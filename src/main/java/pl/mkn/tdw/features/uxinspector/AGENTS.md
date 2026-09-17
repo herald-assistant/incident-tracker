@@ -69,8 +69,9 @@ report, historie oraz import/export.
   wygenerowanej metody klienta i nie wyprowadzaj uslugi backendowej,
   autoryzacji, walidacji ani persistence bez potwierdzajacego evidence.
 - Brak dopasowanego targetu nie blokuje sesji: initial component source pack
-  przekazuje indeks wszystkich komponentow odnalezionych w statycznym graphie
-  i pelne pliki tylko dla wybranej sciezki target -> komponent widoku, a prompt
-  oznacza brak i wymaga celowanego researchu. Brak poprawnego raportu,
+  przekazuje komponenty wybranych sciezek target -> komponent widoku, relacje
+  tylko pomiedzy nimi i ich pelne pliki. Pozostaly graph nie trafia do initial
+  promptu; prompt oznacza jego rozmiar i wymaga celowanego researchu przez
+  neutralne repository tools. Brak poprawnego raportu,
   wymaganych tools, scope'u albo rewizji pozostaje jawnym stanem
   `BLOCKED`/`FAILED`, a nie powodem uruchomienia UI Explorera.

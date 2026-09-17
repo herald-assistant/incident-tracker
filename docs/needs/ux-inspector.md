@@ -137,12 +137,13 @@ moze potem listowac, wyszukiwac i czytac dowolne bezpieczne sciezki w tym
 jednym repozytorium, w tym README, `AGENTS.md`, konfiguracje, frontend i
 backend.
 
-Backend dolacza rowniez nieblokujacy indeks wszystkich komponentow
-odnalezionych w statycznym screen reachability graph. Pakiet zawiera
-uporzadkowany manifest i jawne typy relacji, ale pelne zweryfikowane pliki TS i
-zewnetrzne HTML z przypietego commita tylko dla najkrotszej sciezki od targetu
-do komponentu wybranego widoku. Komponenty rownolegle pozostaja lekkim indeksem
-i moga byc doczytane neutralnymi repository tools, gdy wymaga tego pytanie.
+Backend dolacza rowniez nieblokujacy focused component source pack. Pakiet
+zawiera uporzadkowany manifest komponentow wybranej sciezki od targetu do
+komponentu widoku, relacje tylko pomiedzy nimi oraz ich pelne zweryfikowane
+pliki TS i zewnetrzne HTML z przypietego commita. Komponenty rownolegle i ich
+relacje nie trafiaja do initial promptu; jawne pozostaja liczby calego oraz
+pominietego grafu, a materialny kod moze byc wyszukany neutralnymi repository
+tools, gdy wymaga tego pytanie.
 Nieodnaleziony component boundary,
 nierozwiazana relacja albo plik, ktorego nie udalo sie zweryfikowac, pozostaje
 jawnie opisanym brakiem i nie zatrzymuje analizy. Statyczny graph pomaga

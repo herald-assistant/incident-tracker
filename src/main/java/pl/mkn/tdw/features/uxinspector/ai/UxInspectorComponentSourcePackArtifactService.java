@@ -23,15 +23,15 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 /**
- * Builds a best-effort, pinned component index and a deliberately small source
- * pack. Full files are limited to the best target-to-view path; the remaining
- * graph stays navigable without paying the initial-context cost of every file.
+ * Builds a best-effort, pinned source pack limited to selected target-to-view
+ * paths. The wider static graph remains available through repository tools but
+ * is not serialized into the initial model context.
  */
 @Service
 @RequiredArgsConstructor
 public class UxInspectorComponentSourcePackArtifactService {
     static final String SCHEMA = "tdw.ux-inspector-component-source-pack";
-    static final int VERSION = 1;
+    static final int VERSION = 2;
 
     private final GitLabRepositoryPort repositoryPort;
 
@@ -41,16 +41,16 @@ public class UxInspectorComponentSourcePackArtifactService {
     ) {
         var components = orderedComponents(context);
         var selection = selectFullSourceComponents(context, components);
-        var fullSourceComponents = components.stream()
+        var focusedComponents = components.stream()
                 .filter(component -> selection.componentIds().contains(component.componentId()))
                 .toList();
-        var files = readFiles(context, fullSourceComponents);
+        var files = readFiles(context, focusedComponents);
         var availablePaths = new LinkedHashSet<String>();
         files.values().stream().filter(PackFile::available).map(PackFile::path).forEach(availablePaths::add);
         var availableCount = (int) files.values().stream().filter(PackFile::available).count();
         return new UxInspectorComponentSourcePackArtifact(
                 render(context, capture, components, selection, files),
-                components.size(), fullSourceComponents.size(), components.size() - fullSourceComponents.size(),
+                components.size(), focusedComponents.size(), components.size() - focusedComponents.size(),
                 files.size(), availableCount, files.size() - availableCount,
                 availablePaths
         );
@@ -250,26 +250,28 @@ public class UxInspectorComponentSourcePackArtifactService {
             Map<String, PackFile> files
     ) {
         var available = files.values().stream().filter(PackFile::available).count();
+        var focusedComponents = components.stream()
+                .filter(component -> selection.componentIds().contains(component.componentId()))
+                .toList();
         var builder = new StringBuilder();
         builder.append("schema: ").append(SCHEMA).append('\n');
         builder.append("version: ").append(VERSION).append('\n');
         builder.append("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY\n");
-        builder.append("ordering: graph depth ascending, then breadth-first discovery order\n");
+        builder.append("scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY\n");
+        builder.append("ordering: selected components in graph depth and breadth-first discovery order\n");
         builder.append("fullSourceStrategy: ").append(selection.strategy()).append('\n');
-        builder.append("componentCount: ").append(components.size()).append('\n');
-        builder.append("fullSourceComponentCount: ").append(selection.componentIds().size()).append('\n');
-        builder.append("indexOnlyComponentCount: ").append(components.size() - selection.componentIds().size()).append('\n');
+        builder.append("graphComponentCount: ").append(components.size()).append('\n');
+        builder.append("focusedComponentCount: ").append(focusedComponents.size()).append('\n');
+        builder.append("omittedGraphComponentCount: ").append(components.size() - focusedComponents.size()).append('\n');
         builder.append("uniqueFileCount: ").append(files.size()).append('\n');
         builder.append("availableFileCount: ").append(available).append('\n');
         builder.append("unavailableFileCount: ").append(files.size() - available).append('\n');
         if (context != null && context.sourceRevision() != null) {
             builder.append("pinnedCommit: ").append(context.sourceRevision().revision()).append('\n');
         }
-        var fullSourceComponents = components.stream()
-                .filter(component -> selection.componentIds().contains(component.componentId())).toList();
-        var complete = !fullSourceComponents.isEmpty()
+        var complete = !focusedComponents.isEmpty()
                 && selection.paths().stream().allMatch(SelectedPath::complete)
-                && fullSourceComponents.stream().allMatch(component ->
+                && focusedComponents.stream().allMatch(component ->
                     StringUtils.hasText(component.sourcePath())
                             && available(files, component.sourcePath())
                             && (!StringUtils.hasText(component.templatePath())
@@ -300,11 +302,11 @@ public class UxInspectorComponentSourcePackArtifactService {
             }
         }
 
-        renderComponentIndex(builder, components, selection.componentIds(), files);
-        renderComponentRelations(builder, context, components);
+        renderComponentIndex(builder, focusedComponents, files);
+        renderComponentRelations(builder, context, focusedComponents, selection.componentIds());
 
         builder.append("\n## Unresolved discovery information\n");
-        var unresolved = unresolved(context, components, selection);
+        var unresolved = unresolved(context, focusedComponents, selection);
         if (unresolved.isEmpty()) builder.append("- none reported by static discovery\n");
         else unresolved.forEach(value -> builder.append("- ").append(value).append('\n'));
 
@@ -331,19 +333,17 @@ public class UxInspectorComponentSourcePackArtifactService {
     private void renderComponentIndex(
             StringBuilder builder,
             List<GitLabFrontendReachabilityComponent> components,
-            Set<String> fullSourceComponentIds,
             Map<String, PackFile> files
     ) {
-        builder.append("\n## Discovered components\n");
+        builder.append("\n## Focused path components\n");
         if (components.isEmpty()) {
-            builder.append("- none; the static graph did not expose a component\n");
+            builder.append("- none selected from the static graph\n");
             return;
         }
         builder.append("| # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode | sourceFile | templateFile | truncated | limitations |\n");
         builder.append("|---:|---|---:|---:|---|---|---|---|---|---|---|---|---|\n");
         for (var index = 0; index < components.size(); index++) {
             var component = components.get(index);
-            var fullSource = fullSourceComponentIds.contains(component.componentId());
             builder.append("| ").append(index + 1)
                     .append(" | ").append(tableText(component.componentId()))
                     .append(" | ").append(component.depth())
@@ -352,10 +352,10 @@ public class UxInspectorComponentSourcePackArtifactService {
                     .append(" | ").append(tableText(component.selector()))
                     .append(" | ").append(tableText(component.discoveryKind()))
                     .append(" | ").append(tableText(component.status()))
-                    .append(" | ").append(fullSource ? "FULL_SOURCE" : "INDEX_ONLY")
-                    .append(" | ").append(tableText(fileStatus(component.sourcePath(), files, fullSource)))
+                    .append(" | FULL_SOURCE")
+                    .append(" | ").append(tableText(fileStatus(component.sourcePath(), files)))
                     .append(" | ").append(tableText(StringUtils.hasText(component.templatePath())
-                            ? fileStatus(component.templatePath(), files, fullSource) : "INLINE_OR_NOT_DISCOVERED"))
+                            ? fileStatus(component.templatePath(), files) : "INLINE_OR_NOT_DISCOVERED"))
                     .append(" | ").append(component.truncated())
                     .append(" | ").append(tableText(component.limitations().isEmpty()
                             ? "-" : String.join("; ", component.limitations())))
@@ -366,10 +366,11 @@ public class UxInspectorComponentSourcePackArtifactService {
     private void renderComponentRelations(
             StringBuilder builder,
             UxInspectorTargetContext context,
-            List<GitLabFrontendReachabilityComponent> components
+            List<GitLabFrontendReachabilityComponent> components,
+            Set<String> focusedComponentIds
     ) {
-        var relations = componentRelations(context, components);
-        builder.append("\n## Component relations\n");
+        var relations = componentRelations(context, components, focusedComponentIds);
+        builder.append("\n## Focused component relations\n");
         builder.append("relationCount: ").append(relations.size()).append('\n');
         if (relations.isEmpty()) {
             builder.append("- none reported by static discovery\n");
@@ -384,7 +385,8 @@ public class UxInspectorComponentSourcePackArtifactService {
 
     private List<ComponentRelation> componentRelations(
             UxInspectorTargetContext context,
-            List<GitLabFrontendReachabilityComponent> components
+            List<GitLabFrontendReachabilityComponent> components,
+            Set<String> focusedComponentIds
     ) {
         var relations = new LinkedHashMap<String, ComponentRelation>();
         var graphEdges = context != null && context.graph() != null
@@ -392,6 +394,8 @@ public class UxInspectorComponentSourcePackArtifactService {
         graphEdges.stream()
                 .filter(edge -> edge != null && StringUtils.hasText(edge.fromId())
                         && StringUtils.hasText(edge.toId()) && edge.kind() != null)
+                .filter(edge -> focusedComponentIds.contains(edge.fromId())
+                        && focusedComponentIds.contains(edge.toId()))
                 .map(edge -> new ComponentRelation(edge.fromId(), edge.kind().name(), edge.toId()))
                 .sorted(ComponentRelation.ORDER)
                 .forEach(relation -> relations.putIfAbsent(relation.key(), relation));
@@ -403,11 +407,13 @@ public class UxInspectorComponentSourcePackArtifactService {
             component.childComponentIds().stream().filter(StringUtils::hasText).distinct().sorted()
                     .map(childId -> new ComponentRelation(
                             component.componentId(), "DECLARED_CHILD", childId))
+                    .filter(relation -> focusedComponentIds.contains(relation.toId()))
                     .filter(relation -> !representedPairs.contains(relation.pairKey()))
                     .forEach(relation -> relations.putIfAbsent(relation.key(), relation));
             component.dependencyIds().stream().filter(StringUtils::hasText).distinct().sorted()
                     .map(dependencyId -> new ComponentRelation(
                             component.componentId(), "DECLARED_DEPENDENCY", dependencyId))
+                    .filter(relation -> focusedComponentIds.contains(relation.toId()))
                     .filter(relation -> !representedPairs.contains(relation.pairKey()))
                     .forEach(relation -> relations.putIfAbsent(relation.key(), relation));
         }
@@ -433,9 +439,8 @@ public class UxInspectorComponentSourcePackArtifactService {
         return values.stream().distinct().toList();
     }
 
-    private String fileStatus(String path, Map<String, PackFile> files, boolean fullSource) {
+    private String fileStatus(String path, Map<String, PackFile> files) {
         if (!StringUtils.hasText(path)) return "NOT_DISCOVERED";
-        if (!fullSource) return normalizedPath(path) + " [INDEX_ONLY]";
         var file = files.get(path.trim().replace('\\', '/'));
         if (file == null) return path + " [NOT_DISCOVERED]";
         return file.path() + " [" + (file.available() ? "AVAILABLE_FULL" : "UNAVAILABLE:" + file.reason()) + "]";

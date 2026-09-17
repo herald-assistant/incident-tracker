@@ -145,8 +145,8 @@ Rezultat ma jeden ze stanow:
   ograniczone evidence maksymalnie trzech najlepszych kandydatow wraz z ich
   bindingami, odpowiedz zachowuje niejednoznacznosc i moze uzyc target tools,
 - `NOT_FOUND` - brak zweryfikowanego celu pozostaje jawna luka; sesja dostaje
-  wszystkie komponenty odnalezione dla widoku oraz repository tools i
-  kontynuuje celowany research.
+  pelne zrodlo komponentu widoku, jawny licznik pominietego grafu oraz
+  repository tools i kontynuuje celowany research.
 
 Zmiana source revision, brak refa albo nieaktualny View sa jawnym bledem.
 Feature nie przelacza sie na inny branch i nie zgaduje targetu.
@@ -158,18 +158,16 @@ Prompt oddziela pytanie operatora, `UNTRUSTED_RUNTIME_OBSERVATION` oraz
 focused source slice, procedure dla pytan precyzyjnych i ogolnych oraz
 kontrakt raportu.
 
-Osobny, nieblokujacy logical artifact indeksuje wszystkie komponenty odnalezione
-przez screen reachability graph w kolejnosci depth i breadth-first discovery.
-Dla kazdego komponentu przekazuje w zwartej tabeli symbol, selector, status
-discovery, tryb source, sciezki i ograniczenia. Relacje grafu sa renderowane
-raz w jednej deterministycznej, deduplikowanej liscie; dependency/child ids,
-ktore nie maja odpowiednika w graph edges, pozostaja jawne jako relacje
-deklarowane. Pelna tresc unikalnych plikow TS i zewnetrznych HTML jest
-dolaczana tylko dla deterministycznie wybranej sciezki target -> komponentu
-widoku: jednej dla `RESOLVED`, unii maksymalnie trzech sciezek dla `AMBIGUOUS`,
-a dla `NOT_FOUND` tylko komponentu widoku. `COMPONENT_REFERENCE` nie jest
-relacja ancestry. Inline template pozostaje czescia pelnego TS. Brak pliku lub
-sciezki, nierozwiazany diagnostic
+Osobny, nieblokujacy logical artifact zawiera tylko komponenty
+deterministycznie wybranych sciezek target -> komponent widoku: jednej dla
+`RESOLVED`, unii maksymalnie trzech sciezek dla `AMBIGUOUS`, a dla `NOT_FOUND`
+tylko komponentu widoku. Przekazuje ich symbol, selector, status discovery,
+sciezki i ograniczenia, relacje ktorych oba konce naleza do focused zbioru oraz
+pelna tresc unikalnych plikow TS i zewnetrznych HTML. Pozostale komponenty i
+relacje screen reachability graphu nie sa serializowane; artifact zachowuje
+liczbe komponentow calego grafu i liczbe pominietych. `COMPONENT_REFERENCE`
+nie jest relacja ancestry. Inline template pozostaje czescia pelnego TS. Brak
+pliku lub sciezki, nierozwiazany diagnostic
 albo runtime component boundary bez odpowiednika w grafie jest zapisany w
 artefakcie i nie blokuje preparation. Model czyta pack przed dodatkowymi
 odczytami, nie pobiera ponownie plikow oznaczonych jako kompletne i nie
@@ -290,9 +288,9 @@ Minimalna macierz obejmuje:
 
 - oba profile capture, shape, limity, redakcje, form values i wykluczenia,
 - target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
-- component source pack: indeks wszystkich komponentow, deterministyczny wybor
-  sciezki target -> komponent widoku, deduplikacja pelnych plikow tej sciezki
-  oraz nieblokujace braki,
+- component source pack: tylko komponenty i relacje wybranych sciezek target ->
+  komponent widoku, jawne liczniki pominietego grafu, deduplikacja pelnych
+  plikow tych sciezek oraz nieblokujace braki,
 - origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
 - pinned Copilot instructions, trzy standardowe korzenie project skills,

@@ -51,7 +51,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 """);
         var componentPackService = mock(UxInspectorComponentSourcePackArtifactService.class);
         when(componentPackService.prepare(any(), any())).thenReturn(new UxInspectorComponentSourcePackArtifact(
-                "componentCount: 1\ncomplete: true", 1, 1, 0, 2, 2, 0,
+                "version: 2\ngraphComponentCount: 1\nfocusedComponentCount: 1\ncomplete: true", 1, 1, 0, 2, 2, 0,
                 java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
         var preparation = new UxInspectorPromptPreparationService(
                 new ObjectMapper().findAndRegisterModules(), treeArtifactService, guidanceArtifactService,

@@ -60,19 +60,22 @@ class UxInspectorPromptAndSkillsTest {
         when(componentSourcePackArtifactService.prepare(any(), any())).thenReturn(
                 new UxInspectorComponentSourcePackArtifact("""
                         schema: tdw.ux-inspector-component-source-pack
-                        version: 1
+                        version: 2
                         semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY
-                        componentCount: 1
+                        scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY
+                        graphComponentCount: 1
+                        focusedComponentCount: 1
+                        omittedGraphComponentCount: 0
                         availableFileCount: 2
                         unavailableFileCount: 0
                         complete: true
 
-                        ## Discovered components
+                        ## Focused path components
                         | # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode | sourceFile | templateFile | truncated | limitations |
                         |---:|---|---:|---:|---|---|---|---|---|---|---|---|---|
                         | 1 | contact-create | 0 | 1 | CrmContactCreateComponent | crm-contact-create | ROUTE_TARGET | RESOLVED | FULL_SOURCE | src/app/contacts/contact-create.component.ts [AVAILABLE_FULL] | src/app/contacts/contact-create.component.html [AVAILABLE_FULL] | false | - |
 
-                        ## Component relations
+                        ## Focused component relations
                         relationCount: 0
                         - none reported by static discovery
                         """, 1, 1, 0, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
@@ -93,8 +96,10 @@ class UxInspectorPromptAndSkillsTest {
                         "pinnedCommit: " + REVISION)
                 .contains("DETERMINISTIC_SOURCE_BINDING", "sourceReference", "Selector jest tylko sygnalem lokalizacji")
                 .contains("tdw.ux-inspector-component-source-pack", "STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY",
-                        "AVAILABLE_FULL", "INDEX_ONLY", "NOT_FOUND_IN_STATIC_GRAPH",
+                        "SELECTED_TARGET_TO_VIEW_PATHS_ONLY", "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH",
                         "najkrotsza deterministyczna sciezka", "nie przedstawiaj statycznej relacji")
+                .contains("Szerszy statyczny graph", "nie jest serializowany do initial context")
+                .doesNotContain("INDEX_ONLY")
                 .contains("formSnapshot", "zamrozona obserwacja runtime")
                 .contains("README", "AGENTS.md", ".github/copilot-instructions.md", "complete: true")
                 .contains("Search shared CRM guards before concluding.", "crm-architecture",

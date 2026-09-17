@@ -545,6 +545,96 @@ resolver targetu, AI runtime, report ani export.
 - Nie uruchamiano regresji backendu, poniewaz zmiana nie dotyka kontraktu
   backend-frontend, routingu zasobow statycznych ani integracji backendowej.
 
+## Inkrement: focused-only component source pack
+
+Status: done
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 usuniecie z initial promptu
+komponentow i relacji spoza wybranej sciezki target -> komponent widoku po
+analizie eksportu `ux-inspector-WIBOR-1M-20260917-141446.json`.
+
+Klasyfikacja: **L1**. Zmienia sie model-facing zawartosc feature-owned logical
+artifactu oraz canonical prompt, ale nie publiczne API/DTO, capture, resolver,
+source selection, tool schema, hidden scope, report, job, persistence/export
+ani frontend.
+
+### Baseline
+
+- Graph dla pilota zawiera 104 komponenty, lecz deterministyczna sciezka
+  target -> widok ma 3 komponenty i 6 pelnych plikow.
+- Pozostale 101 komponentow i relacje calego grafu sa przekazywane jako
+  `INDEX_ONLY`; tabela komponentow i 1007 relacji zajmuja okolo 119,8 tys.
+  znakow initial promptu.
+- W pilocie model bezposrednio doczytal tylko jeden komponent `INDEX_ONLY`;
+  pozostaly research dotyczyl serwisow formularza, mapperow, store, guardow,
+  feature flags i kontraktow OpenAPI.
+- Testy baseline
+  `UxInspectorComponentSourcePackArtifactServiceTest`,
+  `UxInspectorPromptAndSkillsTest` i
+  `UxInspectorCopilotRunRequestAssemblerTest` przechodza przed zmiana.
+
+### Conformance delta
+
+- Initial artifact zawiera tylko komponenty wybranych sciezek i relacje,
+  ktorych oba konce naleza do tego focused zbioru.
+- Pelne, zweryfikowane pliki TS/HTML, strategie `RESOLVED`, `AMBIGUOUS` i
+  `NOT_FOUND` oraz algorytm wyboru sciezki pozostaja bez zmian.
+- Liczba komponentow calego grafu i liczba pominietych komponentow pozostaja
+  jawnymi licznikami diagnostycznymi; runtime boundaries i braki discovery nie
+  sa usuwane.
+- Komponenty i relacje spoza sciezki sa celowo pominiete z initial context.
+  Model nadal moze wyszukac materialny kod w calym przypietym repozytorium
+  neutralnymi repository tools.
+- Wlasciciel pozostaje `features.uxinspector.ai`; bez nowych zaleznosci i bez
+  shared abstraction.
+- Konsumenci: canonical prompt, mapa artifactow oraz testy UX Inspectora.
+- Kompatybilnosc: artifact jest tworzony od nowa dla runu; jego wewnetrzna
+  wersja wzrasta do v2. Publiczny export i result contract pozostaja bez zmian.
+
+### Macierz testow
+
+| Zakres | Dowod |
+|---|---|
+| `RESOLVED` | tylko komponenty najkrotszej sciezki i ich relacje |
+| duzy graf | 101 komponentow w graphie, 2 w focused packu, 99 pominietych |
+| `AMBIGUOUS` | unia maksymalnie trzech wybranych sciezek bez siblingow |
+| `NOT_FOUND` | tylko komponent widoku, bez indeksu pozostalego grafu |
+| brak komponentu widoku | pusty focused pack i jawny licznik pominietych |
+| prompt contract | brak instrukcji `INDEX_ONLY`, celowany research przez tools |
+| granice pakietow | `PackageDependencyGuardTest` i architecture diff |
+| regresja backendu | `mvn -q test` |
+
+### Kroki
+
+- [x] Ograniczyc renderer komponentow, relacji i component limitations do
+  focused selection oraz dodac jawne liczniki calego i pominietego grafu.
+- [x] Zmienic canonical prompt i wewnetrzna wersje artifactu, aktualizujac
+  testy wszystkich strategii source selection.
+- [x] Zaktualizowac need, niezmienniki i runtime flow oraz uruchomic testy
+  celowane, architecture guard i pelna regresje backendu.
+
+### Wynik weryfikacji inkrementu
+
+- Baseline:
+  `mvn -q "-Dtest=UxInspectorComponentSourcePackArtifactServiceTest,UxInspectorPromptAndSkillsTest,UxInspectorCopilotRunRequestAssemblerTest" test`
+  - PASS przed zmiana.
+- Testy celowane po zmianie:
+  `mvn -q "-Dtest=PackageDependencyGuardTest,UxInspectorComponentSourcePackArtifactServiceTest,UxInspectorPromptAndSkillsTest,UxInspectorCopilotRunRequestAssemblerTest,UxInspectorCopilotAnalysisProviderTest,UxInspectorReportMapperTest" test`
+  - PASS.
+- Pelna regresja backendu: `mvn -q test`
+  - PASS, 1642 testy, 0 failures, 0 errors, 1 skipped.
+- Architecture diff: bez zmian publicznego API/DTO, capture, source selection,
+  tools, hidden scope, joba, reportu, persistence/export, frontendu oraz
+  zaleznosci pakietowych. Feature-owned artifact ma wewnetrzna wersje v2.
+- Przeliczenie eksportu `ux-inspector-WIBOR-1M-20260917-141446.json`: dla 104
+  komponentow grafu i focused sciezki 3 komponentow artifact maleje
+  szacunkowo z 189621 do 71556 znakow (-62,3%), a caly initial prompt z 257672
+  do okolo 139607 znakow (-45,8%). Z 1007 relacji pozostaja dwie relacje
+  pomiedzy trzema komponentami sciezki.
+- Nie uruchamiano testow ani builda Angulara, poniewaz zmiana dotyczy wylacznie
+  backendowego, wewnetrznego logical artifactu i canonical promptu, bez zmiany
+  kontraktu lub integracji z frontendem.
+
 ## Wynik weryfikacji
 
 - Browser Tools: `node --test frontend/tests/browser-tools/browser-tools.test.mjs`

@@ -32,7 +32,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
             new UxInspectorComponentSourcePackArtifactService(repositoryPort);
 
     @Test
-    void shouldIncludeFullFilesOnlyForResolvedTargetToViewPathAndKeepSiblingAsIndex() {
+    void shouldIncludeOnlyResolvedTargetToViewPathAndOmitSiblingFromPrompt() {
         var child = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
         var sibling = component("contact-summary", "contact-summary", "Podsumowanie", 3);
         var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
@@ -51,9 +51,9 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         var artifact = service.prepare(context, capture());
 
-        assertThat(artifact.componentCount()).isEqualTo(3);
-        assertThat(artifact.fullSourceComponentCount()).isEqualTo(2);
-        assertThat(artifact.indexOnlyComponentCount()).isEqualTo(1);
+        assertThat(artifact.graphComponentCount()).isEqualTo(3);
+        assertThat(artifact.focusedComponentCount()).isEqualTo(2);
+        assertThat(artifact.omittedGraphComponentCount()).isEqualTo(1);
         assertThat(artifact.fileCount()).isEqualTo(4);
         assertThat(artifact.availableFileCount()).isEqualTo(4);
         assertThat(artifact.unavailableFileCount()).isZero();
@@ -61,16 +61,17 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 root.sourcePath(), root.templatePath(), child.sourcePath(), child.templatePath());
         assertThat(artifact.markdown())
                 .contains("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY")
+                .contains("version: 2", "scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY")
+                .contains("graphComponentCount: 3", "focusedComponentCount: 2", "omittedGraphComponentCount: 1")
                 .contains("fullSourceStrategy: RESOLVED_SHORTEST_TARGET_TO_VIEW_PATH")
                 .contains("targetToView=contact-editor -> contact-create")
                 .contains("| # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode")
-                .contains("| 1 | contact-create |", "| 2 | contact-editor |", "| 3 | contact-summary |")
-                .contains("## Component relations", "relationCount: 2")
+                .contains("| 1 | contact-create |", "| 2 | contact-editor |")
+                .contains("## Focused component relations", "relationCount: 1")
                 .contains("contact-create --TEMPLATE_CHILD--> contact-editor")
                 .contains("BEGIN_UNTRUSTED_COMPONENT_FILE " + root.sourcePath())
                 .contains(contents.get(root.sourcePath()), contents.get(child.templatePath()))
-                .contains(sibling.sourcePath() + " [INDEX_ONLY]")
-                .doesNotContain(contents.get(sibling.sourcePath()))
+                .doesNotContain(sibling.componentId(), sibling.sourcePath(), contents.get(sibling.sourcePath()), "INDEX_ONLY")
                 .doesNotContain("dependencyIds:", "childComponentIds:", "incomingEdges:", "outgoingEdges:")
                 .contains("status: AVAILABLE", "complete: true");
         assertThat(artifact.markdown().indexOf("| 1 | contact-create |"))
@@ -80,7 +81,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     }
 
     @Test
-    void shouldRenderEachGraphRelationOnceAndKeepOnlyUnrepresentedDeclaredRelations() {
+    void shouldRenderEachFocusedGraphRelationOnceAndOmitRelationsOutsideTheSelectedPath() {
         var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
         var root = withRelations(component("contact-create", "contact-form", "Formularz kontaktu", 1),
                 List.of("dependency-contact-api"), List.of(target.componentId(), "contact-help"));
@@ -97,15 +98,13 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
         var artifact = service.prepare(context, capture());
 
         assertThat(artifact.markdown())
-                .contains("relationCount: 3")
+                .contains("relationCount: 1")
                 .containsOnlyOnce("contact-create --TEMPLATE_CHILD--> contact-editor")
-                .containsOnlyOnce("contact-create --DECLARED_CHILD--> contact-help")
-                .containsOnlyOnce("contact-create --DECLARED_DEPENDENCY--> dependency-contact-api")
-                .doesNotContain("contact-create --DECLARED_CHILD--> contact-editor");
+                .doesNotContain("contact-help", "dependency-contact-api", "DECLARED_CHILD", "DECLARED_DEPENDENCY");
     }
 
     @Test
-    void shouldKeepALargeComponentGraphCompactWhileIndexingEveryComponent() {
+    void shouldOmitComponentsAndRelationsOutsideTheFocusedPathFromALargeGraph() {
         var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
         var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
         var components = new ArrayList<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent>();
@@ -129,11 +128,15 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         var artifact = service.prepare(context, capture());
 
-        assertThat(artifact.componentCount()).isEqualTo(101);
+        assertThat(artifact.graphComponentCount()).isEqualTo(101);
+        assertThat(artifact.focusedComponentCount()).isEqualTo(2);
+        assertThat(artifact.omittedGraphComponentCount()).isEqualTo(99);
         assertThat(artifact.markdown())
-                .contains("componentCount: 101", "| 101 | contact-section-101 |", "relationCount: 100")
-                .containsOnlyOnce("contact-create --TEMPLATE_CHILD--> contact-editor");
-        assertThat(artifact.markdown().length()).isLessThan(80_000);
+                .contains("graphComponentCount: 101", "focusedComponentCount: 2",
+                        "omittedGraphComponentCount: 99", "relationCount: 1")
+                .containsOnlyOnce("contact-create --TEMPLATE_CHILD--> contact-editor")
+                .doesNotContain("contact-section-3", "contact-section-101", "INDEX_ONLY");
+        assertThat(artifact.markdown().length()).isLessThan(10_000);
     }
 
     @Test
@@ -155,15 +158,15 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         var artifact = service.prepare(context, capture());
 
-        assertThat(artifact.fullSourceComponentCount()).isEqualTo(3);
-        assertThat(artifact.indexOnlyComponentCount()).isZero();
+        assertThat(artifact.focusedComponentCount()).isEqualTo(3);
+        assertThat(artifact.omittedGraphComponentCount()).isZero();
         assertThat(artifact.markdown())
                 .contains("targetToView=contact-editor -> contact-section -> contact-create")
                 .doesNotContain("targetToView=contact-editor -> contact-create");
     }
 
     @Test
-    void shouldUnionBestPathsForAmbiguousCandidatesAndLeaveUnrelatedComponentInIndex() {
+    void shouldUnionBestPathsForAmbiguousCandidatesAndOmitUnrelatedComponent() {
         var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
         var first = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
         var second = component("contact-owner", "contact-owner", "Opiekun", 3);
@@ -187,13 +190,13 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         var artifact = service.prepare(context, capture());
 
-        assertThat(artifact.fullSourceComponentCount()).isEqualTo(3);
-        assertThat(artifact.indexOnlyComponentCount()).isEqualTo(1);
+        assertThat(artifact.focusedComponentCount()).isEqualTo(3);
+        assertThat(artifact.omittedGraphComponentCount()).isEqualTo(1);
         assertThat(artifact.markdown())
                 .contains("fullSourceStrategy: AMBIGUOUS_UNION_OF_UP_TO_THREE_TARGET_TO_VIEW_PATHS")
                 .contains("targetToView=contact-editor -> contact-create")
                 .contains("targetToView=contact-owner -> contact-create")
-                .contains(unrelated.sourcePath() + " [INDEX_ONLY]");
+                .doesNotContain(unrelated.componentId(), unrelated.sourcePath(), "INDEX_ONLY");
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, unrelated.sourcePath());
     }
 
@@ -213,14 +216,14 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         var artifact = service.prepare(context, capture());
 
-        assertThat(artifact.fullSourceComponentCount()).isEqualTo(1);
-        assertThat(artifact.indexOnlyComponentCount()).isEqualTo(1);
+        assertThat(artifact.focusedComponentCount()).isEqualTo(1);
+        assertThat(artifact.omittedGraphComponentCount()).isEqualTo(1);
         assertThat(artifact.availableSourcePaths()).containsExactlyInAnyOrder(root.sourcePath(), root.templatePath());
         assertThat(artifact.markdown())
                 .contains("fullSourceStrategy: NOT_FOUND_VIEW_COMPONENT_ONLY")
                 .contains("targetToView=contact-create")
                 .contains("complete: false")
-                .contains(child.sourcePath() + " [INDEX_ONLY]");
+                .doesNotContain("| contact-editor |", child.sourcePath(), "INDEX_ONLY");
     }
 
     @Test
@@ -231,13 +234,13 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         var artifact = service.prepare(context, capture());
 
-        assertThat(artifact.fullSourceComponentCount()).isZero();
-        assertThat(artifact.indexOnlyComponentCount()).isEqualTo(1);
+        assertThat(artifact.focusedComponentCount()).isZero();
+        assertThat(artifact.omittedGraphComponentCount()).isEqualTo(1);
         assertThat(artifact.fileCount()).isZero();
         assertThat(artifact.markdown())
                 .contains("fullSourceStrategy: VIEW_COMPONENT_NOT_FOUND")
                 .contains("no arbitrary graph component was promoted to full source")
-                .contains(child.sourcePath() + " [INDEX_ONLY]")
+                .doesNotContain(child.componentId(), child.sourcePath(), "INDEX_ONLY")
                 .contains("complete: false");
         verify(repositoryPort, never()).readFileMetadata(anyString(), anyString(), anyString(), anyString());
     }
@@ -246,9 +249,9 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     void shouldKeepThePackUsableAndMarkEveryMissingPinnedFileWithoutBlockingPreparation() {
         var artifact = service.prepare(targetContext(), capture());
 
-        assertThat(artifact.componentCount()).isEqualTo(1);
-        assertThat(artifact.fullSourceComponentCount()).isEqualTo(1);
-        assertThat(artifact.indexOnlyComponentCount()).isZero();
+        assertThat(artifact.graphComponentCount()).isEqualTo(1);
+        assertThat(artifact.focusedComponentCount()).isEqualTo(1);
+        assertThat(artifact.omittedGraphComponentCount()).isZero();
         assertThat(artifact.fileCount()).isEqualTo(2);
         assertThat(artifact.availableFileCount()).isZero();
         assertThat(artifact.unavailableFileCount()).isEqualTo(2);
