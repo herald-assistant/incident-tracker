@@ -124,10 +124,11 @@ nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
 konkretnego feature'a: readiness aktywnych sekcji, initial `AnalysisReport`,
 hidden repository/report scope, default-deny allowliste, goal-driven targeted
 GitLab fallback bez feature'owego limitu call count oraz zlozenie
-`CopilotRunRequest`. Preferowane frontendowe tools przyjmuja tylko
-bezpieczny `sliceRef` i `reason`; repository/ref/path, source revision i
-rejestr dozwolonych targetow pozostaja w hidden context. Generyczny
-search/read jest fallbackiem tylko dla luki bez gotowej referencji.
+`CopilotRunRequest`. Preferowany route tool przyjmuje bezpieczny screen
+`sliceRef`; TypeScript tool przyjmuje naturalny plik/typ albo dokladny import,
+opcjonalne `memberNames` i `reason`. Repository/ref/source revision i rejestr
+dozwolonych targetow pozostaja w hidden context. Generyczny search/read jest
+fallbackiem tylko dla luki bez gotowego route lub TypeScript targetu.
 Assembler buduje dodatkowo krotkie durable system instructions z kanonicznego
 report contract oraz wybranego ekranu/source revision. Neutralny runtime
 mapuje je na SDK, ale nie importuje ani nie interpretuje kontraktow UI
@@ -191,10 +192,11 @@ Warstwa posiada:
 
 `agenttools.gitlab.frontend.mcp` deleguje do
 `integrations.gitlab.frontend` i wystawia route branch slice oraz TypeScript
-symbol slice. Model nie wybiera repository, refa, path ani
-symbolu: przekazuje tylko przygotowany `sliceRef` i `reason`, a wrapper
-rozstrzyga target z session-bound hidden context. Route branch safe ref zwraca
-wybrane poddrzewo kontenera. Screen Reachability pozostaje
+symbol slice. Model nie wybiera repository ani refa. Route branch safe ref
+zwraca wybrane poddrzewo kontenera. Dla TypeScriptu model kopiuje naturalny
+plik/typ z artifactu albo wspolrzedne oryginalnego importu ze zwroconego kodu;
+wrapper akceptuje je tylko wtedy, gdy wskazuja target z session-bound hidden
+allowlisty, i pozwala ograniczyc wynik do dozwolonych `memberNames`. Screen Reachability pozostaje
 deterministycznym inputem initial promptu i nie jest dublowany przez MCP.
 
 MCP jest tylko sposobem ekspozycji capability. Tool nie moze zakladac, ze

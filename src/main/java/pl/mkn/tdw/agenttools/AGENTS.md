@@ -85,12 +85,15 @@ Nie obejmuje:
   rejestruje zweryfikowany `sourceRef`. Feature decyduje, czy tool jest
   dostepny i kiedy ma zastapic ogolne full/chunk reads.
 - Frontendowe route branch i TypeScript symbol slice tools mieszkaja w
-  `gitlab.frontend.mcp` i deleguja do `integrations.gitlab.frontend`. Ich
-  model-facing schema ma zawierac tylko
-  bezpieczny `sliceRef` i `reason`; group, project, ref, path prefixes, source
-  revision oraz rejestr dozwolonych targetow pochodza z hidden session
-  context. Nie przywracaj tych danych jako pol toola. Nie wystawiaj pelnego
-  Screen Reachability jako MCP result, gdy zasila juz initial prompt.
+  `gitlab.frontend.mcp` i deleguja do `integrations.gitlab.frontend`. Route
+  branch przyjmuje bezpieczny screen `sliceRef` i `reason`. TypeScript symbol
+  slice nie ujawnia syntetycznych refow: przyjmuje naturalny `filePath` z
+  `declaringTypeName` albo dokladne wspolrzedne importu widocznego w kodzie
+  (`consumerFilePath`, `moduleSpecifier`, `importedSymbol`), opcjonalne
+  `memberNames` i `reason`. Group, project, ref, path prefixes, source revision
+  oraz rejestr dozwolonych targetow pochodza z hidden session context. Nie
+  przywracaj tych danych jako pol toola. Nie wystawiaj pelnego Screen
+  Reachability jako MCP result, gdy zasila juz initial prompt.
 
 ## Weryfikacja
 

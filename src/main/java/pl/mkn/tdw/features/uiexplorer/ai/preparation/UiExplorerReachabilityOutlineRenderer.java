@@ -48,7 +48,8 @@ final class UiExplorerReachabilityOutlineRenderer {
 
         lines.add("## Targetable component BFS frontier");
         lines.add("");
-        lines.add("`sliceRef` values are session-bound targets. `EMBEDDED` source is present in the initial source artifact; `ON_DEMAND` source must be read with the narrow frontend slice tool when an active section needs it.");
+        lines.add("`EMBEDDED` source is present in the initial source artifact; `ON_DEMAND` source may be read with "
+                + "`gitlab_read_frontend_typescript_symbol_slice` using its natural source path and declaring type.");
         for (var level : graph.componentLevels()) {
             lines.add("");
             lines.add("### Depth " + level.depth());
@@ -72,7 +73,7 @@ final class UiExplorerReachabilityOutlineRenderer {
             lines.add("");
             lines.add("## Targetable supporting dependency frontier");
             lines.add("");
-            lines.add("Supporting targets stay compact, but retain their exact `sliceRef` for a narrow read when a functional claim needs their source.");
+            lines.add("Supporting targets stay compact, but retain natural source path and declaring type for a narrow read when a functional claim needs their source.");
             supportingTargetableDependencies.forEach(dependency -> lines.add(supportingDependencyLine(
                     dependency, projection, dependencyReferences
             )));
@@ -107,7 +108,6 @@ final class UiExplorerReachabilityOutlineRenderer {
             Map<String, String> dependencyReferences
     ) {
         var details = new ArrayList<String>();
-        details.add("sliceRef=`" + safe(component.componentId()) + "`");
         details.add("initial=" + (projection.embeds(component) ? "EMBEDDED" : "ON_DEMAND"));
         details.add("symbol=`" + safe(component.symbol()) + "`");
         details.add("discovery=" + safe(component.discoveryKind()));
@@ -146,7 +146,6 @@ final class UiExplorerReachabilityOutlineRenderer {
             Map<String, String> dependencyReferences
     ) {
         var details = new ArrayList<String>();
-        details.add("sliceRef=`" + safe(dependency.dependencyId()) + "`");
         details.add("initial=" + initialState(dependency, projection));
         details.add("symbol=`" + safe(dependency.symbol()) + "`");
         details.add("kind=" + dependency.kind());
@@ -177,7 +176,6 @@ final class UiExplorerReachabilityOutlineRenderer {
             Map<String, String> dependencyReferences
     ) {
         return "- [" + dependencyReferences.get(dependency.dependencyId()) + "] "
-                + "sliceRef=`" + safe(dependency.dependencyId()) + "`; "
                 + "initial=" + initialState(dependency, projection) + "; "
                 + "symbol=`" + safe(dependency.symbol()) + "`; "
                 + "kind=" + dependency.kind() + "; "

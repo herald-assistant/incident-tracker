@@ -143,7 +143,10 @@ komponentu widoku, relacje tylko pomiedzy nimi oraz ich pelne zweryfikowane
 pliki TS i zewnetrzne HTML z przypietego commita. Komponenty rownolegle i ich
 relacje nie trafiaja do initial promptu; jawne pozostaja liczby calego oraz
 pominietego grafu, a materialny kod moze byc wyszukany neutralnymi repository
-tools, gdy wymaga tego pytanie.
+tools, gdy wymaga tego pytanie. Pakiet przekazuje ponadto kompaktowy effective
+route chain wybranego widoku i maksymalnie jeden ograniczony slice
+bezposredniej klasy bazowej komponentu widoku. Nie przekazuje pelnego route
+subtree, pelnego pliku klasy bazowej ani dalszego lancucha dziedziczenia.
 Nieodnaleziony component boundary,
 nierozwiazana relacja albo plik, ktorego nie udalo sie zweryfikowac, pozostaje
 jawnie opisanym brakiem i nie zatrzymuje analizy. Statyczny graph pomaga

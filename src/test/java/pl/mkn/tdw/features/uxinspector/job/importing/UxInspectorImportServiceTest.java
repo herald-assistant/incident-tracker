@@ -48,6 +48,19 @@ class UxInspectorImportServiceTest {
     }
 
     @Test
+    void shouldImportValidExportRegardlessOfWholeDocumentSize() {
+        ObjectNode document = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
+        document.withObject("/payload/job").put("preparedPrompt", "x".repeat(1_100_000));
+        assertThat(document.toString()).hasSizeGreaterThan(1_000_000);
+
+        var imported = service.importReadOnly(document);
+
+        assertThat(imported.jobId()).startsWith("ux-inspector-import-");
+        assertThat(imported.preparedPrompt()).isNull();
+        verify(persistence).persistRunSnapshot(any());
+    }
+
+    @Test
     void shouldRejectUiExplorerSchemaUnknownVersionUnknownFieldsAndCaptureV3() {
         ObjectNode uiExplorer = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         uiExplorer.put("schema", "tdw.ui-explorer-export");

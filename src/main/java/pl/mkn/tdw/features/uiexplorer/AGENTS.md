@@ -35,9 +35,12 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   zostac limitation, dopoki kolejne scoped GitLab search/read moga rozstrzygnac
   luke. UI Explorer nie posiada feature'owego limitu call count; eksploracje
   konczy readiness albo potwierdzona granica runtime/zewnetrznego scope.
-- Targeted research preferuje `gitlab_read_frontend_route_branch_slice`,
-  `gitlab_read_frontend_typescript_symbol_slice` z dokladnym `sliceRef` z
-  artefaktow. Pelny Screen Reachability jest przygotowany przed AI i nie jest
+- Targeted research preferuje `gitlab_read_frontend_route_branch_slice` z
+  dokladnym screen `sliceRef` oraz
+  `gitlab_read_frontend_typescript_symbol_slice` z naturalna sciezka/typem lub
+  dokladnym importem widocznym w oryginalnym kodzie. TypeScript tool zachowuje
+  importy i pozwala zwezic wynik przez `memberNames`, bez syntetycznych refow.
+  Pelny Screen Reachability jest przygotowany przed AI i nie jest
   MCP toolem UI Explorera, zeby nie duplikowac initial context. Generyczny
   GitLab search/read jest dozwolony tylko dla
   materialnej luki, ktora nie ma jeszcze bezpiecznej referencji. Repository,

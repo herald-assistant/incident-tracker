@@ -79,27 +79,29 @@ class GitLabMcpToolsContextTest {
     }
 
     @Test
-    void shouldExposeOnlySafeSliceReferenceAndReasonForFrontendTools() throws Exception {
+    void shouldExposeScreenReferenceForRouteAndNaturalCoordinatesForTypeScript() throws Exception {
         var callbacksByName = Arrays.stream(toolCallbackProviders)
                 .flatMap(provider -> Arrays.stream(provider.getToolCallbacks()))
                 .collect(Collectors.toMap(tool -> tool.getToolDefinition().name(), tool -> tool));
 
-        for (var toolName : java.util.List.of(
-                "gitlab_read_frontend_route_branch_slice",
-                "gitlab_read_frontend_typescript_symbol_slice"
-        )) {
-            var properties = schemaProperties(callbacksByName.get(toolName));
-            org.junit.jupiter.api.Assertions.assertEquals(
-                    java.util.Set.of("sliceRef", "reason"),
-                    properties.keySet(),
-                    toolName
-            );
+        var routeProperties = schemaProperties(callbacksByName.get("gitlab_read_frontend_route_branch_slice"));
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.Set.of("sliceRef", "reason"), routeProperties.keySet());
+
+        var typeScriptProperties = schemaProperties(
+                callbacksByName.get("gitlab_read_frontend_typescript_symbol_slice"));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of(
+                        "filePath", "declaringTypeName", "consumerFilePath", "moduleSpecifier",
+                        "importedSymbol", "memberNames", "reason"),
+                typeScriptProperties.keySet()
+        );
+        for (var properties : java.util.List.of(routeProperties, typeScriptProperties)) {
             assertFalse(properties.containsKey("group"));
             assertFalse(properties.containsKey("projectName"));
             assertFalse(properties.containsKey("ref"));
-            assertFalse(properties.containsKey("filePath"));
             assertFalse(properties.containsKey("toolContext"));
         }
+        assertFalse(typeScriptProperties.containsKey("sliceRef"));
     }
 
     @Test

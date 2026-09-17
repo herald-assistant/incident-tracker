@@ -66,11 +66,16 @@ public final class UxInspectorTestFixtures {
         var target = new GitLabFrontendRouteTarget("CrmContactCreateComponent", SOURCE_PATH);
         var screen = new GitLabFrontendScreenIdentity(VIEW_ID, "route-contact-create", "/contacts/new", "primary", target);
         var sourceRef = new GitLabFrontendSourceReference("src/app/app.routes.ts", "routes", 10, 18);
+        var dirtyCheck = new GitLabFrontendRouteConfiguration(
+                GitLabFrontendRouteConfigurationKind.CAN_DEACTIVATE, "canDeactivate",
+                List.of("CrmDirtyCheckGuard"), null, GitLabFrontendDiscoveryStatus.RESOLVED,
+                sourceRef, List.of());
         var routeNode = new GitLabFrontendRouteNode("route-contact-create", null, screen, "Create contact",
                 "contacts/new", "/contacts/new", "primary", GitLabFrontendRouteNodeKind.SCREEN,
-                GitLabFrontendDiscoveryStatus.RESOLVED, false, List.of(), target, null, null, List.of(), sourceRef, List.of());
+                GitLabFrontendDiscoveryStatus.RESOLVED, false, List.of(), target, null, null,
+                List.of(dirtyCheck), sourceRef, List.of());
         var segment = new GitLabFrontendRouteChainSegment(routeNode.nodeId(), routeNode.pathSegment(),
-                routeNode.routePattern(), "primary", List.of(), sourceRef);
+                routeNode.routePattern(), "primary", routeNode.configuration(), sourceRef);
         return new GitLabFrontendScreenReachabilityGraph(scope, new GitLabFrontendSourceRevision("main", REVISION),
                 "READY", routeNode, new GitLabFrontendEffectiveRouteChain(screen, List.of(segment), List.of()),
                 List.of(new GitLabFrontendReachabilityComponentLevel(0, components)), List.of(), List.of(), List.of(),

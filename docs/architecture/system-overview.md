@@ -98,8 +98,8 @@ cztery platformowe report tools. Przed sesja powstaje scaffold
 `AnalysisReport` ograniczony do aktywnych sekcji. Materialny brak child route, komponentu, template,
 formularza, modala, serwisu, state logic albo klienta z zatwierdzonego
 repository scope wymaga proby deterministycznego route albo symbol slice, a
-generycznego search/read tylko wtedy, gdy nie istnieje jeszcze
-bezpieczny `sliceRef`; wynik
+generycznego search/read tylko wtedy, gdy nie istnieje jeszcze bezpieczny
+screen route target ani naturalny target TypeScript z grafu/importu; wynik
 z takim brakiem bez zarejestrowanej proby jest odrzucany. Kolejne konkretne
 luki sa pobierane do osiagniecia readiness albo potwierdzenia granicy
 runtime/zewnetrznego scope; licznik wywolan nie finalizuje analizy. Skill
@@ -852,9 +852,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   MCP tools GitLaba delegujace do `integrations.gitlab`.
 - `pl.mkn.tdw.agenttools.gitlab.frontend.mcp`
   Neutralne frontendowe MCP tools dla route branch slice i TypeScript symbol
-  slice. Model-facing input zawiera tylko `sliceRef` i `reason`;
-  repository/ref/path/source revision i target symbolu sa ukrytym scope'em
-  sesji. Pelny Screen Reachability zasila initial artifacts i nie jest toolem.
+  slice. Route tool przyjmuje screen `sliceRef`; TypeScript tool przyjmuje
+  naturalna sciezke z typem albo dokladne wspolrzedne importu oraz opcjonalne
+  `memberNames`. Repository/ref/source revision i allowlista targetow sa
+  ukrytym scope'em sesji. Pelny Screen Reachability zasila initial artifacts i
+  nie jest toolem.
 - `pl.mkn.tdw.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.tdw.api`

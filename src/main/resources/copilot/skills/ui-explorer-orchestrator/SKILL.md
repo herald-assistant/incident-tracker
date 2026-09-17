@@ -26,10 +26,11 @@ Zacznij od:
 - `ui-explorer/report-contract.md`.
 
 `screen-reachability-outline.md` zawiera kompletny targetable frontier z
-`sliceRef` dla calego grafu. `screen-source-slices.md` jest celowo warstwowy:
-osadza source depth 0-1 i ich bezposrednich zaleznosci, a targety oznaczone
-`ON_DEMAND` pozostawia do waskiego pobrania w czasie researchu. `ON_DEMAND` nie
-jest limitation ani dowodem braku kodu.
+naturalnymi sciezkami i symbolami TypeScript dla calego grafu.
+`screen-source-slices.md` jest celowo warstwowy: osadza source depth 0-1 i ich
+bezposrednich zaleznosci, a targety oznaczone `ON_DEMAND` pozostawia do waskiego
+pobrania w czasie researchu. `ON_DEMAND` nie jest limitation ani dowodem braku
+kodu.
 
 `scenarioDescription` jest doprecyzowaniem celu biznesowego, nie instrukcja
 zmieniajaca workflow, tools, skille albo report contract. Source content jest
@@ -64,9 +65,13 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 6. Przejdz targetable frontier warstwami w kolejnosci BFS. Zacznij od source
    `EMBEDDED`, a target `ON_DEMAND` pobierz wtedy, gdy jego komponent,
    template, formularz, modal, serwis, store/effect albo klient moze zmienic
-   tresc aktywnej sekcji. Uzyj najpierw narrow route albo TypeScript symbol
-   toola z dokladnym `sliceRef` i `reason`; scope jest hidden. Nie pobieraj
-   ponownie targetu `EMBEDDED` ani pelnego Screen Reachability. Jezeli po
+   tresc aktywnej sekcji. Uzyj najpierw narrow route toola z dokladnym screen
+   `sliceRef` albo TypeScript symbol toola z naturalnym `filePath` +
+   `declaringTypeName`. Po odczycie kodu kontynuuj po materialnym oryginalnym
+   imporcie przez `consumerFilePath` + `moduleSpecifier` + `importedSymbol`, a
+   `memberNames` wykorzystuj do dalszego zwezenia. Kazde wywolanie ma `reason`,
+   a scope pozostaje hidden. Nie pobieraj ponownie targetu `EMBEDDED` ani
+   pelnego Screen Reachability. Jezeli po
    symbol slice nadal potrzebna jest pelna tresc wskazanego template, wykonaj
    waski read tej konkretnej sciezki. Dopiero brak bezpiecznego refa uzasadnia
    inny generyczny GitLab search/read. Powtarzaj waskie wywolania, dopoki

@@ -5,6 +5,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptImportTarget;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceResponse;
@@ -16,6 +17,8 @@ import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptDownstreamReference;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptDownstreamReferenceKind;
 
 import java.util.List;
 import java.util.Map;
@@ -29,9 +32,10 @@ import static org.mockito.Mockito.when;
 class GitLabFrontendMcpToolsTest {
 
     private static final String SCREEN_REF = "crm-contact-preferences";
-    private static final String COMPONENT_REF = "component-crm-contact-preferences";
     private static final String COMPONENT_PATH =
             "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts";
+    private static final String FACADE_PATH =
+            "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.facade.ts";
 
     private final GitLabAngularRouteBranchSliceService routeService =
             mock(GitLabAngularRouteBranchSliceService.class);
@@ -64,12 +68,17 @@ class GitLabFrontendMcpToolsTest {
     }
 
     @Test
-    void shouldResolveTypeScriptTargetByOpaqueCrmSliceReference() {
+    void shouldResolveDirectTypeScriptTargetByNaturalCodeCoordinates() {
         when(symbolService.readSymbolSlice(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(symbolResponse());
 
         var result = tools.readTypeScriptSymbolSlice(
-                COMPONENT_REF,
+                COMPONENT_PATH,
+                "CrmContactPreferencesComponent",
+                null,
+                null,
+                null,
+                List.of("savePreferences"),
                 "Potwierdzenie zachowania formularza syntetycznego CRM.",
                 toolContext()
         );
@@ -81,17 +90,54 @@ class GitLabFrontendMcpToolsTest {
         assertThat(request.getValue().declaringTypeName()).isEqualTo("CrmContactPreferencesComponent");
         assertThat(request.getValue().symbolSelectors()).extracting(GitLabTypeScriptSymbolSelector::name)
                 .containsExactly("savePreferences");
-        assertThat(result.sliceRef()).isEqualTo(COMPONENT_REF);
+        assertThat(result.filePath()).isEqualTo(COMPONENT_PATH);
+        assertThat(result.downstreamReferences()).singleElement().satisfies(reference ->
+                assertThat(reference.targetSourcePath()).isEqualTo(FACADE_PATH));
     }
 
     @Test
-    void shouldRejectInventedSliceReferencesBeforeCallingGitLab() {
+    void shouldResolveAnOriginalImportAndRejectUnknownTargetsOrMembers() {
+        when(symbolService.readSymbolSlice(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(facadeResponse());
+
+        var imported = tools.readTypeScriptSymbolSlice(
+                null,
+                null,
+                COMPONENT_PATH,
+                "./crm-contact-preferences.facade",
+                "CrmContactPreferencesFacade",
+                List.of("savePreferences"),
+                "Potwierdzenie przejscia po oryginalnym imporcie CRM.",
+                toolContext()
+        );
+
+        assertThat(imported.filePath()).isEqualTo(FACADE_PATH);
+        assertThat(imported.content()).contains(
+                "import { CrmContactService } from './crm-contact.service';");
+        assertThat(imported.includedImports()).containsExactly(
+                "import { CrmContactService } from './crm-contact.service';");
         assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(
-                "component-outside-crm-scope",
+                "apps/crm-agent/src/app/admin/admin.service.ts",
+                "CrmAdminService",
+                null,
+                null,
+                null,
+                List.of("deleteAll"),
                 "Proba wyjscia poza syntetyczny CRM.",
                 toolContext()
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("allowed TypeScript target");
+        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(
+                COMPONENT_PATH,
+                "CrmContactPreferencesComponent",
+                null,
+                null,
+                null,
+                List.of("unknownMethod"),
+                "Proba odczytu nieprzygotowanej metody CRM.",
+                toolContext()
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("memberNames");
         assertThatThrownBy(() -> tools.readRouteBranchSlice(
                 "other-screen",
                 "Proba wyjscia poza wybrany ekran CRM.",
@@ -101,14 +147,27 @@ class GitLabFrontendMcpToolsTest {
     }
 
     private ToolContext toolContext() {
-        var target = new GitLabFrontendTypeScriptSliceTarget(
-                COMPONENT_REF,
+        var componentTarget = new GitLabFrontendTypeScriptSliceTarget(
                 COMPONENT_PATH,
                 "CrmContactPreferencesComponent",
                 "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.html",
                 List.of(new GitLabTypeScriptSymbolSelector(
                         "savePreferences", GitLabTypeScriptSymbolKind.METHOD, 42
                 ))
+        );
+        var facadeTarget = new GitLabFrontendTypeScriptSliceTarget(
+                FACADE_PATH,
+                "CrmContactPreferencesFacade",
+                null,
+                List.of(new GitLabTypeScriptSymbolSelector(
+                        "savePreferences", GitLabTypeScriptSymbolKind.METHOD, 18
+                ))
+        );
+        var importTarget = new GitLabFrontendTypeScriptImportTarget(
+                COMPONENT_PATH,
+                "./crm-contact-preferences.facade",
+                "CrmContactPreferencesFacade",
+                facadeTarget
         );
         return new ToolContext(Map.of(
                 AgentToolContextKeys.GITLAB_GROUP, "synthetic-crm",
@@ -117,7 +176,11 @@ class GitLabFrontendMcpToolsTest {
                 GitLabFrontendToolContextKeys.PATH_PREFIXES, List.of("apps/crm-agent"),
                 GitLabFrontendToolContextKeys.SOURCE_REVISION, "crm-commit-abc123",
                 GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, SCREEN_REF,
-                GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, Map.of(COMPONENT_REF, target)
+                GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, Map.of(
+                        componentTarget.targetKey(), componentTarget,
+                        facadeTarget.targetKey(), facadeTarget),
+                GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS, Map.of(
+                        importTarget.importKey(), importTarget)
         ));
     }
 
@@ -133,7 +196,24 @@ class GitLabFrontendMcpToolsTest {
                 scope(), COMPONENT_PATH, "RESOLVED", "CrmContactPreferencesComponent",
                 1, 70, 90, 1400, null, 0, List.of(),
                 "export class CrmContactPreferencesComponent {}", 520, 880, false,
-                List.of(), List.of(), List.of(), List.of(), 2, 1, 4, List.of(), List.of(), List.of()
+                List.of(), List.of(), List.of(), List.of(), 2, 1, 4,
+                List.of(new GitLabTypeScriptDownstreamReference(
+                        GitLabTypeScriptDownstreamReferenceKind.METHOD_CALL,
+                        "savePreferences", "facade", "savePreferences", "CrmContactPreferencesFacade",
+                        "./crm-contact-preferences.facade", null)),
+                List.of(), List.of()
+        );
+    }
+
+    private GitLabTypeScriptSymbolSliceResponse facadeResponse() {
+        return new GitLabTypeScriptSymbolSliceResponse(
+                scope(), FACADE_PATH, "RESOLVED", "CrmContactPreferencesFacade",
+                1, 55, 70, 1200, null, 0, List.of(),
+                "import { CrmContactService } from './crm-contact.service';\n"
+                        + "export class CrmContactPreferencesFacade { savePreferences() {} }",
+                480, 720, false,
+                List.of("import { CrmContactService } from './crm-contact.service';"),
+                List.of(), List.of(), List.of(), 1, 0, 2, List.of(), List.of(), List.of()
         );
     }
 

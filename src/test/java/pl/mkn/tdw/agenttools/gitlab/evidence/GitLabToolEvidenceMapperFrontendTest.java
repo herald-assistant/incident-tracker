@@ -44,10 +44,12 @@ class GitLabToolEvidenceMapperFrontendTest {
         mapper.capture(
                 "crm-call-symbol",
                 READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
-                "{\"sliceRef\":\"component-crm-contact-preferences\",\"reason\":\"Potwierdzenie formularza CRM.\"}",
+                "{\"filePath\":\"apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts\","
+                        + "\"declaringTypeName\":\"CrmContactPreferencesComponent\","
+                        + "\"memberNames\":[\"savePreferences\"],"
+                        + "\"reason\":\"Potwierdzenie formularza CRM.\"}",
                 """
                         {
-                          "sliceRef": "component-crm-contact-preferences",
                           "filePath": "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts",
                           "status": "RESOLVED",
                           "lineStart": 12,

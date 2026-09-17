@@ -124,8 +124,8 @@ class UiExplorerInitialPromptMatrixTest {
         assertThat(prompts.get("deep-routed-container"))
                 .containsSubsequence("### Depth 0", "### Depth 1", "### Depth 2")
                 .contains("/crm/customers/:customerId/workspace/activities")
-                .contains("sliceRef=`component-crm-activity-detail`; initial=ON_DEMAND")
-                .contains("sliceRef=`dependency-crm-activity-api`; initial=ON_DEMAND")
+                .contains("initial=ON_DEMAND; symbol=`CrmActivityDetailComponent`")
+                .contains("initial=ON_DEMAND; symbol=`CrmActivityApi`")
                 .doesNotContain("readonly selectedActivityId = input.required<string>();")
                 .doesNotContain("loadActivity(id: string)");
         assertThat(prompts.get("dynamic-form"))
@@ -197,11 +197,14 @@ class UiExplorerInitialPromptMatrixTest {
 
         var prompt = service.prepare(scenario.request(), scenario.context()).prompt();
 
-        components.forEach(component -> assertThat(prompt).contains("sliceRef=`" + component.componentId() + "`"));
+        components.forEach(component -> assertThat(prompt)
+                .contains("symbol=`" + component.symbol() + "`")
+                .contains("source=`" + component.sourcePath() + "`"));
         assertThat(prompt)
                 .contains("CRM_LAYER_SOURCE_0", "CRM_LAYER_SOURCE_1")
-                .contains("sliceRef=`component-crm-layer-2`; initial=ON_DEMAND")
-                .contains("sliceRef=`dependency-crm-layer-view-model`; initial=ON_DEMAND")
+                .contains("initial=ON_DEMAND; symbol=`CrmLayer2Component`")
+                .contains("initial=ON_DEMAND; symbol=`CrmLayerViewModel`")
+                .doesNotContain("sliceRef=`component-", "sliceRef=`dependency-")
                 .doesNotContain("CRM_LAYER_SOURCE_2", "CRM_LAYER_SOURCE_11", "CRM_DEFERRED_MODEL_SOURCE");
         var allSourceCharacters = components.stream()
                 .mapToInt(GitLabFrontendReachabilityComponent::returnedCharacters)

@@ -14,6 +14,9 @@ import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparat
 
 class UiExplorerCopilotPoliciesTest {
 
+    private static final String API_PATH =
+            "libs/crm/data-access/src/lib/crm-contact-preferences.api.ts";
+
     private final UiExplorerCopilotScopePolicy scopePolicy =
             new UiExplorerCopilotScopePolicy(new ObjectMapper());
 
@@ -52,7 +55,7 @@ class UiExplorerCopilotPoliciesTest {
     }
 
     @Test
-    void shouldAllowOnlyPreparedFrontendSliceReferences() {
+    void shouldAllowOnlyPreparedRouteReferenceAndNaturalTypeScriptTargets() {
         var context = new UiExplorerCopilotToolSessionContextFactory().create(
                 "crm-slice-run",
                 pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request(),
@@ -62,31 +65,33 @@ class UiExplorerCopilotPoliciesTest {
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
-                slice("crm-contact-preferences", "Potwierdzenie route chain CRM.")
+                routeSlice("crm-contact-preferences", "Potwierdzenie route chain CRM.")
         ))).doesNotThrowAnyException();
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
-                slice("component-crm-contact-preferences", "Potwierdzenie formularza CRM.")
+                directSlice(EMBEDDED_COMPONENT_PATH, "CrmContactPreferencesComponent", null,
+                        "Potwierdzenie formularza CRM.")
         ))).doesNotThrowAnyException();
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
-                slice("dependency-crm-preferences-api", "Potwierdzenie operacji CRM.")
+                importSlice(EMBEDDED_COMPONENT_PATH, "@crm/data-access", "PreferencesApi",
+                        "loadDefinition", "Potwierdzenie operacji CRM.")
         ))).doesNotThrowAnyException();
 
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
-                slice("other-screen", "Proba wyjscia poza ekran CRM.")
+                routeSlice("other-screen", "Proba wyjscia poza ekran CRM.")
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("selected screen reference");
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
-                slice("component-invented", "Proba wyjscia poza graf CRM.")
+                directSlice(API_PATH, "InventedApi", null, "Proba wyjscia poza graf CRM.")
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("allowed TypeScript target");
+                .hasMessageContaining("outside the UI Explorer TypeScript allowlist");
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
@@ -176,12 +181,42 @@ class UiExplorerCopilotPoliciesTest {
                 """.formatted(branch, path, reason);
     }
 
-    private String slice(String sliceRef, String reason) {
+    private String routeSlice(String sliceRef, String reason) {
         return """
                 {
                   "sliceRef": "%s",
                   "reason": "%s"
                 }
                 """.formatted(sliceRef, reason);
+    }
+
+    private String directSlice(String filePath, String declaringTypeName, String memberName, String reason) {
+        var members = memberName != null ? "[\"" + memberName + "\"]" : "[]";
+        return """
+                {
+                  "filePath": "%s",
+                  "declaringTypeName": "%s",
+                  "memberNames": %s,
+                  "reason": "%s"
+                }
+                """.formatted(filePath, declaringTypeName, members, reason);
+    }
+
+    private String importSlice(
+            String consumerFilePath,
+            String moduleSpecifier,
+            String importedSymbol,
+            String memberName,
+            String reason
+    ) {
+        return """
+                {
+                  "consumerFilePath": "%s",
+                  "moduleSpecifier": "%s",
+                  "importedSymbol": "%s",
+                  "memberNames": ["%s"],
+                  "reason": "%s"
+                }
+                """.formatted(consumerFilePath, moduleSpecifier, importedSymbol, memberName, reason);
     }
 }

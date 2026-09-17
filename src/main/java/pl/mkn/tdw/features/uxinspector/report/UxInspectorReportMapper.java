@@ -13,8 +13,10 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -46,9 +48,7 @@ public class UxInspectorReportMapper {
         var validation = new ReferenceValidationState();
         var sectionMeta = validateMeta(sourceSection.meta(), allowedSourcePaths, validation);
         var reportMeta = validateMeta(report.meta(), allowedSourcePaths, validation);
-        var references = new LinkedHashSet<AnalysisReportReference>();
-        references.addAll(sectionMeta.references());
-        references.addAll(reportMeta.references());
+        var references = references(sectionMeta.references(), reportMeta.references());
         var gaps = new LinkedHashSet<String>();
         gaps.addAll(sectionMeta.gaps());
         gaps.addAll(reportMeta.gaps());
@@ -64,10 +64,23 @@ public class UxInspectorReportMapper {
         openQuestions.addAll(sectionMeta.openQuestions());
         openQuestions.addAll(reportMeta.openQuestions());
         var confidence = confidence(reportMeta.confidence(), sectionMeta.confidence(), validation.verifiedCount > 0);
+        var warnings = new LinkedHashSet<String>();
+        warnings.addAll(sectionMeta.warnings());
+        warnings.addAll(reportMeta.warnings());
+        var canonicalSectionMeta = new AnalysisReportMeta(
+                references, List.of(), List.of(), List.of(), null, List.of());
+        var canonicalReportMeta = new AnalysisReportMeta(
+                List.of(),
+                distinct(sectionMeta.visibilityLimits(), reportMeta.visibilityLimits()),
+                List.copyOf(openQuestions),
+                List.copyOf(gaps),
+                confidence,
+                List.copyOf(warnings)
+        );
         var safeSection = new AnalysisReportSection(UxInspectorReportFactory.SECTION_ID, "Odpowiedz", 1,
-                sourceSection.markdown().trim(), sectionMeta);
+                sourceSection.markdown().trim(), canonicalSectionMeta);
         var safeReport = new AnalysisReport(report.reportId(), report.header().trim(), context.view().label(),
-                report.markdownSummary().trim(), List.of(safeSection), reportMeta);
+                report.markdownSummary().trim(), List.of(safeSection), canonicalReportMeta);
         var targetLabel = firstText(capture.target().accessibleName(), capture.target().text(), capture.target().tag());
         var result = new UxInspectorResultResponse(capture.captureId(), targetLabel, context.view(),
                 context.sourceRevision(), context.status(), safeReport.markdownSummary(), safeSection.markdown(),
@@ -75,6 +88,27 @@ public class UxInspectorReportMapper {
         var complete = limits.isEmpty() && validation.unverifiedCount == 0
                 && context.status() == pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus.RESOLVED;
         return new UxInspectorReportMapping(result, safeReport, complete, List.copyOf(limits));
+    }
+
+    private List<AnalysisReportReference> references(
+            List<AnalysisReportReference> sectionReferences,
+            List<AnalysisReportReference> reportReferences
+    ) {
+        Map<String, AnalysisReportReference> byTarget = new LinkedHashMap<>();
+        for (var reference : sectionReferences) {
+            if (reference != null) byTarget.putIfAbsent(reference.target(), reference);
+        }
+        for (var reference : reportReferences) {
+            if (reference != null) byTarget.putIfAbsent(reference.target(), reference);
+        }
+        return List.copyOf(byTarget.values());
+    }
+
+    private List<String> distinct(List<String> sectionValues, List<String> reportValues) {
+        var values = new LinkedHashSet<String>();
+        values.addAll(sectionValues);
+        values.addAll(reportValues);
+        return List.copyOf(values);
     }
 
     private AnalysisReportMeta validateMeta(AnalysisReportMeta source, Set<String> allowedSourcePaths,

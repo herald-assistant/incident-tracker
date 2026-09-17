@@ -24,8 +24,14 @@ public class UxInspectorToolDescriptionCustomizer implements CopilotToolDescript
     public String customize(CopilotToolDescriptionContext context, String toolName, String description) {
         if (context == null || !context.matchesProfile("ux-inspector")) return description;
         if (FRONTEND_TOOLS.contains(toolName)) {
-            return description + "\nUX Inspector: use only for a concrete unresolved link required by the single operator question. "
-                    + "Pass only an in-scope sliceRef and reason; repository and pinned revision come from hidden context.";
+            if (GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE.equals(toolName)) {
+                return description + "\nUX Inspector: use only for a concrete unresolved code link required by the single "
+                        + "operator question. Copy direct file/type or consumer import coordinates from visible original code; "
+                        + "optionally narrow memberNames. Repository and pinned revision come from hidden context.";
+            }
+            return description + "\nUX Inspector: use only for a concrete unresolved route link required by the single "
+                    + "operator question. Pass the selected route sliceRef and reason; repository and pinned revision come "
+                    + "from hidden context.";
         }
         if (REPOSITORY_NAVIGATION_TOOLS.contains(toolName)) {
             return description + "\nUX Inspector: navigate only the repository selected by the operator. "

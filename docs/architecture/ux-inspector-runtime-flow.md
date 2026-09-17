@@ -25,7 +25,9 @@ wartosci najblizszego formularza i jego natywny stan walidacji.
 - `GET /api/ux-inspector/jobs/{jobId}/export` zwraca tylko
   `tdw.ux-inspector-export` w wersji 1 dla ukonczonego wyniku.
 - `POST /api/ux-inspector/imports` przyjmuje tylko export v1 z capture v1 i
-  zapisuje nowy read-only wpis historii.
+  zapisuje nowy read-only wpis historii. Import nie naklada arbitralnego limitu
+  rozmiaru na caly poprawny envelope; nadal wymaga scislego kontraktu,
+  kanonicznego capture oraz spojnego, zakonczonego wyniku.
 - `/ux-inspector` jest jedynym receiverem capture i workspace'em feature'a.
 
 Launcher, protocol, capture i export maja wersje 1. Nie ma aliasow, migratorow,
@@ -166,7 +168,12 @@ sciezki i ograniczenia, relacje ktorych oba konce naleza do focused zbioru oraz
 pelna tresc unikalnych plikow TS i zewnetrznych HTML. Pozostale komponenty i
 relacje screen reachability graphu nie sa serializowane; artifact zachowuje
 liczbe komponentow calego grafu i liczbe pominietych. `COMPONENT_REFERENCE`
-nie jest relacja ancestry. Inline template pozostaje czescia pelnego TS. Brak
+nie jest relacja ancestry. Artifact przekazuje rowniez kompaktowy
+`effectiveRouteChain` wybranego widoku z konfiguracja i pinned source
+references oraz maksymalnie jeden przygotowany `INHERITED_TYPE` slice
+bezposredniej klasy bazowej komponentu widoku. Nie przekazuje route subtree,
+pelnego pliku klasy bazowej ani dalszych poziomow dziedziczenia. Inline
+template pozostaje czescia pelnego TS. Brak
 pliku lub sciezki, nierozwiazany diagnostic
 albo runtime component boundary bez odpowiednika w grafie jest zapisany w
 artefakcie i nie blokuje preparation. Model czyta pack przed dodatkowymi
@@ -227,7 +234,11 @@ Referencje zewnetrzne sa raportowane jako nierozwiazane i nie uruchamiaja
 pobierania sieciowego ani przejscia do innego repozytorium.
 
 Report tools sa jedynym kanalem wyniku. AI przygotowuje w jednej rundzie
-naglowek, jedna sekcje `answer` i metadata, a nastepnie sprawdza stan raportu.
+naglowek, jedna sekcje `answer` i metadata, a nastepnie raz sprawdza stan
+raportu. Kontrola merytoryczna poprzedza zapis; po `report_get_current` raport
+jest ponownie mutowany tylko po bledzie toola albo strukturalnie niepoprawnym
+wyniku. Section meta posiada references, a global meta ograniczenia, gaps,
+warnings, open questions i confidence, bez dublowania tych samych danych.
 Finalny tekst Copilota nie jest parserem ani fallbackiem.
 
 ## Wynik, historia i prezentacja
@@ -290,7 +301,8 @@ Minimalna macierz obejmuje:
 - target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
 - component source pack: tylko komponenty i relacje wybranych sciezek target ->
   komponent widoku, jawne liczniki pominietego grafu, deduplikacja pelnych
-  plikow tych sciezek oraz nieblokujace braki,
+  plikow tych sciezek, kompaktowy effective route chain, jednopoziomowy direct
+  base slice oraz nieblokujace braki,
 - origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
 - pinned Copilot instructions, trzy standardowe korzenie project skills,

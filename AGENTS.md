@@ -112,6 +112,10 @@ Przed wieksza zmiana zacznij od:
 - UX Inspector initial context zawiera nieblokujacy component source pack:
   komponenty wybranej sciezki target -> komponent widoku, relacje tylko
   pomiedzy nimi oraz ich pelne zweryfikowane pliki TS i zewnetrzne HTML.
+  Pack przekazuje tez kompaktowy effective route chain wybranego widoku i
+  maksymalnie jeden przygotowany slice bezposredniej klasy bazowej komponentu
+  widoku; nie dolacza pelnego route subtree, pelnego pliku klasy bazowej ani
+  dalszych poziomow dziedziczenia.
   Komponenty i relacje spoza wybranych sciezek nie sa serializowane do initial
   promptu; pozostaja dostepne przez celowany research neutralnymi repository
   tools, a artifact zachowuje tylko jawny licznik rozmiaru pominietego grafu.

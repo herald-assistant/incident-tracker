@@ -60,7 +60,7 @@ class UxInspectorPromptAndSkillsTest {
         when(componentSourcePackArtifactService.prepare(any(), any())).thenReturn(
                 new UxInspectorComponentSourcePackArtifact("""
                         schema: tdw.ux-inspector-component-source-pack
-                        version: 2
+                        version: 3
                         semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY
                         scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY
                         graphComponentCount: 1
@@ -70,6 +70,11 @@ class UxInspectorPromptAndSkillsTest {
                         unavailableFileCount: 0
                         complete: true
 
+                        ## Effective route context
+                        semantics: DETERMINISTIC_PINNED_ROUTE_CHAIN_FOR_SELECTED_VIEW
+                        routeSegmentCount: 1
+                        - order=1 route=/contacts/new source=src/app/app.routes.ts#L10-L18
+
                         ## Focused path components
                         | # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode | sourceFile | templateFile | truncated | limitations |
                         |---:|---|---:|---:|---|---|---|---|---|---|---|---|---|
@@ -78,6 +83,15 @@ class UxInspectorPromptAndSkillsTest {
                         ## Focused component relations
                         relationCount: 0
                         - none reported by static discovery
+
+                        ## Direct view inheritance slice
+                        maxDepth: 1
+                        ownerComponentId: contact-create
+                        baseSymbol: CrmFormBaseComponent
+                        sourcePath: src/app/shared/crm-form-base.component.ts
+                        sourceMode: AVAILABLE_SLICE
+                        content:
+                        export abstract class CrmFormBaseComponent { protected save() {} }
                         """, 1, 1, 0, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
     }
 
@@ -91,13 +105,18 @@ class UxInspectorPromptAndSkillsTest {
                 .contains("Dla pytania precyzyjnego", "Dla pytania ogolnego")
                 .contains("gitlab_list_repository_tree", "gitlab_list_repository_files",
                         "gitlab_search_repository_files", "gitlab_read_repository_file",
-                        "gitlab_read_repository_file_chunk")
+                        "gitlab_read_repository_file_chunk",
+                        "gitlab_read_frontend_typescript_symbol_slice")
+                .contains("nie uzywa syntetycznych refow", "`filePath` + `declaringTypeName`",
+                        "`consumerFilePath`, `moduleSpecifier` i `importedSymbol`", "`memberNames`")
                 .contains("sourceToolScope", "projectName: crm-ui", "branchRef: main",
                         "pinnedCommit: " + REVISION)
                 .contains("DETERMINISTIC_SOURCE_BINDING", "sourceReference", "Selector jest tylko sygnalem lokalizacji")
                 .contains("tdw.ux-inspector-component-source-pack", "STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY",
                         "SELECTED_TARGET_TO_VIEW_PATHS_ONLY", "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH",
                         "najkrotsza deterministyczna sciezka", "nie przedstawiaj statycznej relacji")
+                .contains("Effective route context", "kompletnym deterministycznym route chain")
+                .contains("Direct view inheritance slice", "sourceMode=AVAILABLE_SLICE", "maksymalnie jeden poziom")
                 .contains("Szerszy statyczny graph", "nie jest serializowany do initial context")
                 .doesNotContain("INDEX_ONLY")
                 .contains("formSnapshot", "zamrozona obserwacja runtime")
@@ -108,6 +127,8 @@ class UxInspectorPromptAndSkillsTest {
                         "guards", "interceptory", "initializery", "feature flags")
                 .contains("report_update_header", "report_upsert_section", "report_update_meta", "report_get_current")
                 .contains("W jednym turnie wywolaj rownolegle")
+                .contains("dokladnie raz `report_get_current`", "nie duplikuj w nim references")
+                .contains("Nie poprawiaj tresci ani metadata po tej kontroli")
                 .contains("jedynej sekcji `answer`")
                 .contains("source-unverified", "nie przedstawiaj jej jako bezposrednio potwierdzonego dowodu")
                 .doesNotContain("pathPrefixes")

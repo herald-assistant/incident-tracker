@@ -75,21 +75,21 @@ final class UiExplorerSourceSliceRenderer {
     private void add(Map<String, SourceGroup> groups, SliceTarget target) {
         var key = hasText(target.sourcePath())
                 ? normalizePath(target.sourcePath())
-                : "@unresolved/" + target.sliceRef();
+                : "@unresolved/" + target.kind() + "/" + target.symbol();
         groups.computeIfAbsent(key, ignored -> new SourceGroup(target.sourcePath()))
                 .add(target, sourceParts(target.content()));
     }
 
     private SliceTarget componentTarget(GitLabFrontendReachabilityComponent component) {
         return new SliceTarget(
-                "component", component.componentId(), component.symbol(), component.sourcePath(),
+                "component", component.symbol(), component.sourcePath(),
                 component.sliceContent()
         );
     }
 
     private SliceTarget dependencyTarget(GitLabFrontendReachabilityDependency dependency) {
         return new SliceTarget(
-                "dependency", dependency.dependencyId(), dependency.symbol(), dependency.sourcePath(),
+                "dependency", dependency.symbol(), dependency.sourcePath(),
                 dependency.sliceContent()
         );
     }
@@ -97,7 +97,6 @@ final class UiExplorerSourceSliceRenderer {
     private SliceTarget templateTarget(GitLabFrontendReachabilityComponent component) {
         return new SliceTarget(
                 "template",
-                component.componentId(),
                 component.symbol(),
                 hasText(component.templatePath()) ? component.templatePath() : component.sourcePath(),
                 component.templateContent()
@@ -129,8 +128,7 @@ final class UiExplorerSourceSliceRenderer {
         lines.add("## " + fileOrder + ". `" + safe(hasText(group.sourcePath) ? group.sourcePath : "unresolved source") + "`");
         lines.add("- targets:");
         for (var target : group.targets) {
-            lines.add("  - `" + safe(target.sliceRef()) + "` | " + target.kind() + " `"
-                    + safe(target.symbol()) + "`");
+            lines.add("  - " + target.kind() + " `" + safe(target.symbol()) + "`");
         }
 
         if (!group.imports.isEmpty()) {
@@ -144,16 +142,16 @@ final class UiExplorerSourceSliceRenderer {
             variantOrder++;
             lines.add("");
             lines.add("### Source variant " + variantOrder);
-            lines.add("- applies to: " + variant.sliceRefs.stream()
+            lines.add("- applies to: " + variant.targetLabels.stream()
                     .map(value -> "`" + safe(value) + "`")
                     .collect(Collectors.joining(", ")));
             lines.add("");
             lines.add(fencedSource(variant.body, sourceLanguage(group.sourcePath)));
         }
 
-        if (!group.emptySliceRefs.isEmpty()) {
+        if (!group.emptyTargetLabels.isEmpty()) {
             lines.add("");
-            lines.add("- no source slice returned for: " + group.emptySliceRefs.stream()
+            lines.add("- no source slice returned for: " + group.emptyTargetLabels.stream()
                     .map(value -> "`" + safe(value) + "`")
                     .collect(Collectors.joining(", ")));
         }
@@ -211,7 +209,6 @@ final class UiExplorerSourceSliceRenderer {
 
     private record SliceTarget(
             String kind,
-            String sliceRef,
             String symbol,
             String sourcePath,
             String content
@@ -229,7 +226,7 @@ final class UiExplorerSourceSliceRenderer {
         private final List<SliceTarget> targets = new ArrayList<>();
         private final LinkedHashSet<String> imports = new LinkedHashSet<>();
         private final LinkedHashMap<String, SourceVariant> variants = new LinkedHashMap<>();
-        private final LinkedHashSet<String> emptySliceRefs = new LinkedHashSet<>();
+        private final LinkedHashSet<String> emptyTargetLabels = new LinkedHashSet<>();
 
         private SourceGroup(String sourcePath) {
             this.sourcePath = sourcePath;
@@ -238,17 +235,18 @@ final class UiExplorerSourceSliceRenderer {
         private void add(SliceTarget target, SourceParts parts) {
             targets.add(target);
             imports.addAll(parts.imports());
+            var targetLabel = target.kind() + ":" + target.symbol();
             if (!parts.body().isBlank()) {
-                variants.computeIfAbsent(parts.body(), SourceVariant::new).sliceRefs.add(target.sliceRef());
+                variants.computeIfAbsent(parts.body(), SourceVariant::new).targetLabels.add(targetLabel);
             } else if (parts.imports().isEmpty()) {
-                emptySliceRefs.add(target.sliceRef());
+                emptyTargetLabels.add(targetLabel);
             }
         }
     }
 
     private static final class SourceVariant {
         private final String body;
-        private final LinkedHashSet<String> sliceRefs = new LinkedHashSet<>();
+        private final LinkedHashSet<String> targetLabels = new LinkedHashSet<>();
 
         private SourceVariant(String body) {
             this.body = body;

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
@@ -51,7 +53,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 """);
         var componentPackService = mock(UxInspectorComponentSourcePackArtifactService.class);
         when(componentPackService.prepare(any(), any())).thenReturn(new UxInspectorComponentSourcePackArtifact(
-                "version: 2\ngraphComponentCount: 1\nfocusedComponentCount: 1\ncomplete: true", 1, 1, 0, 2, 2, 0,
+                "version: 3\ngraphComponentCount: 1\nfocusedComponentCount: 1\ncomplete: true", 1, 1, 0, 2, 2, 0,
                 java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
         var preparation = new UxInspectorPromptPreparationService(
                 new ObjectMapper().findAndRegisterModules(), treeArtifactService, guidanceArtifactService,
@@ -75,7 +77,8 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 .contains(GitLabToolNames.LIST_REPOSITORY_TREE, GitLabToolNames.LIST_REPOSITORY_FILES,
                         GitLabToolNames.SEARCH_REPOSITORY_FILES, GitLabToolNames.READ_REPOSITORY_FILE,
                         GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
-                        GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE)
+                        GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
+                        GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE)
                 .containsAll(CopilotReportToolNames.allToolNames())
                 .doesNotContain("skill", GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                         GitLabToolNames.LIST_REPOSITORY_BRANCHES);
@@ -85,6 +88,15 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         assertThat(assembly.repositoryToolScope().selectedBranch()).isEqualTo("main");
         assertThat(assembly.repositoryToolScope().selectedCommit()).isEqualTo(REVISION);
         assertThat(assembly.runRequest().prompt()).contains("sourceToolScope", "W jednym turnie wywolaj rownolegle");
+        var directTargets = (Map<?, ?>) assembly.toolSessionContext().hiddenContext()
+                .get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
+        org.junit.jupiter.api.Assertions.assertTrue(directTargets.containsKey(
+                GitLabFrontendTypeScriptSliceTarget.key(
+                        targetContext.sourceBinding().sourcePath(),
+                        targetContext.sourceBinding().componentSymbol())));
+        var importTargets = (Map<?, ?>) assembly.toolSessionContext().hiddenContext()
+                .get(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS);
+        assertThat(importTargets).isEmpty();
     }
 
     private List<ToolDefinition> registeredTools() {

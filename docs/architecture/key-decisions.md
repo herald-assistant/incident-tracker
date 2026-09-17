@@ -79,9 +79,11 @@ Decyzje:
   `Screen Source Context`, jego pelny traversal plikow i endpoint
   `/screen-context` nie istnieja. Jest to shared/operator preview neutralnej
   integracji, bez AI, historii i joba UI Explorer. Waskie route/symbol slices
-  sa osobno wystawione jako neutralne MCP tools z model-facing
-  `sliceRef`/`reason` i repository scope w hidden session context. Pelny
-  Screen Reachability nie jest MCP toolem, poniewaz zasila initial artifacts.
+  sa osobno wystawione jako neutralne MCP tools. Route slice uzywa screen
+  `sliceRef`; TypeScript slice uzywa naturalnej sciezki/typu albo dokladnego
+  importu z kodu i opcjonalnej listy metod. Repository scope i allowlista
+  targetow pozostaja w hidden session context. Pelny Screen Reachability nie
+  jest MCP toolem, poniewaz zasila initial artifacts.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
 - `Platform` dotyczy overview, customizacji i podgladu zasobow Team Delivery

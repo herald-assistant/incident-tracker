@@ -11,6 +11,8 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptImportTarget;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
@@ -38,6 +40,7 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
     );
     private static final int MAX_READ_CHARACTERS = 20_000;
     private static final int MAX_CHUNK_LINES = 600;
+    private static final int MAX_TYPESCRIPT_MEMBERS = 50;
 
     private final ObjectMapper objectMapper;
 
@@ -74,6 +77,10 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             CopilotToolInvocationPolicyRequest request,
             JsonNode arguments
     ) {
+        if (GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE.equals(request.toolName())) {
+            validateTypeScriptSlice(request, arguments);
+            return;
+        }
         var unexpected = new java.util.ArrayList<String>();
         arguments.fieldNames().forEachRemaining(field -> {
             if (!"sliceRef".equals(field) && !"reason".equals(field)) {
@@ -87,18 +94,76 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         if (!StringUtils.hasText(sliceRef)) {
             reject(request, "A safe sliceRef is required.", true);
         }
-        if (GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE.equals(request.toolName())) {
-            var targets = request.sessionContext().hiddenContext()
-                    .get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
-            if (!(targets instanceof Map<?, ?> values) || !values.containsKey(sliceRef)) {
-                reject(request, "sliceRef is not an allowed TypeScript target for this UI Explorer session.", true);
-            }
-            return;
-        }
         var selectedScreenRef = stringValue(request.sessionContext().hiddenContext()
                 .get(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF));
         if (!sliceRef.equals(selectedScreenRef)) {
             reject(request, "sliceRef is not the selected screen reference for this UI Explorer session.", true);
+        }
+    }
+
+    private void validateTypeScriptSlice(
+            CopilotToolInvocationPolicyRequest request,
+            JsonNode arguments
+    ) {
+        var allowed = Set.of(
+                "filePath", "declaringTypeName", "consumerFilePath", "moduleSpecifier",
+                "importedSymbol", "memberNames", "reason");
+        var unexpected = new java.util.ArrayList<String>();
+        arguments.fieldNames().forEachRemaining(field -> {
+            if (!allowed.contains(field)) unexpected.add(field);
+        });
+        if (!unexpected.isEmpty()) {
+            reject(request, "TypeScript slice accepts only natural file/import coordinates, memberNames and reason.", true);
+        }
+        var filePath = text(arguments, "filePath");
+        var declaringTypeName = text(arguments, "declaringTypeName");
+        var consumerFilePath = text(arguments, "consumerFilePath");
+        var moduleSpecifier = text(arguments, "moduleSpecifier");
+        var importedSymbol = text(arguments, "importedSymbol");
+        var directMode = StringUtils.hasText(filePath) || StringUtils.hasText(declaringTypeName);
+        var importMode = StringUtils.hasText(consumerFilePath)
+                || StringUtils.hasText(moduleSpecifier) || StringUtils.hasText(importedSymbol);
+        if (directMode == importMode) {
+            reject(request, "Use exactly one TypeScript target mode: direct file/type or visible import.", true);
+        }
+
+        GitLabFrontendTypeScriptSliceTarget target = null;
+        if (directMode) {
+            if (!StringUtils.hasText(filePath) || !StringUtils.hasText(declaringTypeName)) {
+                reject(request, "Direct TypeScript mode requires filePath and declaringTypeName.", true);
+            }
+            var targets = request.sessionContext().hiddenContext()
+                    .get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
+            if (targets instanceof Map<?, ?> values) {
+                var value = values.get(GitLabFrontendTypeScriptSliceTarget.key(filePath, declaringTypeName));
+                if (value instanceof GitLabFrontendTypeScriptSliceTarget typedTarget) target = typedTarget;
+            }
+        } else {
+            if (!StringUtils.hasText(consumerFilePath)
+                    || !StringUtils.hasText(moduleSpecifier) || !StringUtils.hasText(importedSymbol)) {
+                reject(request,
+                        "Import TypeScript mode requires consumerFilePath, moduleSpecifier and importedSymbol.", true);
+            }
+            var targets = request.sessionContext().hiddenContext()
+                    .get(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS);
+            if (targets instanceof Map<?, ?> values) {
+                var value = values.get(GitLabFrontendTypeScriptImportTarget.key(
+                        consumerFilePath, moduleSpecifier, importedSymbol));
+                if (value instanceof GitLabFrontendTypeScriptImportTarget importTarget) target = importTarget.target();
+            }
+        }
+        if (target == null) {
+            reject(request, "Requested code coordinates are outside the UI Explorer TypeScript allowlist.", true);
+        }
+        var requestedMembers = textList(arguments.get("memberNames"));
+        if (requestedMembers.size() > MAX_TYPESCRIPT_MEMBERS) {
+            reject(request, "memberNames must contain at most 50 values.", true);
+        }
+        if (!requestedMembers.isEmpty()) {
+            var allowedMembers = target.symbolSelectors().stream().map(selector -> selector.name()).toList();
+            if (!allowedMembers.containsAll(requestedMembers)) {
+                reject(request, "memberNames contains a symbol outside the allowed TypeScript target.", true);
+            }
         }
     }
 

@@ -39,13 +39,18 @@ class UiExplorerArtifactServiceTest {
         var outline = content(artifacts, UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT);
         assertThat(outline).contains("Effective route chain", "CrmContactPreferencesComponent")
                 .contains("selected screen slice ref: `crm-contact-preferences`")
-                .contains("sliceRef=`component-crm-contact-preferences`; initial=EMBEDDED")
-                .contains("sliceRef=`dependency-crm-preferences-api`; initial=EMBEDDED")
+                .contains("initial=EMBEDDED; symbol=`CrmContactPreferencesComponent`")
+                .contains("source=`apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts`")
+                .contains("initial=EMBEDDED; symbol=`CrmContactPreferencesApi`")
+                .contains("source=`libs/crm/data-access/src/lib/crm-contact-preferences.api.ts`")
+                .doesNotContain("sliceRef=`component-", "sliceRef=`dependency-")
                 .doesNotContain("export class");
         var slices = content(artifacts, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT);
         assertThat(slices).contains("UNTRUSTED_SOURCE_EVIDENCE")
-                .contains("`component-crm-contact-preferences`")
-                .contains("`dependency-crm-preferences-api`")
+                .contains("component `CrmContactPreferencesComponent`")
+                .contains("dependency `CrmContactPreferencesApi`")
+                .contains("Shared imports from retained slices")
+                .contains("import { CrmContactPreferencesApi as PreferencesApi } from '@crm/data-access';")
                 .contains("crm-contact-preferences.component.ts")
                 .contains("crm-contact-preferences.component.html")
                 .contains("savePreferences()")

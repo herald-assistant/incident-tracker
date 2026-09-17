@@ -60,7 +60,6 @@ public final class GitLabFrontendToolDtos {
     }
 
     public record TypeScriptSymbolSliceToolResponse(
-            String sliceRef,
             String filePath,
             String status,
             String declaringTypeName,
@@ -87,11 +86,10 @@ public final class GitLabFrontendToolDtos {
             List<String> limitations
     ) {
         static TypeScriptSymbolSliceToolResponse from(
-                String sliceRef,
-                GitLabTypeScriptSymbolSliceResponse response
+                GitLabTypeScriptSymbolSliceResponse response,
+                List<GitLabTypeScriptDownstreamReference> downstreamReferences
         ) {
             return new TypeScriptSymbolSliceToolResponse(
-                    sliceRef,
                     response.filePath(),
                     response.status(),
                     response.declaringTypeName(),
@@ -113,7 +111,7 @@ public final class GitLabFrontendToolDtos {
                     response.omittedImportCount(),
                     response.omittedFieldCount(),
                     response.omittedSymbolCount(),
-                    response.downstreamReferences(),
+                    downstreamReferences,
                     response.candidates(),
                     response.limitations()
             );

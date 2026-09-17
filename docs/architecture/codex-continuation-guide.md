@@ -105,9 +105,10 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
   moze kopiowac progow ani metadanych modeli do swojego kodu.
 - `src/main/java/pl/mkn/tdw/agenttools`
   neutralne capability tools oraz MCP exposure nad integracjami, w tym
-  frontendowe route/symbol slice tools oparte o bezpieczne `sliceRef` i hidden
-  repository scope. Screen Reachability pozostaje initial preparation, nie
-  duzym MCP result.
+  frontendowy route slice oparty o bezpieczny screen `sliceRef` oraz TypeScript
+  symbol slice adresowany naturalnym plikiem/typem albo importem. Hidden scope
+  ogranicza repository, revision i targety. Screen Reachability pozostaje
+  initial preparation, nie duzym MCP result.
 - `src/main/java/pl/mkn/tdw/integrations`
   adaptery do zewnetrznych systemow.
 - `src/main/java/pl/mkn/tdw/integrations/gitlab/frontend`

@@ -37,6 +37,42 @@ class UxInspectorReportMapperTest {
     }
 
     @Test
+    void shouldDeduplicateTheSameSourceTargetAcrossSectionAndGlobalMetadata() {
+        var sectionReference = new AnalysisReportReference(
+                "source", "Widok formularza", TEMPLATE_PATH + "#L1", "Opis sekcyjny");
+        var globalReference = new AnalysisReportReference(
+                "source", "Formularz kontaktu", TEMPLATE_PATH + "#L1", "Inny opis globalny");
+        var sectionMeta = new AnalysisReportMeta(
+                List.of(sectionReference), List.of("Brak runtime"), List.of("Czy stan jest aktualny?"),
+                List.of("Brak API"), "high", List.of("Ostrzezenie sekcyjne"));
+        var reportMeta = new AnalysisReportMeta(
+                List.of(globalReference), List.of("Brak runtime"), List.of("Czy stan jest aktualny?"),
+                List.of("Brak API"), "high", List.of("Ostrzezenie globalne"));
+
+        var mapping = mapper.map(
+                report("Walidacja formularza blokuje zapis.", "Odpowiedz", sectionMeta, reportMeta),
+                capture(), targetContext(), initialPaths(), Set.of(), null);
+
+        assertThat(mapping.result().sourceReferences()).containsExactly(sectionReference);
+        assertThat(mapping.report().sections().get(0).meta()).satisfies(meta -> {
+            assertThat(meta.references()).containsExactly(sectionReference);
+            assertThat(meta.visibilityLimits()).isEmpty();
+            assertThat(meta.openQuestions()).isEmpty();
+            assertThat(meta.gaps()).isEmpty();
+            assertThat(meta.confidence()).isNull();
+            assertThat(meta.warnings()).isEmpty();
+        });
+        assertThat(mapping.report().meta()).satisfies(meta -> {
+            assertThat(meta.references()).isEmpty();
+            assertThat(meta.visibilityLimits()).containsExactly("Brak runtime");
+            assertThat(meta.openQuestions()).containsExactly("Czy stan jest aktualny?");
+            assertThat(meta.gaps()).containsExactly("Brak API");
+            assertThat(meta.confidence()).isEqualTo("high");
+            assertThat(meta.warnings()).containsExactly("Ostrzezenie sekcyjne", "Ostrzezenie globalne");
+        });
+    }
+
+    @Test
     void shouldRejectExtraSectionsJsonAndMissingHeader() {
         var meta = groundedMeta();
         var extra = new AnalysisReport("report-crm", "Teza", "CRM", "Teza",
@@ -67,7 +103,7 @@ class UxInspectorReportMapperTest {
             assertThat(reference.target()).isEqualTo("src/app/admin/secrets.ts#L1");
             assertThat(reference.description()).contains("Niezweryfikowana referencja");
         });
-        assertThat(inferred.report().sections().get(0).meta().warnings())
+        assertThat(inferred.report().meta().warnings())
                 .containsExactly("Nie zweryfikowano odczytu pliku wskazanego przez model: src/app/admin/secrets.ts");
         assertThat(mapper.map(report("Teza", "Odpowiedz", empty, empty), capture(), targetContext(),
                 initialPaths(), Set.of(), null).result())
@@ -149,7 +185,7 @@ class UxInspectorReportMapperTest {
             assertThat(reference.type()).isEqualTo("source-unverified");
             assertThat(reference.target()).isEqualTo("../../outside.txt#L9-L2");
         });
-        assertThat(mapping.report().sections().get(0).meta().warnings()).singleElement()
+        assertThat(mapping.report().meta().warnings()).singleElement()
                 .asString().contains("bezpiecznej sciezki albo poprawnego zakresu linii");
     }
 

@@ -7,6 +7,9 @@ import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdge;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
@@ -58,17 +61,22 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
         assertThat(artifact.availableFileCount()).isEqualTo(4);
         assertThat(artifact.unavailableFileCount()).isZero();
         assertThat(artifact.availableSourcePaths()).containsExactlyInAnyOrder(
-                root.sourcePath(), root.templatePath(), child.sourcePath(), child.templatePath());
+                root.sourcePath(), root.templatePath(), child.sourcePath(), child.templatePath(),
+                "src/app/app.routes.ts");
         assertThat(artifact.markdown())
                 .contains("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY")
-                .contains("version: 2", "scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY")
+                .contains("version: 3", "scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY")
                 .contains("graphComponentCount: 3", "focusedComponentCount: 2", "omittedGraphComponentCount: 1")
                 .contains("fullSourceStrategy: RESOLVED_SHORTEST_TARGET_TO_VIEW_PATH")
                 .contains("targetToView=contact-editor -> contact-create")
+                .contains("## Effective route context", "routeSegmentCount: 1")
+                .contains("route=/contacts/new", "source=src/app/app.routes.ts#L10-L18")
+                .contains("CAN_DEACTIVATE", "symbols=CrmDirtyCheckGuard", "status=RESOLVED")
                 .contains("| # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode")
                 .contains("| 1 | contact-create |", "| 2 | contact-editor |")
                 .contains("## Focused component relations", "relationCount: 1")
                 .contains("contact-create --TEMPLATE_CHILD--> contact-editor")
+                .contains("## Direct view inheritance slice", "none discovered for the selected view component")
                 .contains("BEGIN_UNTRUSTED_COMPONENT_FILE " + root.sourcePath())
                 .contains(contents.get(root.sourcePath()), contents.get(child.templatePath()))
                 .doesNotContain(sibling.componentId(), sibling.sourcePath(), contents.get(sibling.sourcePath()), "INDEX_ONLY")
@@ -78,6 +86,113 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .isLessThan(artifact.markdown().indexOf("| 2 | contact-editor |"));
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.sourcePath());
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.templatePath());
+    }
+
+    @Test
+    void shouldEmbedOnlyOneDirectViewBaseSliceWithoutReadingItsFullFile() {
+        var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
+        var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
+        var directBase = inheritedDependency(
+                "dependency-form-base", 1, "CrmFormBaseComponent", "src/app/shared/crm-form-base.component.ts",
+                root.componentId(), "save", "export abstract class CrmFormBaseComponent { protected save() {} }");
+        var transitiveBase = inheritedDependency(
+                "dependency-workspace-base", 2, "CrmWorkspaceBase", "src/app/shared/crm-workspace-base.ts",
+                directBase.dependencyId(), "close", "export abstract class CrmWorkspaceBase { protected close() {} }");
+        var alternativeBase = inheritedDependency(
+                "dependency-alternative-base", 3, "CrmAlternativeBase", "src/app/shared/crm-alternative-base.ts",
+                root.componentId(), "archive", "export abstract class CrmAlternativeBase { protected archive() {} }");
+        var context = contextWithGraph(
+                List.of(root, target),
+                List.of(edge(root, target, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD)),
+                List.of(directBase, transitiveBase, alternativeBase),
+                target,
+                UxInspectorTargetResolutionStatus.RESOLVED
+        );
+        var contents = new LinkedHashMap<String, String>();
+        for (var component : List.of(root, target)) {
+            contents.put(component.sourcePath(), "export class " + component.symbol() + " {}");
+            contents.put(component.templatePath(), "<p>" + component.componentId() + "</p>");
+        }
+        stubFiles(contents);
+
+        var artifact = service.prepare(context, capture());
+
+        assertThat(artifact.availableSourcePaths()).contains(
+                "src/app/app.routes.ts", directBase.sourcePath());
+        assertThat(artifact.markdown())
+                .contains("## Direct view inheritance slice", "maxDepth: 1")
+                .contains("ownerComponentId: contact-create")
+                .contains("baseSymbol: CrmFormBaseComponent")
+                .contains("sourcePath: src/app/shared/crm-form-base.component.ts")
+                .contains("sourceMode: AVAILABLE_SLICE", "members: save")
+                .contains(directBase.sliceContent())
+                .doesNotContain(transitiveBase.symbol(), alternativeBase.symbol(), transitiveBase.sliceContent(),
+                        alternativeBase.sliceContent());
+        verify(repositoryPort, never()).readFileMetadata(
+                "CRM", "crm-ui", REVISION, directBase.sourcePath());
+    }
+
+    @Test
+    void shouldUseAnInheritedComponentReferenceAsTheDirectBaseSliceFallback() {
+        var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
+        var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
+        var base = component("form-base", "unused", "Baza formularza", 3);
+        var inheritedEdge = new GitLabFrontendReachabilityEdge(
+                root.componentId(), base.componentId(), GitLabFrontendReachabilityEdgeKind.COMPONENT_REFERENCE,
+                "INHERITED_MEMBER", root.sourcePath(), root.symbol(), "save");
+        var context = contextWithGraph(
+                List.of(root, target, base),
+                List.of(edge(root, target, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD), inheritedEdge),
+                target,
+                UxInspectorTargetResolutionStatus.RESOLVED
+        );
+        var contents = new LinkedHashMap<String, String>();
+        for (var component : List.of(root, target)) {
+            contents.put(component.sourcePath(), "export class " + component.symbol() + " {}");
+            contents.put(component.templatePath(), "<p>" + component.componentId() + "</p>");
+        }
+        stubFiles(contents);
+
+        var artifact = service.prepare(context, capture());
+
+        assertThat(artifact.markdown())
+                .contains("baseSymbol: " + base.symbol(), "sourcePath: " + base.sourcePath())
+                .contains(base.sliceContent())
+                .doesNotContain("BEGIN_UNTRUSTED_COMPONENT_FILE " + base.sourcePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, base.sourcePath());
+    }
+
+    @Test
+    void shouldBoundTheDirectBaseSliceWithoutReadingTheFullFile() {
+        var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
+        var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
+        var oversizedSlice = "x".repeat(15_000);
+        var directBase = inheritedDependency(
+                "dependency-form-base", 1, "CrmFormBaseComponent", "src/app/shared/crm-form-base.component.ts",
+                root.componentId(), "save", oversizedSlice);
+        var context = contextWithGraph(
+                List.of(root, target),
+                List.of(edge(root, target, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD)),
+                List.of(directBase),
+                target,
+                UxInspectorTargetResolutionStatus.RESOLVED
+        );
+        var contents = new LinkedHashMap<String, String>();
+        for (var component : List.of(root, target)) {
+            contents.put(component.sourcePath(), "export class " + component.symbol() + " {}");
+            contents.put(component.templatePath(), "<p>" + component.componentId() + "</p>");
+        }
+        stubFiles(contents);
+
+        var artifact = service.prepare(context, capture());
+
+        assertThat(artifact.markdown())
+                .contains("returnedCharacters: 12000", "truncated: true")
+                .contains("Direct inherited slice was bounded to 12000 characters.")
+                .contains("// ... direct inherited slice bounded by UX Inspector ...")
+                .doesNotContain(oversizedSlice);
+        verify(repositoryPort, never()).readFileMetadata(
+                "CRM", "crm-ui", REVISION, directBase.sourcePath());
     }
 
     @Test
@@ -218,7 +333,8 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
         assertThat(artifact.focusedComponentCount()).isEqualTo(1);
         assertThat(artifact.omittedGraphComponentCount()).isEqualTo(1);
-        assertThat(artifact.availableSourcePaths()).containsExactlyInAnyOrder(root.sourcePath(), root.templatePath());
+        assertThat(artifact.availableSourcePaths()).containsExactlyInAnyOrder(
+                root.sourcePath(), root.templatePath(), "src/app/app.routes.ts");
         assertThat(artifact.markdown())
                 .contains("fullSourceStrategy: NOT_FOUND_VIEW_COMPONENT_ONLY")
                 .contains("targetToView=contact-create")
@@ -268,11 +384,21 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
             pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent target,
             UxInspectorTargetResolutionStatus status
     ) {
+        return contextWithGraph(components, edges, List.of(), target, status);
+    }
+
+    private UxInspectorTargetContext contextWithGraph(
+            List<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent> components,
+            List<GitLabFrontendReachabilityEdge> edges,
+            List<GitLabFrontendReachabilityDependency> dependencies,
+            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent target,
+            UxInspectorTargetResolutionStatus status
+    ) {
         var original = targetContext();
         var base = graph(components);
         var graph = new GitLabFrontendScreenReachabilityGraph(
                 base.scope(), base.sourceRevision(), base.status(), base.screenNode(), base.effectiveRouteChain(),
-                base.componentLevels(), base.dependencies(), edges, base.diagnostics(), base.sourceFileCount(),
+                base.componentLevels(), dependencies, edges, base.diagnostics(), base.sourceFileCount(),
                 base.sourceCharacters(), base.sliceCharacters(), base.outlineCharacters(), base.contextLimitReached(),
                 base.limitations(), base.readableOutline());
         var candidate = candidate(target, 100);
@@ -290,6 +416,23 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 component.componentId(), component.symbol(), component.selector(), component.sourcePath(),
                 component.templatePath(), 1, component.sliceContent(),
                 List.of(component.sourcePath(), component.templatePath()));
+    }
+
+    private GitLabFrontendReachabilityDependency inheritedDependency(
+            String id,
+            int order,
+            String symbol,
+            String sourcePath,
+            String usedBy,
+            String member,
+            String slice
+    ) {
+        return new GitLabFrontendReachabilityDependency(
+                id, order, GitLabFrontendReachabilityDependencyKind.INHERITED_TYPE,
+                GitLabFrontendReachabilityDependencyCategory.SUPPORTING_CODE,
+                symbol, sourcePath, "./" + symbol, "OK", List.of(member), List.of(usedBy), List.of(),
+                slice, slice.length(), slice.length(), false, List.of()
+        );
     }
 
     private GitLabFrontendReachabilityEdge edge(

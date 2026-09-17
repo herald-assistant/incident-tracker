@@ -70,8 +70,11 @@ report, historie oraz import/export.
   autoryzacji, walidacji ani persistence bez potwierdzajacego evidence.
 - Brak dopasowanego targetu nie blokuje sesji: initial component source pack
   przekazuje komponenty wybranych sciezek target -> komponent widoku, relacje
-  tylko pomiedzy nimi i ich pelne pliki. Pozostaly graph nie trafia do initial
-  promptu; prompt oznacza jego rozmiar i wymaga celowanego researchu przez
+  tylko pomiedzy nimi i ich pelne pliki. Dolacza kompaktowy effective route
+  chain wybranego widoku oraz maksymalnie jeden ograniczony slice
+  bezposredniej klasy bazowej komponentu widoku. Pelny route subtree, pelny
+  plik klasy bazowej, dalsze dziedziczenie i pozostaly graph nie trafiaja do
+  initial promptu; prompt oznacza jego rozmiar i wymaga celowanego researchu przez
   neutralne repository tools. Brak poprawnego raportu,
   wymaganych tools, scope'u albo rewizji pozostaje jawnym stanem
   `BLOCKED`/`FAILED`, a nie powodem uruchomienia UI Explorera.

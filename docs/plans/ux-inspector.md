@@ -1,6 +1,6 @@
 # UX Inspector - skupiona analiza wskazanego elementu
 
-Status: in-progress
+Status: complete
 
 Source need: [UX Inspector - pytania o wskazany element uruchomionej aplikacji](../needs/ux-inspector.md)
 
@@ -551,7 +551,7 @@ Status: done
 
 Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 usuniecie z initial promptu
 komponentow i relacji spoza wybranej sciezki target -> komponent widoku po
-analizie eksportu `ux-inspector-WIBOR-1M-20260917-141446.json`.
+analizie pilota focused packu.
 
 Klasyfikacja: **L1**. Zmienia sie model-facing zawartosc feature-owned logical
 artifactu oraz canonical prompt, ale nie publiczne API/DTO, capture, resolver,
@@ -626,7 +626,7 @@ ani frontend.
 - Architecture diff: bez zmian publicznego API/DTO, capture, source selection,
   tools, hidden scope, joba, reportu, persistence/export, frontendu oraz
   zaleznosci pakietowych. Feature-owned artifact ma wewnetrzna wersje v2.
-- Przeliczenie eksportu `ux-inspector-WIBOR-1M-20260917-141446.json`: dla 104
+- Przeliczenie zanonimizowanego pilota: dla 104
   komponentow grafu i focused sciezki 3 komponentow artifact maleje
   szacunkowo z 189621 do 71556 znakow (-62,3%), a caly initial prompt z 257672
   do okolo 139607 znakow (-45,8%). Z 1007 relacji pozostaja dwie relacje
@@ -634,6 +634,162 @@ ani frontend.
 - Nie uruchamiano testow ani builda Angulara, poniewaz zmiana dotyczy wylacznie
   backendowego, wewnetrznego logical artifactu i canonical promptu, bez zmiany
   kontraktu lub integracji z frontendem.
+
+## Inkrement: route context, dziedziczenie i jednokrotna finalizacja
+
+Status: complete
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 zakres obejmujacy kompaktowy
+route context, jednopoziomowy slice klasy bazowej komponentu widoku oraz
+ograniczenie dodatkowych tur finalizacji raportu po analizie pilota UX
+Inspectora.
+
+Klasyfikacja: **L1**. Zmienia sie feature-owned initial artifact i canonical
+prompt/report workflow. Bez zmian pozostaja publiczne API/DTO, capture, target
+resolution, tool schema, hidden scope, job, persistence/export i frontend.
+
+### Baseline
+
+- Focused pack v2 zawiera trzy komponenty sciezki target -> widok i ich szesc
+  pelnych plikow, ale nie przekazuje istniejacego `effectiveRouteChain` ani
+  przygotowanych przez neutralny graph dependency slices.
+- Wybrany komponent widoku dziedziczy po bezposredniej klasie bazowej; model
+  odkryl routing w czwartej turze, a klase bazowa czytal fragmentami w turach
+  osmej i dziewiatej.
+- Pilot wykonal 18 wywolan modelu i 126 wywolan tools. Dwie ostatnie tury byly
+  korekta sekcji oraz ponownym `report_get_current`; rozne section/global meta
+  utworzyly semantycznie zduplikowane references, limits i open questions.
+- Neutralny graph juz posiada effective route chain oraz klasyfikuje
+  odziedziczone zrodla jako `INHERITED_TYPE` albo jawny
+  `COMPONENT_REFERENCE`; nie jest potrzebna zaleznosc do UI Explorera.
+
+### Conformance delta
+
+- Component source pack przekazuje kompaktowy effective route chain wybranego
+  widoku z route pattern, outlet, konfiguracja i source reference, bez routed
+  subtree ani pelnego grafu routingu.
+- Dla komponentu wybranego widoku pack przekazuje maksymalnie jeden
+  bezposredni supporting slice klasy bazowej, jezeli graph rozpoznal jawna
+  relacje dziedziczenia. Pelny plik klasy bazowej nie jest automatycznie
+  osadzany; slice ma jawny status, limit i ograniczenia.
+- Komponenty rownolegle, pozostale dependencies i dalsze poziomy dziedziczenia
+  pozostaja poza initial context oraz sa dostepne tylko przez celowany research.
+- Prompt zabrania ponownego odczytu kompletnego route/inheritance evidence,
+  wymaga jednej kontroli tresci przed zapisem i jednej finalnej inspekcji
+  raportu. Korekta po `report_get_current` pozostaje dozwolona tylko po bledzie
+  toola albo strukturalnie niepoprawnym raporcie.
+- Wlasciciel pozostaje `features.uxinspector.ai`; wykorzystywane sa neutralne
+  modele `integrations.gitlab.frontend`, bez importu sibling feature'a i bez
+  zmiany neutralnych kontraktow.
+- Konsumenci: canonical prompt, component source pack, source-reference
+  validation i testy UX Inspectora. Publiczny export/result pozostaja zgodne.
+
+### Macierz testow
+
+| Zakres | Dowod |
+|---|---|
+| route context | tylko effective chain wybranego widoku, bez routed subtree |
+| direct base | jeden slice powiazany z komponentem widoku |
+| brak dziedziczenia | brak supporting slice i brak sztucznego fallbacku |
+| szeroki graph | sibling dependencies i dalsze klasy bazowe nie trafiaja do packa |
+| prompt/report | brak ponownego odczytu route/base slice i jedna finalizacja |
+| granice pakietow | `PackageDependencyGuardTest` i architecture diff |
+| regresja backendu | `mvn -q test` |
+
+### Kroki
+
+- [x] Dodac kompaktowy route context i ograniczony direct-base slice do
+  component source packu wraz z testami pozytywnymi i granicznymi.
+- [x] Zaktualizowac canonical prompt/report contract oraz testy tak, aby AI
+  wykorzystywalo initial routing/inheritance evidence i finalizowalo raport po
+  pojedynczej kontroli.
+- [x] Zaktualizowac need, runtime flow i lokalne niezmienniki, wykonac testy
+  celowane, architecture guard, pelna regresje backendu i architecture diff.
+
+### Wynik
+
+- Component source pack v3 zawiera compact effective route chain i co najwyzej
+  jeden bezposredni inherited slice ograniczony do 12 000 znakow. Nie wykonuje
+  dodatkowego odczytu pelnego pliku klasy bazowej.
+- Prompt i durable contract wymagaja przygotowania finalnej tresci przed
+  rownoleglym zapisem oraz dokladnie jednego `report_get_current`; mapper
+  dodatkowo deduplikuje reference po target pomiedzy section i global meta.
+- PASS: `mvn -q "-Dtest=UxInspector*Test,PackageDependencyGuardTest" test`.
+- PASS: `mvn -q test` - 1647 testow, 0 failures, 0 errors, 1 skipped.
+- Architecture diff nie dodaje zaleznosci do sibling feature'a ani nie zmienia
+  publicznego API, DTO, capture, tool schema, persistence/export lub frontendu.
+
+## Inkrement: naturalne adresowanie TypeScript slice
+
+Status: in-progress
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 usuniecie model-facing
+syntetycznych `sliceRef` z TypeScript-specific research oraz pogłębianie po
+oryginalnych importach, symbolach i metodach widocznych w zwracanym kodzie.
+
+Klasyfikacja: **L2**. Zmienia sie wspolny kontrakt neutralnego GitLab frontend
+toola oraz jego konsumenci w UX Inspectorze i UI Explorerze. Bez zmian
+pozostaja publiczne HTTP API/DTO, capture, persistence/export i repository
+scope.
+
+### Baseline
+
+- `gitlab_read_frontend_typescript_symbol_slice` zwraca juz ograniczony kod z
+  potrzebnymi importami, polami DI, metodami i helperami.
+- Tool wymaga jednak model-facing `sliceRef`, ktorego UX Inspector po
+  ograniczeniu initial component packu nie publikuje dla dependencies.
+- Hidden context zna plik, typ i dozwolone selektory, ale indeksuje je przez
+  syntetyczny identyfikator. Downstream references nie gwarantuja naturalnego
+  target path, wiec model wraca do search/full read zamiast kontynuowac slice.
+- UI Explorer publikuje te identyfikatory w artifactach i wymusza je w policy,
+  dlatego zmiana neutralnego schema wymaga migracji obu feature'ow.
+
+### Conformance delta
+
+- TypeScript tool przyjmuje naturalne dane z kodu: bezposredni `filePath` i
+  `declaringTypeName` albo przejscie przez dokladny `consumerFilePath`,
+  `moduleSpecifier` i `importedSymbol`; opcjonalne `memberNames` zaweza wynik.
+- Backend rozwiazuje target tylko w hidden allowliscie przygotowanej z pinned
+  reachability graphu i odrzuca obcy plik, typ, import albo metode.
+- Wynik zachowuje oryginalne relevant import lines, pola DI, wybrane metody i
+  helpery oraz uzupelnia naturalny `targetSourcePath` downstream reference,
+  gdy target istnieje w allowliscie sesji.
+- Syntetyczne graph node ids pozostaja wewnetrznym detalem join/dedup/cache,
+  ale nie sa polem TypeScript toola ani wskazowka w promptach/artifactach.
+- Route branch tool pozostaje poza zakresem: jego screen identity nie jest
+  kontraktem nawigacji po importach TypeScript.
+
+### Konsumenci i testy
+
+- Neutralne: frontend MCP DTO/tool/context targets i evidence mapping.
+- UX Inspector: hidden target catalog, prompt i description customization.
+- UI Explorer: hidden target catalog, scope policy, prompt, outline/source
+  artifacts i description customization.
+- Testy: neutralny tool schema i scope, natural direct target, import target,
+  member subset rejection, downstream continuation, oba feature policies,
+  prompt/artifact tests, `PackageDependencyGuardTest`, pelna regresja backendu.
+
+### Kroki
+
+- [x] Zmienic neutralny TypeScript tool i hidden target catalog na naturalne
+  adresowanie z walidowanym direct/import mode.
+- [x] Usunac TypeScript `sliceRef` z promptow i artifactow obu feature'ow oraz
+  zachowac oryginalne importy i naturalny downstream continuation w result.
+- [x] Zaktualizowac dokumentacje i testy, wykonac architecture diff, testy
+  celowane oraz `mvn -q test`.
+
+### Weryfikacja inkrementu
+
+- PASS: testy celowane neutralnego MCP schema/toola/evidence, policy i
+  artifactow UI Explorera oraz promptu, hidden contextu i descriptions UX
+  Inspectora.
+- PASS: alias importu widoczny w oryginalnym kodzie prowadzi przez hidden
+  allowliste do tego samego deklarowanego targetu; obce pliki i members sa
+  odrzucane.
+- PASS: `mvn -q test` (pelna regresja backendu; 1648 testow, 1 skipped).
+- Architecture diff: nowe kontrakty pozostaja w `agenttools.gitlab.frontend`,
+  deleguja do `integrations.gitlab.frontend`, a oba feature'y jedynie buduja
+  session-bound hidden catalog; brak zaleznosci miedzy sibling feature'ami.
 
 ## Wynik weryfikacji
 

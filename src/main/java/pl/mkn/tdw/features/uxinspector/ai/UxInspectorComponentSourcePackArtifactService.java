@@ -10,8 +10,12 @@ import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdge;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteConfiguration;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceReference;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,7 +35,10 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UxInspectorComponentSourcePackArtifactService {
     static final String SCHEMA = "tdw.ux-inspector-component-source-pack";
-    static final int VERSION = 2;
+    static final int VERSION = 3;
+    private static final int MAX_INHERITED_SLICE_CHARACTERS = 12_000;
+    private static final String INHERITED_SLICE_BOUNDARY_MARKER =
+            "\n// ... direct inherited slice bounded by UX Inspector ...";
 
     private final GitLabRepositoryPort repositoryPort;
 
@@ -45,11 +52,18 @@ public class UxInspectorComponentSourcePackArtifactService {
                 .filter(component -> selection.componentIds().contains(component.componentId()))
                 .toList();
         var files = readFiles(context, focusedComponents);
+        var viewComponent = findViewComponent(context, components);
+        var inheritedSlice = directViewInheritanceSlice(context, viewComponent, components);
         var availablePaths = new LinkedHashSet<String>();
         files.values().stream().filter(PackFile::available).map(PackFile::path).forEach(availablePaths::add);
+        routeSourcePaths(context).forEach(availablePaths::add);
+        if (inheritedSlice != null && inheritedSlice.available()
+                && StringUtils.hasText(inheritedSlice.sourcePath())) {
+            availablePaths.add(inheritedSlice.sourcePath());
+        }
         var availableCount = (int) files.values().stream().filter(PackFile::available).count();
         return new UxInspectorComponentSourcePackArtifact(
-                render(context, capture, components, selection, files),
+                render(context, capture, components, selection, files, inheritedSlice),
                 components.size(), focusedComponents.size(), components.size() - focusedComponents.size(),
                 files.size(), availableCount, files.size() - availableCount,
                 availablePaths
@@ -247,7 +261,8 @@ public class UxInspectorComponentSourcePackArtifactService {
             UxInspectorCapture capture,
             List<GitLabFrontendReachabilityComponent> components,
             SourceSelection selection,
-            Map<String, PackFile> files
+            Map<String, PackFile> files,
+            InheritedSlice inheritedSlice
     ) {
         var available = files.values().stream().filter(PackFile::available).count();
         var focusedComponents = components.stream()
@@ -278,6 +293,8 @@ public class UxInspectorComponentSourcePackArtifactService {
                             || available(files, component.templatePath())));
         builder.append("complete: ").append(complete).append('\n');
 
+        renderRouteContext(builder, context);
+
         builder.append("\n## Selected full-source paths\n");
         if (selection.paths().isEmpty()) builder.append("- none\n");
         selection.paths().forEach(path -> builder.append("- candidate=").append(path.candidateId())
@@ -304,6 +321,7 @@ public class UxInspectorComponentSourcePackArtifactService {
 
         renderComponentIndex(builder, focusedComponents, files);
         renderComponentRelations(builder, context, focusedComponents, selection.componentIds());
+        renderInheritedSlice(builder, inheritedSlice);
 
         builder.append("\n## Unresolved discovery information\n");
         var unresolved = unresolved(context, focusedComponents, selection);
@@ -328,6 +346,182 @@ public class UxInspectorComponentSourcePackArtifactService {
             }
         }
         return builder.toString().trim();
+    }
+
+    private void renderRouteContext(StringBuilder builder, UxInspectorTargetContext context) {
+        builder.append("\n## Effective route context\n");
+        builder.append("semantics: DETERMINISTIC_PINNED_ROUTE_CHAIN_FOR_SELECTED_VIEW\n");
+        if (context == null || context.graph() == null || context.graph().effectiveRouteChain() == null) {
+            builder.append("- unavailable\n");
+            return;
+        }
+        var chain = context.graph().effectiveRouteChain();
+        builder.append("routeSegmentCount: ").append(chain.segments().size()).append('\n');
+        builder.append("routeParameters: ").append(chain.routeParameters().isEmpty()
+                ? "-" : String.join(",", chain.routeParameters())).append('\n');
+        for (var index = 0; index < chain.segments().size(); index++) {
+            var segment = chain.segments().get(index);
+            builder.append("- order=").append(index + 1)
+                    .append(" route=").append(lineText(segment.routePattern()))
+                    .append(" pathSegment=").append(lineText(segment.pathSegment()))
+                    .append(" outlet=").append(lineText(segment.outlet()))
+                    .append(" source=").append(sourceReference(segment.source()));
+            if (!segment.configuration().isEmpty()) {
+                builder.append(" configuration=")
+                        .append(segment.configuration().stream().map(this::routeConfiguration)
+                                .collect(java.util.stream.Collectors.joining(";")));
+            }
+            builder.append('\n');
+        }
+        builder.append("Research rule: treat this route chain as complete initial evidence for the selected view; ")
+                .append("read route source only when an exact route-body detail absent above is material.\n");
+    }
+
+    private String routeConfiguration(GitLabFrontendRouteConfiguration configuration) {
+        var detail = new ArrayList<String>();
+        detail.add(configuration.kind().name());
+        if (StringUtils.hasText(configuration.key())) detail.add("key=" + lineText(configuration.key()));
+        if (!configuration.referencedSymbols().isEmpty()) {
+            detail.add("symbols=" + String.join(",", configuration.referencedSymbols()));
+        }
+        if (StringUtils.hasText(configuration.staticValue())) {
+            detail.add("value=" + lineText(configuration.staticValue()));
+        }
+        detail.add("status=" + configuration.status().name());
+        return "[" + String.join(",", detail) + "]";
+    }
+
+    private String sourceReference(GitLabFrontendSourceReference source) {
+        if (source == null || !StringUtils.hasText(source.path())) return "-";
+        var result = new StringBuilder(lineText(source.path()));
+        if (source.startLine() != null) {
+            result.append("#L").append(source.startLine());
+            if (source.endLine() != null && !source.endLine().equals(source.startLine())) {
+                result.append("-L").append(source.endLine());
+            }
+        }
+        return result.toString();
+    }
+
+    private List<String> routeSourcePaths(UxInspectorTargetContext context) {
+        if (context == null || context.graph() == null || context.graph().effectiveRouteChain() == null) {
+            return List.of();
+        }
+        return context.graph().effectiveRouteChain().segments().stream()
+                .map(segment -> segment.source() != null ? normalizedPath(segment.source().path()) : null)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+    }
+
+    private InheritedSlice directViewInheritanceSlice(
+            UxInspectorTargetContext context,
+            GitLabFrontendReachabilityComponent viewComponent,
+            List<GitLabFrontendReachabilityComponent> components
+    ) {
+        if (context == null || context.graph() == null || viewComponent == null) return null;
+        var dependency = context.graph().dependencies().stream()
+                .filter(candidate -> candidate.kind() == GitLabFrontendReachabilityDependencyKind.INHERITED_TYPE)
+                .filter(candidate -> candidate.usedBy().contains(viewComponent.componentId()))
+                .sorted(Comparator.comparingInt(GitLabFrontendReachabilityDependency::discoveryOrder)
+                        .thenComparing(GitLabFrontendReachabilityDependency::dependencyId))
+                .findFirst().orElse(null);
+        if (dependency != null) return inheritedDependencySlice(viewComponent, dependency);
+
+        var componentById = components.stream().collect(java.util.stream.Collectors.toMap(
+                GitLabFrontendReachabilityComponent::componentId,
+                component -> component,
+                (left, right) -> left,
+                LinkedHashMap::new
+        ));
+        return context.graph().edges().stream()
+                .filter(edge -> edge.kind() == GitLabFrontendReachabilityEdgeKind.COMPONENT_REFERENCE)
+                .filter(edge -> viewComponent.componentId().equals(edge.fromId()))
+                .filter(edge -> "INHERITED_MEMBER".equals(edge.label()))
+                .sorted(Comparator.comparing(GitLabFrontendReachabilityEdge::toId))
+                .map(edge -> inheritedComponentSlice(viewComponent, componentById.get(edge.toId())))
+                .filter(java.util.Objects::nonNull)
+                .findFirst().orElse(null);
+    }
+
+    private InheritedSlice inheritedDependencySlice(
+            GitLabFrontendReachabilityComponent viewComponent,
+            GitLabFrontendReachabilityDependency dependency
+    ) {
+        var content = boundedSlice(dependency.sliceContent());
+        var limitations = new ArrayList<>(dependency.limitations());
+        if (dependency.sliceContent().length() > content.length()) {
+            limitations.add("Direct inherited slice was bounded to " + MAX_INHERITED_SLICE_CHARACTERS + " characters.");
+        }
+        return new InheritedSlice(
+                viewComponent.componentId(), dependency.symbol(), dependency.sourcePath(), dependency.status(),
+                dependency.methods(), content, dependency.sourceCharacters(), content.length(),
+                dependency.truncated() || dependency.sliceContent().length() > content.length(),
+                List.copyOf(limitations)
+        );
+    }
+
+    private InheritedSlice inheritedComponentSlice(
+            GitLabFrontendReachabilityComponent viewComponent,
+            GitLabFrontendReachabilityComponent baseComponent
+    ) {
+        if (baseComponent == null) return null;
+        var content = boundedSlice(baseComponent.sliceContent());
+        var limitations = new ArrayList<>(baseComponent.limitations());
+        if (baseComponent.sliceContent().length() > content.length()) {
+            limitations.add("Direct inherited component slice was bounded to "
+                    + MAX_INHERITED_SLICE_CHARACTERS + " characters.");
+        }
+        return new InheritedSlice(
+                viewComponent.componentId(), baseComponent.symbol(), baseComponent.sourcePath(), baseComponent.status(),
+                baseComponent.includedSymbols().stream().map(symbol -> symbol.symbolName()).toList(),
+                content, baseComponent.sourceCharacters(), content.length(),
+                baseComponent.truncated() || baseComponent.sliceContent().length() > content.length(),
+                List.copyOf(limitations)
+        );
+    }
+
+    private String boundedSlice(String content) {
+        if (!StringUtils.hasText(content)) return "";
+        if (content.length() <= MAX_INHERITED_SLICE_CHARACTERS) return content;
+        var retainedCharacters = MAX_INHERITED_SLICE_CHARACTERS - INHERITED_SLICE_BOUNDARY_MARKER.length();
+        return content.substring(0, retainedCharacters) + INHERITED_SLICE_BOUNDARY_MARKER;
+    }
+
+    private void renderInheritedSlice(StringBuilder builder, InheritedSlice inheritedSlice) {
+        builder.append("\n## Direct view inheritance slice\n");
+        builder.append("maxDepth: 1\n");
+        if (inheritedSlice == null) {
+            builder.append("- none discovered for the selected view component\n");
+            return;
+        }
+        builder.append("ownerComponentId: ").append(lineText(inheritedSlice.ownerComponentId())).append('\n');
+        builder.append("baseSymbol: ").append(lineText(inheritedSlice.symbol())).append('\n');
+        builder.append("sourcePath: ").append(lineText(inheritedSlice.sourcePath())).append('\n');
+        builder.append("sourceMode: ").append(inheritedSlice.available() ? "AVAILABLE_SLICE" : "UNAVAILABLE").append('\n');
+        builder.append("status: ").append(lineText(inheritedSlice.status())).append('\n');
+        builder.append("members: ").append(inheritedSlice.members().isEmpty()
+                ? "-" : String.join(",", inheritedSlice.members())).append('\n');
+        builder.append("sourceCharacters: ").append(inheritedSlice.sourceCharacters()).append('\n');
+        builder.append("returnedCharacters: ").append(inheritedSlice.returnedCharacters()).append('\n');
+        builder.append("truncated: ").append(inheritedSlice.truncated()).append('\n');
+        if (!inheritedSlice.limitations().isEmpty()) {
+            builder.append("limitations:\n");
+            inheritedSlice.limitations().forEach(limitation -> builder.append("- ").append(lineText(limitation)).append('\n'));
+        }
+        if (inheritedSlice.available()) {
+            builder.append("content:\nBEGIN_UNTRUSTED_INHERITED_SLICE ")
+                    .append(inheritedSlice.sourcePath()).append('\n');
+            builder.append(inheritedSlice.content());
+            if (!inheritedSlice.content().endsWith("\n")) builder.append('\n');
+            builder.append("END_UNTRUSTED_INHERITED_SLICE ").append(inheritedSlice.sourcePath()).append('\n');
+        }
+        builder.append("Research rule: do not read this base source again unless the slice is truncated, unavailable, ")
+                .append("or a material inherited member is absent.\n");
+    }
+
+    private String lineText(String value) {
+        return value != null ? value.replace("\r", " ").replace("\n", " ").trim() : "-";
     }
 
     private void renderComponentIndex(
@@ -478,6 +672,29 @@ public class UxInspectorComponentSourcePackArtifactService {
     private record SelectedPath(String candidateId, List<String> componentIds, int cost, boolean complete) {}
 
     private record PathResult(List<String> componentIds, int cost) {}
+
+    private record InheritedSlice(
+            String ownerComponentId,
+            String symbol,
+            String sourcePath,
+            String status,
+            List<String> members,
+            String content,
+            int sourceCharacters,
+            int returnedCharacters,
+            boolean truncated,
+            List<String> limitations
+    ) {
+        private InheritedSlice {
+            members = members != null ? List.copyOf(members) : List.of();
+            content = content != null ? content : "";
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
+
+        private boolean available() {
+            return StringUtils.hasText(sourcePath) && StringUtils.hasText(content);
+        }
+    }
 
     private record ComponentRelation(String fromId, String kind, String toId) {
         private static final Comparator<ComponentRelation> ORDER = Comparator

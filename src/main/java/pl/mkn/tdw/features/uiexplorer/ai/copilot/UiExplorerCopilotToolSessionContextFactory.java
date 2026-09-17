@@ -4,13 +4,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptToolTargetCatalog;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportSectionIds;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,48 +48,9 @@ public class UiExplorerCopilotToolSessionContextFactory {
         hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, scope.pathPrefixes());
         hidden.put(GitLabFrontendToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.screen().screenId());
-        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, typeScriptSliceTargets(context));
+        var typeScriptTargets = GitLabFrontendTypeScriptToolTargetCatalog.from(context.graph());
+        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, typeScriptTargets.directTargets());
+        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS, typeScriptTargets.importTargets());
         return new CopilotToolSessionContext(runId, SESSION_PREFIX + runId, hidden);
-    }
-
-    private java.util.Map<String, GitLabFrontendTypeScriptSliceTarget> typeScriptSliceTargets(
-            UiExplorerScreenReachabilityContext context
-    ) {
-        var targets = new LinkedHashMap<String, GitLabFrontendTypeScriptSliceTarget>();
-        context.components().stream()
-                .filter(component -> StringUtils.hasText(component.componentId())
-                        && StringUtils.hasText(component.sourcePath()))
-                .forEach(component -> targets.put(component.componentId(), new GitLabFrontendTypeScriptSliceTarget(
-                        component.componentId(),
-                        component.sourcePath(),
-                        component.symbol(),
-                        component.templatePath(),
-                        component.entrySymbols().stream()
-                                .map(candidate -> new GitLabTypeScriptSymbolSelector(
-                                        candidate.symbolName(), candidate.kind(), candidate.lineStart()
-                                ))
-                                .toList()
-                )));
-        if (context.graph() != null) {
-            context.graph().dependencies().stream()
-                    .filter(dependency -> StringUtils.hasText(dependency.dependencyId())
-                            && StringUtils.hasText(dependency.sourcePath()))
-                    .forEach(dependency -> targets.put(
-                            dependency.dependencyId(),
-                            new GitLabFrontendTypeScriptSliceTarget(
-                                    dependency.dependencyId(),
-                                    dependency.sourcePath(),
-                                    dependency.symbol(),
-                                    null,
-                                    dependency.methods().stream()
-                                            .filter(StringUtils::hasText)
-                                            .map(method -> new GitLabTypeScriptSymbolSelector(
-                                                    method, GitLabTypeScriptSymbolKind.AUTO, null
-                                            ))
-                                            .toList()
-                            )
-                    ));
-        }
-        return java.util.Map.copyOf(targets);
     }
 }

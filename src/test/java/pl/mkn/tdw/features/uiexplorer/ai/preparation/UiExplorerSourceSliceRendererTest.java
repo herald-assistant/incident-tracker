@@ -59,9 +59,10 @@ class UiExplorerSourceSliceRendererTest {
         assertThat(rendered)
                 .contains("// ... 3 unrelated imports omitted ...")
                 .contains("// ... 2 unrelated methods omitted ...")
-                .contains("`dependency-crm-contact-load`, `dependency-crm-contact-load-alias`")
-                .contains("`dependency-crm-contact-save`")
-                .doesNotContain("dependency-crm-contact-empty")
+                .contains("`dependency:CrmContactWorkspaceFacade`, `dependency:CrmContactWorkspaceFacadeAlias`")
+                .contains("`dependency:CrmContactWorkspaceFacade`")
+                .doesNotContain("CrmContactWorkspaceEmptySource")
+                .doesNotContain("dependency-crm-contact-")
                 .doesNotContain("usedBy=", "downstream=", "members=", "entries=", "dependencies=")
                 .doesNotContain("    // no source slice returned");
 

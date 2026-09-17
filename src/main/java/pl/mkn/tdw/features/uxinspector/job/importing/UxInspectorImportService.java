@@ -22,7 +22,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UxInspectorImportService {
-    private static final int MAX_IMPORT_CHARS = 1_000_000;
     private final ObjectMapper objectMapper;
     private final LocalWorkspaceProperties properties;
     private final UxInspectorLocalRunPersistence persistence;
@@ -48,7 +47,7 @@ public class UxInspectorImportService {
     }
 
     private void validateDocument(JsonNode document) {
-        if (document == null || !document.isObject() || document.toString().length() > MAX_IMPORT_CHARS) throw invalid("UX Inspector export is required and must be bounded.");
+        if (document == null || !document.isObject()) throw invalid("UX Inspector export object is required.");
         var allowed = Set.of("schema", "version", "exportedAt", "payload");
         var names = new java.util.HashSet<String>(); document.fieldNames().forEachRemaining(names::add);
         if (!allowed.equals(names)) throw invalid("UX Inspector export contains missing or unknown top-level fields.");

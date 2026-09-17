@@ -23,4 +23,18 @@ class UxInspectorToolDescriptionCustomizerTest {
                 .contains("instead of reading the contract with full-file or chunk tools")
                 .contains("pinned revision");
     }
+
+    @Test
+    void shouldDescribeNaturalTypeScriptContinuationWithoutSyntheticReferences() {
+        var description = customizer.customize(
+                CopilotToolDescriptionContext.profile("ux-inspector"),
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                "Read a focused TypeScript symbol slice."
+        );
+
+        assertThat(description)
+                .contains("direct file/type", "consumer import coordinates", "visible original code", "memberNames")
+                .contains("hidden context")
+                .doesNotContain("sliceRef");
+    }
 }

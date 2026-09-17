@@ -222,13 +222,23 @@ public class UxInspectorPromptPreparationService {
                   komponent jest runtime ownerem bez potwierdzajacego evidence.
                 - `uxi_read_target_slice` przyjmuje tylko `targetRef` z tej sesji.
                 - Nie czytaj ponownie pliku oznaczonego w component source pack jako `AVAILABLE_FULL`.
+                  `Effective route context` jest kompletnym deterministycznym route chain wybranego widoku; nie
+                  wyszukuj ani nie czytaj ponownie pliku route, chyba ze pytanie wymaga szczegolu nieobecnego w tym
+                  kontekscie. `Direct view inheritance slice` ma maksymalnie jeden poziom; gdy ma
+                  `sourceMode=AVAILABLE_SLICE`, nie czytaj ponownie klasy bazowej, chyba ze slice jest obciety,
+                  niedostepny albo nie zawiera materialnego odziedziczonego membera wymaganego przez pytanie.
                   Komponent lub zaleznosc spoza focused sciezki wyszukaj i doczytaj neutralnym repository toolem tylko
                   wtedy, gdy sa materialne dla pytania. Dla pliku lub component boundary oznaczonego jako `UNAVAILABLE`,
                   `NOT_DISCOVERED` albo
                   `NOT_FOUND_IN_STATIC_GRAPH` wykonaj celowany research neutralnymi repository tools, jezeli jest
                   materialny dla pytania. Brak ogniwa nazwij w odpowiedzi tylko wtedy, gdy pozostaje istotna luka.
                 - Nie czytaj ponownie kodu, ktory jest juz kompletny w focused slice.
-                - Dalsze frontend slice tools stosuj tylko dla konkretnej luki wymaganej przez pytanie.
+                - `gitlab_read_frontend_typescript_symbol_slice` nie uzywa syntetycznych refow. Dla kodu juz
+                  wskazanego w evidence podaj direct `filePath` + `declaringTypeName`; aby przejsc po oryginalnym
+                  imporcie podaj dokladne `consumerFilePath`, `moduleSpecifier` i `importedSymbol` widoczne w kodzie.
+                  `memberNames` ogranicz do metod faktycznie potrzebnych pytaniu. Wynik zachowuje relevant import lines,
+                  pola DI i helpery, wiec mozesz kontynuowac ta sama procedura przez fasade, serwis, klienta albo mapper.
+                  Dalsze frontend slice tools stosuj tylko dla konkretnej luki wymaganej przez pytanie.
                 - Masz read-only dostep do calego repozytorium z `sourceToolScope`, zawsze na ukrytym pinned commit.
                   Nie wolno przechodzic do innego projektu ani galezi.
                 - Zanim rozszerzysz research poza focused evidence, przeczytaj repository-wide Copilot instructions
@@ -300,12 +310,18 @@ public class UxInspectorPromptPreparationService {
         return """
                 Zrodlem prawdy jest `AnalysisReport` o id z hidden context.
                 Wymagana kolejnosc finalizacji:
-                1. W jednym turnie wywolaj rownolegle, bez czekania pomiedzy wynikami:
+                1. Przed pierwszym zapisem wykonaj cala kontrole merytoryczna odpowiedzi i przygotuj jeden finalny
+                   zestaw references, visibility limits, gaps, warnings, open questions oraz confidence.
+                2. W jednym turnie wywolaj rownolegle, bez czekania pomiedzy wynikami:
                    - `report_update_header` z jednozdaniowa teza w `markdownSummary` i zwiezlym headerem,
                    - `report_upsert_section` z kompletna odpowiedzia Markdown w jedynej sekcji `answer`,
-                     title `Odpowiedz`, order `1` oraz section meta,
-                   - `report_update_meta` z globalnymi ograniczeniami i confidence.
-                2. Po zakonczeniu tych trzech zapisow wywolaj raz `report_get_current` i sprawdz finalny stan.
+                     title `Odpowiedz`, order `1` oraz section meta zawierajacym tylko references,
+                   - `report_update_meta` z globalnymi visibility limits, gaps, warnings, open questions oraz confidence;
+                     nie duplikuj w nim references.
+                3. Po zakonczeniu tych trzech zapisow wywolaj dokladnie raz `report_get_current` i sprawdz finalny stan.
+                   Nie poprawiaj tresci ani metadata po tej kontroli, chyba ze ktorys zapis zakonczyl sie bledem albo
+                   raport jest strukturalnie niepoprawny. Korekta stylistyczna lub ponowna analiza po zapisie nie sa
+                   powodem dodatkowego turnu.
                 Dodatkowe section ids sa zabronione. Reference target podawaj w formacie `path` albo
                 `path#Lstart-Lend` dla pinned revision `%s`. Preferuj pliki dostarczone jako initial evidence albo
                 rzeczywiscie odczytane repository toolem. Sciezka wywnioskowana z potwierdzonych importow lub
