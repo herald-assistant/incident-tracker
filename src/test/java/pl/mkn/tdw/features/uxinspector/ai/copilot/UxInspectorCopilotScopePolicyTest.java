@@ -50,6 +50,11 @@ class UxInspectorCopilotScopePolicyTest {
                 {"projectName":"crm-ui","branchRef":"main","query":"ContactPolicy","pathPrefix":"",
                  "reason":"Wyszukanie reguly."}
                 """))).doesNotThrowAnyException();
+        assertThatCode(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE, """
+                {"projectName":"crm-ui","branchRef":"main","filePath":"contracts/customer-api.json",
+                 "operationId":"getCustomer","schemaDepth":2,"maxCharacters":20000,
+                 "reason":"Potwierdzenie kontraktu wywolania klienta."}
+                """))).doesNotThrowAnyException();
     }
 
     @Test
@@ -94,6 +99,29 @@ class UxInspectorCopilotScopePolicyTest {
                 .isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("reason");
         assertThatCode(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
                 "not-json"))).doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldRejectUnsafeOpenApiLocator() {
+        var context = new UxInspectorCopilotToolSessionContextFactory().create("crm-scope-run", targetContext());
+
+        assertThatThrownBy(() -> policy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
+                """
+                        {"projectName":"crm-ui","branchRef":"main","filePath":"contracts/customer-api.json",
+                         "reason":"Proba odczytu bez lokatora."}
+                        """
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("operationId");
+
+        assertThatThrownBy(() -> policy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
+                """
+                        {"projectName":"crm-ui","branchRef":"main","filePath":"contracts/customer-api.txt",
+                         "operationId":"getCustomer","reason":"Proba odczytu zlego formatu."}
+                        """
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining(".json");
     }
 
     @Test

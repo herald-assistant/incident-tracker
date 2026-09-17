@@ -19,6 +19,7 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             GitLabToolNames.SEARCH_REPOSITORY_FILES,
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+            GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
             CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
             CopilotReportToolNames.GET_CURRENT, CopilotReportToolNames.UPSERT_SECTION,
             CopilotReportToolNames.UPDATE_HEADER, CopilotReportToolNames.UPDATE_META
@@ -42,7 +43,8 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
                 GitLabToolNames.LIST_REPOSITORY_FILES,
                 GitLabToolNames.SEARCH_REPOSITORY_FILES,
                 GitLabToolNames.READ_REPOSITORY_FILE,
-                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
+                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE
         ));
     }
 }

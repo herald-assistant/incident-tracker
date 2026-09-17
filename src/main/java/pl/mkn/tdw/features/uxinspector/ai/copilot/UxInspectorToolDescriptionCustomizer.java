@@ -37,6 +37,12 @@ public class UxInspectorToolDescriptionCustomizer implements CopilotToolDescript
                     + "Use projectName and branchRef from sourceToolScope, omit applicationNames, and provide a short reason. "
                     + "The hidden session scope resolves the branch to the pinned commit; only successfully read files may be cited.";
         }
+        if (GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE.equals(toolName)) {
+            return description + "\nUX Inspector: when source evidence identifies an OpenAPI/Swagger file and either METHOD path "
+                    + "or operationId, use this tool instead of reading the contract with full-file or chunk tools. "
+                    + "Use projectName and branchRef from sourceToolScope, omit applicationNames, and provide a short reason. "
+                    + "The selected repository and pinned revision are enforced by hidden session scope.";
+        }
         return description;
     }
 }

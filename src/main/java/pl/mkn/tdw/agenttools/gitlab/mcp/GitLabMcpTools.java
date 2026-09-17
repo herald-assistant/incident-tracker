@@ -42,7 +42,6 @@ import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
@@ -1010,45 +1009,72 @@ public class GitLabMcpTools {
     @Tool(
             name = READ_OPENAPI_ENDPOINT_SLICE,
             description = """
-                    Read a focused OpenAPI/Swagger YAML slice for one concrete endpoint operation from a GitLab repository.
-                    The tool validates that the file is YAML, parses the OpenAPI/Swagger manifest, checks supported version
-                    (OpenAPI 3.x or Swagger 2.0), filters paths to the requested httpMethod + endpointPath, and returns only
-                    the operation plus locally referenced schemas/components up to schemaDepth. Prefer this over reading a
-                    full OpenAPI YAML file when endpoint contract details are needed.
+                    Read a focused OpenAPI/Swagger JSON or YAML slice for one concrete endpoint operation from a GitLab repository.
+                    Locate the operation with httpMethod + endpointPath, exact operationId, or both. The tool parses OpenAPI 3.x
+                    and Swagger 2.0 and returns a typed operation plus effective path/root context and locally referenced
+                    schemas/components up to schemaDepth. Prefer this over full-file or chunk reads for OpenAPI contracts.
                     """
     )
-    public GitLabOpenApiEndpointSliceResponse readOpenApiEndpointSlice(
+    public GitLabOpenApiEndpointSliceToolResponse readOpenApiEndpointSlice(
             @ToolParam(description = "GitLab project path inside the resolved GitLab group.")
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
             @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
             List<String> applicationNames,
-            @ToolParam(description = "Repository OpenAPI YAML file path.")
+            @ToolParam(description = "Repository OpenAPI/Swagger JSON, YAML or YML file path.")
             String filePath,
-            @ToolParam(description = "HTTP method, for example GET, POST, PUT or DELETE.")
+            @ToolParam(required = false, description = "HTTP method, for example GET, POST, PUT or DELETE. Required with endpointPath unless operationId is provided.")
             String httpMethod,
-            @ToolParam(description = "Endpoint path from prompt, artifact or previous tool result.")
+            @ToolParam(required = false, description = "Endpoint path from prompt, artifact or previous tool result. Required with httpMethod unless operationId is provided.")
             String endpointPath,
+            @ToolParam(required = false, description = "Exact OpenAPI operationId from generated client code or source evidence. Can replace httpMethod + endpointPath.")
+            String operationId,
             @ToolParam(required = false, description = "Include local $ref schemas/components used by this operation. Defaults to true.")
             Boolean includeReferencedSchemas,
             @ToolParam(required = false, description = "Maximum local $ref traversal depth. Defaults to 2 and is capped by the server.")
             Integer schemaDepth,
-            @ToolParam(required = false, description = "Maximum returned characters. Defaults to 20000 and is capped by the server.")
+            @ToolParam(required = false, description = "Target maximum characters for the typed contract slice. Defaults to 20000; allowed range is 1000-50000.")
             Integer maxCharacters,
             @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta kontrakt OpenAPI endpointu.")
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationNames, branchRef, toolContext);
-        var effectiveProjectName = canonicalProjectName(scope, projectName);
-        var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, effectiveProjectName, filePath, false);
+        var bound = toolContext != null && toolContext.getContext() != null
+                ? toolContext.getContext().get(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE) : null;
+        GitLabRepositoryToolScope.Target pinnedTarget = null;
+        GitLabToolScope scope;
+        String effectiveProjectName;
+        String resolvedFilePath;
+        String effectiveGroup;
+        String effectiveReadRef;
+        if (bound instanceof GitLabRepositoryToolScope repositoryScope) {
+            if (reason == null || reason.isBlank() || reason.length() > 500) {
+                throw new IllegalArgumentException("A short reason is required.");
+            }
+            if (!GitLabVerifiedRepositoryFileReader.isSafePath(filePath, false)) {
+                throw new IllegalArgumentException("Only relative OpenAPI file paths can be read.");
+            }
+            pinnedTarget = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
+            scope = GitLabToolScope.fromResolvedScope(
+                    pinnedTarget.group(), pinnedTarget.branch(), List.of(), toolContext);
+            effectiveProjectName = pinnedTarget.projectName();
+            resolvedFilePath = filePath;
+            effectiveGroup = pinnedTarget.group();
+            effectiveReadRef = pinnedTarget.commitId();
+        } else {
+            scope = scope(projectName, applicationNames, branchRef, toolContext);
+            effectiveProjectName = canonicalProjectName(scope, projectName);
+            resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, effectiveProjectName, filePath, false);
+            effectiveGroup = scope.group();
+            effectiveReadRef = scope.branch();
+        }
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} httpMethod={} endpointPath={} schemaDepth={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} httpMethod={} endpointPath={} operationId={} schemaDepth={} maxCharacters={}",
                 READ_OPENAPI_ENDPOINT_SLICE,
                 scope.runReference(),
-                scope.group(),
+                effectiveGroup,
                 scope.branch(),
                 scope.applicationNames(),
                 scope.analysisRunId(),
@@ -1058,17 +1084,19 @@ public class GitLabMcpTools {
                 resolvedFilePath,
                 httpMethod,
                 endpointPath,
+                operationId,
                 schemaDepth,
                 maxCharacters
         );
 
         var response = gitLabOpenApiEndpointSliceService.readEndpointSlice(new GitLabOpenApiEndpointSliceRequest(
-                scope.group(),
+                effectiveGroup,
                 effectiveProjectName,
-                scope.branch(),
+                effectiveReadRef,
                 resolvedFilePath,
                 httpMethod,
                 endpointPath,
+                operationId,
                 includeReferencedSchemas,
                 schemaDepth,
                 maxCharacters
@@ -1090,7 +1118,21 @@ public class GitLabMcpTools {
                 response.limitations().size()
         );
 
-        return response;
+        String verifiedSourceRef = null;
+        String pinnedCommit = null;
+        if (bound instanceof GitLabRepositoryToolScope repositoryScope && pinnedTarget != null) {
+            verifiedSourceRef = repositoryScope.recordRead(pinnedTarget, response.filePath());
+            if (StringUtils.hasText(response.httpMethod()) && StringUtils.hasText(response.matchedPath())) {
+                verifiedSourceRef += "#" + response.httpMethod() + " " + response.matchedPath();
+            }
+            pinnedCommit = pinnedTarget.commitId();
+        }
+        return GitLabOpenApiEndpointSliceToolResponse.from(
+                response,
+                pinnedTarget != null ? pinnedTarget.branch() : response.branch(),
+                pinnedCommit,
+                verifiedSourceRef
+        );
     }
 
     @Tool(

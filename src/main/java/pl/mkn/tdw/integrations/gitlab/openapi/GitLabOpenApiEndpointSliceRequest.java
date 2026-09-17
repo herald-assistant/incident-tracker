@@ -15,18 +15,33 @@ public record GitLabOpenApiEndpointSliceRequest(
         @NotBlank(message = "filePath must not be blank")
         @Size(max = 700, message = "filePath must contain at most 700 characters")
         String filePath,
-        @NotBlank(message = "httpMethod must not be blank")
         @Size(max = 20, message = "httpMethod must contain at most 20 characters")
         String httpMethod,
-        @NotBlank(message = "endpointPath must not be blank")
         @Size(max = 300, message = "endpointPath must contain at most 300 characters")
         String endpointPath,
+        @Size(max = 300, message = "operationId must contain at most 300 characters")
+        String operationId,
         Boolean includeReferencedSchemas,
         @Min(value = 0, message = "schemaDepth must be at least 0")
         @Max(value = GitLabOpenApiEndpointSliceService.MAX_SCHEMA_DEPTH, message = "schemaDepth must be at most 4")
         Integer schemaDepth,
-        @Min(value = 1, message = "maxCharacters must be at least 1")
+        @Min(value = GitLabOpenApiEndpointSliceService.MIN_OUTPUT_CHARACTERS, message = "maxCharacters must be at least 1000")
         @Max(value = GitLabOpenApiEndpointSliceService.MAX_OUTPUT_CHARACTERS, message = "maxCharacters must be at most 50000")
         Integer maxCharacters
 ) {
+
+    public GitLabOpenApiEndpointSliceRequest(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            String httpMethod,
+            String endpointPath,
+            Boolean includeReferencedSchemas,
+            Integer schemaDepth,
+            Integer maxCharacters
+    ) {
+        this(group, projectName, branch, filePath, httpMethod, endpointPath, null,
+                includeReferencedSchemas, schemaDepth, maxCharacters);
+    }
 }

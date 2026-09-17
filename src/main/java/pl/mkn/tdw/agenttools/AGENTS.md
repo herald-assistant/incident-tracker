@@ -77,6 +77,13 @@ Nie obejmuje:
   przypietego commita rejestruja ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie
   wzorcow danych wrazliwych; pozostaja walidacja sciezki, rozmiaru i tekstu.
   Feature wybiera allowliste i budzet z tego wspolnego katalogu.
+- `gitlab_read_openapi_endpoint_slice` jest neutralnym semantycznym odczytem
+  jednej operacji OpenAPI 3.x albo Swagger 2.0 z pliku JSON/YAML/YML. Przyjmuje
+  `filePath` oraz `httpMethod + endpointPath` albo dokladny `operationId`,
+  zwraca typowany operation slice, efektywny context i ograniczone lokalne
+  `$ref`. W session-bound scope odczyt odbywa sie na przypietym commicie i
+  rejestruje zweryfikowany `sourceRef`. Feature decyduje, czy tool jest
+  dostepny i kiedy ma zastapic ogolne full/chunk reads.
 - Frontendowe route branch i TypeScript symbol slice tools mieszkaja w
   `gitlab.frontend.mcp` i deleguja do `integrations.gitlab.frontend`. Ich
   model-facing schema ma zawierac tylko

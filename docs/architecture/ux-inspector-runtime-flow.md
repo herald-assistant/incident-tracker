@@ -209,6 +209,16 @@ mapper zachowuje ja jako `source-unverified`, dodaje warning, obniza najwyzsza
 pewnosc i oznacza run jako `PARTIAL`. Taka referencja nie jest potwierdzonym
 dowodem tresci pliku.
 
+Gdy source research wskazuje plik OpenAPI/Swagger oraz zweryfikowane
+`METHOD path` albo `operationId` wygenerowanego klienta, model preferuje
+neutralny `gitlab_read_openapi_endpoint_slice` nad pelnym odczytem albo
+wielokrotnymi chunkami kontraktu. Tool obsluguje JSON/YAML/YML, OpenAPI 3.x i
+Swagger 2.0, zwraca jedna typowana operacje, efektywny context oraz ograniczone
+lokalne `$ref`. `filePath`, projekt i branch nadal podlegaja policy UX
+Inspectora, a hidden scope wymusza ten sam pinned commit co pozostale odczyty.
+Referencje zewnetrzne sa raportowane jako nierozwiazane i nie uruchamiaja
+pobierania sieciowego ani przejscia do innego repozytorium.
+
 Report tools sa jedynym kanalem wyniku. AI przygotowuje w jednej rundzie
 naglowek, jedna sekcje `answer` i metadata, a nastepnie sprawdza stan raportu.
 Finalny tekst Copilota nie jest parserem ani fallbackiem.

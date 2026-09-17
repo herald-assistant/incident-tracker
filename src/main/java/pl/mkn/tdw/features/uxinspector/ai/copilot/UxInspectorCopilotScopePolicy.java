@@ -29,7 +29,8 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
             GitLabToolNames.LIST_REPOSITORY_FILES,
             GitLabToolNames.SEARCH_REPOSITORY_FILES,
             GitLabToolNames.READ_REPOSITORY_FILE,
-            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+            GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE
     );
 
     private final ObjectMapper objectMapper;
@@ -61,7 +62,11 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
             reject(request, "branchRef must be the selected UX Inspector branch pinned by the session.", true);
         }
 
-        if (Set.of(GitLabToolNames.READ_REPOSITORY_FILE, GitLabToolNames.READ_REPOSITORY_FILE_CHUNK)
+        if (Set.of(
+                GitLabToolNames.READ_REPOSITORY_FILE,
+                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE
+        )
                 .contains(request.toolName())) {
             requireSafePath(request, text(arguments, "filePath"), false, "filePath");
         } else if (GitLabToolNames.LIST_REPOSITORY_TREE.equals(request.toolName())) {
@@ -78,6 +83,33 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
         var applicationNames = arguments.get("applicationNames");
         if (applicationNames != null && (!applicationNames.isArray() || applicationNames.size() != 0)) {
             reject(request, "applicationNames must be omitted because the selected repository is session-bound.", true);
+        }
+
+        if (GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE.equals(request.toolName())) {
+            validateOpenApiLocator(request, arguments);
+        }
+    }
+
+    private void validateOpenApiLocator(CopilotToolInvocationPolicyRequest request, JsonNode arguments) {
+        var filePath = text(arguments, "filePath");
+        var normalized = filePath != null ? filePath.toLowerCase(java.util.Locale.ROOT) : "";
+        if (!(normalized.endsWith(".json") || normalized.endsWith(".yaml") || normalized.endsWith(".yml"))) {
+            reject(request, "OpenAPI filePath must end with .json, .yaml or .yml.", true);
+        }
+        var httpMethod = text(arguments, "httpMethod");
+        var endpointPath = text(arguments, "endpointPath");
+        var operationId = text(arguments, "operationId");
+        if (!StringUtils.hasText(operationId)
+                && (!StringUtils.hasText(httpMethod) || !StringUtils.hasText(endpointPath))) {
+            reject(request, "OpenAPI reads require operationId or both httpMethod and endpointPath.", true);
+        }
+        var schemaDepth = integer(arguments, "schemaDepth");
+        if (schemaDepth != null && (schemaDepth < 0 || schemaDepth > 4)) {
+            reject(request, "schemaDepth must be between 0 and 4.", true);
+        }
+        var maxCharacters = integer(arguments, "maxCharacters");
+        if (maxCharacters != null && (maxCharacters < 1_000 || maxCharacters > 50_000)) {
+            reject(request, "maxCharacters must be between 1000 and 50000.", true);
         }
     }
 
@@ -116,6 +148,11 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
     private static String optionalText(JsonNode node, String field) {
         var value = node != null ? node.get(field) : null;
         return value != null && value.isTextual() ? value.asText() : null;
+    }
+
+    private static Integer integer(JsonNode node, String field) {
+        var value = node != null ? node.get(field) : null;
+        return value != null && value.canConvertToInt() ? value.asInt() : null;
     }
 
     private void reject(CopilotToolInvocationPolicyRequest request, String reason, boolean retryable) {

@@ -74,7 +74,8 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         assertThat(session.effectiveAvailableToolNames())
                 .contains(GitLabToolNames.LIST_REPOSITORY_TREE, GitLabToolNames.LIST_REPOSITORY_FILES,
                         GitLabToolNames.SEARCH_REPOSITORY_FILES, GitLabToolNames.READ_REPOSITORY_FILE,
-                        GitLabToolNames.READ_REPOSITORY_FILE_CHUNK)
+                        GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                        GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE)
                 .containsAll(CopilotReportToolNames.allToolNames())
                 .doesNotContain("skill", GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                         GitLabToolNames.LIST_REPOSITORY_BRANCHES);
@@ -97,6 +98,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 GitLabToolNames.SEARCH_REPOSITORY_FILES,
                 GitLabToolNames.READ_REPOSITORY_FILE,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 "skill"
         ));

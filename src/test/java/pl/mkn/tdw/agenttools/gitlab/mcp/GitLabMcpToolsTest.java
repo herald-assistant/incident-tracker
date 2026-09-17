@@ -35,6 +35,7 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaMethodSummary;
@@ -1326,6 +1327,7 @@ class GitLabMcpToolsTest {
                 "src/main/resources/openapi/customer-api.yml",
                 "GET",
                 "/customers/{customerId}",
+                null,
                 true,
                 2,
                 8_000,
@@ -1337,6 +1339,67 @@ class GitLabMcpToolsTest {
         assertEquals("shared-contracts/src/main/resources/openapi/customer-api.yml", response.filePath());
         assertEquals("/customers/{customerId}", response.matchedPath());
         assertEquals("getCustomer", response.operationId());
+        assertEquals("YAML", response.format());
+        assertTrue(response.operation().containsKey("responses"));
+        assertFalse(java.util.Arrays.stream(response.getClass().getRecordComponents())
+                .anyMatch(component -> "content".equals(component.getName())));
+    }
+
+    @Test
+    void shouldReadOpenApiEndpointSliceFromSessionPinnedCommit() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
+        var commitId = "1234567890abcdef1234567890abcdef12345678";
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "crm-ui",
+                commitId,
+                "contracts/customer-api.json",
+                500_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-ui",
+                commitId,
+                "contracts/customer-api.json",
+                """
+                        {
+                          "openapi": "3.1.0",
+                          "info": {"title": "CRM Customer API", "version": "1.0.0"},
+                          "paths": {
+                            "/customers/{customerId}": {
+                              "get": {"operationId": "getCustomer", "responses": {"200": {"description": "OK"}}}
+                            }
+                          }
+                        }
+                        """,
+                false
+        ));
+        var contextValues = new LinkedHashMap<String, Object>();
+        contextValues.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "crm-ux-run");
+        contextValues.put(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE,
+                new GitLabRepositoryToolScope("CRM", "crm-ui", "main", commitId));
+
+        var response = tools.readOpenApiEndpointSlice(
+                "crm-ui",
+                "main",
+                List.of(),
+                "contracts/customer-api.json",
+                null,
+                null,
+                "getCustomer",
+                true,
+                2,
+                8_000,
+                "Potwierdzam kontrakt endpointu klienta.",
+                new ToolContext(contextValues)
+        );
+
+        assertEquals("main", response.branch());
+        assertEquals(commitId, response.commitId());
+        assertEquals("getCustomer", response.operationId());
+        assertTrue(response.sourceRef().contains("@" + commitId + ":contracts/customer-api.json#GET"));
+        verify(gitLabRepositoryPort).readFile(
+                "CRM", "crm-ui", commitId, "contracts/customer-api.json", 500_000);
     }
 
     @Test
