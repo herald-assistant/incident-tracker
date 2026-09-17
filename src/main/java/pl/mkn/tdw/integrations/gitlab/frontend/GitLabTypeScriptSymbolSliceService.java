@@ -48,6 +48,7 @@ public class GitLabTypeScriptSymbolSliceService {
     );
     private static final Pattern TEMPLATE_URL = Pattern.compile("templateUrl\\s*:\\s*['\"]([^'\"]+)['\"]");
     private static final Pattern INLINE_TEMPLATE_START = Pattern.compile("template\\s*:\\s*([`'\"])");
+    private static final Pattern COMPONENT_DECORATOR = Pattern.compile("@Component\\s*\\(");
     private static final Set<String> ANGULAR_LIFECYCLE = Set.of(
             "ngOnChanges", "ngOnInit", "ngDoCheck", "ngAfterContentInit", "ngAfterContentChecked",
             "ngAfterViewInit", "ngAfterViewChecked", "ngOnDestroy"
@@ -166,7 +167,8 @@ public class GitLabTypeScriptSymbolSliceService {
         var includedSymbols = includeHelpers(source, parsed.members(), entrySymbols,
                 Boolean.TRUE.equals(request.includeLocalHelpers()));
         var fields = parsed.members().stream()
-                .filter(member -> java.util.Objects.equals(declaringType, member.declaringType()))
+                .filter(member -> java.util.Objects.equals(declaringType, member.declaringType())
+                        || member.declaringType() == null && member.kind() == MemberKind.FIELD)
                 .filter(member -> member.kind() == MemberKind.FIELD || member.kind() == MemberKind.CONSTRUCTOR)
                 .toList();
         var includedFields = Boolean.TRUE.equals(request.includeRelevantFields())
@@ -267,6 +269,9 @@ public class GitLabTypeScriptSymbolSliceService {
             }
         }
         if (!StringUtils.hasText(path)) {
+            if (!COMPONENT_DECORATOR.matcher(mask(source)).find()) {
+                return TemplateContext.notRequested();
+            }
             limitations.add("Template-driven discovery was requested, but no templatePath or static template was found.");
             return new TemplateContext(true, false, null, "", List.of());
         }

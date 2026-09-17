@@ -791,6 +791,21 @@ scope.
   deleguja do `integrations.gitlab.frontend`, a oba feature'y jedynie buduja
   session-bound hidden catalog; brak zaleznosci miedzy sibling feature'ami.
 
+## Korekta kompletności TypeScript slice dla serwisów
+
+Source need: ręczna weryfikacja odpowiedzi
+`/api/gitlab/frontend/typescript-symbol-slice` dla metody serwisu wykazała, że
+lokalny helper był dołączany, ale używana przez niego stała top-level pozostawała
+wyłącznie w `candidates`. Dodatkowo żądanie template bindings nad zwykłym
+serwisem nadawało poprawnemu slice status `PARTIAL`.
+
+- [x] Dołączyć używane stałe top-level do relevant fields i renderowanego kodu.
+- [x] Traktować template bindings jako nieaplikowalne dla pliku bez
+  `@Component`, zamiast zgłaszać brak template'u.
+- [x] Uruchomić test celowany i pełną regresję backendu.
+
+Weryfikacja: `GitLabTypeScriptSymbolSliceServiceTest` oraz `mvn -q test` — PASS.
+
 ## Wynik weryfikacji
 
 - Browser Tools: `node --test frontend/tests/browser-tools/browser-tools.test.mjs`

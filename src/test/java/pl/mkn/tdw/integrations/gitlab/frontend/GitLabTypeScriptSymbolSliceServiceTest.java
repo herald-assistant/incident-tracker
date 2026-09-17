@@ -93,6 +93,70 @@ class GitLabTypeScriptSymbolSliceServiceTest {
     }
 
     @Test
+    void shouldIncludeReferencedTopLevelConstantAndIgnoreTemplateRequestForSyntheticCrmService() {
+        var source = """
+                import { Injectable } from '@angular/core';
+                import { HttpClient } from '@angular/common/http';
+                import { tap } from 'rxjs/operators';
+                import { environment } from '../../environments/environment';
+
+                export type CrmUserResponse = { id: number; email: string };
+                export type CrmAuthResponse = { token: string; user: CrmUserResponse };
+
+                const CRM_TOKEN_KEY = 'synthetic_crm_token';
+                const CRM_USER_KEY = 'synthetic_crm_user';
+
+                @Injectable({ providedIn: 'root' })
+                export class CrmSessionService {
+                  private apiUrl = environment.apiUrl + '/api/crm-session';
+
+                  constructor(private http: HttpClient) {}
+
+                  login(email: string) {
+                    return this.http.post<CrmAuthResponse>(`${this.apiUrl}/login`, { email }).pipe(
+                      tap(response => localStorage.setItem(CRM_USER_KEY, JSON.stringify(response.user)))
+                    );
+                  }
+
+                  getToken(): string | null {
+                    return localStorage.getItem(CRM_TOKEN_KEY);
+                  }
+
+                  isLoggedIn(): boolean {
+                    return !!this.getToken();
+                  }
+                }
+                """;
+        var scope = new GitLabFrontendRepositoryScope(
+                "synthetic-crm", "crm-agent-portal", "main", List.of("apps/crm-agent")
+        );
+        var filePath = "apps/crm-agent/src/app/session/crm-session.service.ts";
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), filePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), filePath, source, false
+                ));
+
+        var response = new GitLabTypeScriptSymbolSliceService(repositoryPort).readSymbolSlice(
+                new GitLabTypeScriptSymbolSliceRequest(
+                        scope, filePath, "CrmSessionService", null, true,
+                        List.of(new GitLabTypeScriptSymbolSelector(
+                                "isLoggedIn", GitLabTypeScriptSymbolKind.METHOD, null
+                        )),
+                        true, true, true, 12_000
+                )
+        );
+
+        assertThat(response.status()).isEqualTo("OK");
+        assertThat(response.content())
+                .contains("const CRM_TOKEN_KEY", "getToken", "isLoggedIn")
+                .doesNotContain("CRM_USER_KEY", "login(email", "HttpClient", "environment.apiUrl");
+        assertThat(response.includedFields()).containsExactly("CRM_TOKEN_KEY");
+        assertThat(response.includedImports()).isEmpty();
+        assertThat(response.templateBindings()).isEmpty();
+        assertThat(response.limitations()).isEmpty();
+    }
+
+    @Test
     void shouldBuildTemplateDrivenSyntheticCrmReachabilityForFormsRxjsNgrxAndBackendOperations() {
         var source = """
                 import { Component, Input, inject } from '@angular/core';
