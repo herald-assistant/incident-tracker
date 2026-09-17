@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -1016,8 +1017,9 @@ public class GitLabTypeScriptSymbolSliceService {
     }
 
     private boolean inScope(GitLabFrontendRepositoryScope scope, String path) {
-        return scope.pathPrefixes().isEmpty() || scope.pathPrefixes().stream()
-                .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
+        return GitLabVerifiedRepositoryFileReader.isSafePath(path, false)
+                && (scope.pathPrefixes().isEmpty() || scope.pathPrefixes().stream()
+                .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/")));
     }
 
     private int normalizeLimit(Integer value) {

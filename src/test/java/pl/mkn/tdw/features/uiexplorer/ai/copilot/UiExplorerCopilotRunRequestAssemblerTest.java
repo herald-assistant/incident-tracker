@@ -7,8 +7,6 @@ import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptImportTarget;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
@@ -119,19 +117,8 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 .isEqualTo("crm-commit-abc123");
         assertThat(hidden.get(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF))
                 .isEqualTo("crm-contact-preferences");
-        var sliceTargets = (Map<?, ?>) hidden.get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
-        org.junit.jupiter.api.Assertions.assertTrue(sliceTargets.containsKey(GitLabFrontendTypeScriptSliceTarget.key(
-                "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts",
-                "CrmContactPreferencesComponent")));
-        org.junit.jupiter.api.Assertions.assertTrue(sliceTargets.containsKey(GitLabFrontendTypeScriptSliceTarget.key(
-                "libs/crm/data-access/src/lib/crm-contact-preferences.api.ts", "CrmContactPreferencesApi")));
-        var importTargets = (Map<?, ?>) hidden.get(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS);
-        org.junit.jupiter.api.Assertions.assertTrue(importTargets.containsKey(GitLabFrontendTypeScriptImportTarget.key(
-                "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts",
-                "@crm/data-access", "CrmContactPreferencesApi")));
-        org.junit.jupiter.api.Assertions.assertTrue(importTargets.containsKey(GitLabFrontendTypeScriptImportTarget.key(
-                "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts",
-                "@crm/data-access", "PreferencesApi")));
+        assertThat(hidden).doesNotContainKeys("gitLabFrontendTypeScriptSliceTargets",
+                "gitLabFrontendTypeScriptImportTargets");
         assertThat(preparation.prompt()).doesNotContain("synthetic-crm");
     }
 

@@ -4,7 +4,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptToolTargetCatalog;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
@@ -48,9 +47,6 @@ public class UiExplorerCopilotToolSessionContextFactory {
         hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, scope.pathPrefixes());
         hidden.put(GitLabFrontendToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.screen().screenId());
-        var typeScriptTargets = GitLabFrontendTypeScriptToolTargetCatalog.from(context.graph());
-        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, typeScriptTargets.directTargets());
-        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS, typeScriptTargets.importTargets());
         return new CopilotToolSessionContext(runId, SESSION_PREFIX + runId, hidden);
     }
 }

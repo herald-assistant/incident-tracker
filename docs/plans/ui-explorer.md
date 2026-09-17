@@ -2166,18 +2166,21 @@ juz initial artifacts, wiec ponowne wywolanie duplikowaloby kontekst.
 Checkpoint 8L.7 (2026-08-21): `agenttools.gitlab.frontend.mcp` wystawia
 `gitlab_read_frontend_route_branch_slice`,
 `gitlab_read_frontend_typescript_symbol_slice` nad istniejacymi neutralnymi
-serwisami `integrations.gitlab.frontend`. Model-facing schema kazdego toola
-zawiera dokladnie `sliceRef` i `reason`. Group, project, ref, path prefixes,
-immutable source revision, wybrany screen oraz dozwolone targety TypeScript sa
-session-bound hidden contextem; wymyslona albo pochodzaca z innej sesji
-referencja jest odrzucana przed wywolaniem GitLaba.
+serwisami `integrations.gitlab.frontend`. Route branch zachowuje model-facing
+`sliceRef` i `reason`. TypeScript symbol slice przyjmuje naturalna sciezke i
+typ albo wspolrzedne importu widocznego w kodzie oraz opcjonalne member names;
+nie korzysta z syntetycznego `sliceRef` ani przygotowanej allowlisty targetow.
+Group, project, path prefixes i immutable source revision sa session-bound
+hidden contextem, a sciezki oraz importy sa rozwiazywane i walidowane dopiero
+przy wywolaniu toola na przypietym commicie.
 
-Artefakty v5 publikuja bezpieczne referencje wybranego ekranu, komponentow BFS
-i zaleznosci. Pelny graf powstaje raz przed AI i nie jest ponownie wystawiony
-jako MCP result. UI Explorer preferuje dwa waskie deterministyczne tools; generyczne
-GitLab search/read pozostaja fallbackiem tylko dla materialnej luki bez
-gotowego `sliceRef`. Wyniki nowych tools trafiaja do user-visible GitLab code
-evidence, wiec dociagniete pliki moga ugruntowac `sourceReferences` raportu.
+Artefakty v5 publikuja bezpieczna referencje wybranego ekranu oraz naturalne
+wspolrzedne komponentow i zaleznosci. Pelny graf powstaje raz przed AI i nie
+jest ponownie wystawiony jako MCP result. UI Explorer preferuje dwa waskie
+deterministyczne tools; generyczne GitLab search/read pozostaja fallbackiem
+tylko dla materialnej luki bez naturalnego targetu. Wyniki nowych tools trafiaja
+do user-visible GitLab code evidence, wiec dociagniete pliki moga ugruntowac
+`sourceReferences` raportu.
 Publiczne API, job/result/report, persistence i frontend nie zmienily
 kontraktu. Testy kontraktu, hidden scope, rejestracji Spring AI, policy,
 preparation i evidence uzywaja wylacznie silnie zanonimizowanego,

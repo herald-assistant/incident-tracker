@@ -7,7 +7,6 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.*;
@@ -23,7 +22,7 @@ class UxInspectorReportMapperTest {
         var report = report("Walidacja formularza blokuje zapis.",
                 "Przycisk jest zablokowany, dopoki formularz nie jest poprawny.", sectionMeta, AnalysisReportMeta.empty());
 
-        var mapping = mapper.map(report, capture(), targetContext(), initialPaths(), Set.of(), null);
+        var mapping = mapper.map(report, capture(), targetContext(), null);
 
         assertThat(mapping.complete()).isTrue();
         assertThat(mapping.limitations()).isEmpty();
@@ -31,13 +30,12 @@ class UxInspectorReportMapperTest {
             assertThat(section.id()).isEqualTo("answer");
             assertThat(section.title()).isEqualTo("Odpowiedz");
         });
-        assertThat(mapping.result().sourceReferences()).singleElement()
-                .extracting(AnalysisReportReference::target).isEqualTo(TEMPLATE_PATH + "#L1");
+        assertThat(mapping.result().sourceReferences()).isEmpty();
         assertThat(mapping.result().confidence()).isEqualTo("high");
     }
 
     @Test
-    void shouldDeduplicateTheSameSourceTargetAcrossSectionAndGlobalMetadata() {
+    void shouldDiscardReferenceMetadataAndKeepOtherReportMetadata() {
         var sectionReference = new AnalysisReportReference(
                 "source", "Widok formularza", TEMPLATE_PATH + "#L1", "Opis sekcyjny");
         var globalReference = new AnalysisReportReference(
@@ -51,11 +49,11 @@ class UxInspectorReportMapperTest {
 
         var mapping = mapper.map(
                 report("Walidacja formularza blokuje zapis.", "Odpowiedz", sectionMeta, reportMeta),
-                capture(), targetContext(), initialPaths(), Set.of(), null);
+                capture(), targetContext(), null);
 
-        assertThat(mapping.result().sourceReferences()).containsExactly(sectionReference);
+        assertThat(mapping.result().sourceReferences()).isEmpty();
         assertThat(mapping.report().sections().get(0).meta()).satisfies(meta -> {
-            assertThat(meta.references()).containsExactly(sectionReference);
+            assertThat(meta.references()).isEmpty();
             assertThat(meta.visibilityLimits()).isEmpty();
             assertThat(meta.openQuestions()).isEmpty();
             assertThat(meta.gaps()).isEmpty();
@@ -82,111 +80,49 @@ class UxInspectorReportMapperTest {
         var missingHeader = new AnalysisReport("report-crm", "", "CRM", "",
                 List.of(new AnalysisReportSection("answer", "Odpowiedz", 1, "Odpowiedz", meta)), meta);
 
-        assertThat(mapper.map(extra, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
-        assertThat(mapper.map(json, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
-        assertThat(mapper.map(missingHeader, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
+        assertThat(mapper.map(extra, capture(), targetContext(), null).result()).isNull();
+        assertThat(mapper.map(json, capture(), targetContext(), null).result()).isNull();
+        assertThat(mapper.map(missingHeader, capture(), targetContext(), null).result()).isNull();
     }
 
     @Test
-    void shouldPreserveOutOfScopeReferenceAsUnverifiedAndStillRequireSomeEvidenceSignal() {
+    void shouldIgnoreReferencesWithoutRequiringAnEvidenceMarker() {
         var outside = new AnalysisReportMeta(List.of(new AnalysisReportReference("source", "Poza scope",
                 "src/app/admin/secrets.ts#L1", "Niezweryfikowany plik")), List.of(), List.of(), List.of(), "high", List.of());
         var empty = AnalysisReportMeta.empty();
 
-        var inferred = mapper.map(report("Teza", "Odpowiedz", outside, empty), capture(), targetContext(),
-                initialPaths(), Set.of(), null);
+        var inferred = mapper.map(report("Teza", "Odpowiedz", outside, empty), capture(), targetContext(), null);
         assertThat(inferred.result()).isNotNull();
-        assertThat(inferred.complete()).isFalse();
-        assertThat(inferred.result().confidence()).isEqualTo("medium");
-        assertThat(inferred.result().sourceReferences()).singleElement().satisfies(reference -> {
-            assertThat(reference.type()).isEqualTo("source-unverified");
-            assertThat(reference.target()).isEqualTo("src/app/admin/secrets.ts#L1");
-            assertThat(reference.description()).contains("Niezweryfikowana referencja");
-        });
-        assertThat(inferred.report().meta().warnings())
-                .containsExactly("Nie zweryfikowano odczytu pliku wskazanego przez model: src/app/admin/secrets.ts");
-        assertThat(mapper.map(report("Teza", "Odpowiedz", empty, empty), capture(), targetContext(),
-                initialPaths(), Set.of(), null).result())
-                .isNull();
+        assertThat(inferred.complete()).isTrue();
+        assertThat(inferred.result().confidence()).isEqualTo("high");
+        assertThat(inferred.result().sourceReferences()).isEmpty();
+        assertThat(inferred.report().meta().warnings()).isEmpty();
+        assertThat(mapper.map(report("Teza", "Odpowiedz", empty, empty), capture(), targetContext(), null).result())
+                .isNotNull();
 
         var gap = new AnalysisReportMeta(List.of(), List.of(), List.of(),
                 List.of("Brak implementacji API w zakresie przypietego frontendu."), "low", List.of());
         var partial = mapper.map(report("Teza", "Nie mozna tego potwierdzic w dostepnym kodzie.", gap, gap),
-                capture(), targetContext(), initialPaths(), Set.of(), null);
+                capture(), targetContext(), null);
         assertThat(partial.result()).isNotNull();
         assertThat(partial.complete()).isFalse();
         assertThat(partial.result().visibilityLimits()).contains("Brak implementacji API w zakresie przypietego frontendu.");
     }
 
     @Test
-    void shouldDistinguishRepositoryFilesReadAtThePinnedCommitFromInferredReferences() {
-        var path = "src/main/java/example/crm/ContactPolicy.java";
-        var sourceRef = "gitlab:CRM/crm-ui@" + REVISION + ":" + path;
-        var meta = new AnalysisReportMeta(List.of(new AnalysisReportReference(
-                "source", "Regula kontaktu", path + "#L20-L28", "Zweryfikowana regula biznesowa")),
-                List.of(), List.of(), List.of(), "high", List.of());
-        var sourceReport = report("Regula wymaga aktywnego klienta.", "Kontakt mozna zapisac dla aktywnego klienta.",
-                meta, AnalysisReportMeta.empty());
-
-        var inferred = mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(), null);
-        assertThat(inferred.result()).isNotNull();
-        assertThat(inferred.complete()).isFalse();
-        assertThat(inferred.result().sourceReferences()).singleElement()
-                .extracting(AnalysisReportReference::type).isEqualTo("source-unverified");
-
-        var verified = mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(sourceRef), null);
-        assertThat(verified.result()).isNotNull();
-        assertThat(verified.complete()).isTrue();
-        assertThat(verified.result().sourceReferences()).singleElement()
-                .extracting(AnalysisReportReference::type).isEqualTo("source");
-
-        var wrongCommit = mapper.map(sourceReport, capture(), targetContext(),
-                initialPaths(), Set.of("gitlab:CRM/crm-ui@0000000000000000000000000000000000000000:" + path),
-                null);
-        assertThat(wrongCommit.result()).isNotNull();
-        assertThat(wrongCommit.complete()).isFalse();
-        assertThat(wrongCommit.result().sourceReferences()).singleElement()
-                .extracting(AnalysisReportReference::type).isEqualTo("source-unverified");
-    }
-
-    @Test
-    void shouldMarkAnUnavailableComponentFileAsUnverifiedUntilARepositoryToolReadsIt() {
-        var meta = groundedMeta();
-        var sourceReport = report("Teza", "Odpowiedz oparta na template.", meta, AnalysisReportMeta.empty());
-        var verifiedByTool = "gitlab:CRM/crm-ui@" + REVISION + ":" + TEMPLATE_PATH;
-
-        var inferred = mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH), Set.of(), null);
-        assertThat(inferred.result()).isNotNull();
-        assertThat(inferred.complete()).isFalse();
-        assertThat(inferred.result().sourceReferences()).singleElement()
-                .extracting(AnalysisReportReference::type).isEqualTo("source-unverified");
-
-        var verified = mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH),
-                Set.of(verifiedByTool), null);
-        assertThat(verified.result()).isNotNull();
-        assertThat(verified.complete()).isTrue();
-        assertThat(verified.result().sourceReferences()).singleElement()
-                .extracting(AnalysisReportReference::type).isEqualTo("source");
-    }
-
-    @Test
-    void shouldKeepTheReportAndMarkMalformedSourceReferenceAsUnverified() {
+    void shouldKeepTheReportAndDiscardMalformedSourceReference() {
         var malformed = new AnalysisReportMeta(List.of(new AnalysisReportReference(
                 "source", "Niepewna sciezka", "../../outside.txt#L9-L2", "Wniosek modelu")),
                 List.of(), List.of(), List.of(), "high", List.of());
 
         var mapping = mapper.map(report("Teza", "Odpowiedz", malformed, AnalysisReportMeta.empty()),
-                capture(), targetContext(), initialPaths(), Set.of(), null);
+                capture(), targetContext(), null);
 
         assertThat(mapping.result()).isNotNull();
-        assertThat(mapping.complete()).isFalse();
-        assertThat(mapping.result().confidence()).isEqualTo("medium");
-        assertThat(mapping.result().sourceReferences()).singleElement().satisfies(reference -> {
-            assertThat(reference.type()).isEqualTo("source-unverified");
-            assertThat(reference.target()).isEqualTo("../../outside.txt#L9-L2");
-        });
-        assertThat(mapping.report().meta().warnings()).singleElement()
-                .asString().contains("bezpiecznej sciezki albo poprawnego zakresu linii");
+        assertThat(mapping.complete()).isTrue();
+        assertThat(mapping.result().confidence()).isEqualTo("high");
+        assertThat(mapping.result().sourceReferences()).isEmpty();
+        assertThat(mapping.report().meta().warnings()).isEmpty();
     }
 
     private AnalysisReport report(String thesis, String answer, AnalysisReportMeta sectionMeta, AnalysisReportMeta reportMeta) {
@@ -199,7 +135,4 @@ class UxInspectorReportMapperTest {
                 "Zweryfikowany template")), List.of(), List.of(), List.of(), "high", List.of());
     }
 
-    private Set<String> initialPaths() {
-        return Set.of(SOURCE_PATH, TEMPLATE_PATH);
-    }
 }

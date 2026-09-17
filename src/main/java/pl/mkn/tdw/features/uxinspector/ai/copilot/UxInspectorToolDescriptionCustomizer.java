@@ -41,7 +41,7 @@ public class UxInspectorToolDescriptionCustomizer implements CopilotToolDescript
         if (REPOSITORY_READ_TOOLS.contains(toolName)) {
             return description + "\nUX Inspector: read any safe path in the repository selected by the operator. "
                     + "Use projectName and branchRef from sourceToolScope, omit applicationNames, and provide a short reason. "
-                    + "The hidden session scope resolves the branch to the pinned commit; only successfully read files may be cited.";
+                    + "The hidden session scope resolves the branch to the pinned commit; use only successfully read content as evidence.";
         }
         if (GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE.equals(toolName)) {
             return description + "\nUX Inspector: when source evidence identifies an OpenAPI/Swagger file and either METHOD path "

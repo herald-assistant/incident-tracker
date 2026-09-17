@@ -20,7 +20,6 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +49,7 @@ class UxInspectorCopilotAnalysisProviderTest {
         when(executionGateway.execute(preparedSession)).thenReturn(
                 new CopilotExecutionResult("", null, "crm-session", report));
         var result = mock(UxInspectorResultResponse.class);
-        when(reportMapper.map(eq(report), any(), any(), anySet(), anySet(), isNull())).thenReturn(
+        when(reportMapper.map(eq(report), any(), any(), isNull())).thenReturn(
                 new UxInspectorReportMapping(result, report, false, List.of("Target was not resolved.")));
         var provider = new UxInspectorCopilotAnalysisProvider(
                 assembler, preparationService, executionGateway, reportMapper);
@@ -59,8 +58,7 @@ class UxInspectorCopilotAnalysisProviderTest {
                 "crm-agent-portal", "main", VIEW_ID, REVISION, "Wyjasnij ten element.",
                 capture(), "gpt-crm", "medium");
         var preparation = new UxInspectorPromptPreparation(
-                "Prompt with component source pack", Map.of("component-pack", "all components"),
-                Set.of(SOURCE_PATH, TEMPLATE_PATH));
+                "Prompt with component source pack", Map.of("component-pack", "all components"));
 
         var analysis = provider.analyze(
                 "crm-run", request, context, preparation, AnalysisAiAuthRef.localToken("CRM test"), null, null);

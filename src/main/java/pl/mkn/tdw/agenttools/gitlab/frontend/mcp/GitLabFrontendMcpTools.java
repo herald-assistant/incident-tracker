@@ -9,12 +9,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptImportTarget;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceService;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptDownstreamReference;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendTypeScriptImportResolverService;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceService;
@@ -36,6 +35,7 @@ public class GitLabFrontendMcpTools {
 
     private final GitLabAngularRouteBranchSliceService routeBranchSliceService;
     private final GitLabTypeScriptSymbolSliceService typeScriptSymbolSliceService;
+    private final GitLabFrontendTypeScriptImportResolverService importResolverService;
 
     @Tool(
             name = READ_FRONTEND_ROUTE_BRANCH_SLICE,
@@ -73,8 +73,8 @@ public class GitLabFrontendMcpTools {
                     Reads a focused TypeScript symbol slice without opaque references. Use direct mode with filePath and
                     declaringTypeName for a source target already shown in evidence. Use import mode with consumerFilePath,
                     moduleSpecifier and importedSymbol copied from the original code to follow an import. Optional memberNames
-                    narrows the prepared allowed members. Hidden session context fixes the pinned repository, resolves imports
-                    and rejects files, types, imports or members outside the prepared reachability graph. The result preserves
+                    selects the members needed by the analysis. Hidden session context fixes the pinned repository and resolves
+                    imports on demand without a prepared reachability allowlist. The result preserves
                     relevant original import lines, dependency injection fields, selected methods and required local helpers.
                     """
     )
@@ -89,7 +89,7 @@ public class GitLabFrontendMcpTools {
             String moduleSpecifier,
             @ToolParam(required = false, description = "Import mode: exact imported symbol used by the visible dependency injection or call.")
             String importedSymbol,
-            @ToolParam(required = false, description = "Optional subset of exact member names already allowed for the resolved target.")
+            @ToolParam(required = false, description = "Optional exact member names to include from the resolved target.")
             List<String> memberNames,
             @ToolParam(description = "Krotki powod po polsku: jaka konkretna luka funkcjonalna wymaga symbol slice.")
             String reason,
@@ -97,14 +97,13 @@ public class GitLabFrontendMcpTools {
     ) {
         var context = context(toolContext);
         requireReason(reason);
-        var target = context.requireTypeScriptTarget(
-                filePath, declaringTypeName, consumerFilePath, moduleSpecifier, importedSymbol);
-        var selectors = selectedMembers(target, memberNames);
+        var target = target(context, filePath, declaringTypeName, consumerFilePath, moduleSpecifier, importedSymbol);
+        var selectors = selectedMembers(memberNames);
         var response = typeScriptSymbolSliceService.readSymbolSlice(new GitLabTypeScriptSymbolSliceRequest(
                 context.scope(),
                 target.filePath(),
                 target.declaringTypeName(),
-                target.templatePath(),
+                null,
                 true,
                 selectors,
                 true,
@@ -112,17 +111,44 @@ public class GitLabFrontendMcpTools {
                 true,
                 GitLabTypeScriptSymbolSliceService.DEFAULT_OUTPUT_CHARACTERS
         ));
-        var downstream = response.downstreamReferences().stream()
-                .map(reference -> context.withResolvedTargetPath(response.filePath(), reference))
-                .toList();
         logResult(READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE, response.filePath(), response.status(), response.returnedCharacters());
-        return GitLabFrontendToolDtos.TypeScriptSymbolSliceToolResponse.from(response, downstream);
+        return GitLabFrontendToolDtos.TypeScriptSymbolSliceToolResponse.from(response, response.downstreamReferences());
     }
 
-    private List<GitLabTypeScriptSymbolSelector> selectedMembers(
-            GitLabFrontendTypeScriptSliceTarget target,
-            List<String> requestedMembers
+    private TypeScriptTarget target(
+            FrontendToolContext context,
+            String filePath,
+            String declaringTypeName,
+            String consumerFilePath,
+            String moduleSpecifier,
+            String importedSymbol
     ) {
+        var directMode = StringUtils.hasText(filePath) || StringUtils.hasText(declaringTypeName);
+        var importMode = StringUtils.hasText(consumerFilePath)
+                || StringUtils.hasText(moduleSpecifier) || StringUtils.hasText(importedSymbol);
+        if (directMode == importMode) {
+            throw new IllegalArgumentException("Use exactly one TypeScript target mode: direct file/type or visible import");
+        }
+        if (directMode) {
+            if (!StringUtils.hasText(filePath) || !StringUtils.hasText(declaringTypeName)) {
+                throw new IllegalArgumentException("Direct TypeScript mode requires filePath and declaringTypeName");
+            }
+            if (!GitLabVerifiedRepositoryFileReader.isSafePath(filePath, false)) {
+                throw new IllegalArgumentException("Direct TypeScript filePath is unsafe");
+            }
+            return new TypeScriptTarget(filePath.trim().replace('\\', '/'), declaringTypeName.trim());
+        }
+        if (!StringUtils.hasText(consumerFilePath)
+                || !StringUtils.hasText(moduleSpecifier) || !StringUtils.hasText(importedSymbol)) {
+            throw new IllegalArgumentException(
+                    "Import TypeScript mode requires consumerFilePath, moduleSpecifier and importedSymbol");
+        }
+        var resolved = importResolverService.resolve(
+                context.scope(), consumerFilePath, moduleSpecifier, importedSymbol);
+        return new TypeScriptTarget(resolved.filePath(), resolved.declaringTypeName());
+    }
+
+    private List<GitLabTypeScriptSymbolSelector> selectedMembers(List<String> requestedMembers) {
         if (requestedMembers != null && requestedMembers.size() > MAX_MEMBER_NAMES) {
             throw new IllegalArgumentException("memberNames must contain at most 50 values");
         }
@@ -130,16 +156,10 @@ public class GitLabFrontendMcpTools {
         if (requestedMembers != null) {
             requestedMembers.stream().filter(StringUtils::hasText).map(String::trim).forEach(requested::add);
         }
-        if (requested.isEmpty()) return target.symbolSelectors();
-        var selected = target.symbolSelectors().stream()
-                .filter(selector -> requested.contains(selector.name()))
+        return requested.stream()
+                .map(name -> new GitLabTypeScriptSymbolSelector(
+                        name, pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind.AUTO, null))
                 .toList();
-        var selectedNames = selected.stream().map(selector -> selector.name())
-                .collect(java.util.stream.Collectors.toSet());
-        if (!selectedNames.containsAll(requested)) {
-            throw new IllegalArgumentException("memberNames contains a symbol outside the allowed TypeScript target");
-        }
-        return selected;
     }
 
     private FrontendToolContext context(ToolContext toolContext) {
@@ -148,18 +168,13 @@ public class GitLabFrontendMcpTools {
                 : Map.<String, Object>of();
         var group = requiredString(values, AgentToolContextKeys.GITLAB_GROUP);
         var projectName = requiredString(values, GitLabFrontendToolContextKeys.PROJECT_NAME);
-        var ref = requiredString(values, AgentToolContextKeys.GITLAB_BRANCH);
         var sourceRevision = requiredString(values, GitLabFrontendToolContextKeys.SOURCE_REVISION);
         var screenSliceRef = requiredString(values, GitLabFrontendToolContextKeys.SCREEN_SLICE_REF);
         var pathPrefixes = stringList(values.get(GitLabFrontendToolContextKeys.PATH_PREFIXES));
-        var targets = typeScriptTargets(values.get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS));
-        var importTargets = typeScriptImportTargets(values.get(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS));
         return new FrontendToolContext(
-                new GitLabFrontendRepositoryScope(group, projectName, ref, pathPrefixes),
+                new GitLabFrontendRepositoryScope(group, projectName, sourceRevision, pathPrefixes),
                 sourceRevision,
-                screenSliceRef,
-                targets,
-                importTargets
+                screenSliceRef
         );
     }
 
@@ -189,32 +204,6 @@ public class GitLabFrontendMcpTools {
                 .toList();
     }
 
-    private Map<String, GitLabFrontendTypeScriptSliceTarget> typeScriptTargets(Object value) {
-        if (!(value instanceof Map<?, ?> values)) {
-            return Map.of();
-        }
-        var result = new java.util.LinkedHashMap<String, GitLabFrontendTypeScriptSliceTarget>();
-        values.forEach((key, target) -> {
-            if (key instanceof String targetKey && target instanceof GitLabFrontendTypeScriptSliceTarget typedTarget) {
-                result.put(targetKey, typedTarget);
-            }
-        });
-        return Map.copyOf(result);
-    }
-
-    private Map<String, GitLabFrontendTypeScriptImportTarget> typeScriptImportTargets(Object value) {
-        if (!(value instanceof Map<?, ?> values)) {
-            return Map.of();
-        }
-        var result = new java.util.LinkedHashMap<String, GitLabFrontendTypeScriptImportTarget>();
-        values.forEach((key, target) -> {
-            if (key instanceof String importKey && target instanceof GitLabFrontendTypeScriptImportTarget typedTarget) {
-                result.put(importKey, typedTarget);
-            }
-        });
-        return Map.copyOf(result);
-    }
-
     private void logResult(String toolName, String target, String status, int returnedCharacters) {
         log.info(
                 "Tool result [{}] target={} status={} returnedCharacters={}",
@@ -228,9 +217,7 @@ public class GitLabFrontendMcpTools {
     private record FrontendToolContext(
             GitLabFrontendRepositoryScope scope,
             String sourceRevision,
-            String screenSliceRef,
-            Map<String, GitLabFrontendTypeScriptSliceTarget> typeScriptTargets,
-            Map<String, GitLabFrontendTypeScriptImportTarget> typeScriptImportTargets
+            String screenSliceRef
     ) {
         private void requireScreenSliceRef(String requested) {
             if (!StringUtils.hasText(requested) || !screenSliceRef.equals(requested.trim())) {
@@ -238,52 +225,8 @@ public class GitLabFrontendMcpTools {
             }
         }
 
-        private GitLabFrontendTypeScriptSliceTarget requireTypeScriptTarget(
-                String filePath,
-                String declaringTypeName,
-                String consumerFilePath,
-                String moduleSpecifier,
-                String importedSymbol
-        ) {
-            var directMode = StringUtils.hasText(filePath) || StringUtils.hasText(declaringTypeName);
-            var importMode = StringUtils.hasText(consumerFilePath)
-                    || StringUtils.hasText(moduleSpecifier) || StringUtils.hasText(importedSymbol);
-            if (directMode == importMode) {
-                throw new IllegalArgumentException("Use exactly one TypeScript target mode: direct file/type or visible import");
-            }
-            GitLabFrontendTypeScriptSliceTarget target;
-            if (directMode) {
-                if (!StringUtils.hasText(filePath) || !StringUtils.hasText(declaringTypeName)) {
-                    throw new IllegalArgumentException("Direct TypeScript mode requires filePath and declaringTypeName");
-                }
-                target = typeScriptTargets.get(GitLabFrontendTypeScriptSliceTarget.key(filePath, declaringTypeName));
-            } else {
-                if (!StringUtils.hasText(consumerFilePath)
-                        || !StringUtils.hasText(moduleSpecifier) || !StringUtils.hasText(importedSymbol)) {
-                    throw new IllegalArgumentException(
-                            "Import TypeScript mode requires consumerFilePath, moduleSpecifier and importedSymbol");
-                }
-                var imported = typeScriptImportTargets.get(GitLabFrontendTypeScriptImportTarget.key(
-                        consumerFilePath, moduleSpecifier, importedSymbol));
-                target = imported != null ? imported.target() : null;
-            }
-            if (target == null) {
-                throw new IllegalArgumentException("Requested code coordinates are not an allowed TypeScript target for this session");
-            }
-            return target;
-        }
+    }
 
-        private GitLabTypeScriptDownstreamReference withResolvedTargetPath(
-                String consumerFilePath,
-                GitLabTypeScriptDownstreamReference reference
-        ) {
-            if (reference == null || StringUtils.hasText(reference.targetSourcePath())) return reference;
-            var imported = typeScriptImportTargets.get(GitLabFrontendTypeScriptImportTarget.key(
-                    consumerFilePath, reference.moduleSpecifier(), reference.targetSymbol()));
-            if (imported == null) return reference;
-            return new GitLabTypeScriptDownstreamReference(
-                    reference.kind(), reference.sourceSymbol(), reference.ownerSymbol(), reference.memberSymbol(),
-                    reference.targetSymbol(), reference.moduleSpecifier(), imported.target().filePath());
-        }
+    private record TypeScriptTarget(String filePath, String declaringTypeName) {
     }
 }

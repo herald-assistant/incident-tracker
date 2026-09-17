@@ -6,9 +6,6 @@ public final class GitLabFrontendToolContextKeys {
     public static final String PATH_PREFIXES = "gitLabFrontendPathPrefixes";
     public static final String SOURCE_REVISION = "gitLabFrontendSourceRevision";
     public static final String SCREEN_SLICE_REF = "gitLabFrontendScreenSliceRef";
-    public static final String TYPESCRIPT_SLICE_TARGETS = "gitLabFrontendTypeScriptSliceTargets";
-    public static final String TYPESCRIPT_IMPORT_TARGETS = "gitLabFrontendTypeScriptImportTargets";
-
     private GitLabFrontendToolContextKeys() {
     }
 }

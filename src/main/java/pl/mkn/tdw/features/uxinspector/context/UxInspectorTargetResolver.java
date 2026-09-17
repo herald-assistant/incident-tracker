@@ -42,8 +42,9 @@ public class UxInspectorTargetResolver {
                 branch, frontend.pathPrefixes());
         GitLabFrontendScreenReachabilityGraph graph;
         try {
-            graph = screenReachabilityService.build(new GitLabFrontendScreenSelectionRequest(
-                    scope, viewId, expectedRevision, GitLabFrontendGraphLimits.defaults()));
+            graph = screenReachabilityService.buildFocused(new GitLabFrontendScreenSelectionRequest(
+                            scope, viewId, expectedRevision, GitLabFrontendGraphLimits.defaults()),
+                    orderedComponentBoundaries(capture));
         } catch (GitLabFrontendDiscoveryException exception) {
             throw mapFailure(exception);
         }

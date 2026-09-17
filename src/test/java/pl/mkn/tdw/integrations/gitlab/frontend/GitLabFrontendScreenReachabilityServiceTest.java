@@ -10,6 +10,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class GitLabFrontendScreenReachabilityServiceTest {
@@ -117,6 +119,33 @@ class GitLabFrontendScreenReachabilityServiceTest {
                 .isEqualTo("apps/synthetic-crm/src/app/customer/customer-page.component.html");
         assertThat(result.outlineCharacters()).isEqualTo(result.readableOutline().length());
         assertThat(result.sliceCharacters()).isPositive();
+    }
+
+    @Test
+    void shouldBuildFocusedGraphFromRuntimeBoundariesWithoutTraversingServiceDependencies() {
+        var contextService = mock(GitLabFrontendScreenSelectionService.class);
+        var symbolSliceService = mock(GitLabTypeScriptSymbolSliceService.class);
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        when(contextService.select(any())).thenReturn(context());
+        when(symbolSliceService.readSymbolSlice(any())).thenAnswer(invocation ->
+                slice(invocation.getArgument(0, GitLabTypeScriptSymbolSliceRequest.class)));
+
+        var result = new GitLabFrontendScreenReachabilityService(
+                contextService, symbolSliceService, repositoryPort
+        ).buildFocused(request(), List.of("crm-customer-form", "crm-customer-page"));
+
+        assertThat(result.componentLevels().stream().flatMap(level -> level.components().stream()))
+                .extracting(GitLabFrontendReachabilityComponent::symbol)
+                .containsExactlyInAnyOrder("CrmCustomerPageComponent", "CrmCustomerFormComponent");
+        assertThat(result.dependencies())
+                .extracting(GitLabFrontendReachabilityDependency::symbol)
+                .containsExactly("CrmCustomerPageBase");
+        assertThat(result.dependencies())
+                .noneMatch(dependency -> dependency.kind() == GitLabFrontendReachabilityDependencyKind.FACADE
+                        || dependency.kind() == GitLabFrontendReachabilityDependencyKind.SERVICE
+                        || dependency.kind() == GitLabFrontendReachabilityDependencyKind.BACKEND_CLIENT);
+        assertThat(result.limitations()).noneMatch(value -> value.contains("runtime component boundaries"));
+        verify(symbolSliceService, times(3)).readSymbolSlice(any());
     }
 
     @Test

@@ -128,8 +128,11 @@ dispatch do executora; brak persistence zatrzymuje utworzenie runu.
 ## Deterministyczne rozpoznanie targetu
 
 `UxInspectorTargetResolver` rozwiazuje zarejestrowany frontend do ukrytego
-GitLab scope, przypina branch do oczekiwanej rewizji i buduje screen
-reachability dla wybranego view. Ranking korzysta ze stabilnych atrybutow,
+GitLab scope, przypina branch do oczekiwanej rewizji i wykonuje target-first
+discovery dla wybranego view. Rozpoczyna od komponentu widoku, a nastepnie
+odnajduje tylko komponenty wskazane przez uporzadkowane runtime
+`componentBoundaryTags`; nie buduje pelnego screen reachability graphu ani nie
+przechodzi rekurencyjnie dependencies. Ranking korzysta ze stabilnych atrybutow,
 znormalizowanych selector candidates, accessible name, tekstu, tagu, role,
 uporzadkowanego custom-element ancestry oraz route. Te same `id`, `data-*`,
 `formControlName`, `name` albo `aria-label` nie sa naliczane drugi raz, gdy
@@ -160,17 +163,16 @@ Prompt oddziela pytanie operatora, `UNTRUSTED_RUNTIME_OBSERVATION` oraz
 focused source slice, procedure dla pytan precyzyjnych i ogolnych oraz
 kontrakt raportu.
 
-Osobny, nieblokujacy logical artifact zawiera tylko komponenty
-deterministycznie wybranych sciezek target -> komponent widoku: jednej dla
+Osobny, nieblokujacy logical artifact zawiera tylko komponenty odkryte przez
+target-first preflight i nalezace do deterministycznie wybranych sciezek target -> komponent widoku: jednej dla
 `RESOLVED`, unii maksymalnie trzech sciezek dla `AMBIGUOUS`, a dla `NOT_FOUND`
 tylko komponentu widoku. Przekazuje ich symbol, selector, status discovery,
 sciezki i ograniczenia, relacje ktorych oba konce naleza do focused zbioru oraz
-pelna tresc unikalnych plikow TS i zewnetrznych HTML. Pozostale komponenty i
-relacje screen reachability graphu nie sa serializowane; artifact zachowuje
-liczbe komponentow calego grafu i liczbe pominietych. `COMPONENT_REFERENCE`
-nie jest relacja ancestry. Artifact przekazuje rowniez kompaktowy
-`effectiveRouteChain` wybranego widoku z konfiguracja i pinned source
-references oraz maksymalnie jeden przygotowany `INHERITED_TYPE` slice
+pelna tresc unikalnych plikow TS i zewnetrznych HTML. Pozostaly graf nie jest
+budowany przed AI; liczniki artifactu opisuja tylko focused discovery.
+`COMPONENT_REFERENCE` nie jest relacja ancestry. Artifact przekazuje rowniez kompaktowy
+`effectiveRouteChain` wybranego widoku z konfiguracja i lokalizacjami pinned
+source oraz maksymalnie jeden przygotowany `INHERITED_TYPE` slice
 bezposredniej klasy bazowej komponentu widoku. Nie przekazuje route subtree,
 pelnego pliku klasy bazowej ani dalszych poziomow dziedziczenia. Inline
 template pozostaje czescia pelnego TS. Brak
@@ -215,13 +217,12 @@ Sesja ma read-only dostep do calego jednego wybranego repozytorium przez
 neutralne GitLab tools do listowania, wyszukiwania i czytania plikow. Hidden
 scope przypina projekt, branch oraz commit. Feature nie tworzy tooli o nazwach
 specyficznych dla UX Inspectora. Model moze czytac m.in. README, `AGENTS.md`,
-instrukcje repozytorium, konfiguracje, frontend i backend. Plik rzeczywiscie
-odczytany na przypietym commicie albo przekazany jako zweryfikowane initial
-evidence staje sie referencja `source`. Poprawna skladniowo sciezka
-wywnioskowana przez model bez takiego odczytu nie uniewaznia calego raportu:
-mapper zachowuje ja jako `source-unverified`, dodaje warning, obniza najwyzsza
-pewnosc i oznacza run jako `PARTIAL`. Taka referencja nie jest potwierdzonym
-dowodem tresci pliku.
+instrukcje repozytorium, konfiguracje, frontend i backend. TypeScript symbol
+slice nie korzysta z przygotowanego katalogu plikow, typow, importow ani metod:
+naturalne wspolrzedne sa rozwiazywane dopiero podczas wywolania, zawsze w tym
+samym read-only repository scope i na przypietym commicie. UX Inspector nie
+tworzy, nie weryfikuje ani nie klasyfikuje report references; brakujacy dowod
+jest prezentowany jako gap albo visibility limit.
 
 Gdy source research wskazuje plik OpenAPI/Swagger oraz zweryfikowane
 `METHOD path` albo `operationId` wygenerowanego klienta, model preferuje
@@ -237,8 +238,8 @@ Report tools sa jedynym kanalem wyniku. AI przygotowuje w jednej rundzie
 naglowek, jedna sekcje `answer` i metadata, a nastepnie raz sprawdza stan
 raportu. Kontrola merytoryczna poprzedza zapis; po `report_get_current` raport
 jest ponownie mutowany tylko po bledzie toola albo strukturalnie niepoprawnym
-wyniku. Section meta posiada references, a global meta ograniczenia, gaps,
-warnings, open questions i confidence, bez dublowania tych samych danych.
+wyniku. Section meta pozostaje puste, a global meta zawiera ograniczenia, gaps,
+warnings, open questions i confidence.
 Finalny tekst Copilota nie jest parserem ani fallbackiem.
 
 ## Wynik, historia i prezentacja
@@ -258,8 +259,8 @@ runtime skilla ani dodatkowego turnu. Kontrakt:
   instrukcje obslugi zamiast zawsze generowac wszystkie formaty,
 - nazywa odpowiedzialna warstwe `frontend` albo `backend` i nie uzywa
   ogolnego slowa "system" jako wykonawcy zachowania,
-- pozostawia klasy, metody, guardy, DTO, store i inne nazwy implementacyjne w
-  source references zamiast w glownej narracji,
+- pozostawia klasy, metody, guardy, DTO, store i inne nazwy implementacyjne poza
+  glowna narracja, chyba ze pomagaja odpowiedziec na pytanie operatora,
 - opisuje materialna interakcje HTTP przez zweryfikowane `METHOD path`,
   trigger, cel i efekt we frontendzie; dynamiczne wartosci sa placeholderami,
   a relatywny path nie dowodzi konkretnej uslugi backendowej bez konfiguracji
@@ -273,8 +274,8 @@ Ekran pokazuje:
 - jedna karte runu; dla historii/importu Application, Branch, Revision, View,
   Model oraz pytanie sa drobnym kontekstem w jej stopce,
 - jedna sekcje odpowiedzi,
-- scalone References, Visibility limits, Gaps i Warnings tylko raz, pod
-  odpowiedzia i po prawej stronie jak w UI Explorerze.
+- scalone Visibility limits, Gaps i Warnings tylko raz, pod odpowiedzia i po
+  prawej stronie jak w UI Explorerze; UX Inspector nie pokazuje References.
 
 Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Import nie
 wznawia sesji AI. Export i import sa scisle ograniczone do envelope v1,

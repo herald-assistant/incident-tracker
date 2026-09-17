@@ -33,7 +33,7 @@ class UxInspectorTargetResolverTest {
             components.add(component(fixtureKinds.get(index) + "-" + index,
                     "crm-target-" + index, "CRM target " + index, index + 1));
         }
-        when(reachability.build(any())).thenReturn(graph(components));
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(components));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 
         var correct = 0;
@@ -60,7 +60,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.build(any())).thenReturn(graph(List.of(
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(
                 actionComponent("contact-primary", "primary-action", "doPrimary", 1),
                 actionComponent("contact-secondary", "secondary-action", "doSecondary", 2)
         )));
@@ -86,7 +86,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.build(any())).thenReturn(graph(List.of(
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(
                 actionComponent("contact-primary", "crm-primary-action", "doPrimary", 1),
                 actionComponent("contact-secondary", "crm-secondary-action", "doSecondary", 2)
         )));
@@ -108,7 +108,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.build(any())).thenReturn(graph(List.of(
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(
                 actionComponent("inner", "inner-action", "inside", 1),
                 actionComponent("outer", "outer-action", "outside", 2)
         )));
@@ -132,7 +132,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.build(any())).thenReturn(graph(List.of(genericDivComponent())));
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(genericDivComponent())));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
         var selected = withFingerprint(capture("cap_crm_generic", "div", "Runtime only", null),
                 Map.of(), List.of(), List.of("crm-container"));
@@ -170,7 +170,7 @@ class UxInspectorTargetResolverTest {
                 ), List.of(), List.of(), List.of(), List.of(),
                 "export class LoginComponent { email = ''; doLogin() {} }", 120, 120, false, List.of()
         );
-        when(reachability.build(any())).thenReturn(graph(List.of(component)));
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(component)));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 
         var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
@@ -193,7 +193,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.build(any())).thenThrow(new GitLabFrontendDiscoveryException(
+        when(reachability.buildFocused(any(), any())).thenThrow(new GitLabFrontendDiscoveryException(
                 "FRONTEND_SOURCE_REVISION_CHANGED", "revision changed"));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 
@@ -209,7 +209,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.build(any())).thenReturn(graph(List.of(
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(
                 component("contact-create", "contact-save", "Zapisz kontakt", 1))));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 

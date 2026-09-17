@@ -55,7 +55,7 @@ class UiExplorerCopilotPoliciesTest {
     }
 
     @Test
-    void shouldAllowOnlyPreparedRouteReferenceAndNaturalTypeScriptTargets() {
+    void shouldAllowPreparedRouteReferenceAndNaturalTypeScriptCoordinates() {
         var context = new UiExplorerCopilotToolSessionContextFactory().create(
                 "crm-slice-run",
                 pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request(),
@@ -86,12 +86,11 @@ class UiExplorerCopilotPoliciesTest {
                 routeSlice("other-screen", "Proba wyjscia poza ekran CRM.")
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("selected screen reference");
-        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
                 directSlice(API_PATH, "InventedApi", null, "Proba wyjscia poza graf CRM.")
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("outside the UI Explorer TypeScript allowlist");
+        ))).doesNotThrowAnyException();
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,

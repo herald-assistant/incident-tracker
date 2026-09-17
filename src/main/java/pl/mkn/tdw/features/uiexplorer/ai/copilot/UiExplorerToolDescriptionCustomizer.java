@@ -29,7 +29,8 @@ public class UiExplorerToolDescriptionCustomizer implements CopilotToolDescripti
 
                     UI Explorer guidance: prefer this deterministic tool whenever the artifacts expose a natural file/type target
                     or the current original source contains a material import. Copy exact source/import coordinates and optionally
-                    narrow memberNames. Repository, ref, revision and allowed targets are enforced by hidden runtime context.
+                    narrow memberNames. Repository scope and pinned revision are enforced by hidden runtime context; import targets
+                    are resolved on demand from the original source instead of a prepared target allowlist.
                     Returned original imports enable another narrow call when deeper evidence is material.
                     """;
         }

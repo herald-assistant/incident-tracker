@@ -238,16 +238,15 @@ feature-specific odpowiednikow. Poczatkowy prompt dostaje nazwy sciezek z
 pierwszych czterech poziomow, pelna tresc repository-wide Copilot instructions
 i katalog naglowkow project skills. Dostaje rowniez nieblokujacy focused pack
 komponentow wybranej sciezki target -> komponent widoku, relacje tylko
-pomiedzy nimi oraz ich pelne dostepne pliki TS/HTML. Pozostaly graf nie jest
-serializowany do initial promptu; jawne liczniki jego rozmiaru oraz braki
-kieruja celowanym researchem przez neutralne repository tools.
+pomiedzy nimi oraz ich pelne dostepne pliki TS/HTML. Target-first preflight nie
+buduje pozostalego grafu ani rekurencyjnych dependencies przed AI; dalszy kod
+jest doczytywany celowo przez neutralne repository tools.
 Materialne skille sa doczytywane przez
 neutralne file-read tools, ktore wraz z navigation/search maja read-only
 dostep do calego wybranego repozytorium. Polityka sesji wymusza project i
-branch, hidden scope przypina commit. Referencje z initial evidence lub plikow
-rzeczywiscie odczytanych z tego commita sa zweryfikowanym `source`; sciezki
-tylko wywnioskowane przez model pozostaja jawnie oznaczone jako
-`source-unverified` i nie uniewazniaja calego raportu.
+branch, hidden scope przypina commit. UX Inspector nie przygotowuje ani nie
+klasyfikuje report references; niepotwierdzone twierdzenia pozostaja jawnymi
+gaps albo visibility limits.
 Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje
 capture przez URL, storage lub kanal reczny.
 

@@ -5,7 +5,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptToolTargetCatalog;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 
@@ -38,9 +37,6 @@ public class UxInspectorCopilotToolSessionContextFactory {
         hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, context.sourceScope().pathPrefixes());
         hidden.put(GitLabFrontendToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.view().viewId());
-        var typeScriptTargets = GitLabFrontendTypeScriptToolTargetCatalog.from(context.graph());
-        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, typeScriptTargets.directTargets());
-        hidden.put(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS, typeScriptTargets.importTargets());
         return new CopilotToolSessionContext(runId, "ux-inspector-" + runId, hidden);
     }
 }

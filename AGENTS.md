@@ -116,9 +116,10 @@ Przed wieksza zmiana zacznij od:
   maksymalnie jeden przygotowany slice bezposredniej klasy bazowej komponentu
   widoku; nie dolacza pelnego route subtree, pelnego pliku klasy bazowej ani
   dalszych poziomow dziedziczenia.
-  Komponenty i relacje spoza wybranych sciezek nie sa serializowane do initial
-  promptu; pozostaja dostepne przez celowany research neutralnymi repository
-  tools, a artifact zachowuje tylko jawny licznik rozmiaru pominietego grafu.
+  Deterministyczny preflight jest target-first: rozpoznaje komponent widoku i
+  runtime `componentBoundaryTags`, nie buduje przed AI pelnego screen
+  reachability graphu ani rekurencyjnego grafu dependencies. Pozostaly kod jest
+  dostepny przez celowany research neutralnymi repository tools.
   Brak dopasowanego
   targetu, component boundary albo pojedynczego pliku jest jawna luka dla
   modelu i nie zatrzymuje sesji AI; statyczny graph nie jest dowodem runtime

@@ -106,9 +106,11 @@ public class UxInspectorComponentSourcePackArtifactService {
             var path = shortestRenderingPath(target.componentId(), viewComponent.componentId(), context, byId);
             if (path == null) {
                 selectedIds.add(target.componentId());
+                selectedIds.add(viewComponent.componentId());
                 selectedPaths.add(new SelectedPath(candidate.candidateId(), List.of(target.componentId()), 0, false));
                 limitations.add("No rendering path from candidate " + candidate.candidateId()
-                        + " to selected view component " + viewComponent.componentId() + " was found; only the candidate source was included.");
+                        + " to selected view component " + viewComponent.componentId()
+                        + " was found; candidate and view sources were included without claiming static ancestry.");
             } else {
                 selectedIds.addAll(path.componentIds());
                 selectedPaths.add(new SelectedPath(candidate.candidateId(), path.componentIds(), path.cost(), true));

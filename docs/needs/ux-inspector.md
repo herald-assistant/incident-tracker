@@ -61,9 +61,9 @@ Potrzeba pojawia sie, gdy uzytkownik:
    model oraz reasoning effort i wpisuje pytanie albo polecenie w textarea.
 5. Po uruchomieniu joba prawa czesc ekranu pokazuje stan analizy, jej kroki,
    aktywnosc Copilota i uzyte narzedzia w tym samym wzorcu co UI Explorer.
-6. Wynikiem jest jedna skupiona sekcja odpowiedzi. Sekcja pokazuje source
-   references, confidence, visibility limits i otwarte pytania tylko wtedy,
-   gdy maja znaczenie dla odpowiedzi.
+6. Wynikiem jest jedna skupiona sekcja odpowiedzi. Sekcja pokazuje confidence,
+   visibility limits i otwarte pytania tylko wtedy, gdy maja znaczenie dla
+   odpowiedzi; feature nie wymaga osobnych source references.
 7. Run jest dostepny w `Analysis History`; odpowiedz jest prezentowana w TDW,
    nigdy jako modal na badanej stronie.
 
@@ -183,10 +183,10 @@ zastepuje wskazania odpowiedzialnej warstwy.
 Gdy interakcja HTTP jest materialna dla pytania, odpowiedz podaje
 zweryfikowana metode i path, trigger, cel biznesowy oraz efekt we frontendzie.
 Dynamiczne wartosci sa placeholderami, a nazwa wygenerowanej metody klienta
-pozostaje co najwyzej source reference. Relatywny path nie dowodzi konkretnej
-uslugi backendowej bez potwierdzonej konfiguracji gatewaya, proxy albo base
-URL. Taki punkt kontrolny ma pozwolic analitykowi zweryfikowac request w
-panelu `Network/Siec` przegladarki.
+jest detalem implementacyjnym tylko wtedy, gdy pomaga odpowiedziec na pytanie.
+Relatywny path nie dowodzi konkretnej uslugi backendowej bez potwierdzonej
+konfiguracji gatewaya, proxy albo base URL. Taki punkt kontrolny ma pozwolic
+analitykowi zweryfikowac request w panelu `Network/Siec` przegladarki.
 
 Warunek `disabled` widoczny w przegladarce nie jest dowodem backendowej
 autoryzacji. Tekst i atrybuty badanej strony sa niezaufanym materialem, a nie
@@ -202,24 +202,24 @@ instrukcjami dla AI.
   sekcji.
 - Wynik zawiera dokladnie jedna sekcje odpowiedzi i jest zapisany w historii.
 - Glowna narracja opisuje zachowanie przez `frontend` i `backend`, a techniczne
-  nazwy implementacyjne pozostaja w source references.
+  nazwy implementacyjne pojawiaja sie tylko wtedy, gdy pomagaja odpowiedziec na
+  pytanie operatora.
 - Materialna interakcja HTTP jest przedstawiona przez zweryfikowane
   `METHOD path`, trigger i widoczny efekt, tak aby analityk mogl sprawdzic ja w
   panelu `Network/Siec`.
 - Zachowanie odtworzone z kodu nie jest przedstawiane jako zatwierdzone
   wymaganie; kandydackie kryteria akceptacji i kwestie wymagajace decyzji sa
   jawnie oznaczone.
-- Twierdzenia o implementacji maja source references; brak dowodu jest jawny.
-  Referencja poprawnie wywnioskowana przez model moze pozostac w wyniku nawet
-  bez odczytu pliku, ale musi byc jednoznacznie oznaczona jako
-  niezweryfikowana i nie moze sama uzasadniac najwyzszej pewnosci odpowiedzi.
+- Brak dowodu dla materialnego twierdzenia jest jawny jako gap albo visibility
+  limit; UX Inspector nie przygotowuje ani nie klasyfikuje source references.
 - Analiza zaczyna od wskazanego targetu i rozszerza zakres tylko wtedy, gdy
   wymaga tego pytanie.
 - AI ma read-only dostep do calego wybranego repozytorium na jednym
   przypietym commicie, ale nie moze przejsc do innego projektu ani brancha.
 - Poczatkowy prompt zawiera komplet nazw sciezek pierwszych czterech poziomow;
-  raport moze cytowac plik przekazany w pelnym zweryfikowanym component source
-  pack albo rzeczywiscie odczytany pozniej z przypietego commita.
+  model moze opierac odpowiedz na pliku przekazanym w component source pack
+  albo rzeczywiscie odczytanym pozniej z przypietego commita, bez budowania
+  osobnego katalogu referencji raportu.
 - Poczatkowy prompt zawiera pelna tresc obecnego repository-wide Copilot
   instructions i naglowki wszystkich poprawnych project skills w standardowych
   lokalizacjach; materialny skill jest odczytywany przed dalszym researchem.

@@ -5,13 +5,12 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptImportTarget;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceService;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRevision;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendTypeScriptImportResolverService;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceRequest;
@@ -41,8 +40,10 @@ class GitLabFrontendMcpToolsTest {
             mock(GitLabAngularRouteBranchSliceService.class);
     private final GitLabTypeScriptSymbolSliceService symbolService =
             mock(GitLabTypeScriptSymbolSliceService.class);
+    private final GitLabFrontendTypeScriptImportResolverService importResolverService =
+            mock(GitLabFrontendTypeScriptImportResolverService.class);
     private final GitLabFrontendMcpTools tools =
-            new GitLabFrontendMcpTools(routeService, symbolService);
+            new GitLabFrontendMcpTools(routeService, symbolService, importResolverService);
 
     @Test
     void shouldResolveRouteSliceExclusivelyFromHiddenCrmScope() throws Exception {
@@ -92,13 +93,19 @@ class GitLabFrontendMcpToolsTest {
                 .containsExactly("savePreferences");
         assertThat(result.filePath()).isEqualTo(COMPONENT_PATH);
         assertThat(result.downstreamReferences()).singleElement().satisfies(reference ->
-                assertThat(reference.targetSourcePath()).isEqualTo(FACADE_PATH));
+                assertThat(reference.targetSourcePath()).isNull());
     }
 
     @Test
-    void shouldResolveAnOriginalImportAndRejectUnknownTargetsOrMembers() {
+    void shouldResolveAnOriginalImportOnDemandWithoutPreparedTargets() {
         when(symbolService.readSymbolSlice(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(facadeResponse());
+        when(importResolverService.resolve(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(COMPONENT_PATH),
+                org.mockito.ArgumentMatchers.eq("./crm-contact-preferences.facade"),
+                org.mockito.ArgumentMatchers.eq("CrmContactPreferencesFacade")))
+                .thenReturn(new GitLabFrontendTypeScriptImportResolverService.ResolvedImport(
+                        FACADE_PATH, "CrmContactPreferencesFacade"));
 
         var imported = tools.readTypeScriptSymbolSlice(
                 null,
@@ -116,28 +123,6 @@ class GitLabFrontendMcpToolsTest {
                 "import { CrmContactService } from './crm-contact.service';");
         assertThat(imported.includedImports()).containsExactly(
                 "import { CrmContactService } from './crm-contact.service';");
-        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(
-                "apps/crm-agent/src/app/admin/admin.service.ts",
-                "CrmAdminService",
-                null,
-                null,
-                null,
-                List.of("deleteAll"),
-                "Proba wyjscia poza syntetyczny CRM.",
-                toolContext()
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("allowed TypeScript target");
-        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(
-                COMPONENT_PATH,
-                "CrmContactPreferencesComponent",
-                null,
-                null,
-                null,
-                List.of("unknownMethod"),
-                "Proba odczytu nieprzygotowanej metody CRM.",
-                toolContext()
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("memberNames");
         assertThatThrownBy(() -> tools.readRouteBranchSlice(
                 "other-screen",
                 "Proba wyjscia poza wybrany ekran CRM.",
@@ -147,40 +132,13 @@ class GitLabFrontendMcpToolsTest {
     }
 
     private ToolContext toolContext() {
-        var componentTarget = new GitLabFrontendTypeScriptSliceTarget(
-                COMPONENT_PATH,
-                "CrmContactPreferencesComponent",
-                "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.html",
-                List.of(new GitLabTypeScriptSymbolSelector(
-                        "savePreferences", GitLabTypeScriptSymbolKind.METHOD, 42
-                ))
-        );
-        var facadeTarget = new GitLabFrontendTypeScriptSliceTarget(
-                FACADE_PATH,
-                "CrmContactPreferencesFacade",
-                null,
-                List.of(new GitLabTypeScriptSymbolSelector(
-                        "savePreferences", GitLabTypeScriptSymbolKind.METHOD, 18
-                ))
-        );
-        var importTarget = new GitLabFrontendTypeScriptImportTarget(
-                COMPONENT_PATH,
-                "./crm-contact-preferences.facade",
-                "CrmContactPreferencesFacade",
-                facadeTarget
-        );
         return new ToolContext(Map.of(
                 AgentToolContextKeys.GITLAB_GROUP, "synthetic-crm",
                 AgentToolContextKeys.GITLAB_BRANCH, "main",
                 GitLabFrontendToolContextKeys.PROJECT_NAME, "crm-agent-portal",
                 GitLabFrontendToolContextKeys.PATH_PREFIXES, List.of("apps/crm-agent"),
                 GitLabFrontendToolContextKeys.SOURCE_REVISION, "crm-commit-abc123",
-                GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, SCREEN_REF,
-                GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS, Map.of(
-                        componentTarget.targetKey(), componentTarget,
-                        facadeTarget.targetKey(), facadeTarget),
-                GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS, Map.of(
-                        importTarget.importKey(), importTarget)
+                GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, SCREEN_REF
         ));
     }
 
@@ -230,7 +188,7 @@ class GitLabFrontendMcpToolsTest {
     private void assertScope(GitLabFrontendRepositoryScope scope) {
         assertThat(scope.group()).isEqualTo("synthetic-crm");
         assertThat(scope.projectName()).isEqualTo("crm-agent-portal");
-        assertThat(scope.ref()).isEqualTo("main");
+        assertThat(scope.ref()).isEqualTo("crm-commit-abc123");
         assertThat(scope.pathPrefixes()).containsExactly("apps/crm-agent");
     }
 }

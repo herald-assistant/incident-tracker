@@ -11,8 +11,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptImportTarget;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
@@ -127,16 +125,9 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             reject(request, "Use exactly one TypeScript target mode: direct file/type or visible import.", true);
         }
 
-        GitLabFrontendTypeScriptSliceTarget target = null;
         if (directMode) {
             if (!StringUtils.hasText(filePath) || !StringUtils.hasText(declaringTypeName)) {
                 reject(request, "Direct TypeScript mode requires filePath and declaringTypeName.", true);
-            }
-            var targets = request.sessionContext().hiddenContext()
-                    .get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
-            if (targets instanceof Map<?, ?> values) {
-                var value = values.get(GitLabFrontendTypeScriptSliceTarget.key(filePath, declaringTypeName));
-                if (value instanceof GitLabFrontendTypeScriptSliceTarget typedTarget) target = typedTarget;
             }
         } else {
             if (!StringUtils.hasText(consumerFilePath)
@@ -144,26 +135,10 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
                 reject(request,
                         "Import TypeScript mode requires consumerFilePath, moduleSpecifier and importedSymbol.", true);
             }
-            var targets = request.sessionContext().hiddenContext()
-                    .get(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS);
-            if (targets instanceof Map<?, ?> values) {
-                var value = values.get(GitLabFrontendTypeScriptImportTarget.key(
-                        consumerFilePath, moduleSpecifier, importedSymbol));
-                if (value instanceof GitLabFrontendTypeScriptImportTarget importTarget) target = importTarget.target();
-            }
-        }
-        if (target == null) {
-            reject(request, "Requested code coordinates are outside the UI Explorer TypeScript allowlist.", true);
         }
         var requestedMembers = textList(arguments.get("memberNames"));
         if (requestedMembers.size() > MAX_TYPESCRIPT_MEMBERS) {
             reject(request, "memberNames must contain at most 50 values.", true);
-        }
-        if (!requestedMembers.isEmpty()) {
-            var allowedMembers = target.symbolSelectors().stream().map(selector -> selector.name()).toList();
-            if (!allowedMembers.containsAll(requestedMembers)) {
-                reject(request, "memberNames contains a symbol outside the allowed TypeScript target.", true);
-            }
         }
     }
 

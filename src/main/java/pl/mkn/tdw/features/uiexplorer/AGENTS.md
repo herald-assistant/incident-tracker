@@ -44,7 +44,9 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   MCP toolem UI Explorera, zeby nie duplikowac initial context. Generyczny
   GitLab search/read jest dozwolony tylko dla
   materialnej luki, ktora nie ma jeszcze bezpiecznej referencji. Repository,
-  ref, path, source revision i dozwolone targety pozostaja hidden contextem.
+  ref oraz source revision pozostaja hidden contextem. Naturalne sciezki, typy
+  i importy sa walidowane w read-only repository scope dopiero przy wywolaniu
+  toola; nie przywracaj przygotowanego katalogu dozwolonych targetow.
 - Result nie posiada `dependencies`, `crossSectionDependencies` ani osobnego
   appendixu zaleznosci. Relacje funkcjonalne mieszkaja w tresci wlasciwej
   sekcji tylko wtedy, gdy wyjasniaja warunek, akcje albo rezultat.

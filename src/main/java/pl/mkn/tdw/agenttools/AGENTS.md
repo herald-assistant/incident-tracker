@@ -90,9 +90,10 @@ Nie obejmuje:
   slice nie ujawnia syntetycznych refow: przyjmuje naturalny `filePath` z
   `declaringTypeName` albo dokladne wspolrzedne importu widocznego w kodzie
   (`consumerFilePath`, `moduleSpecifier`, `importedSymbol`), opcjonalne
-  `memberNames` i `reason`. Group, project, ref, path prefixes, source revision
-  oraz rejestr dozwolonych targetow pochodza z hidden session context. Nie
-  przywracaj tych danych jako pol toola. Nie wystawiaj pelnego Screen
+  `memberNames` i `reason`. Group, project, path prefixes oraz source revision
+  pochodza z hidden session context, a import jest rozwiazywany na zadanie z
+  przypietego commita. Tool nie wymaga przygotowanego katalogu targetow. Nie
+  przywracaj scope jako pol toola. Nie wystawiaj pelnego Screen
   Reachability jako MCP result, gdy zasila juz initial prompt.
 
 ## Weryfikacja

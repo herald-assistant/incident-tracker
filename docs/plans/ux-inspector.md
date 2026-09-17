@@ -18,7 +18,8 @@ Branch, View, model, reasoning effort oraz pytanie.
 
 Wynikiem jest `AnalysisReport` z dokladnie jedna sekcja `answer`, zapisany w
 Analysis History. Odpowiedz ma byc zrozumiala biznesowo, a odniesienia do kodu
-maja pelnic role dowodow.
+sa przywolywane w Markdown tylko wtedy, gdy pomagaja operatorowi. Osobny
+katalog referencji nie jest czescia kontraktu UX Inspectora.
 
 ## Baseline i conformance delta
 
@@ -721,7 +722,7 @@ resolution, tool schema, hidden scope, job, persistence/export i frontend.
 
 ## Inkrement: naturalne adresowanie TypeScript slice
 
-Status: in-progress
+Status: complete
 
 Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 usuniecie model-facing
 syntetycznych `sliceRef` z TypeScript-specific research oraz pogłębianie po
@@ -806,6 +807,57 @@ serwisem nadawało poprawnemu slice status `PARTIAL`.
 
 Weryfikacja: `GitLabTypeScriptSymbolSliceServiceTest` oraz `mvn -q test` — PASS.
 
+## Inkrement: szybki target-first preflight bez katalogu referencji
+
+Status: complete
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 wariant 2: initial prompt ma
+powstawac z celowanego target resolution i focused source packu bez budowania
+pelnego grafu oraz bez precomputingu, walidacji i oznaczania referencji na
+potrzeby pozniejszych wywolan tools.
+
+Klasyfikacja: **L2**. Zmienia sie algorytm deterministycznego przygotowania UX
+Inspectora, hidden context TypeScript toola, report contract i wspolny kontrakt
+neutralnego toola. Publiczne HTTP API, capture, pinned repository scope oraz
+read-only charakter tools pozostaja bez zmian.
+
+### Baseline i conformance delta
+
+- Baseline: resolver buduje pelny screen reachability graph, przechodzi
+  rekurencyjnie komponenty i dependencies, a nastepnie wykorzystuje calosc do
+  target rankingu, focused source packu i hidden allowlisty TypeScript toola.
+- Delta: target resolution rozpoczyna sie od selected view oraz sygnalow
+  capture, ogranicza source discovery do kandydatow i sciezek wymaganych przez
+  initial prompt oraz przygotowuje co najwyzej bezposrednia klase bazowa.
+- Delta: TypeScript tool zachowuje pinned project/commit, read-only scope,
+  walidacje bezpiecznej sciezki i limity, ale nie wymaga przygotowanego katalogu
+  direct/import targets ani nie oznacza source references.
+- Delta: wynik UX Inspectora nie klasyfikuje references jako `source` lub
+  `source-unverified`; usuniecie tej walidacji nie moze dodac odczytu innego
+  projektu, rewizji ani zapisu do badanego repozytorium.
+
+### Konsumenci i testy
+
+- Neutralne: frontend TypeScript MCP tool/context i evidence mapping.
+- UX Inspector: resolver, focused source pack, prompt, Copilot hidden context,
+  report mapper, result/history/export oraz dokumentacja runtime.
+- UI Explorer: wspolny TypeScript tool musi zachowac naturalne adresowanie;
+  jego istniejacy graph flow pozostaje poza zakresem optymalizacji.
+- Testy: target resolution `RESOLVED`/`AMBIGUOUS`/`NOT_FOUND`, ograniczona
+  liczba source/dependency reads, source pack i direct base, neutralny tool,
+  report contract, oba feature policies oraz `PackageDependencyGuardTest`.
+
+### Kroki
+
+- [x] Usunac katalog referencji i walidacje prepared targets z TypeScript toola
+  oraz klasyfikacje `source`/`source-unverified`, zachowujac pinned read-only
+  repository scope, bezpieczne sciezki i limity.
+- [x] Zastapic pelny pre-AI reachability/dependency traversal celowanym
+  target-first discovery, ktory dostarcza ten sam materialny initial source
+  pack i bezposrednia klase bazowa bez analizy pozostalych komponentow.
+- [x] Zaktualizowac prompt, runtime flow, niezmienniki i testy; wykonac testy
+  celowane, architecture guard oraz pelna regresje backendu.
+
 ## Wynik weryfikacji
 
 - Browser Tools: `node --test frontend/tests/browser-tools/browser-tools.test.mjs`
@@ -849,6 +901,12 @@ Weryfikacja: `GitLabTypeScriptSymbolSliceServiceTest` oraz `mvn -q test` — PAS
 - Pelna regresja backendu po ograniczeniu pelnych zrodel do wybranych sciezek:
   `mvn -q test`
   - PASS, exit code 0; 341 raportow test suites bez failures/errors.
+- Wariant 2, celowane testy target-first, naturalnego TypeScript import
+  resolution, promptu, report mappera, policy i joba:
+  `mvn -q "-Dtest=GitLabFrontendTypeScriptImportResolverServiceTest,GitLabFrontendMcpToolsTest,GitLabFrontendScreenReachabilityServiceTest,UxInspectorTargetResolverTest,UxInspectorComponentSourcePackArtifactServiceTest,UxInspectorCopilotToolSessionContextFactoryTest,UiExplorerCopilotPoliciesTest,UiExplorerCopilotRunRequestAssemblerTest,UxInspectorCopilotRunRequestAssemblerTest,UxInspectorCopilotAnalysisProviderTest,UxInspectorPromptAndSkillsTest,UxInspectorReportMapperTest,UxInspectorJobServiceTest" test`
+  - PASS.
+- Pelna regresja backendu po wdrozeniu wariantu 2: `mvn -q test`
+  - PASS, 1649 testow, 0 failures, 0 errors, 1 skipped.
 
 Pilot jakosciowy z rzeczywistym Copilot/GitLab pozostaje osobnym kryterium
 produktowym. Powinien objac pytania o walidacje, pochodzenie danych,

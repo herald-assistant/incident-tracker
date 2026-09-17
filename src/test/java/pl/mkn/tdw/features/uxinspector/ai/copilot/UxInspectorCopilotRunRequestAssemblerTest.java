@@ -5,7 +5,6 @@ import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
@@ -88,15 +87,9 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         assertThat(assembly.repositoryToolScope().selectedBranch()).isEqualTo("main");
         assertThat(assembly.repositoryToolScope().selectedCommit()).isEqualTo(REVISION);
         assertThat(assembly.runRequest().prompt()).contains("sourceToolScope", "W jednym turnie wywolaj rownolegle");
-        var directTargets = (Map<?, ?>) assembly.toolSessionContext().hiddenContext()
-                .get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
-        org.junit.jupiter.api.Assertions.assertTrue(directTargets.containsKey(
-                GitLabFrontendTypeScriptSliceTarget.key(
-                        targetContext.sourceBinding().sourcePath(),
-                        targetContext.sourceBinding().componentSymbol())));
-        var importTargets = (Map<?, ?>) assembly.toolSessionContext().hiddenContext()
-                .get(GitLabFrontendToolContextKeys.TYPESCRIPT_IMPORT_TARGETS);
-        assertThat(importTargets).isEmpty();
+        assertThat(assembly.toolSessionContext().hiddenContext())
+                .doesNotContainKeys("gitLabFrontendTypeScriptSliceTargets",
+                        "gitLabFrontendTypeScriptImportTargets");
     }
 
     private List<ToolDefinition> registeredTools() {

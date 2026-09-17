@@ -59,6 +59,21 @@ public class GitLabFrontendScreenReachabilityService {
     private final GitLabRepositoryPort repositoryPort;
 
     public GitLabFrontendScreenReachabilityGraph build(GitLabFrontendScreenSelectionRequest request) {
+        return build(request, List.of(), false);
+    }
+
+    public GitLabFrontendScreenReachabilityGraph buildFocused(
+            GitLabFrontendScreenSelectionRequest request,
+            List<String> componentSelectors
+    ) {
+        return build(request, componentSelectors != null ? componentSelectors : List.of(), true);
+    }
+
+    private GitLabFrontendScreenReachabilityGraph build(
+            GitLabFrontendScreenSelectionRequest request,
+            List<String> componentSelectors,
+            boolean focused
+    ) {
         var context = screenSelectionService.select(request);
         var bootstrapPath = context.effectiveRouteChain().segments().isEmpty()
                 ? context.screenNode().viewTarget().sourcePath()
@@ -67,6 +82,9 @@ public class GitLabFrontendScreenReachabilityService {
                 context.sourceFiles(), repositoryPort, request.scope(), request.limits(), bootstrapPath
         );
         var descriptors = new ArrayList<>(componentDescriptors(context, sourceIndex));
+        if (focused) {
+            descriptors = new ArrayList<>(focusedComponentDescriptors(context, sourceIndex, descriptors, componentSelectors));
+        }
         var root = rootDescriptor(context, descriptors);
         var edgeIndex = new LinkedHashMap<String, GitLabFrontendReachabilityEdge>();
         var components = new LinkedHashMap<String, MutableComponent>();
@@ -79,13 +97,25 @@ public class GitLabFrontendScreenReachabilityService {
             componentQueue.add(new ComponentDepth(root.componentId(), 0, "SELECTED_SCREEN"));
             queuedComponents.add(root.componentId());
         }
+        if (focused) {
+            var focusedDepth = 1;
+            for (var descriptor : descriptors) {
+                if (root != null && root.componentId().equals(descriptor.componentId())) continue;
+                if (queuedComponents.add(descriptor.componentId())) {
+                    componentQueue.add(new ComponentDepth(
+                            descriptor.componentId(), focusedDepth++, "RUNTIME_COMPONENT_BOUNDARY"));
+                }
+            }
+        }
         while (!componentQueue.isEmpty()) {
             var current = componentQueue.removeFirst();
             var descriptor = descriptorById(descriptors, current.componentId());
             if (descriptor == null || components.containsKey(descriptor.componentId())) {
                 continue;
             }
-            discoverComponentCandidates(descriptor, sourceIndex, descriptors);
+            if (!focused) {
+                discoverComponentCandidates(descriptor, sourceIndex, descriptors);
+            }
             var position = new ComponentPosition(
                     descriptor, current.depth(), components.size(), true, current.discoveryKind()
             );
@@ -101,17 +131,30 @@ public class GitLabFrontendScreenReachabilityService {
                     componentQueue.add(new ComponentDepth(edge.toId(), current.depth() + 1, edge.kind().name()));
                 }
             }
+            var dependencyReferences = focused
+                    ? component.slice.downstreamReferences().stream()
+                    .filter(reference -> root != null && root.componentId().equals(component.id()))
+                    .filter(reference -> reference.kind() == GitLabTypeScriptDownstreamReferenceKind.INHERITED_MEMBER)
+                    .toList()
+                    : component.slice.downstreamReferences();
             collectDependencies(
-                    request.scope(), component.id(), component.descriptor.sourcePath(), component.slice.downstreamReferences(),
+                    request.scope(), component.id(), component.descriptor.sourcePath(), dependencyReferences,
                     sourceIndex, descriptors, dependencies, dependencyQueue, queuedDependencies, edgeIndex,
-                    component.dependencyIds, componentQueue, queuedComponents, current.depth() + 1
+                    component.dependencyIds,
+                    focused ? null : componentQueue,
+                    focused ? null : queuedComponents,
+                    current.depth() + 1
             );
         }
 
-        processDependencies(
-                request.scope(), sourceIndex, descriptors, dependencies,
-                dependencyQueue, queuedDependencies, edgeIndex
-        );
+        if (focused) {
+            processDirectDependencies(request.scope(), sourceIndex, dependencies, dependencyQueue);
+        } else {
+            processDependencies(
+                    request.scope(), sourceIndex, descriptors, dependencies,
+                    dependencyQueue, queuedDependencies, edgeIndex
+            );
+        }
 
         var connectedComponents = components.values().stream().map(MutableComponent::toResponse).toList();
         var levels = connectedComponents.stream()
@@ -128,7 +171,7 @@ public class GitLabFrontendScreenReachabilityService {
                 .map(MutableDependency::toResponse)
                 .toList();
         var edges = List.copyOf(edgeIndex.values());
-        var unresolvedRoutedViews = unresolvedRoutedViews(context, descriptors);
+        var unresolvedRoutedViews = focused ? 0 : unresolvedRoutedViews(context, descriptors);
         var unresolvedTemplates = unresolvedTemplates(components);
         var unresolvedContainerOutlet = unresolvedContainerOutlet(context, root);
         var limitations = limitations(
@@ -166,6 +209,40 @@ public class GitLabFrontendScreenReachabilityService {
                 sliceCharacters, outline.length(), sourceIndex.limitReached() || context.graphCoverage().limitReached(),
                 limitations, outline
         );
+    }
+
+    private List<ComponentDescriptor> focusedComponentDescriptors(
+            GitLabFrontendScreenReachabilitySeed context,
+            SourceIndex sourceIndex,
+            List<ComponentDescriptor> initial,
+            List<String> selectors
+    ) {
+        var discovered = new ArrayList<>(initial);
+        var normalizedSelectors = selectors.stream()
+                .filter(StringUtils::hasText)
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .filter(value -> value.contains("-"))
+                .distinct()
+                .toList();
+        for (var selector : normalizedSelectors) {
+            var alreadyLoaded = discovered.stream()
+                    .anyMatch(descriptor -> descriptor.selectors().stream()
+                            .anyMatch(candidate -> selectorMatchesElement(candidate, selector)));
+            if (alreadyLoaded) continue;
+            for (var path : sourceIndex.findSelectorCandidates(selector)) {
+                addDescriptorsFromPath(path, sourceIndex, discovered);
+            }
+        }
+        var root = rootDescriptor(context, discovered);
+        var focused = new LinkedHashMap<String, ComponentDescriptor>();
+        if (root != null) focused.put(root.componentId(), root);
+        for (var selector : normalizedSelectors) {
+            discovered.stream()
+                    .filter(descriptor -> descriptor.selectors().stream()
+                            .anyMatch(candidate -> selectorMatchesElement(candidate, selector)))
+                    .forEach(descriptor -> focused.putIfAbsent(descriptor.componentId(), descriptor));
+        }
+        return List.copyOf(focused.values());
     }
 
     private List<ComponentDescriptor> componentDescriptors(
@@ -558,6 +635,30 @@ public class GitLabFrontendScreenReachabilityService {
                     dependencies, queue, queued, edges, downstream, null, null, 0
             );
             dependency.downstreamDependencyIds.addAll(downstream);
+        }
+    }
+
+    private void processDirectDependencies(
+            GitLabFrontendRepositoryScope scope,
+            SourceIndex sourceIndex,
+            LinkedHashMap<String, MutableDependency> dependencies,
+            ArrayDeque<String> queue
+    ) {
+        while (!queue.isEmpty()) {
+            var dependency = dependencies.get(queue.removeFirst());
+            if (dependency == null || !StringUtils.hasText(dependency.sourcePath)) continue;
+            var selectors = dependency.methods.stream()
+                    .map(method -> new GitLabTypeScriptSymbolSelector(method, GitLabTypeScriptSymbolKind.AUTO, null))
+                    .toList();
+            var declaringType = sourceIndex.declaresClass(dependency.sourcePath, dependency.symbol)
+                    ? dependency.symbol : null;
+            var slice = typeScriptSymbolSliceService.readSymbolSlice(new GitLabTypeScriptSymbolSliceRequest(
+                    scope, dependency.sourcePath, declaringType, null, false, selectors,
+                    true, true, true, GitLabTypeScriptSymbolSliceService.MAX_OUTPUT_CHARACTERS
+            ));
+            dependency.update(slice);
+            dependency.processedMethods.clear();
+            dependency.processedMethods.addAll(dependency.methods);
         }
     }
 

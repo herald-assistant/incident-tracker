@@ -98,8 +98,7 @@ class UxInspectorJobServiceTest {
         when(evidence.map(any())).thenReturn(List.of());
         var preparation = mock(UxInspectorPromptPreparationService.class);
         when(preparation.prepare(any(), any())).thenReturn(new UxInspectorPromptPreparation(
-                "Focused CRM prompt", java.util.Map.of("target", "CRM target"),
-                java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
+                "Focused CRM prompt", java.util.Map.of("target", "CRM target")));
         var provider = mock(UxInspectorAnalysisProvider.class);
         when(provider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(completedAnalysis());

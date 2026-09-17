@@ -39,8 +39,7 @@ public class UxInspectorCopilotAnalysisProvider implements UxInspectorAnalysisPr
         });
         if (activityListener != null) prepared = prepared.withActivitySink(activityListener::onAiActivity);
         var execution = executionGateway.execute(prepared);
-        var mapping = reportMapper.map(execution.report(), request.capture(), context, preparation.initialSourcePaths(),
-                assembly.repositoryToolScope().readSourceRefs(), execution.usage());
+        var mapping = reportMapper.map(execution.report(), request.capture(), context, execution.usage());
         if (mapping.result() == null || mapping.report() == null) {
             return new UxInspectorAiAnalysis(UxInspectorAiAnalysisStatus.FAILED, null, null, execution.usage(),
                     execution.sessionId(), mapping.limitations());

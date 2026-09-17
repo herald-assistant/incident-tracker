@@ -100,7 +100,7 @@ class UxInspectorPromptAndSkillsTest {
         var preparation = service.prepare(request("Dlaczego przycisk jest zablokowany?"), targetContext());
 
         assertThat(preparation.prompt())
-                .contains("UNTRUSTED_RUNTIME_OBSERVATION", "UNTRUSTED_SOURCE_EVIDENCE", "pinned revision")
+                .contains("UNTRUSTED_RUNTIME_OBSERVATION", "UNTRUSTED_SOURCE_EVIDENCE", "pinnedCommit")
                 .contains("czy pytanie jest precyzyjne, czy ogolne")
                 .contains("Dla pytania precyzyjnego", "Dla pytania ogolnego")
                 .contains("gitlab_list_repository_tree", "gitlab_list_repository_files",
@@ -127,10 +127,10 @@ class UxInspectorPromptAndSkillsTest {
                         "guards", "interceptory", "initializery", "feature flags")
                 .contains("report_update_header", "report_upsert_section", "report_update_meta", "report_get_current")
                 .contains("W jednym turnie wywolaj rownolegle")
-                .contains("dokladnie raz `report_get_current`", "nie duplikuj w nim references")
+                .contains("dokladnie raz `report_get_current`", "Nie tworz report references")
                 .contains("Nie poprawiaj tresci ani metadata po tej kontroli")
                 .contains("jedynej sekcji `answer`")
-                .contains("source-unverified", "nie przedstawiaj jej jako bezposrednio potwierdzonego dowodu")
+                .doesNotContain("source-unverified")
                 .doesNotContain("pathPrefixes")
                 .doesNotContain("ui-explorer-")
                 .doesNotContain("ux-inspector-orchestrator")

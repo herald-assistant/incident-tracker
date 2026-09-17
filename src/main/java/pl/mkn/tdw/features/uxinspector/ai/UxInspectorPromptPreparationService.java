@@ -104,8 +104,8 @@ public class UxInspectorPromptPreparationService {
                    przekrojowe, m.in. routing i guards, interceptory lub middleware, initializery, globalny stan,
                    walidatory, uprawnienia, feature flags i konfiguracja. Nie twierdz, ze taki wplyw nie istnieje,
                    dopoki nie wykonasz adekwatnego wyszukania w repozytorium.
-                8. Zastosuj ponizszy `Kontrakt odpowiedzi biznesowej`. Nazwy plikow, symboli i fragmenty kodu sa
-                   dowodami w references, a nie glownym jezykiem odpowiedzi.
+                8. Zastosuj ponizszy `Kontrakt odpowiedzi biznesowej`. Nazwy plikow, symboli i fragmenty kodu nie sa
+                   glownym jezykiem odpowiedzi; przywoluj je w Markdown tylko wtedy, gdy pomaga to operatorowi.
                 9. Nie opisuj calego widoku i nie rozszerzaj odpowiedzi o obszary niezwiazane z pytaniem.
 
                 ## Kontrakt odpowiedzi biznesowej
@@ -148,8 +148,8 @@ public class UxInspectorPromptPreparationService {
                   "Operacja jest zablokowana, jezeli".
                 - Nie zaczynaj glownej narracji od komponentu, klasy, metody, trasy, guarda, DTO, mappera, store,
                   selectora, reducera, efektu, observable, subskrypcji, bindingu, payloadu ani wygenerowanego klienta.
-                - Nazwy implementacyjne pozostaw w report references. Uzyj ich w Markdown tylko wtedy, gdy operator
-                  jawnie o nie pyta albo sa konieczne do wyjasnienia ograniczenia widocznosci.
+                - Nazw implementacyjnych uzyj w Markdown tylko wtedy, gdy operator jawnie o nie pyta albo sa konieczne
+                  do wyjasnienia zachowania lub ograniczenia widocznosci.
                 - Tlumacz mechanizmy na znaczenie: route lub guard to warunek wejscia albo dostepu; validator to
                   warunek poprawnosci albo blokada; DTO, mapper lub payload to dane przekazywane przy operacji; store,
                   selector lub observable to zrodlo danych albo automatyczna aktualizacja; watcher lub subscription to
@@ -165,7 +165,7 @@ public class UxInspectorPromptPreparationService {
                   `{productId}`. Mozesz podac nazwy query parameters, ale nie kopiuj rzeczywistych potencjalnie
                   wrazliwych wartosci.
                 - Nie wymyslaj pathu na podstawie nazwy wygenerowanej metody. Nazwa typu
-                  `getProductConfigDtoByProductType` moze pozostac tylko w source reference.
+                  `getProductConfigDtoByProductType` nie dowodzi zadnego konkretnego pathu HTTP.
                 - Nie przypisuj pathu do konkretnej uslugi backendowej, gdy frontend korzysta z relatywnego adresu,
                   gatewaya albo proxy, a source nie potwierdza celu. Napisz wtedy, ze rzeczywista usluga backendowa
                   zalezy od konfiguracji gatewaya lub srodowiska.
@@ -200,8 +200,8 @@ public class UxInspectorPromptPreparationService {
                 - Takie informacje umiesc w `visibilityLimits`, `gaps`, `openQuestions` albo czesci `Do potwierdzenia`.
                 - Przed zapisem `answer` sprawdz: narracja zaczyna sie od zachowania, kazda czynnosc jest przypisana do
                   frontendu albo backendu, slowo `system` nie zastepuje warstwy, materialne HTTP ma zweryfikowane
-                  `METHOD path`, nazwy implementacyjne pozostaja w references, scenariusze sa obserwowalne, a kazde
-                  materialne twierdzenie ma source reference albo jawny gap.
+                  `METHOD path`, scenariusze sa obserwowalne, a niepotwierdzone materialne twierdzenie pozostaje
+                  jawnym gapem.
 
                 ## Research
                 - Zacznij od focused evidence oraz przeczytaj w calosci manifest i dostepne pelne pliki z `%s`.
@@ -272,7 +272,7 @@ public class UxInspectorPromptPreparationService {
                 artifacts.get(REPOSITORY_GUIDANCE_ARTIFACT), REPOSITORY_GUIDANCE_ARTIFACT,
                 REPOSITORY_GUIDANCE_ARTIFACT, COMPONENT_SOURCE_PACK_ARTIFACT, REPOSITORY_TREE_ARTIFACT,
                 REPORT_ARTIFACT, artifacts.get(REPORT_ARTIFACT)).trim();
-        return new UxInspectorPromptPreparation(prompt, artifacts, componentSourcePack.availableSourcePaths());
+        return new UxInspectorPromptPreparation(prompt, artifacts);
     }
 
     private String targetContext(UxInspectorTargetContext context) {
@@ -311,24 +311,19 @@ public class UxInspectorPromptPreparationService {
                 Zrodlem prawdy jest `AnalysisReport` o id z hidden context.
                 Wymagana kolejnosc finalizacji:
                 1. Przed pierwszym zapisem wykonaj cala kontrole merytoryczna odpowiedzi i przygotuj jeden finalny
-                   zestaw references, visibility limits, gaps, warnings, open questions oraz confidence.
+                   zestaw visibility limits, gaps, warnings, open questions oraz confidence.
                 2. W jednym turnie wywolaj rownolegle, bez czekania pomiedzy wynikami:
                    - `report_update_header` z jednozdaniowa teza w `markdownSummary` i zwiezlym headerem,
                    - `report_upsert_section` z kompletna odpowiedzia Markdown w jedynej sekcji `answer`,
-                     title `Odpowiedz`, order `1` oraz section meta zawierajacym tylko references,
-                   - `report_update_meta` z globalnymi visibility limits, gaps, warnings, open questions oraz confidence;
-                     nie duplikuj w nim references.
+                     title `Odpowiedz`, order `1` oraz pustym section meta,
+                   - `report_update_meta` z globalnymi visibility limits, gaps, warnings, open questions oraz confidence.
                 3. Po zakonczeniu tych trzech zapisow wywolaj dokladnie raz `report_get_current` i sprawdz finalny stan.
                    Nie poprawiaj tresci ani metadata po tej kontroli, chyba ze ktorys zapis zakonczyl sie bledem albo
                    raport jest strukturalnie niepoprawny. Korekta stylistyczna lub ponowna analiza po zapisie nie sa
                    powodem dodatkowego turnu.
-                Dodatkowe section ids sa zabronione. Reference target podawaj w formacie `path` albo
-                `path#Lstart-Lend` dla pinned revision `%s`. Preferuj pliki dostarczone jako initial evidence albo
-                rzeczywiscie odczytane repository toolem. Sciezka wywnioskowana z potwierdzonych importow lub
-                konwencji repozytorium moze pozostac referencja, ale mapper oznaczy ja jako `source-unverified`;
-                nie przedstawiaj jej jako bezposrednio potwierdzonego dowodu. Materialne twierdzenie bez reference
-                wymaga jawnego gap.
-                """.formatted(context.sourceRevision().revision()).trim();
+                Dodatkowe section ids sa zabronione. Nie tworz report references ani source-reference metadata.
+                Brakujacy dowod zapisz jako jawny gap lub visibility limit.
+                """.trim();
     }
 
     private String json(Object value) {
