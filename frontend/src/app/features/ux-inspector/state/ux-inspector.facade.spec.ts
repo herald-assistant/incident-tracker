@@ -107,7 +107,88 @@ describe('UxInspectorFacade', () => {
 
     expect(api.getViews).toHaveBeenLastCalledWith('crm-agent-portal', 'main', true);
   });
+
+  it('selects the unique best view from the captured route after the catalog loads', () => {
+    api.getViews.mockReturnValue(of(viewCatalog([
+      view('crm-contact-details', '/contacts/:contactId'),
+      view('crm-contact-create', '/contacts/new')
+    ])));
+    const facade = TestBed.inject(UxInspectorFacade);
+
+    facade.initialize();
+    facade.loadViews();
+    TestBed.tick();
+
+    expect(facade.selectedViewId()).toBe('crm-contact-create');
+    expect(facade.viewMatchedFromCapture()).toBe(true);
+  });
+
+  it('selects the matching view when capture arrives after the catalog', () => {
+    captureSignal.set(null);
+    api.getViews.mockReturnValue(of(viewCatalog([
+      view('crm-contact-details', '/contacts/:contactId'),
+      view('crm-contact-create', '/contacts/new')
+    ])));
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    TestBed.tick();
+
+    captureSignal.set(captureFixture());
+    TestBed.tick();
+
+    expect(facade.selectedViewId()).toBe('crm-contact-create');
+    expect(facade.viewMatchedFromCapture()).toBe(true);
+  });
+
+  it('leaves the view empty when captured route matching is ambiguous', () => {
+    captureSignal.set({
+      ...captureFixture(),
+      page: { ...captureFixture().page, path: '/contacts/customer-a7' }
+    });
+    api.getViews.mockReturnValue(of(viewCatalog([
+      view('crm-contact-by-id', '/contacts/:contactId'),
+      view('crm-contact-by-key', '/contacts/:contactKey')
+    ])));
+    const facade = TestBed.inject(UxInspectorFacade);
+
+    facade.initialize();
+    facade.loadViews();
+    TestBed.tick();
+
+    expect(facade.selectedViewId()).toBe('');
+    expect(facade.viewMatchedFromCapture()).toBe(false);
+  });
+
+  it('keeps a manual override and removes the capture-route marker', () => {
+    api.getViews.mockReturnValue(of(viewCatalog([
+      view('crm-contact-details', '/contacts/:contactId'),
+      view('crm-contact-create', '/contacts/new')
+    ])));
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    TestBed.tick();
+
+    facade.selectView('crm-contact-details');
+    TestBed.tick();
+
+    expect(facade.selectedViewId()).toBe('crm-contact-details');
+    expect(facade.viewMatchedFromCapture()).toBe(false);
+  });
 });
+
+function view(viewId: string, routePattern: string) {
+  return { viewId, label: viewId, routePattern, status: 'READY', limitations: [] };
+}
+
+function viewCatalog(views: ReturnType<typeof view>[]) {
+  return {
+    systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
+    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' }, status: 'READY',
+    views, diagnostics: [], limitations: []
+  };
+}
 
 function captureFixture(): UxInspectorCapture {
   return {

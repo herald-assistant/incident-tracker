@@ -65,6 +65,17 @@ describe('UxInspectorPageComponent', () => {
       type: 'TDW_UX_INSPECTOR_RECEIVED', captureId: 'cap_crm_contact_save'
     });
 
+    fixture.componentInstance.facade.viewCatalog.set({
+      systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
+      sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' }, status: 'READY',
+      views: [{ viewId: 'crm-contact-create', label: 'Nowy kontakt', routePattern: '/contacts/new', status: 'READY', limitations: [] }],
+      diagnostics: [], limitations: []
+    });
+    fixture.componentInstance.facade.selectedViewId.set('crm-contact-create');
+    fixture.componentInstance.facade.viewMatchedFromCapture.set(true);
+    fixture.detectChanges();
+    expect(page.textContent).toContain('dopasowano z URL capture');
+
     const browserToolsButton = Array.from(page.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.textContent?.includes('Browser Tools'));
     browserToolsButton?.click();

@@ -110,6 +110,12 @@ TDW. Uklad i zachowanie tych kontrolek odpowiada UI Explorerowi:
 - katalog jest wspolnie cache'owany przez neutralny `frontendcatalog` per
   system, repository scope, ref i limity discovery,
 - `Load views` wymusza odswiezenie tylko aktualnego scope'u,
+- gdy capture i katalog sa dostepne, frontend porownuje `page.path` z
+  `routePattern` i uzupelnia View tylko dla jednego najlepszego dopasowania;
+  segment statyczny ma pierwszenstwo przed parametrem, wildcard jest
+  najslabszy, a remis albo brak dopasowania pozostawia wybor pusty,
+- sugestia View nie zmienia Application ani Branch, jest oznaczona jako
+  pochodzaca z URL-u capture i moze zostac zastapiona recznie przez operatora,
 - View jest zwiazany z pokazanym immutable source revision,
 - Model AI i Reasoning effort sa wybierane przed wpisaniem pytania.
 

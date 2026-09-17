@@ -461,6 +461,90 @@ scope, report ani UI.
   backendowym, wewnetrznym formatem logical artifactu i nie zmienia kontraktu
   ani integracji z frontendem.
 
+## Inkrement: sugestia View na podstawie route capture
+
+Status: done
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 automatyczne uzupelnienie
+selektora View na podstawie URL-u zebranego w capture.
+
+Klasyfikacja: **L1**. Zmienia sie feature-owned zachowanie formularza UX
+Inspectora, ale nie publiczne API, DTO, capture v1, job, source revision,
+resolver targetu, AI runtime, report ani export.
+
+### Baseline
+
+- Capture v1 zawiera znormalizowane `page.path`, bez wartosci query; obsluguje
+  tez bezpiecznie rozpoznana trase hash.
+- Katalog wybranego Application/Branch zwraca `viewId` oraz `routePattern`, ale
+  operator zawsze wybiera View recznie.
+- Wybor Application albo zmiana Branch czysci View i katalog; zaladowany View
+  pozostaje zwiazany z pokazana immutable source revision.
+- Capture nie zawiera zaufanego mapowania `origin -> systemId`, wiec nie moze
+  samodzielnie zmieniac Application ani Branch.
+- Celowane testy Angulara przed zmiana zostaly zablokowane przez ograniczenia
+  sandboxa podczas odczytu zaleznosci i plikow SCSS; nie odnotowano failure
+  funkcjonalnego przed zmiana.
+
+### Conformance delta
+
+- Cel: ograniczyc reczne wyszukiwanie View, gdy runtime route jednoznacznie
+  odpowiada trasie z zaladowanego katalogu.
+- Wlasciciel: frontend `features/ux-inspector`; nie powstaje shared helper ani
+  zaleznosc od UI Explorera.
+- Publiczne API/DTO, capture, context/evidence, prompt/artifacts/skills,
+  tools/policy/hidden scope, report/result, job state, persistence/export:
+  bez zmian.
+- UI: po dostepnosci capture i katalogu lokalny matcher wybiera tylko jedyny
+  najlepszy View. Statyczny segment ma pierwszenstwo przed parametrem, a
+  wildcard jest najslabszy. Remis albo brak dopasowania pozostawia View pusty.
+- Scope: matcher nigdy nie zmienia Application ani Branch, nie dopasowuje po
+  `origin` i nie omija zwiazania View z source revision.
+- Operator widzi, ze wybor zostal zasugerowany z route capture, moze go
+  zastapic recznie, a uruchomienie joba pozostaje jawnym potwierdzeniem calego
+  scope'u formularza.
+- Konsumenci: tylko formularz i testy UX Inspectora.
+- Zaleznosci i architecture drift: bez nowych zaleznosci i bez rozszerzenia
+  istniejacego driftu.
+
+### Macierz testow
+
+| Zakres | Dowod |
+|---|---|
+| trasa statyczna | exact View jest wybierany automatycznie |
+| parametr trasy | `/contacts/:contactId` pasuje do zredagowanego albo runtime ID |
+| specyficznosc | `/contacts/new` wygrywa z `/contacts/:contactId` |
+| niejednoznacznosc | rowny najlepszy wynik nie ustawia View |
+| brak dopasowania | selektor pozostaje pusty |
+| decyzja operatora | reczny wybor usuwa oznaczenie sugestii |
+| regresja UI | celowane testy UX Inspectora, pelne testy Angulara i build produkcyjny |
+
+### Kroki
+
+- [x] Dodac feature-owned matcher route oraz automatyczna sugestie po
+  dostepnosci capture i katalogu, bez zmiany Application/Branch.
+- [x] Pokazac pochodzenie automatycznego wyboru i zachowac reczny override.
+- [x] Rozszerzyc testy o exact, parametr, priorytet, remis, brak dopasowania i
+  reczny override.
+- [x] Zaktualizowac runtime flow, wykonac architecture diff oraz uruchomic
+  celowane i pelne testy Angulara wraz z produkcyjnym buildem.
+
+### Wynik weryfikacji inkrementu
+
+- Celowane testy UX Inspectora:
+  `npm --prefix frontend test -- --watch=false --include src/app/features/ux-inspector/utils/ux-inspector-view-route-match.utils.spec.ts --include src/app/features/ux-inspector/state/ux-inspector.facade.spec.ts --include src/app/features/ux-inspector/pages/ux-inspector-page/ux-inspector-page.spec.ts`
+  - PASS, 3 pliki testowe i 14 testow.
+- Pelna regresja frontendu: `npm --prefix frontend test -- --watch=false`
+  - PASS, 74 pliki testowe i 611 testow.
+- Produkcyjny build: `npm --prefix frontend run build`
+  - PASS; aktualny bundle zapisany w `src/main/resources/static`.
+- Architecture diff: brak zmian publicznego API/DTO, capture v1, joba,
+  persistence/export, AI runtime, tools, hidden scope i zaleznosci pakietowych.
+  Dopasowanie pozostaje lokalne dla formularza UX Inspectora i korzysta tylko
+  z juz dostepnych `capture.page.path` oraz `routePattern`.
+- Nie uruchamiano regresji backendu, poniewaz zmiana nie dotyka kontraktu
+  backend-frontend, routingu zasobow statycznych ani integracji backendowej.
+
 ## Wynik weryfikacji
 
 - Browser Tools: `node --test frontend/tests/browser-tools/browser-tools.test.mjs`

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, finalize } from 'rxjs';
 
@@ -32,6 +32,7 @@ import {
 } from '../models/ux-inspector.models';
 import { UxInspectorApiService } from '../services/ux-inspector-api.service';
 import { UxInspectorCaptureIngressService } from '../services/ux-inspector-capture-ingress.service';
+import { matchCapturedRouteToView } from '../utils/ux-inspector-view-route-match.utils';
 
 @Injectable()
 export class UxInspectorFacade {
@@ -65,6 +66,7 @@ export class UxInspectorFacade {
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
   readonly selectedViewId = signal('');
+  readonly viewMatchedFromCapture = signal(false);
   readonly question = signal('');
   readonly selectedModel = signal('');
   readonly selectedReasoningEffort = signal('');
@@ -134,6 +136,7 @@ export class UxInspectorFacade {
   });
 
   constructor() {
+    effect(() => this.applyCapturedRouteSuggestion());
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
@@ -228,7 +231,9 @@ export class UxInspectorFacade {
   }
 
   selectView(viewId: string): void {
-    if (!this.controlsLocked()) this.selectedViewId.set(viewId);
+    if (this.controlsLocked()) return;
+    this.selectedViewId.set(viewId);
+    this.viewMatchedFromCapture.set(false);
   }
 
   updateQuestion(value: string): void {
@@ -399,8 +404,21 @@ export class UxInspectorFacade {
     this.viewRequestId++;
     this.viewCatalog.set(null);
     this.selectedViewId.set('');
+    this.viewMatchedFromCapture.set(false);
     this.viewState.set('idle');
     this.viewError.set('');
+  }
+
+  private applyCapturedRouteSuggestion(): void {
+    const capture = this.ingress.capture();
+    const catalog = this.viewCatalog();
+    if (!capture || !catalog || this.controlsLocked() || this.selectedViewId()) return;
+    if (catalog.systemId !== this.selectedSystemId() || catalog.sourceRevision.branch !== this.branch().trim()) return;
+
+    const match = matchCapturedRouteToView(capture.page.path, catalog.views);
+    if (!match) return;
+    this.selectedViewId.set(match.viewId);
+    this.viewMatchedFromCapture.set(true);
   }
 }
 

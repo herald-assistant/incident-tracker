@@ -86,7 +86,9 @@ export class UxInspectorPageComponent implements OnInit {
   });
   readonly viewControlMeta = computed(() => {
     const selected = this.facade.selectedView();
-    if (selected) return selected.label;
+    if (selected) return this.facade.viewMatchedFromCapture()
+      ? `${selected.label} · dopasowano z URL capture`
+      : selected.label;
     const catalog = this.facade.viewCatalog();
     if (catalog) return `${catalog.views.length} views · ${catalog.sourceRevision.revision}`;
     switch (this.facade.viewState()) {
