@@ -415,6 +415,81 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
         });
     }
 
+    @Test
+    void shouldTraverseAnonymousDefaultExportCrmLazyRouteCollections() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("apps/crm-agent/src/app/crm.routes.ts", """
+                export const CRM_ROUTES: Routes = [
+                  {
+                    path: 'customers',
+                    canActivate: [CrmSessionGuard],
+                    loadChildren: () => import('./customer/routes')
+                  }
+                ];
+                """);
+        files.put("apps/crm-agent/src/app/customer/routes.ts", """
+                import { CrmCustomerListComponent } from './customer-list.component';
+                import { CrmCustomerDetailsComponent } from './customer-details.component';
+                export default [
+                  { path: '', component: CrmCustomerListComponent },
+                  { path: ':customerId', component: CrmCustomerDetailsComponent }
+                ] as Route[];
+                """);
+        files.put("apps/crm-agent/src/app/customer/customer-list.component.ts",
+                "export class CrmCustomerListComponent {}");
+        files.put("apps/crm-agent/src/app/customer/customer-details.component.ts",
+                "export class CrmCustomerDetailsComponent {}");
+        stubFiles(files);
+
+        var result = service.traverse(scope(), root(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.coverage().status()).isEqualTo(GitLabFrontendCoverageStatus.READY);
+        assertThat(result.routeCollections())
+                .extracting(GitLabFrontendRouteSourceTraversalResult.RouteCollection::sourcePath)
+                .containsExactlyInAnyOrder(
+                        "apps/crm-agent/src/app/crm.routes.ts",
+                        "apps/crm-agent/src/app/customer/routes.ts"
+                );
+        assertThat(result.routeCollections())
+                .flatExtracting(collection -> collection.parsed().routes())
+                .extracting(AngularRouteSourceParser.ParsedRoute::fullPath)
+                .contains("/customers", "/customers/:customerId");
+        assertThat(result.componentTargets())
+                .extracting(GitLabFrontendRouteSourceTraversalResult.ComponentTarget::symbol)
+                .containsExactlyInAnyOrder("CrmCustomerListComponent", "CrmCustomerDetailsComponent");
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .doesNotContain(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND);
+    }
+
+    @Test
+    void shouldNotTreatAnonymousDefaultCrmRouteArrayAsALazyComponent() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("apps/crm-agent/src/app/crm.routes.ts", """
+                export const CRM_ROUTES: Routes = [
+                  { path: 'customers', loadComponent: () => import('./customer/routes') }
+                ];
+                """);
+        files.put("apps/crm-agent/src/app/customer/routes.ts", """
+                export default [{ path: '', component: CrmCustomerListComponent }] as Route[];
+                """);
+        stubFiles(files);
+
+        var result = service.traverse(scope(), root(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.coverage().status()).isEqualTo(GitLabFrontendCoverageStatus.PARTIAL);
+        assertThat(result.componentTargets()).isEmpty();
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .contains(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND);
+    }
+
     private Map<String, String> crmGraph() {
         var files = new LinkedHashMap<String, String>();
         files.put("tsconfig.base.json", crmTsconfig());

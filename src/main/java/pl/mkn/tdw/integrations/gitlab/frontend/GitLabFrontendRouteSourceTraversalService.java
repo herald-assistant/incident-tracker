@@ -323,13 +323,37 @@ public class GitLabFrontendRouteSourceTraversalService {
             ArrayDeque<RouteTask> queue,
             Counter unresolvedEdges
     ) {
-        var targets = resolveDynamicSymbol(
+        var targets = resolveDynamicRouteCollection(
                 ownerPath, importPath, symbol, session, imports, new LinkedHashSet<>(), depth
         );
         enqueueResolvedTargets(
                 targets, symbol, ownerPath, parentRoutePath, inheritedLazy, inheritedGuards,
                 relation, depth, ancestry, parentRoute, session, queue, unresolvedEdges
         );
+    }
+
+    private List<ResolvedSymbol> resolveDynamicRouteCollection(
+            String ownerPath,
+            String importPath,
+            String symbol,
+            GitLabFrontendTargetedSourceSession session,
+            GitLabFrontendTargetedImportResolver imports,
+            LinkedHashSet<String> stack,
+            int depth
+    ) {
+        if (!"default".equals(symbol) || importPath == null || !session.withinImportDepth(depth, ownerPath)) {
+            return resolveDynamicSymbol(ownerPath, importPath, symbol, session, imports, stack, depth);
+        }
+        var moduleTargets = imports.resolve(ownerPath, importPath);
+        if (moduleTargets.size() != 1) {
+            return List.of();
+        }
+        var targetPath = moduleTargets.get(0);
+        var source = session.readRequired(targetPath);
+        if (source != null && routeParser.hasStaticDefaultCollection(source)) {
+            return List.of(new ResolvedSymbol(targetPath, "default"));
+        }
+        return resolveExportedSymbol(targetPath, symbol, session, imports, stack, depth + 1);
     }
 
     private void enqueueResolvedTargets(

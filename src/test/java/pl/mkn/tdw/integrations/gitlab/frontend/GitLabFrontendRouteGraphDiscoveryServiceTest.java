@@ -167,6 +167,54 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
     }
 
     @Test
+    void shouldBuildCrmScreensFromAnonymousDefaultExportLazyRoutes() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/main.ts", """
+                import { bootstrapApplication } from '@angular/platform-browser';
+                import { CRM_CONFIG } from './app/app.config';
+                bootstrapApplication(CrmAgentComponent, CRM_CONFIG);
+                """);
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { provideRouter } from '@angular/router';
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("apps/crm-agent/src/app/crm.routes.ts", """
+                export const CRM_ROUTES: Routes = [{
+                  path: 'customers',
+                  loadChildren: () => import('./customer/routes')
+                }];
+                """);
+        files.put("apps/crm-agent/src/app/customer/routes.ts", """
+                import { CrmCustomerListComponent } from './customer-list.component';
+                import { CrmCustomerDetailsComponent } from './customer-details.component';
+                export default [
+                  { path: '', component: CrmCustomerListComponent },
+                  { path: ':customerId', component: CrmCustomerDetailsComponent }
+                ] satisfies Routes;
+                """);
+        files.put("apps/crm-agent/src/app/customer/customer-list.component.ts",
+                "export class CrmCustomerListComponent {}");
+        files.put("apps/crm-agent/src/app/customer/customer-details.component.ts",
+                "export class CrmCustomerDetailsComponent {}");
+        stubRepository(files);
+
+        var graph = service.discover(scope(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(graph.coverage().status()).isEqualTo(GitLabFrontendCoverageStatus.READY);
+        assertThat(graph.nodes()).filteredOn(node -> node.screen() != null)
+                .extracting(GitLabFrontendRouteNode::routePattern)
+                .containsExactlyInAnyOrder("/customers", "/customers/:customerId");
+        assertThat(graph.edges())
+                .filteredOn(edge -> edge.kind() == GitLabFrontendRouteGraphEdgeKind.LOAD_CHILDREN)
+                .hasSize(2)
+                .allSatisfy(edge -> assertThat(edge.status())
+                        .isEqualTo(GitLabFrontendRouteGraphEdgeStatus.RESOLVED));
+        assertThat(graph.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .doesNotContain(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND);
+    }
+
+    @Test
     void shouldReturnBlockedGraphWhenNoCrmBootstrapRootCanBeProven() {
         when(repositoryPort.searchRepositoryFilesByContent(
                 anyString(), anyString(), anyString(), anyList(), anyInt()

@@ -57,7 +57,11 @@ cache'uje resolution. Bezposredni `loadComponent: () => import(...)` rozwiazuje
 default export do rzeczywistego symbolu widoku. Local lazy factory
 `() => ImportedComponent` obsluguje named i default import, a literalne tablice
 `routes` splaszczane przez `reduce/flatMap` sa rozwijane statycznie bez
-wykonywania TypeScriptu. Ograniczenia katalogu pozostaja twarde: domyslnie
+wykonywania TypeScriptu. Bezposredni `loadChildren: () => import(...)` moze
+rowniez wskazac plik z anonimowa statyczna kolekcja
+`export default [...] as Route[]` albo `satisfies Routes`; ta semantyka nie
+obejmuje `loadComponent` ani kolekcji budowanych przez wywolania i transformacje.
+Ograniczenia katalogu pozostaja twarde: domyslnie
 200 000 znakow na plik i 2 000 000 lacznie, z jedna diagnostyka przyczynowa po
 wyczerpaniu limitu lacznego. Ref jest rozstrzygany
 bezposrednio do immutable commit id przez GitLab, niezaleznie od metadanych

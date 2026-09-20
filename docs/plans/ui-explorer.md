@@ -2723,6 +2723,98 @@ nie przekracza progu `AUTO=50%`; runtime upgrade pozostaje dostepny od 70%
 rzeczywistego zapelnienia okna. Nie uruchamiano testow Angulara, bo kontrakt
 UI i bundle nie byly zmieniane.
 
+### 8V. Anonimowe `default export` statycznych kolekcji lazy routes
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-09-20 wykonanie obu
+krokow po diagnozie, ze katalog duzego frontendu zwraca tylko bezposrednie widoki mimo
+poprawnych lazy routes. Source need pozostaje `../needs/ui-explorer.md`, w tym
+wymaganie odpornosci na gleboki routing i lazy loading.
+
+Klasyfikacja: L2. Zmiana dotyka neutralnej capability
+`integrations.gitlab.frontend` i wspolnego cache katalogu widokow, z ktorych
+korzystaja UI Explorer, UX Inspector, shared/operator GitLab Frontend Discovery
+API oraz GitLab Tool Workbench. Nie zmienia kierunku zaleznosci, publicznych
+DTO, endpointow, requestow, wynikow, promptow, skilli, tools, hidden scope,
+budzetow ani kontraktow import/export.
+
+Baseline: targeted traversal poprawnie obsluguje named route collections,
+re-exporty, `children`, `loadChildren` wskazujace named export oraz default
+export nazwanej klasy lub identyfikatora. Dla poprawnego Angularowego wariantu
+`loadChildren: () => import('./customer/routes')`, gdy plik docelowy zawiera
+`export default [...] as Route[]`, parser wyprowadza symbol `default`, ale
+resolver nie znajduje nazwanego symbolu. Wynik pozostaje `PARTIAL`, traversal
+nie przekracza lazy boundary, a istniejacy trwaly cache zachowuje niepelny
+katalog. Zastany zestaw celowanych testow traversalu, route graphu, neutralnego
+katalogu oraz adaptera UI Explorer przechodzi przed zmiana.
+
+Conformance delta: tylko sciezka `LOAD_CHILDREN` rozpozna anonimowy statyczny
+default export tablicy jako route collection. `AngularRouteSourceParser`
+odczyta tablice zaczynajaca sie bezposrednio po `export default`, zachowujac
+obsluge typowych koncowych asercji TypeScript, np. `as Route[]`, `as Routes`
+albo `satisfies Routes`, bez wykonywania kodu. Targeted traversal nadal wymaga
+dokladnie jednego pliku importu, respektuje repository scope, import depth,
+route/source/character budgets i nie rozszerza tej semantyki na
+`LOAD_COMPONENT` ani generyczne rozwiazywanie default exportow. Dynamiczny lub
+nie-tablicowy default export pozostaje jawnym unresolved edge. Wersja
+wewnetrznego cache katalogu zostanie podniesiona, aby nie reuse'owac
+niepelnych wpisow utworzonych przed poprawka.
+
+Konsumenci i kompatybilnosc:
+
+- neutralny route graph oraz screen selection otrzymaja dodatkowe poprawnie
+  rozwiazane route collections i view targets,
+- `frontendcatalog` automatycznie przeliczy stare wpisy po zmianie wersji
+  cache; nie ma migracji ani zmiany publicznego kontraktu,
+- UI Explorer i UX Inspector zobacza pelniejszy wspolny katalog po zwyklym
+  odczycie; ich joby, result/export i Angular pozostaja bez zmian,
+- shared/operator GitLab Frontend Discovery API i Tool Workbench zachowaja
+  obecny shape, statusy, diagnostics oraz limity,
+- named collections, named/default components, re-exporty i wszystkie
+  zachowania poza `LOAD_CHILDREN` pozostaja bez zmian.
+
+Macierz testow uzywa wylacznie fikcyjnej domeny CRM:
+
+- parser: anonimowe `export default [...] as Route[]` oraz
+  `export default [...] satisfies Routes`, z nested routes i komponentami,
+- traversal/route graph: bezposredni dynamiczny import bez `.then(...)`
+  przechodzi przez lazy boundary, tworzy pelne sciezki i nie emituje
+  `IMPORT_TARGET_NOT_FOUND`,
+- negatywne: dynamiczny albo nie-tablicowy default export pozostaje
+  nierozwiazany, a `loadComponent` nie dziedziczy semantyki route collection,
+- cache: wpis poprzedniej wersji jest ignorowany, aktualny zapis jest
+  odczytywany i refresh nadal usuwa tylko wybrany scope,
+- konsumenci: testy `FrontendViewCatalogService`, UI Explorer catalog,
+  UX Inspector view catalog i GitLab Frontend Discovery API,
+- architektura i regresja backendu: `PackageDependencyGuardTest`, pelne
+  `mvn -q test` oraz `git diff --check`; testy i build Angulara nie sa wymagane,
+  poniewaz kontrakt backend-frontend i pliki frontendu nie zmieniaja sie.
+
+- [x] 8V.1: Rozszerzyc parser i targeted traversal o ograniczona obsluge
+  anonimowego statycznego default-export route array tylko dla
+  `LOAD_CHILDREN`. Dodac parserowe i integracyjne testy CRM, w tym negatywne
+  rozdzielenie od `LOAD_COMPONENT`. Kryterium akceptacji: pelny zagniezdzony
+  route graph bez `IMPORT_TARGET_NOT_FOUND` dla wspieranego wariantu, przy
+  zachowaniu dotychczasowych granic i diagnostyk.
+- [x] 8V.2: Podniesc wewnetrzna wersje cache katalogu, dodac regresje starego
+  wpisu, wykonac testy wszystkich konsumentow, `PackageDependencyGuardTest`,
+  pelne `mvn -q test` i `git diff --check`, a nastepnie zaktualizowac
+  kanoniczny opis frontend discovery. Kryterium akceptacji: stary czastkowy
+  cache nie przeslania nowego wyniku, wszystkie regresje przechodza, a diff
+  nie zmienia publicznych kontraktow ani grafu zaleznosci.
+
+Rezultat: `loadChildren: () => import(...)` rozpoznaje anonimowy statyczny
+`export default` tablicy tras z asercjami `as Route[]`, `as Routes` i
+`satisfies Routes`. Dynamiczne kolekcje i `loadComponent` pozostaja poza tym
+rozszerzeniem. Cache katalogu ma wersje 2, wiec wpisy utworzone przez poprzedni
+resolver sa ignorowane. Celowane testy parsera, traversalu, route graphu,
+cache i konsumentow oraz `PackageDependencyGuardTest` przeszly. Pelne
+`mvn -q test`: 1655 testow, 0 failures, 0 errors, 1 skipped;
+`git diff --check` - PASS. Lokalna walidacja na aktualnie skonfigurowanym
+publicznym frontendzie zwrocila `READY`, 50 widokow, 72 route nodes,
+16 route files, 0 unresolved edges, 0 diagnostics i brak osiagnietego limitu.
+Nie uruchamiano testow ani builda Angulara, poniewaz publiczny kontrakt
+backend-frontend i pliki frontendu nie zostaly zmienione.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

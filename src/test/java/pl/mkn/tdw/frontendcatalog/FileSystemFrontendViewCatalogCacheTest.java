@@ -1,12 +1,14 @@
 package pl.mkn.tdw.frontendcatalog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -28,6 +30,23 @@ class FileSystemFrontendViewCatalogCacheTest {
         cache.evict(review);
         assertThat(cache.find(review)).isEmpty();
         assertThat(cache.find(release)).contains(catalog("crm-release", "crm-revision-release"));
+    }
+
+    @Test
+    void shouldIgnoreAnOlderCrmViewCatalogCacheVersion() throws Exception {
+        var review = key("crm-review");
+        var cache = cache();
+        cache.save(review, catalog("crm-review", "crm-revision-review"));
+        Path cacheFile;
+        try (var files = Files.list(workspaceDirectory.resolve("frontend-catalog").resolve("view-cache"))) {
+            cacheFile = files.findFirst().orElseThrow();
+        }
+        var mapper = new ObjectMapper().findAndRegisterModules();
+        var entry = (ObjectNode) mapper.readTree(cacheFile.toFile());
+        entry.put("version", 1);
+        mapper.writeValue(cacheFile.toFile(), entry);
+
+        assertThat(cache().find(review)).isEmpty();
     }
 
     private FileSystemFrontendViewCatalogCache cache() {

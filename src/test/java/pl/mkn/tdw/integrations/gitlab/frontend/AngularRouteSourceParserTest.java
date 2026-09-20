@@ -2,6 +2,8 @@ package pl.mkn.tdw.integrations.gitlab.frontend;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AngularRouteSourceParserTest {
@@ -133,6 +135,86 @@ class AngularRouteSourceParserTest {
                     .isEqualTo("./contact-summary/crm-contact-summary.component");
             assertThat(route.loadComponentSymbol()).isEqualTo("default");
         });
+    }
+
+    @Test
+    void shouldParseAnonymousDefaultCrmRouteCollectionsWithTypeAssertions() {
+        var asserted = parser.parseCollection(
+                "apps/crm-agent/src/app/customer/routes.ts",
+                """
+                        import { Route } from '@angular/router';
+                        export default [
+                          { path: '', component: CrmCustomerListComponent },
+                          {
+                            path: ':customerId',
+                            children: [{ path: 'details', component: CrmCustomerDetailsComponent }]
+                          }
+                        ] as Route[];
+                        """,
+                "default",
+                "/customers",
+                true,
+                List.of("CrmSessionGuard"),
+                (path, source, expression) -> new AngularRouteSourceParser.StaticStringResolution(null, null)
+        );
+        var satisfied = parser.parseCollection(
+                "apps/crm-agent/src/app/customer/preferences.routes.ts",
+                """
+                        export default [
+                          { path: 'preferences', component: CrmCustomerPreferencesComponent }
+                        ] satisfies Routes;
+                        """,
+                "default",
+                "/customers",
+                true,
+                List.of(),
+                (path, source, expression) -> new AngularRouteSourceParser.StaticStringResolution(null, null)
+        );
+
+        assertThat(asserted.routes())
+                .extracting(AngularRouteSourceParser.ParsedRoute::fullPath)
+                .containsExactly("/customers", "/customers/:customerId", "/customers/:customerId/details");
+        assertThat(asserted.routes()).allSatisfy(route -> {
+            assertThat(route.lazy()).isTrue();
+            assertThat(route.guards()).contains("CrmSessionGuard");
+        });
+        assertThat(satisfied.routes()).singleElement()
+                .extracting(AngularRouteSourceParser.ParsedRoute::fullPath)
+                .isEqualTo("/customers/preferences");
+        assertThat(asserted.limitations()).isEmpty();
+        assertThat(satisfied.limitations()).isEmpty();
+    }
+
+    @Test
+    void shouldRejectDynamicOrCommentedAnonymousDefaultCrmRouteCollections() {
+        var dynamic = parser.parseCollection(
+                "apps/crm-agent/src/app/customer/routes.ts",
+                "export default buildCrmCustomerRoutes();",
+                "default",
+                (path, source, expression) -> new AngularRouteSourceParser.StaticStringResolution(null, null)
+        );
+        var transformed = parser.parseCollection(
+                "apps/crm-agent/src/app/customer/transformed.routes.ts",
+                "export default [{ path: 'customers' }].map(enrichCrmRoute);",
+                "default",
+                (path, source, expression) -> new AngularRouteSourceParser.StaticStringResolution(null, null)
+        );
+        var commented = parser.parseCollection(
+                "apps/crm-agent/src/app/customer/commented.routes.ts",
+                """
+                        // export default [{ path: 'ignored' }];
+                        export const CRM_CUSTOMER_ROUTES = [{ path: 'customers' }];
+                        """,
+                "default",
+                (path, source, expression) -> new AngularRouteSourceParser.StaticStringResolution(null, null)
+        );
+
+        assertThat(dynamic.routes()).isEmpty();
+        assertThat(transformed.routes()).isEmpty();
+        assertThat(commented.routes()).isEmpty();
+        assertThat(dynamic.limitations()).singleElement().asString().contains("not a static array");
+        assertThat(transformed.limitations()).singleElement().asString().contains("not a static array");
+        assertThat(commented.limitations()).singleElement().asString().contains("not a static array");
     }
 
     @Test

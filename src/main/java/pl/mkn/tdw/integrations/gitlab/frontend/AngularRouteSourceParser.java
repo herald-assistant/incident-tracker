@@ -29,6 +29,10 @@ final class AngularRouteSourceParser {
             "(?s)^\\s*([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\.\\s*"
                     + "(?:reduce(?:\\s*<[^>]+>)?|flatMap)\\s*\\(.*\\.routes\\b"
     );
+    private static final Pattern DEFAULT_EXPORT = Pattern.compile("\\bexport\\s+default\\b");
+    private static final Pattern STATIC_ROUTE_ARRAY_SUFFIX = Pattern.compile(
+            "(?s)^(?:(?:as\\s+(?:const|Routes|Route\\s*\\[\\s*])|satisfies\\s+Routes)\\s*)*$"
+    );
 
     ParseResult parse(String sourcePath, String source) {
         return parse(sourcePath, source, (path, content, expression) ->
@@ -89,6 +93,16 @@ final class AngularRouteSourceParser {
         if (!StringUtils.hasText(collectionSymbol)) {
             return parse(sourcePath, source, stringResolver);
         }
+        if ("default".equals(collectionSymbol)) {
+            return parseDefaultCollection(
+                    sourcePath,
+                    source,
+                    parentPath,
+                    inheritedLazy,
+                    inheritedGuards,
+                    stringResolver
+            );
+        }
         var declaration = Pattern.compile(
                 "(?s)(?:export\\s+)?const\\s+" + Pattern.quote(collectionSymbol)
                         + "\\b\\s*(?::[^=;]+)?=\\s*"
@@ -131,6 +145,81 @@ final class AngularRouteSourceParser {
                 stringResolver
         );
         return new ParseResult(routes, List.copyOf(limitations));
+    }
+
+    boolean hasStaticDefaultCollection(String source) {
+        return defaultRouteArray(source) != null;
+    }
+
+    private ParseResult parseDefaultCollection(
+            String sourcePath,
+            String source,
+            String parentPath,
+            boolean inheritedLazy,
+            List<String> inheritedGuards,
+            StaticStringResolver stringResolver
+    ) {
+        var array = defaultRouteArray(source);
+        if (array == null) {
+            return new ParseResult(
+                    List.of(),
+                    List.of("Default route collection is not a static array in " + sourcePath + ".")
+            );
+        }
+        var routes = new ArrayList<ParsedRoute>();
+        var limitations = new LinkedHashSet<String>();
+        parseArray(
+                sourcePath,
+                source,
+                array.start(),
+                array.end(),
+                parentPath,
+                inheritedLazy,
+                inheritedGuards,
+                null,
+                routes,
+                limitations,
+                stringResolver
+        );
+        return new ParseResult(routes, List.copyOf(limitations));
+    }
+
+    private Span defaultRouteArray(String source) {
+        var declaration = DEFAULT_EXPORT.matcher(source);
+        while (declaration.find()) {
+            if (!isCodePosition(source, declaration.start())) {
+                continue;
+            }
+            var arrayStart = firstNonWhitespace(source, declaration.end());
+            if (arrayStart < 0 || source.charAt(arrayStart) != '[') {
+                return null;
+            }
+            var arrayEnd = matchingDelimiter(source, arrayStart, '[', ']');
+            if (arrayEnd < 0) {
+                return null;
+            }
+            var statementEnd = source.indexOf(';', arrayEnd + 1);
+            if (statementEnd < 0) {
+                statementEnd = source.length();
+            }
+            var suffix = source.substring(arrayEnd + 1, statementEnd).trim();
+            return STATIC_ROUTE_ARRAY_SUFFIX.matcher(suffix).matches()
+                    ? new Span(arrayStart, arrayEnd)
+                    : null;
+        }
+        return null;
+    }
+
+    private boolean isCodePosition(String source, int position) {
+        var state = new ScanState();
+        for (var index = 0; index < position; index++) {
+            var current = source.charAt(index);
+            if (state.consume(source, index)) {
+                continue;
+            }
+            state.adjustDepth(current);
+        }
+        return state.inCode();
     }
 
     private void parseArray(
@@ -746,6 +835,10 @@ final class AngularRouteSourceParser {
         private boolean atTopLevel() {
             return round == 0 && square == 0 && curly == 0 && quote == '\0'
                     && !lineComment && !blockComment;
+        }
+
+        private boolean inCode() {
+            return quote == '\0' && !lineComment && !blockComment;
         }
     }
 }

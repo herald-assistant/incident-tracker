@@ -22,7 +22,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class FileSystemFrontendViewCatalogCache implements FrontendViewCatalogCache {
     private static final String SCHEMA = "tdw.frontend-view-catalog-cache";
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     private final LocalWorkspaceProperties properties;
     private final LocalWorkspacePaths paths;
