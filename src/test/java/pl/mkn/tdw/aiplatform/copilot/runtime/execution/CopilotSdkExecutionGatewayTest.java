@@ -40,6 +40,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProper
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportSessionStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisAiToolResultContent;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
@@ -77,7 +78,7 @@ import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolEvidenceSes
 class CopilotSdkExecutionGatewayTest {
 
     @Test
-    void shouldCaptureFullSkillResultButOnlyPreviewsForOtherTools() {
+    void shouldCaptureFullSkillResultAndStructuredResultsForEveryTool() {
         var gateway = executionGateway(new CopilotSdkProperties(),
                 toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()));
         var detailedContent = "Skill loaded successfully ✅\n\n# Skill\n\n" + "instruction ".repeat(200);
@@ -95,12 +96,19 @@ class CopilotSdkExecutionGatewayTest {
 
         assertThat(skillActivity).isNotNull();
         assertThat(skillActivity.details()).containsEntry("skillContent", detailedContent);
-        assertThat(skillActivity.details().get("resultDetailedContentPreview").toString())
-                .endsWith("...(" + detailedContent.length() + " chars)");
+        assertThat(skillActivity.details().get("resultDetailedContent"))
+                .isInstanceOfSatisfying(AnalysisAiToolResultContent.class, result -> {
+                    assertThat(result.format()).isEqualTo(AnalysisAiToolResultContent.Format.TEXT);
+                    assertThat(result.value()).isEqualTo(detailedContent);
+                    assertThat(result.truncated()).isFalse();
+                });
         assertThat(describedSkillActivity.details()).containsEntry("skillContent", detailedContent);
         assertThat(otherActivity).isNotNull();
         assertThat(otherActivity.details()).doesNotContainKey("skillContent");
+        assertThat(otherActivity.details()).containsKeys("resultContent", "resultDetailedContent");
         assertThat(describedOtherActivity.details()).doesNotContainKey("skillContent");
+        assertThat(skillActivity.details()).doesNotContainKeys(
+                "resultContentPreview", "resultDetailedContentPreview");
     }
 
     private ToolExecutionCompleteEvent completedToolEvent(String detailedContent, Map<String, Object> toolTelemetry) {
@@ -428,7 +436,8 @@ class CopilotSdkExecutionGatewayTest {
                 new CopilotReportSessionStore(),
                 new CopilotClientShutdown(properties),
                 contextTierPolicy(properties, effectiveTierReader, contextTierActivator),
-                compatibleRuntime()
+                compatibleRuntime(),
+                new CopilotToolResultContentFactory(new com.fasterxml.jackson.databind.ObjectMapper())
         );
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var sessionConfig = new SessionConfig()
@@ -909,7 +918,8 @@ class CopilotSdkExecutionGatewayTest {
                 new CopilotReportSessionStore(),
                 new CopilotClientShutdown(properties),
                 contextTierPolicy(properties, mock(CopilotEffectiveContextTierReader.class)),
-                compatibility
+                compatibility,
+                new CopilotToolResultContentFactory(new com.fasterxml.jackson.databind.ObjectMapper())
         );
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var preparedRequest = new CopilotPreparedSession(
@@ -978,7 +988,8 @@ class CopilotSdkExecutionGatewayTest {
                 reportStore,
                 new CopilotClientShutdown(properties),
                 contextTierPolicy(properties, effectiveTierReader),
-                compatibleRuntime()
+                compatibleRuntime(),
+                new CopilotToolResultContentFactory(new com.fasterxml.jackson.databind.ObjectMapper())
         );
     }
 

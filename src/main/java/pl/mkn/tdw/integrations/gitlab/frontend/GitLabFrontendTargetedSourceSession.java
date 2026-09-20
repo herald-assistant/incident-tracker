@@ -278,6 +278,16 @@ final class GitLabFrontendTargetedSourceSession {
         return inScope(normalize(rawPath));
     }
 
+    boolean withinConfiguredSourceScope(String rawPath) {
+        var path = normalize(rawPath);
+        return StringUtils.hasText(path)
+                && !path.contains("..")
+                && !path.contains("//")
+                && !scope.pathPrefixes().isEmpty()
+                && scope.pathPrefixes().stream()
+                .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
+    }
+
     private boolean inScope(String path) {
         if (!StringUtils.hasText(path) || path.contains("..") || path.contains("//")) {
             return false;

@@ -1,11 +1,15 @@
 package pl.mkn.tdw.features.uiexplorer.job.localworkspace;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.ToolResultActivityDetailsSanitizer;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
@@ -15,12 +19,16 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 @Component
 public class UiExplorerLocalRunSnapshotSanitizer {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final Map<String, Set<String>> SAFE_CONTEXT_EVIDENCE_ATTRIBUTES = Map.of(
             "selected-screen", Set.of(
@@ -56,6 +64,11 @@ public class UiExplorerLocalRunSnapshotSanitizer {
             "candidateCount",
             "returnedStartLine",
             "returnedEndLine"
+    );
+
+    private static final Set<String> TOOL_RESULTS_WITH_PUBLIC_CODE_CONTENT = Set.of(
+            "gitlab_read_frontend_typescript_symbol_slice",
+            "gitlab_read_repository_file"
     );
 
     private static final Set<String> SAFE_CONTEXT_TIER_ACTIVITY_DETAILS = Set.of(
@@ -293,7 +306,14 @@ public class UiExplorerLocalRunSnapshotSanitizer {
     }
 
     private AnalysisEvidenceItem sanitizeToolEvidence(AnalysisEvidenceItem item) {
-        var safeAttributes = sanitizeAttributes(item, SAFE_TOOL_EVIDENCE_ATTRIBUTES);
+        var safeAttributes = new ArrayList<>(sanitizeAttributes(item, SAFE_TOOL_EVIDENCE_ATTRIBUTES));
+        var toolName = attributeValue(item, "toolName");
+        if (TOOL_RESULTS_WITH_PUBLIC_CODE_CONTENT.contains(toolName)) {
+            addCopiedAttribute(item, safeAttributes, "content");
+        }
+        if ("gitlab_search_repository_candidates".equals(toolName)) {
+            addCandidateFilePaths(item, safeAttributes);
+        }
         var filePath = safeAttributes.stream()
                 .filter(attribute -> "filePath".equals(attribute.name()))
                 .map(AnalysisEvidenceAttribute::value)
@@ -303,6 +323,53 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 filePath != null ? "Source evidence: " + filePath : "UI Explorer tool evidence",
                 safeAttributes
         );
+    }
+
+    private void addCandidateFilePaths(
+            AnalysisEvidenceItem item,
+            List<AnalysisEvidenceAttribute> safeAttributes
+    ) {
+        var candidates = attributeValue(item, "candidates");
+        if (candidates == null) {
+            return;
+        }
+        try {
+            var paths = new LinkedHashSet<String>();
+            for (JsonNode candidate : JSON.readTree(candidates)) {
+                var filePath = candidate.path("filePath").asText(null);
+                if (filePath != null && !filePath.isBlank()) {
+                    paths.add(filePath.trim());
+                }
+            }
+            if (!paths.isEmpty()) {
+                safeAttributes.add(new AnalysisEvidenceAttribute(
+                        "filePaths",
+                        JSON.writeValueAsString(paths)
+                ));
+            }
+        } catch (JsonProcessingException ignored) {
+            // Malformed optional presentation data must not block persistence of the run.
+        }
+    }
+
+    private void addCopiedAttribute(
+            AnalysisEvidenceItem item,
+            List<AnalysisEvidenceAttribute> safeAttributes,
+            String name
+    ) {
+        var value = attributeValue(item, name);
+        if (value != null) {
+            safeAttributes.add(new AnalysisEvidenceAttribute(name, value));
+        }
+    }
+
+    private String attributeValue(AnalysisEvidenceItem item, String name) {
+        return item.attributes().stream()
+                .filter(attribute -> name.equals(attribute.name()))
+                .map(AnalysisEvidenceAttribute::value)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     private AnalysisEvidenceItem sanitizeEvidenceItem(
@@ -342,7 +409,13 @@ public class UiExplorerLocalRunSnapshotSanitizer {
     }
 
     private Map<String, Object> sanitizeActivityDetails(AnalysisAiActivityEvent event) {
-        if (!"platform.context_tier".equals(event.type()) || event.details().isEmpty()) {
+        if (event.details().isEmpty()) {
+            return Map.of();
+        }
+        if ("tool.execution_complete".equals(event.type())) {
+            return ToolResultActivityDetailsSanitizer.sanitize(event.details());
+        }
+        if (!"platform.context_tier".equals(event.type())) {
             return Map.of();
         }
         var safeDetails = new LinkedHashMap<String, Object>();

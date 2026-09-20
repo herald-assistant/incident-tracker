@@ -1,7 +1,5 @@
 package pl.mkn.tdw.aiplatform.copilot.tools.report;
 
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
-
 import java.util.List;
 
 public record CopilotReportToolResult(
@@ -9,7 +7,7 @@ public record CopilotReportToolResult(
         String message,
         String reportId,
         String reportFeature,
-        AnalysisReport report,
+        CopilotReportManifest manifest,
         List<String> updatedSectionIds,
         List<String> allowedReportSectionIds
 ) {

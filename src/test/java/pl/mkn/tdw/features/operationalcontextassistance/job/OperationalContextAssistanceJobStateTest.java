@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.operationalcontextassistance.job;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisAiToolResultContent;
 
 import java.time.Instant;
 import java.util.Map;
@@ -41,6 +42,16 @@ class OperationalContextAssistanceJobStateTest {
                 Map.of("arguments", Map.of("secret", "private-source-content"))
         ));
         state.activity(new AnalysisAiActivityEvent(
+                "tool-complete", null, "tool.execution_complete", "TOOL", "COMPLETED",
+                "raw title", "raw summary", null, null, "call-1", "gitlab_read_repository_file",
+                Instant.parse("2026-09-13T10:00:30Z"),
+                Map.of(
+                        "success", true,
+                        "resultContent", jsonResult(Map.of("content", "export class CustomerProfile {}")),
+                        "arguments", Map.of("secret", "private-source-content")
+                )
+        ));
+        state.activity(new AnalysisAiActivityEvent(
                 "usage-1", null, "assistant.usage", "USAGE", "INFO",
                 "raw title", "raw summary", null, null, null, null,
                 Instant.parse("2026-09-13T10:01:00Z"),
@@ -53,10 +64,26 @@ class OperationalContextAssistanceJobStateTest {
         assertThat(events.get(0).toolName()).isEqualTo("gitlab_read_repository_file");
         assertThat(events.get(0).summary()).contains("gitlab_read_repository_file");
         assertThat(events.get(0).details()).isEmpty();
-        assertThat(events.get(1).details()).containsEntry("inputTokens", 100)
+        assertThat(events.get(1).details())
+                .containsEntry("success", true)
+                .containsEntry("resultContent", jsonResult(Map.of("content", "export class CustomerProfile {}")))
+                .doesNotContainKey("arguments");
+        assertThat(events.get(2).details()).containsEntry("inputTokens", 100)
                 .containsEntry("outputTokens", 20);
-        assertThat(events.get(1).summary()).contains("gpt-5.6-terra", "input 100", "output 20");
+        assertThat(events.get(2).summary()).contains("gpt-5.6-terra", "input 100", "output 20");
         assertThat(events.toString()).doesNotContain("private-source-content");
+    }
+
+    private AnalysisAiToolResultContent jsonResult(Object value) {
+        return new AnalysisAiToolResultContent(
+                AnalysisAiToolResultContent.Format.JSON,
+                value,
+                false,
+                44,
+                44,
+                0,
+                0
+        );
     }
 
     @Test

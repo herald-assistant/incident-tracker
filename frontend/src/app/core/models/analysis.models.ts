@@ -104,6 +104,16 @@ export interface AnalysisAiActivityEvent {
   details: Record<string, unknown>;
 }
 
+export interface AnalysisAiToolResultContent {
+  format: 'JSON' | 'TEXT';
+  value: unknown;
+  truncated: boolean;
+  originalCharacters: number;
+  retainedCharacters: number;
+  omittedEntries: number;
+  truncatedStrings: number;
+}
+
 export interface AnalysisAiToolFeedback {
   feedbackId: string;
   targetToolName: string;

@@ -521,6 +521,30 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     @Override
+    public boolean refExists(String group, String projectName, String ref) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(ref)) {
+            return false;
+        }
+
+        try {
+            restClient().get()
+                    .uri(commitMetadataUri(group, projectName, ref))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                return false;
+            }
+            throw new IllegalStateException(
+                    "GitLab ref lookup failed for " + group + "/" + projectName + "@" + ref,
+                    exception
+            );
+        }
+    }
+
+    @Override
     public GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
             String group,
             String issueKey,

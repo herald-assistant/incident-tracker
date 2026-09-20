@@ -13,6 +13,7 @@ import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStatus;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerOutputAvailability;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerOutputAvailabilityStatus;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisAiToolResultContent;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
@@ -202,20 +203,46 @@ final class UiExplorerLocalRunTestFixture {
         return new AnalysisEvidenceSection(
                 "gitlab",
                 "tool-fetched-code",
-                List.of(new AnalysisEvidenceItem(
-                        "internal-crm-ui-project:" + SOURCE_PATH,
-                        List.of(
-                                new AnalysisEvidenceAttribute("filePath", SOURCE_PATH),
-                                new AnalysisEvidenceAttribute("reason", "Verify synthetic CRM validation."),
-                                new AnalysisEvidenceAttribute("toolCallId", "crm-tool-call-1"),
-                                new AnalysisEvidenceAttribute("toolName", "gitlab_read_repository_file"),
-                                new AnalysisEvidenceAttribute("content", "CRM_RAW_SOURCE_SECRET"),
-                                new AnalysisEvidenceAttribute("toolArguments", "CRM_HIDDEN_SCOPE_SECRET"),
-                                new AnalysisEvidenceAttribute("group", "confidential-crm-group"),
-                                new AnalysisEvidenceAttribute("projectName", "internal-crm-ui-project"),
-                                new AnalysisEvidenceAttribute("branch", "main")
+                List.of(
+                        new AnalysisEvidenceItem(
+                                "internal-crm-ui-project:" + SOURCE_PATH,
+                                List.of(
+                                        new AnalysisEvidenceAttribute("filePath", SOURCE_PATH),
+                                        new AnalysisEvidenceAttribute("reason", "Verify synthetic CRM validation."),
+                                        new AnalysisEvidenceAttribute("toolCallId", "crm-tool-call-1"),
+                                        new AnalysisEvidenceAttribute("toolName", "gitlab_read_repository_file"),
+                                        new AnalysisEvidenceAttribute(
+                                                "content",
+                                                "export class CustomerPreferencesComponent {}"
+                                        ),
+                                        new AnalysisEvidenceAttribute("toolArguments", "CRM_HIDDEN_SCOPE_SECRET"),
+                                        new AnalysisEvidenceAttribute("group", "confidential-crm-group"),
+                                        new AnalysisEvidenceAttribute("projectName", "internal-crm-ui-project"),
+                                        new AnalysisEvidenceAttribute("branch", "main")
+                                )
+                        ),
+                        new AnalysisEvidenceItem(
+                                "GitLab search candidates",
+                                List.of(
+                                        new AnalysisEvidenceAttribute("reason", "Find CRM preference sources."),
+                                        new AnalysisEvidenceAttribute("toolCallId", "crm-tool-call-2"),
+                                        new AnalysisEvidenceAttribute(
+                                                "toolName",
+                                                "gitlab_search_repository_candidates"
+                                        ),
+                                        new AnalysisEvidenceAttribute("candidateCount", "2"),
+                                        new AnalysisEvidenceAttribute(
+                                                "candidates",
+                                                """
+                                                [
+                                                  {"projectName":"internal-crm-ui-project","filePath":"src/app/crm/customer-preferences.ts"},
+                                                  {"projectName":"internal-crm-ui-project","filePath":"src/app/crm/customer-preferences.html"}
+                                                ]
+                                                """
+                                        )
+                                )
                         )
-                ))
+                )
         );
     }
 
@@ -223,8 +250,8 @@ final class UiExplorerLocalRunTestFixture {
         return new AnalysisAiActivityEvent(
                 "crm-activity-1",
                 null,
-                "tool",
-                "source",
+                "tool.execution_complete",
+                "TOOL",
                 "COMPLETED",
                 "Read synthetic CRM source",
                 "A bounded CRM source file was read.",
@@ -233,7 +260,22 @@ final class UiExplorerLocalRunTestFixture {
                 "crm-tool-call-1",
                 "gitlab_read_repository_file",
                 UPDATED_AT,
-                Map.of("rawArguments", "CRM_HIDDEN_ACTIVITY_SECRET")
+                Map.of(
+                        "success", true,
+                        "resultContent", new AnalysisAiToolResultContent(
+                                AnalysisAiToolResultContent.Format.JSON,
+                                Map.of(
+                                        "filePath", SOURCE_PATH,
+                                        "content", "export class CustomerPreferencesComponent {}"
+                                ),
+                                false,
+                                128,
+                                128,
+                                0,
+                                0
+                        ),
+                        "rawArguments", "CRM_HIDDEN_ACTIVITY_SECRET"
+                )
         );
     }
 

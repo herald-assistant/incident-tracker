@@ -505,6 +505,129 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(runtimePayload).toContain('"messagesLength": 6');
   });
 
+  it('should show a readable result state for every tool without a specialized evidence view', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      buildToolActivityEvent('call-json', 'custom_lookup', 'tool.execution_start', 'STARTED', {}, '14'),
+      buildToolActivityEvent(
+        'call-json',
+        'custom_lookup',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          success: true,
+          resultContent: capturedToolResult({ matches: [{ name: 'CustomerProfile', score: 0.92 }] })
+        },
+        '15'
+      ),
+      buildToolActivityEvent(
+        'call-truncated',
+        'custom_read',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          success: true,
+          resultContent: capturedToolResult('pierwszy fragment rezultatu', {
+            truncated: true,
+            originalCharacters: 5000
+          })
+        },
+        '16'
+      ),
+      buildToolActivityEvent(
+        'call-unavailable',
+        'custom_sanitized',
+        'tool.execution_complete',
+        'COMPLETED',
+        { success: true },
+        '17'
+      ),
+      buildToolActivityEvent('call-pending', 'custom_pending', 'tool.execution_start', 'STARTED', {}, '18'),
+      buildToolActivityEvent(
+        'call-failed',
+        'custom_failed',
+        'tool.execution_complete',
+        'FAILED',
+        { success: false, errorMessage: 'Brak dostępu do fikcyjnego źródła CRM.' },
+        '19'
+      ),
+      buildToolActivityEvent(
+        'call-semantic-error',
+        'custom_route_slice',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          success: true,
+          resultContent: capturedToolResult({
+            status: 'tool_error',
+            toolName: 'custom_route_slice',
+            message: 'Wskazany ref repozytorium CRM nie istnieje.',
+            retryableWithChangedArguments: true,
+            recommendation: 'Zmień argumenty albo użyj discovery toola.'
+          })
+        },
+        '20'
+      ),
+      buildToolActivityEvent(
+        'call-report-rejected',
+        'report_upsert_section',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          success: true,
+          resultContent: capturedToolResult({
+            status: 'rejected',
+            message: 'Report section id is not allowed for this session.'
+          })
+        },
+        '21'
+      ),
+      buildToolActivityEvent(
+        'call-detailed-result',
+        'custom_detailed_read',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          success: true,
+          resultContent: capturedToolResult(''),
+          resultDetailedContent: capturedToolResult({ detail: 'pełna odpowiedź CRM' })
+        },
+        '22'
+      )
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const results = Array.from(compiled.querySelectorAll('.ai-work-item__result'));
+    const jsonResult = results[0]?.querySelector('.ai-work-item__result-content')?.textContent ?? '';
+    const allText = results.map((result) => result.textContent ?? '').join('\n');
+    const semanticErrorResult = results.find((result) => result.textContent?.includes('tool_error'));
+    const semanticErrorItem = semanticErrorResult?.closest('.ai-work-item');
+    const rejectedReportResult = results.find((result) => result.textContent?.includes('rejected'));
+    const rejectedReportItem = rejectedReportResult?.closest('.ai-work-item');
+
+    expect(results).toHaveLength(8);
+    expect(jsonResult).toContain('"matches": [');
+    expect(jsonResult).toContain('"score": 0.92');
+    expect(allText).toContain('Rezultat zwrócony do AI');
+    expect(allText).toContain('pierwszy fragment rezultatu');
+    expect(allText).toContain('Zachowano 27 z 5000 znaków rezultatu');
+    expect(allText).toContain('treść rezultatu nie jest dostępna w publicznym przebiegu');
+    expect(allText).toContain('Tool nadal pracuje');
+    expect(allText).toContain('Błąd zwrócony do AI');
+    expect(allText).toContain('Brak dostępu do fikcyjnego źródła CRM.');
+    expect(allText).toContain('Tool zwrócił kontrolowany błąd');
+    expect(allText).toContain('Wskazany ref repozytorium CRM nie istnieje.');
+    expect(allText).toContain('pełna odpowiedź CRM');
+    expect(semanticErrorItem?.querySelector('.ai-work-item__status')?.textContent).toContain('Błąd');
+    expect(semanticErrorItem?.querySelector('.ai-work-item__status')?.textContent).not.toContain('OK');
+    expect(rejectedReportItem?.querySelector('.ai-work-item__status')?.textContent).toContain('Błąd');
+    expect(rejectedReportItem?.querySelector('.ai-work-item__status')?.textContent).not.toContain('OK');
+  });
+
   it('should render the long-context decision and observed CRM window with its parameters', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('aiActivityEvents', buildContextTierActivityEvents());
@@ -575,9 +698,13 @@ describe('AnalysisStepsPanelComponent', () => {
         details: {
           toolCallId: 'tool-call-skill-1',
           success: true,
-          resultContentPreview:
-            'Skill "flow-explorer-code-grounding" loaded successfully. Follow the instructions in the skill context.',
-          resultDetailedContentPreview: 'Skill loaded successfully ✅\n\n# Ucięty podgląd...(5000 chars)',
+          resultContent: capturedToolResult(
+            'Skill "flow-explorer-code-grounding" loaded successfully. Follow the instructions in the skill context.'
+          ),
+          resultDetailedContent: capturedToolResult('Skill loaded successfully ✅\n\n# Ucięty podgląd', {
+            truncated: true,
+            originalCharacters: 5000
+          }),
           skillContent: [
             'Skill loaded successfully ✅',
             '',
@@ -625,7 +752,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(payload?.textContent).toContain('"skillContent"');
   });
 
-  it('should render the recorded excerpt of an older skill event and mark it as incomplete', async () => {
+  it('should render a truncated structured skill result and mark it as incomplete', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('aiActivityEvents', [{
       eventId: 'event-old-skill-complete',
@@ -642,8 +769,10 @@ describe('AnalysisStepsPanelComponent', () => {
       timestamp: '2026-04-14T12:00:15Z',
       details: {
         success: true,
-        resultDetailedContentPreview:
-          'Skill loaded successfully ✅\n\n# Starszy skill\n\n- pierwsza instrukcja...(8000 chars)',
+        resultDetailedContent: capturedToolResult(
+          'Skill loaded successfully ✅\n\n# Starszy skill\n\n- pierwsza instrukcja',
+          { truncated: true, originalCharacters: 8000 }
+        ),
         toolTelemetry: { restrictedProperties: { skillName: 'old-skill' } }
       }
     }]);
@@ -657,7 +786,6 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(skillSection?.querySelector('h1')?.textContent).toBe('Starszy skill');
     expect(skillSection?.querySelector('li')?.textContent).toBe('pierwsza instrukcja');
     expect(skillSection?.textContent).toContain('Zapis zdarzenia zawiera tylko fragment treści skilla.');
-    expect(skillSection?.textContent).not.toContain('...(8000 chars)');
   });
 
   it('should show Java class name for GitLab method slice tool details', async () => {
@@ -913,10 +1041,162 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(reason?.textContent?.trim()).toBe('Sprawdzam fragment klienta z timeoutem.');
     expect(icon?.textContent?.trim()).toBe('code');
     expect(status).not.toBeNull();
+    expect(compiled.textContent).toContain('Rezultat zwrócony do AI');
+    expect(compiled.textContent).toContain('Treść pliku');
+    expect(compiled.textContent).toContain(
+      'src/main/java/com/example/synthetic/crm/CustomerProfileGatewayClient.java'
+    );
     expect(compiled.textContent).toContain('CustomerProfileGatewayClient');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
     expect(compiled.textContent).not.toContain('Powód pobrania');
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
+  });
+
+  it('should render the TypeScript symbol slice as returned source code', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('toolEvidenceSections', [buildTypeScriptSymbolSliceSection()]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const content = compiled.textContent || '';
+
+    expect(content).toContain('Rezultat zwrócony do AI');
+    expect(content).toContain('Zwrócony fragment kodu');
+    expect(content).toContain('src/app/crm/customer-preferences.service.ts');
+    expect(content).toContain('savePreferences(customerId: string)');
+    expect(compiled.querySelector('.repo-code-viewer--tool-evidence')).not.toBeNull();
+  });
+
+  it('should use structured resultContent for an empty TypeScript symbol slice', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    const resultContent = [
+      {
+        declaringTypeName: 'CrmNotificationService',
+        symbolName: 'subscribeByDefault',
+        kind: 'PROPERTY',
+        signature: 'readonly subscribeByDefault = computed(() => false)'
+      }
+    ];
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('toolEvidenceSections', [buildTypeScriptSymbolSliceSection('')]);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      buildToolActivityEvent(
+        'tool-call-typescript-slice-1',
+        'gitlab_read_frontend_typescript_symbol_slice',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          resultContent: capturedToolResult(resultContent, {
+            truncated: true,
+            originalCharacters: 5062,
+            omittedEntries: 7
+          })
+        },
+        '31'
+      )
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const content = compiled.textContent || '';
+
+    expect(content).toContain('Rezultat zwrócony do AI');
+    expect(content).toContain('Zwrócony fragment kodu');
+    expect(content).toContain('CrmNotificationService');
+    expect(content).toContain('subscribeByDefault');
+    expect(content).toContain('Zachowano');
+    expect(content).toContain('z 5062 znaków rezultatu');
+    expect(content).toContain('pominięte elementy lub pola: 7');
+  });
+
+  it('should extract TypeScript code from structured resultContent without separate evidence', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('aiActivityEvents', [
+      buildToolActivityEvent(
+        'tool-call-typescript-content-only',
+        'gitlab_read_frontend_typescript_symbol_slice',
+        'tool.execution_complete',
+        'COMPLETED',
+        {
+          success: true,
+          resultContent: capturedToolResult(
+            {
+              filePath: 'src/app/crm/emails/emails.service.ts',
+              status: 'OK',
+              declaringTypeName: 'EmailsService',
+              lineStart: 52,
+              lineEnd: 65,
+              content:
+                'async addEmailAddress(email: string) {\n  const result = await this.client.POST(email);\n  return result;\n}',
+              candidates: [{ symbolName: 'addEmailAddress' }]
+            },
+            {
+              truncated: true,
+              originalCharacters: 12465,
+              retainedCharacters: 11993,
+              omittedEntries: 10,
+              truncatedStrings: 2
+            }
+          )
+        },
+        '32'
+      )
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const readableResult = compiled.querySelector('.ai-work-item__result') as HTMLElement | null;
+    const codeLines = Array.from(
+      compiled.querySelectorAll('.repo-code-viewer__line-content')
+    ).map((element) => element.textContent ?? '');
+    const lineNumbers = Array.from(
+      compiled.querySelectorAll('.repo-code-viewer__line-number')
+    ).map((element) => element.textContent?.trim());
+
+    expect(readableResult?.textContent).toContain('Zwrócony fragment kodu');
+    expect(readableResult?.textContent).toContain('src/app/crm/emails/emails.service.ts');
+    expect(readableResult?.textContent).toContain('EmailsService');
+    expect(readableResult?.textContent).toContain('Zachowano 11993 z 12465 znaków rezultatu');
+    expect(codeLines).toContain('async addEmailAddress(email: string) {');
+    expect(codeLines).toContain('  const result = await this.client.POST(email);');
+    expect(lineNumbers).toContain('52');
+    expect(readableResult?.querySelector('.ai-work-item__result-content')).toBeNull();
+    expect(readableResult?.textContent).not.toContain('"content":');
+    expect(readableResult?.textContent).not.toContain('"candidates":');
+  });
+
+  it('should render repository search candidates as a list of file paths', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
+    fixture.componentRef.setInput('toolEvidenceSections', [buildRepositoryCandidateSearchSection()]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const filePaths = Array.from(
+      compiled.querySelectorAll('.gitlab-tool-card__file-list code')
+    ).map((element) => element.textContent?.trim());
+    const readableResult = compiled.querySelector('.ai-work-item__result')?.textContent || '';
+
+    expect(compiled.textContent).toContain('Rezultat zwrócony do AI');
+    expect(compiled.textContent).toContain('Ścieżki znalezionych plików');
+    expect(filePaths).toEqual([
+      'src/app/crm/customer-preferences.service.ts',
+      'src/app/crm/customer-preferences.component.ts'
+    ]);
+    expect(readableResult).not.toContain('Dopasowanie po nazwie klienta');
   });
 
   it('should render GitLab discovery tool details on the final analysis step', async () => {
@@ -981,6 +1261,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).toContain('"count": 3');
     expect(content).not.toContain('Powód sprawdzenia');
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
+    expect(compiled.querySelectorAll('.ai-work-item__result')).toHaveLength(2);
 
     const toolTooltip = compiled
       .querySelector('.ai-work-item--tool .ai-work-item__technical pre')
@@ -1351,6 +1632,59 @@ Provider: dynatrace, category: runtime-signals
 - Dynatrace problem P-230415 Gateway timeout | signalCategories=database-connectivity, availability`;
 }
 
+function buildToolActivityEvent(
+  toolCallId: string,
+  toolName: string,
+  type: 'tool.execution_start' | 'tool.execution_complete',
+  status: 'STARTED' | 'COMPLETED' | 'FAILED',
+  details: Record<string, unknown>,
+  second: string
+): AnalysisAiActivityEvent {
+  return {
+    eventId: `${toolCallId}-${type}`,
+    parentEventId: '',
+    type,
+    category: 'TOOL',
+    status,
+    title: type === 'tool.execution_start' ? `Tool start: ${toolName}` : 'Tool koniec',
+    summary: type === 'tool.execution_start' ? `Copilot uruchamia ${toolName}.` : 'Tool zakończył wykonanie.',
+    turnId: '',
+    interactionId: '',
+    toolCallId,
+    toolName,
+    timestamp: `2026-04-14T12:00:${second}Z`,
+    details: {
+      toolCallId,
+      toolName,
+      ...details
+    }
+  };
+}
+
+function capturedToolResult(
+  value: unknown,
+  overrides: Partial<{
+    truncated: boolean;
+    originalCharacters: number;
+    retainedCharacters: number;
+    omittedEntries: number;
+    truncatedStrings: number;
+  }> = {}
+): Record<string, unknown> {
+  const format = typeof value === 'string' ? 'TEXT' : 'JSON';
+  const rendered = format === 'TEXT' ? String(value) : (JSON.stringify(value) ?? '');
+  return {
+    format,
+    value,
+    truncated: false,
+    originalCharacters: rendered.length,
+    retainedCharacters: rendered.length,
+    omittedEntries: 0,
+    truncatedStrings: 0,
+    ...overrides
+  };
+}
+
 function buildAiToolGitLabSection(captureOrder = '1'): AnalysisEvidenceSection {
   return {
     provider: 'gitlab',
@@ -1364,12 +1698,73 @@ function buildAiToolGitLabSection(captureOrder = '1'): AnalysisEvidenceSection {
             value: 'src/main/java/com/example/synthetic/crm/CustomerProfileGatewayClient.java'
           },
           { name: 'reason', value: 'Sprawdzam fragment klienta z timeoutem.' },
+          { name: 'toolCallId', value: 'tool-call-repository-file-1' },
+          { name: 'toolName', value: 'gitlab_read_repository_file' },
           { name: 'toolCaptureOrder', value: captureOrder },
           { name: 'startLine', value: '5' },
           {
             name: 'content',
             value:
               'public class CustomerProfileGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}'
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function buildTypeScriptSymbolSliceSection(
+  content = 'savePreferences(customerId: string) {\n  return this.api.save(customerId);\n}'
+): AnalysisEvidenceSection {
+  return {
+    provider: 'gitlab',
+    category: 'tool-fetched-code',
+    items: [
+      {
+        title: 'CRM TypeScript symbol slice',
+        attributes: [
+          { name: 'filePath', value: 'src/app/crm/customer-preferences.service.ts' },
+          { name: 'reason', value: 'Sprawdzam zapis preferencji klienta.' },
+          { name: 'toolCallId', value: 'tool-call-typescript-slice-1' },
+          { name: 'toolName', value: 'gitlab_read_frontend_typescript_symbol_slice' },
+          { name: 'startLine', value: '24' },
+          ...(content ? [{ name: 'content', value: content }] : [])
+        ]
+      }
+    ]
+  };
+}
+
+function buildRepositoryCandidateSearchSection(): AnalysisEvidenceSection {
+  return {
+    provider: 'gitlab',
+    category: 'tool-discovery',
+    items: [
+      {
+        title: 'GitLab search candidates',
+        attributes: [
+          { name: 'toolName', value: 'gitlab_search_repository_candidates' },
+          { name: 'toolCallId', value: 'tool-call-repository-search-1' },
+          { name: 'reason', value: 'Szukam kodu preferencji klienta.' },
+          { name: 'candidateCount', value: '2' },
+          {
+            name: 'candidates',
+            value: JSON.stringify([
+              {
+                projectName: 'crm-web',
+                branch: 'main',
+                filePath: 'src/app/crm/customer-preferences.service.ts',
+                matchReason: 'Dopasowanie po nazwie klienta',
+                matchScore: 31
+              },
+              {
+                projectName: 'crm-web',
+                branch: 'main',
+                filePath: 'src/app/crm/customer-preferences.component.ts',
+                matchReason: 'Dopasowanie po nazwie klienta',
+                matchScore: 28
+              }
+            ])
           }
         ]
       }

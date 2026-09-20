@@ -452,6 +452,13 @@ Model zapisuje wynik przez platformowe report tools:
 Report tools sa session-bound. Model-facing schema nie przyjmuje `reportId`;
 scope pochodzi z hidden `ToolContext`, razem z feature name i lista
 dozwolonych sekcji. Tool odrzuca sekcje spoza `allowedReportSectionIds`.
+Rezultaty mutacji i `report_get_current` nie serializuja ponownie pelnego
+`AnalysisReport`. Zwracaja zwarty manifest z naglowkami, section ids, order,
+rozmiarami i podgladami, licznikami metadata, sumami SHA-256 oraz neutralna
+kontrola kompletności. Zapobiega to mechanizmowi large-output SDK, ktory przy
+duzym wyniku przekazuje modelowi tylko fragment i sciezke do pliku. Pelny
+raport pozostaje w session store i jest zwracany przez execution gateway;
+kontrola merytoryczna tresci nalezy do feature'a i odbywa sie przed zapisem.
 
 Po zakonczeniu `sendAndWait` execution gateway zwraca ostatni snapshot raportu
 w `CopilotExecutionResult.report()`. Feature mapuje ten raport na swoj

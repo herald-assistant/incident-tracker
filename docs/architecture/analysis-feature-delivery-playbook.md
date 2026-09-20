@@ -1036,6 +1036,13 @@ Platformowe tools:
 - `report_upsert_section`,
 - `report_update_meta`.
 
+Report tools zwracaja zwarty manifest zapisanego stanu, nie pelny raport.
+Manifest potwierdza sekcje, kolejnosc, rozmiary, metadata i digesty oraz
+sygnalizuje braki strukturalne. Feature musi wykonac kontrole merytoryczna
+przed mutacja; `report_get_current` nie jest drugim odczytem wszystkich body.
+Pelny `AnalysisReport` pozostaje w session store i trafia do feature'a przez
+`CopilotExecutionResult.report()`.
+
 Feature musi:
 
 1. zdefiniowac stabilne section IDs,

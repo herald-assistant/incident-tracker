@@ -8,7 +8,9 @@ import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +55,9 @@ class CopilotReportToolsTest {
         assertEquals("ok", result.status());
         assertEquals("report-1", result.reportId());
         assertEquals("flow-explorer", result.reportFeature());
-        assertEquals(report, result.report());
+        assertEquals("Header", result.manifest().header());
+        assertEquals("Summary".length(), result.manifest().markdownSummary().characters());
+        assertEquals(64, result.manifest().reportSha256().length());
     }
 
     @Test
@@ -125,7 +129,9 @@ class CopilotReportToolsTest {
         var result = tools.updateMeta(meta, "Aktualizacja metadanych.", toolContext());
 
         assertEquals("ok", result.status());
-        assertEquals(meta, result.report().meta());
+        assertEquals(1, result.manifest().meta().references());
+        assertEquals(1, result.manifest().meta().visibilityLimits());
+        assertEquals("medium", result.manifest().meta().confidence());
         assertEquals(meta, store.current("report-1").orElseThrow().meta());
     }
 
@@ -144,10 +150,82 @@ class CopilotReportToolsTest {
         );
 
         assertEquals("ok", result.status());
-        assertEquals("DOWNSTREAM_TIMEOUT", result.report().header());
-        assertEquals("Profil klienta CRM | CRM Customer Context | CRM Customer Team", result.report().subHeader());
-        assertEquals("Downstream timeout blocks customer case processing.", result.report().markdownSummary());
+        assertEquals("DOWNSTREAM_TIMEOUT", result.manifest().header());
+        assertEquals("Profil klienta CRM | CRM Customer Context | CRM Customer Team", result.manifest().subHeader());
+        assertEquals(
+                "Downstream timeout blocks customer case processing.",
+                result.manifest().markdownSummary().preview()
+        );
         assertEquals("DOWNSTREAM_TIMEOUT", store.current("report-1").orElseThrow().header());
+    }
+
+    @Test
+    void shouldReturnCompactCompleteManifestInsteadOfLargeReportBodies() throws JsonProcessingException {
+        var store = new CopilotReportSessionStore();
+        var sectionIds = new ArrayList<String>();
+        var sections = new ArrayList<AnalysisReportSection>();
+        for (var index = 0; index < 8; index++) {
+            var id = "SECTION_" + index;
+            sectionIds.add(id);
+            sections.add(new AnalysisReportSection(
+                    id,
+                    "Sekcja " + index,
+                    index,
+                    "Pełna treść CRM " + index + " " + "x".repeat(4_000),
+                    AnalysisReportMeta.empty()
+            ));
+        }
+        var report = new AnalysisReport(
+                "report-1",
+                "Profil klienta CRM",
+                "Widok preferencji",
+                "Operator utrzymuje preferencje klienta.",
+                sections,
+                AnalysisReportMeta.empty()
+        );
+        store.register(report);
+        var tools = new CopilotReportTools(store);
+
+        var result = tools.getCurrentReport("Końcowa kontrola zapisu.", toolContext(sectionIds));
+        var serialized = objectMapper.writeValueAsString(result);
+
+        assertTrue(result.manifest().validation().complete());
+        assertEquals(sectionIds, result.manifest().validation().presentSectionIds());
+        assertEquals(8, result.manifest().sections().size());
+        assertEquals(64, result.manifest().sections().get(0).markdown().sha256().length());
+        assertTrue(serialized.length() < 12_000, "Manifest should stay below the SDK large-output threshold");
+        assertFalse(serialized.contains("x".repeat(1_000)));
+        assertEquals(report, store.current("report-1").orElseThrow());
+    }
+
+    @Test
+    void shouldExposeMissingUnexpectedAndEmptySectionsInValidationManifest() {
+        var store = new CopilotReportSessionStore();
+        store.register(new AnalysisReport(
+                "report-1",
+                "Profil klienta CRM",
+                "Widok preferencji",
+                "",
+                List.of(
+                        new AnalysisReportSection("OVERVIEW", "Cel", 0, "", AnalysisReportMeta.empty()),
+                        new AnalysisReportSection("OVERVIEW", "Duplikat", 1, "Powielona treść", AnalysisReportMeta.empty()),
+                        new AnalysisReportSection("EXTRA", "Nadmiarowa", 1, "Treść", AnalysisReportMeta.empty())
+                ),
+                AnalysisReportMeta.empty()
+        ));
+        var tools = new CopilotReportTools(store);
+
+        var result = tools.getCurrentReport(
+                "Sprawdzenie kompletności.",
+                toolContext(List.of("OVERVIEW", "FUNCTIONAL_FLOW"))
+        );
+
+        assertFalse(result.manifest().validation().complete());
+        assertFalse(result.manifest().validation().markdownSummaryPresent());
+        assertEquals(List.of("FUNCTIONAL_FLOW"), result.manifest().validation().missingAllowedSectionIds());
+        assertEquals(List.of("EXTRA"), result.manifest().validation().unexpectedSectionIds());
+        assertEquals(List.of("OVERVIEW"), result.manifest().validation().emptySectionIds());
+        assertEquals(List.of("OVERVIEW"), result.manifest().validation().duplicateSectionIds());
     }
 
     @Test
@@ -181,10 +259,14 @@ class CopilotReportToolsTest {
     }
 
     private ToolContext toolContext() {
+        return toolContext(List.of("OVERVIEW", "FUNCTIONAL_FLOW"));
+    }
+
+    private ToolContext toolContext(List<String> allowedSectionIds) {
         return new ToolContext(Map.of(
                 AgentToolContextKeys.REPORT_ID, "report-1",
                 AgentToolContextKeys.REPORT_FEATURE, "flow-explorer",
-                AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS, List.of("OVERVIEW", "FUNCTIONAL_FLOW")
+                AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS, allowedSectionIds
         ));
     }
 }

@@ -41,7 +41,9 @@ precyzyjne `visibilityLimits`, `openQuestions` albo `gaps`.
 ## Procedura
 
 1. Wykonaj `Readiness Gate` dla wszystkich aktywnych `sectionModes`.
-2. Przygotuj business-first `markdownSummary` oraz tresc kazdej aktywnej sekcji.
+2. Przygotuj i sprawdz merytorycznie business-first `markdownSummary` oraz
+   tresc kazdej aktywnej sekcji przed ich zapisem. Koncowy manifest nie
+   powtarza pelnych body sekcji.
 3. Wywolaj `report_update_header`: zachowaj route jako `header`, pomocnicza
    nazwe komponentu/widoku jako `subHeader` i zapisz podsumowanie jako
    `markdownSummary`.
@@ -49,8 +51,10 @@ precyzyjne `visibilityLimits`, `openQuestions` albo `gaps`.
    kolejnosci. Nie zapisuj sekcji `OFF`.
 5. Wywolaj `report_update_meta` z globalnymi references, visibility limits,
    open questions, gaps, confidence i warnings.
-6. Wywolaj `report_get_current` i sprawdz, czy raport ma niepuste
-   `markdownSummary` oraz kazda aktywna sekcje dokladnie raz.
+6. Wywolaj `report_get_current` i sprawdz zwrocony manifest: niepuste
+   `markdownSummary`, `validation.complete=true`, kazda aktywna sekcja
+   dokladnie raz, brak sekcji nieoczekiwanych oraz stabilne digesty zapisanej
+   tresci i metadata.
 7. Jezeli walidacja zapisu wykryje brak, popraw tylko brakujacy element przez
    odpowiedni report tool i ponownie wykonaj `report_get_current`.
 8. Po poprawnym zapisie zwroc jednozdaniowy status tekstowy. Nie zwracaj JSON,
@@ -177,16 +181,21 @@ samym `RouterOutlet`.
 
 ## Walidacja
 
-Przed zakonczeniem sprawdz przez `report_get_current`:
+Przed pierwszym zapisem sprawdz merytorycznie przygotowana tresc:
 
 - `markdownSummary` jest niepuste i business-first,
-- istnieje kazda aktywna sekcja oraz nie istnieje zadna sekcja `OFF`,
 - section id, title i order sa kanoniczne,
 - Markdown spelnia functional writing contract,
 - wszystkie references wskazuja graf/slice albo captured targeted evidence,
 - `high` nie wystepuje bez source reference,
 - globalne i sekcyjne visibility limits nie zniknely,
 - backend logic, runtime forms i zewnetrzne biblioteki nie zostaly wymyslone.
+
+Po zapisie `report_get_current` zwraca zwarty manifest, a nie pelna kopie
+raportu. Sprawdz w nim `validation.complete`, `markdownSummary.characters`,
+liste section ids, kolejnosc, rozmiary, liczniki metadata oraz digesty SHA-256.
+Manifest potwierdza stan zapisany w session store; nie sluzy do ponownej oceny
+pelnej tresci Markdown.
 
 ## Fallbacki
 
@@ -201,5 +210,5 @@ potwierdzona czesc wraz z `visibilityLimits`, `openQuestions` i `gaps`.
 ## Artefakty Handoffu
 
 Finalnym artefaktem jest session-bound `AnalysisReport` zapisany przez report
-tools i zweryfikowany przez `report_get_current`. Finalna odpowiedz tekstowa
-nie przenosi tresci raportu.
+tools. `report_get_current` potwierdza jego strukture i integralnosc przez
+zwarty manifest. Finalna odpowiedz tekstowa nie przenosi tresci raportu.

@@ -70,8 +70,21 @@ class UiExplorerLocalRunPersisterTest {
         envelope.at("/payload/job/toolEvidenceSections/0/items/0/attributes")
                 .forEach(attribute -> persistedAttributeNames.add(attribute.path("name").asText()));
         assertThat(persistedAttributeNames)
-                .containsOnly("filePath", "reason", "toolCallId", "toolName");
-        assertThat(envelope.at("/payload/job/aiActivityEvents/0/details").isEmpty()).isTrue();
+                .containsOnly("filePath", "reason", "toolCallId", "toolName", "content");
+        assertThat(envelope.at("/payload/job/toolEvidenceSections/0/items/0/attributes/4/value").asText())
+                .isEqualTo("export class CustomerPreferencesComponent {}");
+        assertThat(envelope.at("/payload/job/toolEvidenceSections/0/items/1/title").asText())
+                .isEqualTo("UI Explorer tool evidence");
+        assertThat(envelope.at("/payload/job/toolEvidenceSections/0/items/1/attributes").toString())
+                .contains("filePaths")
+                .contains("src/app/crm/customer-preferences.ts")
+                .contains("src/app/crm/customer-preferences.html")
+                .doesNotContain("projectName");
+        assertThat(envelope.at("/payload/job/aiActivityEvents/0/details/success").asBoolean()).isTrue();
+        assertThat(envelope.at("/payload/job/aiActivityEvents/0/details/resultContent/value").toString())
+                .contains("CustomerPreferencesComponent")
+                .contains(SOURCE_PATH);
+        assertThat(envelope.at("/payload/job/aiActivityEvents/0/details/rawArguments").isMissingNode()).isTrue();
         assertThat(envelope.at("/payload/job/aiActivityEvents/1/type").asText())
                 .isEqualTo("platform.context_tier");
         assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/phase").asText())

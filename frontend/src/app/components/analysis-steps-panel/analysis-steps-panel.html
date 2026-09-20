@@ -17,6 +17,21 @@
       }
 
       @if (panel.hasContent) {
+        <div class="repo-code-result__header">
+          <span class="attribute-name">
+            @if (event.toolName === 'gitlab_read_frontend_typescript_symbol_slice') {
+              Zwrócony fragment kodu
+            } @else if (panel.contentSource === 'result-content') {
+              Treść zwrócona do AI
+            } @else {
+              Treść pliku
+            }
+          </span>
+          <code class="repo-code-result__path">{{ panel.componentName }}</code>
+        </div>
+        @if (panel.contentNote) {
+          <p class="repo-code-result__note">{{ panel.contentNote }}</p>
+        }
         <div class="repo-code-viewer repo-code-viewer--tool-evidence">
           @for (line of panel.codeLines; track line.lineNumber ?? $index) {
             <div
@@ -47,7 +62,19 @@
           </div>
         }
 
-        @if (lookup.candidateGroups.length > 0) {
+        @if (lookup.toolName === 'gitlab_search_repository_candidates' && lookup.filePaths.length > 0) {
+          <section class="gitlab-tool-card__section">
+            <div class="gitlab-tool-card__section-header">
+              <h6 class="gitlab-tool-card__section-title">Ścieżki znalezionych plików</h6>
+              <span class="gitlab-tool-card__count">{{ lookup.filePaths.length }}</span>
+            </div>
+            <ul class="gitlab-tool-card__file-list">
+              @for (filePath of lookup.filePaths; track filePath) {
+                <li><code>{{ filePath }}</code></li>
+              }
+            </ul>
+          </section>
+        } @else if (lookup.candidateGroups.length > 0) {
           <div class="gitlab-tool-card__sections">
             @for (group of lookup.candidateGroups; track group.key) {
               <section class="gitlab-tool-card__section">
@@ -638,6 +665,21 @@
                                   }
 
                                   @if (panel.hasContent) {
+                                    <div class="repo-code-result__header">
+                                      <span class="attribute-name">
+                                        @if (event.toolName === 'gitlab_read_frontend_typescript_symbol_slice') {
+                                          Zwrócony fragment kodu
+                                        } @else if (panel.contentSource === 'result-content') {
+                                          Treść zwrócona do AI
+                                        } @else {
+                                          Treść pliku
+                                        }
+                                      </span>
+                                      <code class="repo-code-result__path">{{ panel.componentName }}</code>
+                                    </div>
+                                    @if (panel.contentNote) {
+                                      <p class="repo-code-result__note">{{ panel.contentNote }}</p>
+                                    }
                                     <div class="repo-code-viewer repo-code-viewer--tool-evidence">
                                       @for (line of panel.codeLines; track line.lineNumber ?? $index) {
                                         <div
@@ -677,7 +719,19 @@
                                       </div>
                                     }
 
-                                    @if (lookup.candidateGroups.length > 0) {
+                                    @if (lookup.toolName === 'gitlab_search_repository_candidates' && lookup.filePaths.length > 0) {
+                                      <section class="gitlab-tool-card__section">
+                                        <div class="gitlab-tool-card__section-header">
+                                          <h6 class="gitlab-tool-card__section-title">Ścieżki znalezionych plików</h6>
+                                          <span class="gitlab-tool-card__count">{{ lookup.filePaths.length }}</span>
+                                        </div>
+                                        <ul class="gitlab-tool-card__file-list">
+                                          @for (filePath of lookup.filePaths; track filePath) {
+                                            <li><code>{{ filePath }}</code></li>
+                                          }
+                                        </ul>
+                                      </section>
+                                    } @else if (lookup.candidateGroups.length > 0) {
                                       <div class="gitlab-tool-card__sections">
                                         @for (group of lookup.candidateGroups; track group.key) {
                                           <section class="gitlab-tool-card__section">
@@ -1600,11 +1654,53 @@
                     </section>
                   }
 
+                  @if (item.toolResult; as toolResult) {
+                    <section
+                      class="ai-work-item__result"
+                      [class.ai-work-item__result--pending]="toolResult.state === 'pending'"
+                      [class.ai-work-item__result--failed]="toolResult.state === 'failed'"
+                      [class.ai-work-item__result--unavailable]="toolResult.state === 'unavailable'"
+                      aria-label="Rezultat wywołania toola"
+                    >
+                      <div class="ai-work-item__result-header">
+                        <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">
+                          @if (toolResult.state === 'failed') {
+                            error
+                          } @else if (toolResult.state === 'pending') {
+                            hourglass_top
+                          } @else if (toolResult.state === 'unavailable') {
+                            visibility_off
+                          } @else {
+                            output
+                          }
+                        </mat-icon>
+                        <div>
+                          <h6 class="ai-work-item__result-title">{{ toolResult.title }}</h6>
+                          <p class="ai-work-item__result-message">{{ toolResult.message }}</p>
+                        </div>
+                      </div>
+                      @if (toolResult.content) {
+                        <pre class="ai-work-item__result-content">{{ toolResult.content }}</pre>
+                      }
+                    </section>
+                  }
+
                   @if (item.toolEvidence; as toolEvidence) {
-                    <ng-container
-                      [ngTemplateOutlet]="toolEvidenceResult"
-                      [ngTemplateOutletContext]="{ $implicit: toolEvidence }"
-                    ></ng-container>
+                    <section class="ai-work-item__result" aria-label="Rezultat wywołania toola">
+                      <div class="ai-work-item__result-header">
+                        <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">output</mat-icon>
+                        <div>
+                          <h6 class="ai-work-item__result-title">Rezultat zwrócony do AI</h6>
+                          <p class="ai-work-item__result-message">
+                            Czytelny widok treści zwróconej przez tool do dalszej pracy AI.
+                          </p>
+                        </div>
+                      </div>
+                      <ng-container
+                        [ngTemplateOutlet]="toolEvidenceResult"
+                        [ngTemplateOutletContext]="{ $implicit: toolEvidence }"
+                      ></ng-container>
+                    </section>
                   }
 
                   <details class="ai-work-item__technical">

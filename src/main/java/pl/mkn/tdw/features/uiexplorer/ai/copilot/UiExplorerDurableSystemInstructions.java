@@ -32,8 +32,10 @@ final class UiExplorerDurableSystemInstructions {
                 tools. Finalna odpowiedz tekstowa nie jest parsowana i moze zawierac tylko
                 krotkie potwierdzenie zakonczenia. Zapisz `markdownSummary`, wszystkie i tylko
                 aktywne sekcje oraz report meta, a nastepnie potwierdz zapis przez
-                `report_get_current`. Route i nazwa komponentu musza odpowiadac ponizszemu
-                artefaktowi wybranego ekranu.
+                `report_get_current`. Ten tool zwraca zwarty manifest struktury, rozmiarow,
+                metadata i digestow, a nie ponowna kopie pelnych body. Kontrole merytoryczna
+                calej tresci wykonaj przed zapisem. Route i nazwa komponentu musza odpowiadac
+                ponizszemu artefaktowi wybranego ekranu.
 
                 Exact selected screen artifact (`ui-explorer/screen-catalog-entry.json`):
                 %s

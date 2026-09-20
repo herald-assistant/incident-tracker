@@ -177,9 +177,11 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             reject(request, "projectNames is outside the selected UI Explorer repository.", true);
         }
         var requestedPrefixes = normalizedPaths(textList(arguments.get("pathPrefixes")));
-        if (!new java.util.LinkedHashSet<>(requestedPrefixes)
-                .equals(new java.util.LinkedHashSet<>(repository.pathPrefixes()))) {
-            reject(request, "pathPrefixes must exactly match the validated UI Explorer code-search boundary.", true);
+        var missingRequiredBoundary = !repository.pathPrefixes().isEmpty() && requestedPrefixes.isEmpty();
+        var expandsBoundary = requestedPrefixes.stream()
+                .anyMatch(prefix -> !withinPrefixes(prefix, repository.pathPrefixes()));
+        if (missingRequiredBoundary || expandsBoundary) {
+            reject(request, "pathPrefixes must stay within the validated UI Explorer code-search boundary.", true);
         }
         var terms = new java.util.ArrayList<String>();
         terms.addAll(textList(arguments.get("keywords")));

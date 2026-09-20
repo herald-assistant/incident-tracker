@@ -8,6 +8,7 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceSourceRevision;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.ToolResultActivityDetailsSanitizer;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 
@@ -232,6 +233,9 @@ final class OperationalContextAssistanceJobState {
     }
 
     private Map<String, Object> safeActivityDetails(AnalysisAiActivityEvent event, String category) {
+        if ("TOOL".equals(category) && "tool.execution_complete".equals(event.type())) {
+            return ToolResultActivityDetailsSanitizer.sanitize(event.details());
+        }
         if (!"USAGE".equals(category) && !"MESSAGE".equals(category)) {
             return Map.of();
         }

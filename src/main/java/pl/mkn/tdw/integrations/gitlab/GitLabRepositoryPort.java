@@ -104,6 +104,10 @@ public interface GitLabRepositoryPort {
         return true;
     }
 
+    default boolean refExists(String group, String projectName, String ref) {
+        return branchExists(group, projectName, ref);
+    }
+
     default GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
             String group,
             String issueKey,

@@ -40,6 +40,11 @@ class UiExplorerCopilotPoliciesTest {
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context, GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES, valid
         ))).doesNotThrowAnyException();
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
+                valid.replace("apps/crm-agent", "apps/crm-agent/src/app/contact")
+        ))).doesNotThrowAnyException();
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
@@ -50,6 +55,18 @@ class UiExplorerCopilotPoliciesTest {
                 context,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 valid.replace("apps/crm-agent", "outside-scope")
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                .hasMessageContaining("pathPrefixes");
+        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
+                valid.replace("apps/crm-agent", "apps")
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                .hasMessageContaining("pathPrefixes");
+        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
+                valid.replace("[\"apps/crm-agent\"]", "[]")
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("pathPrefixes");
     }

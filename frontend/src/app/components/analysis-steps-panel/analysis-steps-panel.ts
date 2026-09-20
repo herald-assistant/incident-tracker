@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
   AnalysisAiActivityEvent,
+  AnalysisAiToolResultContent,
   AnalysisAiToolFeedback,
   AnalysisAiUsage,
   AnalysisEvidenceAttribute,
@@ -190,6 +191,8 @@ interface RepoCodePanelView {
   reason: string;
   detailsTooltip: string;
   hasContent: boolean;
+  contentSource: 'evidence' | 'result-content';
+  contentNote: string;
   highlightedLineNumber: number | null;
   codeLines: RepoCodeLineView[];
   compactAttributes: AnalysisEvidenceAttribute[];
@@ -216,6 +219,7 @@ interface GitLabToolCandidateView {
   key: string;
   title: string;
   subtitle: string;
+  filePath: string;
   role: string;
   score: string;
   strategy: string;
@@ -240,6 +244,7 @@ interface GitLabToolLookupView {
   reason: string;
   summary: string;
   compactAttributes: AnalysisEvidenceAttribute[];
+  filePaths: string[];
   candidateGroups: GitLabToolCandidateGroupView[];
   outlineLists: GitLabToolListView[];
   recommendedNextReads: string[];
@@ -263,6 +268,16 @@ interface ToolEvidenceTimelineItemView {
 
 type AiWorkItemKind = 'message' | 'runtime' | 'tool' | 'usage';
 type AiWorkItemStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'INFO';
+type ToolResultState = 'available' | 'pending' | 'failed' | 'unavailable';
+
+interface ToolResultView {
+  state: ToolResultState;
+  title: string;
+  message: string;
+  content: string;
+  truncated: boolean;
+  originalLength: number | null;
+}
 
 interface AiWorkKindFilterOption {
   kind: AiWorkItemKind;
@@ -280,6 +295,7 @@ interface AiWorkItemView {
   previewMarkdown: string;
   markdownContent: string;
   skillContent?: SkillContentView;
+  toolResult?: ToolResultView;
   iconName: string;
   meta: string[];
   technicalTooltip: string;
@@ -428,6 +444,8 @@ const DATABASE_TOOL_LABELS: Record<string, string> = {
 
 const GITLAB_TOOL_LABELS: Record<string, string> = {
   gitlab_search_repository_candidates: 'Wyszukiwanie kandydatów plików',
+  gitlab_read_repository_file: 'Odczyt pliku',
+  gitlab_read_frontend_typescript_symbol_slice: 'Odczyt fragmentu TypeScript',
   gitlab_read_repository_files_by_path: 'Odczyt listy plików',
   gitlab_read_java_method_slice: 'Odczyt metody Java',
   gitlab_read_repository_file_outline: 'Zarys pliku',
@@ -465,6 +483,7 @@ const GITLAB_TOOL_STRUCTURED_ATTRIBUTES = new Set([
   'toolName',
   'summary',
   'candidates',
+  'filePaths',
   'groups',
   'recommendedNextReads',
   'searchKeywords',
@@ -1659,34 +1678,279 @@ function buildToolWorkItem(
     activity.start?.toolName ||
     activity.complete?.toolName ||
     'tool';
+  const visibleToolEvidence = withTypeScriptSymbolSliceResultContent(toolEvidence, toolName, activity);
   const skillName = resolveSkillName(request, activity);
   const reason =
-    toolEvidence?.reason ||
+    visibleToolEvidence?.reason ||
     request?.reason ||
     toolReasonFromActivity(activity.start) ||
     toolReasonFromActivity(activity.complete) ||
     formatToolTimelineSummary(toolName, skillName);
   const toolCallId =
-    toolEvidence?.toolCallId || request?.toolCallId || activity.start?.toolCallId || activity.complete?.toolCallId || '';
-  const meta = buildToolTimelineMeta(toolEvidence, request, activity, toolName, toolCallId);
+    visibleToolEvidence?.toolCallId || request?.toolCallId || activity.start?.toolCallId || activity.complete?.toolCallId || '';
+  const meta = buildToolTimelineMeta(visibleToolEvidence, request, activity, toolName, toolCallId);
+  const skillContent = status === 'COMPLETED' ? skillContentFromActivity(toolName, activity) : undefined;
 
   return {
     key: toolCallId || toolEvidence?.key || request?.sourceEvent.eventId || `tool-${index}`,
     kind: 'tool',
     category: 'TOOL',
     status,
-    title: formatToolTimelineTitle(toolEvidence, toolName, skillName, request, activity),
+    title: formatToolTimelineTitle(visibleToolEvidence, toolName, skillName, request, activity),
     summary: reason,
     previewMarkdown: '',
     markdownContent: '',
-    skillContent: status === 'COMPLETED' ? skillContentFromActivity(toolName, activity) : undefined,
-    iconName: toolEvidence?.iconName || toolIconByName(toolName),
+    skillContent,
+    toolResult: visibleToolEvidence || skillContent ? undefined : toolResultFromActivity(status, activity),
+    iconName: visibleToolEvidence?.iconName || toolIconByName(toolName),
     meta,
-    technicalTooltip: buildMergedToolTooltip(toolEvidence, request, activity),
+    technicalTooltip: buildMergedToolTooltip(visibleToolEvidence, request, activity),
     timestampMs,
     ...buildDisplayStatus(status, toolStatusTooltip(status, activity.complete)),
-    toolEvidence
+    toolEvidence: visibleToolEvidence
   };
+}
+
+function withTypeScriptSymbolSliceResultContent(
+  toolEvidence: ToolEvidenceTimelineItemView | null,
+  toolName: string,
+  activity: ToolActivityBundle
+): ToolEvidenceTimelineItemView | null {
+  if (toolName !== 'gitlab_read_frontend_typescript_symbol_slice') {
+    return toolEvidence;
+  }
+
+  const codePanel = toolEvidence?.codePanel;
+  if (codePanel?.hasContent) {
+    return toolEvidence;
+  }
+
+  const complete = activity.complete;
+  const capturedResult = complete ? toolResultContent(activityDetails(complete)) : null;
+  if (!capturedResult) {
+    return toolEvidence;
+  }
+
+  const payload = recordFromValue(capturedResult.value);
+  const payloadContent = payload['content'];
+  const content = typeof payloadContent === 'string' && payloadContent.length > 0
+    ? payloadContent
+    : codePanel
+      ? formatToolResultContent(capturedResult)
+      : '';
+  if (!content) {
+    return toolEvidence;
+  }
+
+  const filePath = stringFromRecord(payload, 'filePath') || codePanel?.componentName || '';
+  const lineStart = numberFromRecord(payload, 'lineStart');
+  const lineEnd = numberFromRecord(payload, 'lineEnd');
+  const declaringTypeName = stringFromRecord(payload, 'declaringTypeName');
+  const contentNote = capturedResult.truncated
+    ? toolResultTruncationMessage(capturedResult)
+    : 'Kod pochodzi ze strukturalnego rezultatu zwróconego przez tool.';
+
+  if (!toolEvidence || !codePanel) {
+    const toolCallId = activity.complete?.toolCallId || activity.start?.toolCallId || '';
+    const compactAttributes = resultCodeAttributes(declaringTypeName, lineStart, lineEnd);
+    return {
+      key: toolCallId || `${toolName}-result-content`,
+      reason:
+        toolReasonFromActivity(activity.start) ||
+        toolReasonFromActivity(activity.complete) ||
+        'Tool zwrócił fragment kodu TypeScript.',
+      technicalTooltip: '',
+      toolCallId,
+      toolName,
+      captureOrder: null,
+      fallbackOrder: Number.MAX_SAFE_INTEGER,
+      sourceLabel: 'GitLab',
+      iconName: 'code',
+      codePanel: {
+        key: `${toolCallId || toolName}-code`,
+        headerTitle: filePath ? lastPathSegment(filePath) : declaringTypeName || 'Fragment TypeScript',
+        componentName: filePath || declaringTypeName || 'Nieznany plik',
+        reason: '',
+        detailsTooltip: '',
+        hasContent: true,
+        contentSource: 'result-content',
+        contentNote,
+        highlightedLineNumber: null,
+        codeLines: buildRepoCodeLines(content, lineStart, null),
+        compactAttributes,
+        blockAttributes: []
+      },
+      gitLabLookup: null,
+      databaseTool: null,
+      defaultItem: null
+    };
+  }
+
+  return {
+    ...toolEvidence,
+    codePanel: {
+      ...codePanel,
+      hasContent: true,
+      contentSource: 'result-content',
+      componentName: filePath || codePanel.componentName,
+      contentNote,
+      codeLines: buildRepoCodeLines(content, lineStart, null)
+    }
+  };
+}
+
+function resultCodeAttributes(
+  declaringTypeName: string,
+  lineStart: number | null,
+  lineEnd: number | null
+): AnalysisEvidenceAttribute[] {
+  return [
+    declaringTypeName ? { name: 'declaringTypeName', value: declaringTypeName } : null,
+    lineStart !== null ? { name: 'lineStart', value: String(lineStart) } : null,
+    lineEnd !== null ? { name: 'lineEnd', value: String(lineEnd) } : null
+  ].filter((attribute): attribute is AnalysisEvidenceAttribute => attribute !== null);
+}
+
+function toolResultFromActivity(
+  status: 'PENDING' | 'COMPLETED' | 'FAILED',
+  activity: ToolActivityBundle
+): ToolResultView {
+  if (status === 'PENDING') {
+    return {
+      state: 'pending',
+      title: 'Rezultat zwrócony do AI',
+      message: 'Tool nadal pracuje. Rezultat pojawi się po zakończeniu wywołania.',
+      content: '',
+      truncated: false,
+      originalLength: null
+    };
+  }
+
+  const complete = activity.complete;
+  const details = complete ? activityDetails(complete) : {};
+  const capturedResult = toolResultContent(details);
+
+  if (status === 'FAILED') {
+    const payload = toolResultPayload(details);
+    const semanticStatus = stringFromRecord(payload, 'status').toLowerCase();
+    const semanticError = isSemanticToolFailureStatus(semanticStatus);
+    const error =
+      stringFromRecord(payload, 'message') ||
+      stringFromRecord(payload, 'rootCauseMessage') ||
+      stringFromRecord(details, 'errorMessage') ||
+      stringFromRecord(details, 'message') ||
+      stringFromRecord(details, 'error') ||
+      complete?.summary ||
+      'Tool zakończył się błędem bez opublikowanych szczegółów.';
+    return {
+      state: 'failed',
+      title: 'Błąd zwrócony do AI',
+      message: semanticError
+        ? booleanFromRecord(payload, 'retryableWithChangedArguments') === true
+          ? 'Tool zwrócił kontrolowany błąd. AI może kontynuować po zmianie argumentów lub sposobu wyszukania danych.'
+          : 'Tool zwrócił kontrolowany błąd do dalszej obsługi przez AI.'
+        : 'Wywołanie toola nie dostarczyło poprawnego rezultatu.',
+      content: capturedResult ? formatToolResultContent(capturedResult) : error,
+      truncated: false,
+      originalLength: null
+    };
+  }
+
+  if (!capturedResult) {
+    return {
+      state: 'unavailable',
+      title: 'Rezultat zwrócony do AI',
+      message:
+        'To wywołanie zakończyło się poprawnie, ale treść rezultatu nie jest dostępna w publicznym przebiegu.',
+      content: '',
+      truncated: false,
+      originalLength: null
+    };
+  }
+
+  return {
+    state: 'available',
+    title: 'Rezultat zwrócony do AI',
+    message: capturedResult.truncated
+      ? toolResultTruncationMessage(capturedResult)
+      : 'Treść, którą tool zwrócił do dalszej pracy AI.',
+    content: formatToolResultContent(capturedResult),
+    truncated: capturedResult.truncated,
+    originalLength: capturedResult.originalCharacters
+  };
+}
+
+function toolResultTruncationMessage(result: AnalysisAiToolResultContent): string {
+  const details = [
+    result.omittedEntries > 0 ? `pominięte elementy lub pola: ${result.omittedEntries}` : '',
+    result.truncatedStrings > 0 ? `skrócone wartości tekstowe: ${result.truncatedStrings}` : ''
+  ].filter(Boolean);
+  const suffix = details.length > 0 ? `; ${details.join(', ')}` : '';
+  return `Zachowano ${result.retainedCharacters} z ${result.originalCharacters} znaków rezultatu${suffix}.`;
+}
+
+function formatToolResultContent(content: AnalysisAiToolResultContent): string {
+  if (content.format === 'TEXT') {
+    return typeof content.value === 'string' ? content.value : '';
+  }
+  return JSON.stringify(content.value, null, 2) ?? '';
+}
+
+function toolResultContent(details: Record<string, unknown>): AnalysisAiToolResultContent | null {
+  const results = [
+    capturedToolResultContent(details['resultContent']),
+    capturedToolResultContent(details['resultDetailedContent'])
+  ].filter((result): result is AnalysisAiToolResultContent => result !== null);
+  return results.find((result) => formatToolResultContent(result).trim().length > 0) ?? results[0] ?? null;
+}
+
+function capturedToolResultContent(value: unknown): AnalysisAiToolResultContent | null {
+  const record = recordFromValue(value);
+  const format = stringFromRecord(record, 'format').toUpperCase();
+  const truncated = booleanFromRecord(record, 'truncated');
+  const originalCharacters = numberFromRecord(record, 'originalCharacters');
+  const retainedCharacters = numberFromRecord(record, 'retainedCharacters');
+  if (
+    (format !== 'JSON' && format !== 'TEXT') ||
+    truncated === null ||
+    originalCharacters === null ||
+    retainedCharacters === null
+  ) {
+    return null;
+  }
+  return {
+    format,
+    value: record['value'],
+    truncated,
+    originalCharacters,
+    retainedCharacters,
+    omittedEntries: numberFromRecord(record, 'omittedEntries') ?? 0,
+    truncatedStrings: numberFromRecord(record, 'truncatedStrings') ?? 0
+  };
+}
+
+function toolResultPayload(details: Record<string, unknown>): Record<string, unknown> {
+  for (const name of ['resultContent', 'resultDetailedContent']) {
+    const result = capturedToolResultContent(details[name]);
+    const payload = result ? recordFromValue(result.value) : null;
+    if (payload) {
+      return payload;
+    }
+  }
+  return {};
+}
+
+function isSemanticToolFailureStatus(status: string): boolean {
+  const normalized = status.trim().toLowerCase();
+  return (
+    normalized === 'tool_error' ||
+    normalized === 'error' ||
+    normalized === 'failed' ||
+    normalized === 'failure' ||
+    normalized === 'rejected' ||
+    normalized === 'missing_report' ||
+    normalized.startsWith('denied_by_')
+  );
 }
 
 function resolveToolWorkItemTimestamp(
@@ -1956,9 +2220,9 @@ function skillContentFromActivity(toolName: string, activity: ToolActivityBundle
   }
 
   const details = activityDetails(activity.complete);
-  const capturedContent =
-    stringFromRecord(details, 'skillContent') ||
-    stringFromRecord(details, 'resultDetailedContentPreview');
+  const detailedResult = capturedToolResultContent(details['resultDetailedContent']);
+  const skillContent = stringFromRecord(details, 'skillContent');
+  const capturedContent = skillContent || (detailedResult ? formatToolResultContent(detailedResult) : '');
   if (!capturedContent) {
     return undefined;
   }
@@ -1966,7 +2230,9 @@ function skillContentFromActivity(toolName: string, activity: ToolActivityBundle
   const withoutStatus = capturedContent
     .replace(/^Skill loaded successfully\s*✅?\s*\r?\n(?:\r?\n)*/i, '')
     .trim();
-  const truncated = /\.\.\.\(\d+ chars\)$/.test(withoutStatus);
+  const truncated = skillContent
+    ? /\.\.\.\(\d+ chars\)$/.test(withoutStatus)
+    : detailedResult?.truncated === true;
   const markdown = withoutStatus.replace(/\.\.\.\(\d+ chars\)$/, '').trim();
   return markdown ? { markdown, truncated } : undefined;
 }
@@ -2192,8 +2458,12 @@ function resolveToolTimelineStatus(
   const completeStatus = String(activity.complete?.status || '').toUpperCase();
   const completeDetails = activity.complete ? activityDetails(activity.complete) : {};
   const success = booleanFromRecord(completeDetails, 'success');
+  const resultStatus = stringFromRecord(
+    toolResultPayload(completeDetails),
+    'status'
+  );
 
-  if (completeStatus === 'FAILED' || success === false) {
+  if (completeStatus === 'FAILED' || success === false || isSemanticToolFailureStatus(resultStatus)) {
     return 'FAILED';
   }
 
@@ -2276,8 +2546,9 @@ function skillNameFromResultPreview(event: AnalysisAiActivityEvent | null): stri
     return '';
   }
 
-  const preview = stringFromRecord(activityDetails(event), 'resultContentPreview');
-  return preview.match(/Skill\s+"([^"]+)"/)?.[1]?.trim() ?? '';
+  const result = toolResultContent(activityDetails(event));
+  const content = result ? formatToolResultContent(result) : '';
+  return content.match(/Skill\s+"([^"]+)"/)?.[1]?.trim() ?? '';
 }
 
 function isSkillTool(toolName: string): boolean {
@@ -2315,11 +2586,9 @@ function gitLabJavaMethodSliceTitleFromResultPreview(event: AnalysisAiActivityEv
   }
 
   const details = activityDetails(event);
-  const parsedPreview =
-    asRecord(parseOptionalJson(stringFromRecord(details, 'resultContentPreview'))) ||
-    asRecord(parseOptionalJson(stringFromRecord(details, 'resultDetailedContentPreview')));
+  const parsedResult = toolResultPayload(details);
 
-  return gitLabJavaMethodSliceTitleFromRecord(parsedPreview);
+  return gitLabJavaMethodSliceTitleFromRecord(parsedResult);
 }
 
 function gitLabJavaMethodSliceTitleFromRecord(
@@ -2365,7 +2634,10 @@ function toolStatusTooltip(status: string, completeEvent: AnalysisAiActivityEven
   }
 
   const details = activityDetails(completeEvent);
+  const result = toolResultPayload(details);
   return (
+    stringFromRecord(result, 'message') ||
+    stringFromRecord(result, 'rootCauseMessage') ||
     stringFromRecord(details, 'errorMessage') ||
     stringFromRecord(details, 'message') ||
     stringFromRecord(details, 'error') ||
@@ -3045,6 +3317,8 @@ function prepareRepoCodePanel(
     reason,
     detailsTooltip: buildRepoTooltipContent(item.title || headerTitle, attributes),
     hasContent: Boolean(content),
+    contentSource: 'evidence',
+    contentNote: '',
     highlightedLineNumber,
     codeLines: buildRepoCodeLines(content, contentStartLine, highlightedLineNumber),
     compactAttributes: metaAttributes.filter((attribute) => !isLargeAttribute(attribute)),
@@ -3062,6 +3336,7 @@ function prepareGitLabToolLookup(
   const attributesByName = mapAttributesByName(attributes);
   const toolName = nonEmptyValue(attributesByName.get('toolName')) || nonEmptyValue(item.title) || 'gitlab_tool';
   const candidateGroups = buildGitLabToolCandidateGroups(attributesByName, itemKey);
+  const filePaths = buildGitLabToolFilePaths(attributesByName, candidateGroups);
   const outlineLists = buildGitLabToolOutlineLists(attributesByName);
   const recommendedNextReads = parseStringArrayAttribute(
     attributesByName.get('recommendedNextReads')
@@ -3082,10 +3357,30 @@ function prepareGitLabToolLookup(
           !GITLAB_TOOL_STRUCTURED_ATTRIBUTES.has(attribute.name)
       )
       .map(normalizeGitLabToolAttribute),
+    filePaths,
     candidateGroups,
     outlineLists,
     recommendedNextReads
   };
+}
+
+function buildGitLabToolFilePaths(
+  attributesByName: ReadonlyMap<string, string>,
+  candidateGroups: GitLabToolCandidateGroupView[]
+): string[] {
+  const persistedPaths = parseStringArrayAttribute(attributesByName.get('filePaths'));
+  if (persistedPaths.length > 0) {
+    return [...new Set(persistedPaths.map((path) => path.trim()).filter(Boolean))];
+  }
+
+  return [
+    ...new Set(
+      candidateGroups
+        .flatMap((group) => group.candidates)
+        .map((candidate) => candidate.filePath)
+        .filter(Boolean)
+    )
+  ];
 }
 
 function prepareDatabaseToolCard(
@@ -3274,6 +3569,7 @@ function buildGitLabToolCandidate(
     key,
     title,
     subtitle,
+    filePath,
     role: recordText(record, 'inferredRole'),
     score: recordText(record, 'matchScore'),
     strategy: recordText(record, 'recommendedReadStrategy'),

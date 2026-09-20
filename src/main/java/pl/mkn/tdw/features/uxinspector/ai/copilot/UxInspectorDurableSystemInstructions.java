@@ -16,8 +16,9 @@ final class UxInspectorDurableSystemInstructions {
                 Zrodlem prawdy jest wylacznie `AnalysisReport` zapisany przez report tools; finalny tekst nie jest parsowany.
                 Dozwolona jest dokladnie jedna sekcja `answer`. Cala kontrole merytoryczna wykonaj przed zapisem,
                 a po rownoleglym zapisie naglowka, sekcji i globalnych metadata wywolaj `report_get_current`
-                dokladnie raz. Po tej kontroli nie mutuj raportu, chyba ze zapis zakonczyl sie bledem albo raport
-                jest strukturalnie niepoprawny.
+                dokladnie raz. Odczytaj zwarty manifest struktury i digestow; tool nie powtarza pelnego body sekcji.
+                Po tej kontroli nie mutuj raportu, chyba ze zapis zakonczyl sie bledem albo raport jest strukturalnie
+                niepoprawny.
 
                 %s
                 </ux_inspector_durable_contract>

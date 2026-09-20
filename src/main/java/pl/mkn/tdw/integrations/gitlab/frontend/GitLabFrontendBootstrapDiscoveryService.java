@@ -27,7 +27,7 @@ public class GitLabFrontendBootstrapDiscoveryService {
             GitLabFrontendGraphLimits limits
     ) {
         var effectiveLimits = limits != null ? limits : GitLabFrontendGraphLimits.defaults();
-        if (!gitLabRepositoryPort.branchExists(scope.group(), scope.projectName(), scope.ref())) {
+        if (!gitLabRepositoryPort.refExists(scope.group(), scope.projectName(), scope.ref())) {
             throw new GitLabFrontendDiscoveryException(
                     "FRONTEND_REF_NOT_FOUND",
                     "The requested GitLab branch/ref does not exist"

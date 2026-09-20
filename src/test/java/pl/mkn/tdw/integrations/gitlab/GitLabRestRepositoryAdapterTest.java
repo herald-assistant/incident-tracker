@@ -709,6 +709,35 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldCheckPinnedCommitRefExistenceWithoutTreatingItAsABranch() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(
+                properties,
+                new GitLabRestClientFactory(properties, restClientBuilder)
+        );
+        var existingRevision = "1234567890abcdef1234567890abcdef12345678";
+        var missingRevision = "abcdef1234567890abcdef1234567890abcdef12";
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-agent-frontend/repository/commits/"
+                                + existingRevision + "?stats=false"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-agent-frontend/repository/commits/"
+                                + missingRevision + "?stats=false"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        assertTrue(adapter.refExists("CRM/runtime", "crm-agent-frontend", existingRevision));
+        assertFalse(adapter.refExists("CRM/runtime", "crm-agent-frontend", missingRevision));
+
+        server.verify();
+    }
+
+    @Test
     void shouldFindMergeRequestsByIssueKeyWithCommitsAndChangedFiles() {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();

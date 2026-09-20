@@ -484,6 +484,11 @@ Report tools sa platformowym, session-bound mechanizmem zapisu wyniku:
 `report_update_meta`. Scope raportu pochodzi z hidden `ToolContext`:
 `reportId`, `reportFeature` i `allowedReportSectionIds`. Model nie podaje
 `reportId`, a `report_upsert_section` odrzuca sekcje spoza allowlisty feature'a.
+Kazdy tool zwraca modelowi zwarty manifest aktualnego stanu zamiast pelnej
+kopii raportu. Manifest zawiera identyfikatory i kolejnosc sekcji, fingerprinty
+tresci, liczniki metadata oraz strukturalny wynik kompletności. Dzieki temu
+`report_get_current` potwierdza zapis bez uruchamiania large-output fallbacku
+SDK. Pelne body sekcji pozostaja w session-bound store.
 
 Execution gateway rejestruje `CopilotPreparedSession.initialReport()` w
 `CopilotReportSessionStore` przed `sendAndWait`, zwraca ostatni snapshot w

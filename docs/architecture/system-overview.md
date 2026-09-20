@@ -252,11 +252,29 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /incident-analysis` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
   dociagniete przez tools w trakcie sesji Copilota i odswieza je wraz z
   pollingiem joba,
-- w ekranie `GET /incident-analysis` ostatni krok AI pokazuje plaska liste
-  aktywnosci Copilota i user-facing tool evidence:
-  komunikaty/rozumowanie AI, usage/runtime oraz wywolania tools sa laczone w
-  jeden tok wedlug zdarzen z pollingu, a kazdy wiersz ma ikone, prosty tekst,
-  status i rozwijane szczegoly,
+- wspolny `analysis-steps-panel` pokazuje aktywnosci Copilota i user-facing
+  tool evidence jako jeden tok wedlug zdarzen z pollingu. Kazde rozpoznane
+  wywolanie toola pozostaje osobna pozycja z ikona, opisem, statusem i
+  rozwijanymi szczegolami. Widok specjalizowany kodu, wyszukiwania, bazy albo
+  skilla ma pierwszenstwo; pozostale wywolania pokazuja ogolna karte rezultatu
+  z czytelnym JSON-em lub tekstem. Obciecie, oczekiwanie, blad i rzeczywisty
+  brak treści sa komunikowane jawnie, a surowy payload pozostaje warstwa
+  diagnostyczna. Kontrolowany `tool_error` i odrzucenie `denied_by_*` sa
+  prezentowane jako blad nawet wtedy, gdy SDK dostarczylo payload przez event
+  zakonczony technicznym `success=true`; model nadal otrzymuje tresc bledu i
+  instrukcje dalszego postepowania. Platformowy capture publikuje dla kazdego
+  zakonczonego toola `resultContent` i `resultDetailedContent` jako neutralny
+  strukturalny kontrakt. JSON pozostaje drzewem z zachowanymi typami i nazwami
+  pol, a tekst jest ograniczany po pelnych liniach; metadane podaja rozmiar,
+  liczbe pominietych elementow i skroconych wartosci. Wspolny
+  `ToolResultActivityDetailsSanitizer` pozwala feature'om publikowac tylko ten
+  zweryfikowany kontrakt oraz `success`. UI Explorer i Operational Context
+  Assistance uzywaja tej allowlisty, zachowujac wynik dla UI, ale nadal
+  usuwajac argumenty, hidden scope i pozostale szczegoly activity. Stary
+  tekstowy format nie jest odczytywany ani emitowany. Dla
+  `gitlab_read_frontend_typescript_symbol_slice` panel wyciaga z rezultatu
+  `content` i metadane pliku, aby pokazac numerowany kod takze bez osobnego
+  wpisu tool evidence,
 - w ekranie `GET /incident-analysis` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy. Wycena
@@ -614,7 +632,9 @@ Na dzisiaj projekt ma:
   znakow; nie buduje pelnego snapshotu plikow ani repository inventory.
 - `POST /api/gitlab/frontend/route-branch-slice`
   Zwraca tylko effective route branch wybranego ekranu wraz z wymaganymi
-  importami i jawnymi markerami pominietych sibling routes.
+  importami i jawnymi markerami pominietych sibling routes. Repository ref
+  jest sprawdzany przez GitLab commit API, dlatego capability przyjmuje nazwe
+  brancha albo przypiety commit SHA bez oslabiania source revision.
 - `POST /api/gitlab/frontend/typescript-symbol-slice`
   Zwraca osiagalne symbole, lokalne helpery, relewantne pola/importy, template
   bindings i downstream references dla wskazanego pliku TypeScript.
@@ -1005,8 +1025,8 @@ Znaczenie grup UI:
   merge'uje te eventy z `toolEvidenceSections` w jeden timeline analizy.
   Udane wywolanie wbudowanego toola `skill` zapisuje w activity tresc
   zaladowanego skilla (z limitem rozmiaru), a wspolny timeline renderuje ja
-  jako Markdown nad surowym payloadem. Starsze eksporty z samym skroconym
-  `resultDetailedContentPreview` pokazuja oznaczony fragment tresci.
+  jako Markdown nad surowym payloadem. Gdy osobna tresc skilla nie jest
+  dostepna, renderer korzysta ze strukturalnego `resultDetailedContent`.
 - Wszystkie skille Copilota sa pakowane jako immutable seed. Przy starcie
   loader dopisuje tylko brakujace pliki do persistent effective katalogu
   `${analysis.ai.copilot.copilot-home}/skills`, domyslnie

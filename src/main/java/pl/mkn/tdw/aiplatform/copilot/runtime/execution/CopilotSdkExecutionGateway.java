@@ -54,6 +54,7 @@ public class CopilotSdkExecutionGateway {
     private final CopilotClientShutdown clientShutdown;
     private final CopilotContextTierPolicy contextTierPolicy;
     private final CopilotRuntimeCompatibility runtimeCompatibility;
+    private final CopilotToolResultContentFactory toolResultContentFactory;
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
         var overallStart = System.nanoTime();
@@ -656,8 +657,10 @@ public class CopilotSdkExecutionGateway {
             put(details, "interactionId", data.interactionId());
             put(details, "isUserRequested", data.isUserRequested());
             put(details, "parentToolCallId", data.parentToolCallId());
-            put(details, "resultContentPreview", data.result() != null ? abbreviate(data.result().content(), 1_200) : null);
-            put(details, "resultDetailedContentPreview", data.result() != null ? abbreviate(data.result().detailedContent(), 1_200) : null);
+            put(details, "resultContent", data.result() != null
+                    ? toolResultContentFactory.capture(data.result().content()) : null);
+            put(details, "resultDetailedContent", data.result() != null
+                    ? toolResultContentFactory.capture(data.result().detailedContent()) : null);
             if (Boolean.TRUE.equals(data.success()) && data.result() != null && isSkillResult(data)) {
                 put(details, "skillContent", abbreviate(data.result().detailedContent(), MAX_CAPTURED_SKILL_CONTENT_LENGTH));
             }

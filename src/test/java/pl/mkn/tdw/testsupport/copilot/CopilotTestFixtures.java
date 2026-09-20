@@ -3,6 +3,7 @@ package pl.mkn.tdw.testsupport.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotToolResultContentFactory;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactService;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
@@ -134,7 +135,8 @@ public final class CopilotTestFixtures {
                         new CopilotEffectiveContextTierReader(properties),
                         new CopilotContextTierActivator()
                 ),
-                compatibleRuntime()
+                compatibleRuntime(),
+                new CopilotToolResultContentFactory(new ObjectMapper())
         );
     }
 

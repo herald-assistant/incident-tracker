@@ -909,6 +909,23 @@ best-effort i nie nadpisuje terminalnego stanu analizy. Celowane testy UI
 Explorer/history/granic pakietow oraz pelne `mvn -q test` przeszly na silnie
 zanonimizowanych danych CRM.
 
+Aktualizacja 2026-09-20: sanitizer zachowuje dla
+`tool.execution_complete` pole `success` oraz zweryfikowane strukturalne
+`resultContent` i `resultDetailedContent`, aby wspolny panel mogl pokazac
+rezultat zwrocony do AI rowniez po odtworzeniu historii. Nadal usuwa tool
+arguments, hidden repository scope oraz wszystkie inne szczegoly activity.
+Ograniczony rezultat moze zawierac fragment kodu odczytany przez read-only
+tool; nie jest pelnym source evidence ani kontynuacja sesji. Stary tekstowy
+format eventu nie jest obslugiwany.
+
+Aktualizacja 2026-09-20 po analizie runu
+`f79853b6-cc6f-4d95-920c-007abdd55101`: targeted frontend tools pracuja na
+przypietym commit SHA z hidden context. Bootstrap discovery sprawdza odtad
+dowolny GitLab ref przez commit API, zamiast wymagac, aby SHA istnial jako
+nazwa brancha. `gitlab_read_frontend_route_branch_slice` zachowuje wiec
+immutable source scope taki sam jak TypeScript symbol slice. Test adaptera
+rozroznia istniejacy i brakujacy fikcyjny commit CRM.
+
 Zakres 6B.2, zatwierdzony jako osobny inkrement portability:
 
 - [x] 6B.2: Zdefiniowac stabilny, wersjonowany i sanitizowany kontrakt exportu
@@ -2814,6 +2831,57 @@ publicznym frontendzie zwrocila `READY`, 50 widokow, 72 route nodes,
 16 route files, 0 unresolved edges, 0 diagnostics i brak osiagnietego limitu.
 Nie uruchamiano testow ani builda Angulara, poniewaz publiczny kontrakt
 backend-frontend i pliki frontendu nie zostaly zmienione.
+
+### 8W. Zawężanie search scope i repozytoryjne importy TypeScript
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-09-20 poprawke po
+analizie runu, w ktorym bezpiecznie zawezony `pathPrefixes` zostal odrzucony,
+a poprawne importy `src/...` nie zostaly rozwiazane przez targeted TypeScript
+tool. Source need pozostaje `../needs/ui-explorer.md`, w tym kontrolowany
+repository scope i poglebianie materialnych luk przez read-only tools.
+
+Klasyfikacja: L2. Zmiana dotyka feature-owned policy UI Explorera oraz
+neutralnego resolvera `integrations.gitlab.frontend`. Nie zmienia publicznych
+DTO, tool schema, promptu, skilli, hidden contextu, budzetow, reportu ani
+kontraktow import/export.
+
+Baseline: search policy wymaga identycznego zbioru `pathPrefixes` jak granica
+przygotowana dla sesji, przez co odrzuca rowniez bezpieczne zawężenie. Resolver
+importow rozpoznaje sciezki wzgledne i aliasy z `tsconfig`, ale nie probuje
+bezposredniej sciezki repozytoryjnej `src/...` mieszczacej sie w skonfigurowanym
+source scope. Model musi po obu bledach wykonywac dodatkowe fallback calls.
+
+Conformance delta: search policy zaakceptuje niepusty podzbior sciezek, jezeli
+kazda z nich lezy wewnatrz zatwierdzonej granicy; rozszerzenie oraz prefix
+bedacy rodzicem granicy pozostana odrzucone. Resolver po nieskutecznym
+rozwiazaniu jawnego aliasu sprawdzi bezposredni module specifier tylko wtedy,
+gdy miesci sie on w niepustym skonfigurowanym source scope. Importy pakietow,
+scope bez prefixow, pinned revision oraz wszystkie dotychczasowe limity i
+diagnostyki pozostaja bez zmian.
+
+Konsumenci: zmiana neutralnego resolvera obejmuje route traversal, screen
+reachability i TypeScript import-mode tools; policy dotyczy tylko UI Explorera.
+UX Inspector oraz pozostale feature'y zachowuja wlasne policy. Testy uzywaja
+wylacznie fikcyjnej domeny CRM.
+
+- [x] 8W.1: Dopuszcic bezpieczne zawężenie `pathPrefixes`, zachowac odrzucenie
+  rozszerzenia scope i dodac regresje policy. Kryterium akceptacji: wezszą
+  sciezke mozna przeszukac bez nowego hidden contextu, a sciezka poza granica
+  nadal daje kontrolowane odrzucenie.
+- [x] 8W.2: Dodac fallback bezposredniej sciezki repozytoryjnej dla importu
+  TypeScript wewnatrz skonfigurowanego source scope oraz regresje importu
+  `src/...`. Uruchomic celowane testy, testy konsumentow resolvera,
+  `PackageDependencyGuardTest`, pelne `mvn -q test` i `git diff --check`.
+
+Rezultat: UI Explorer pozwala modelowi zawęzić search do potomka
+zatwierdzonego prefixu, nadal odrzuca pusty prefix, rodzica granicy i sciezke
+poza scope. Resolver TypeScript rozpoznaje repozytoryjny import `src/...`
+wewnatrz skonfigurowanego source scope po nieskutecznym dopasowaniu aliasu;
+nie wykonuje tej proby dla zewnetrznych pakietow ani scope bez prefixow.
+Hidden context, tool schema i publiczne kontrakty nie zmienily sie. Testy
+celowane policy, resolvera i jego konsumentow oraz `PackageDependencyGuardTest`
+przeszly. Pelne `mvn -q test`: 1665 testow, 0 failures, 0 errors, 1 skipped;
+`git diff --check` - PASS.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

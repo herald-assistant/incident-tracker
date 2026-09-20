@@ -29,7 +29,9 @@ public class CopilotReportTools {
     @Tool(
             name = CopilotReportToolNames.GET_CURRENT,
             description = """
-                    Returns the current structured analysis report for this AI session.
+                    Returns a compact validation manifest of the current structured analysis report for this AI session.
+                    The manifest confirms persisted headers, section ids, order, content lengths, SHA-256 digests,
+                    metadata counts and structural completeness without repeating all section bodies.
                     The active report is selected from hidden ToolContext. Do not provide reportId, analysisId,
                     correlationId, environment, gitLabGroup or gitLabBranch.
                     """
@@ -45,7 +47,7 @@ public class CopilotReportTools {
         }
 
         return reportStore.current(scope.reportId())
-                .map(report -> ok("Current report returned.", scope, report, List.of()))
+                .map(report -> ok("Current report validation manifest returned.", scope, report, List.of()))
                 .orElseGet(() -> missingReport("No active report is registered for this reportId.", scope));
     }
 
@@ -196,7 +198,7 @@ public class CopilotReportTools {
                 message,
                 scope.reportId(),
                 scope.reportFeature(),
-                report,
+                report != null ? CopilotReportManifestFactory.create(report, scope.allowedSectionIds()) : null,
                 updatedSectionIds,
                 scope.allowedSectionIds()
         );
@@ -208,7 +210,7 @@ public class CopilotReportTools {
                 message,
                 scope.reportId(),
                 scope.reportFeature(),
-                report,
+                report != null ? CopilotReportManifestFactory.create(report, scope.allowedSectionIds()) : null,
                 List.of(),
                 scope.allowedSectionIds()
         );

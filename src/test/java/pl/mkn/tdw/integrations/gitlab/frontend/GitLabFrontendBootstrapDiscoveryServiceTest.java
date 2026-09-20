@@ -33,7 +33,7 @@ class GitLabFrontendBootstrapDiscoveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new GitLabFrontendBootstrapDiscoveryService(repositoryPort);
-        when(repositoryPort.branchExists("crm-platform", "crm-agent-frontend", "main")).thenReturn(true);
+        lenient().when(repositoryPort.refExists("crm-platform", "crm-agent-frontend", "main")).thenReturn(true);
     }
 
     @Test
@@ -203,6 +203,26 @@ class GitLabFrontendBootstrapDiscoveryServiceTest {
         );
     }
 
+    @Test
+    void shouldAcceptPinnedCommitShaAsRepositoryRef() {
+        var revision = "1234567890abcdef1234567890abcdef12345678";
+        when(repositoryPort.refExists("crm-platform", "crm-agent-frontend", revision)).thenReturn(true);
+        when(repositoryPort.searchRepositoryFilesByContent(
+                "crm-platform",
+                "crm-agent-frontend",
+                revision,
+                List.of("bootstrapApplication", "provideRouter"),
+                GitLabFrontendGraphLimits.defaults().maxRootCandidates() + 1
+        )).thenReturn(List.of());
+
+        var result = service.discover(scope(revision), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.status()).isEqualTo(GitLabFrontendCoverageStatus.BLOCKED);
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .contains(GitLabFrontendGraphDiagnosticCode.BOOTSTRAP_ROOT_NOT_FOUND);
+        verify(repositoryPort).refExists("crm-platform", "crm-agent-frontend", revision);
+    }
+
     private void addImportedRoot(
             Map<String, String> files,
             String application,
@@ -265,10 +285,14 @@ class GitLabFrontendBootstrapDiscoveryServiceTest {
     }
 
     private GitLabFrontendRepositoryScope scope() {
+        return scope("main");
+    }
+
+    private GitLabFrontendRepositoryScope scope(String ref) {
         return new GitLabFrontendRepositoryScope(
                 "crm-platform",
                 "crm-agent-frontend",
-                "main",
+                ref,
                 List.of()
         );
     }

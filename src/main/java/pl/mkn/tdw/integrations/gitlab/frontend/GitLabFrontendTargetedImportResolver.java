@@ -72,6 +72,15 @@ final class GitLabFrontendTargetedImportResolver {
                 }
             }
         }
+        if (!importPath.startsWith(".") && session.withinConfiguredSourceScope(importPath)) {
+            for (var candidate : candidates(importPath)) {
+                if (session.readOptional(candidate) != null) {
+                    var resolved = List.of(candidate);
+                    resolutionCache.put(cacheKey, resolved);
+                    return resolved;
+                }
+            }
+        }
         var unresolved = List.<String>of();
         resolutionCache.put(cacheKey, unresolved);
         return unresolved;

@@ -35,7 +35,7 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
         var bootstrap = new GitLabFrontendBootstrapDiscoveryService(repositoryPort);
         var traversal = new GitLabFrontendRouteSourceTraversalService(repositoryPort);
         service = new GitLabFrontendRouteGraphDiscoveryService(bootstrap, traversal, repositoryPort);
-        when(repositoryPort.branchExists("crm-platform", "crm-agent-frontend", "main")).thenReturn(true);
+        when(repositoryPort.refExists("crm-platform", "crm-agent-frontend", "main")).thenReturn(true);
         when(repositoryPort.resolveRevision("crm-platform", "crm-agent-frontend", "main"))
                 .thenReturn(new GitLabRepositoryRevision(
                         "crm-platform",

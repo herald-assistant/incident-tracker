@@ -504,6 +504,42 @@
   margin-top: 4px;
 }
 
+.gitlab-tool-card__file-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gitlab-tool-card__file-list li {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(216, 224, 235, 0.72);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.gitlab-tool-card__file-list code,
+.repo-code-result__path {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.repo-code-result__header {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 8px;
+}
+
+.repo-code-result__note {
+  margin: -2px 0 8px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
 .repo-code-panel__reason {
   margin: 0 0 12px;
   padding: 10px 12px;
