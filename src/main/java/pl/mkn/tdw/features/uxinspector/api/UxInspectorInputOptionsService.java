@@ -55,7 +55,8 @@ public class UxInspectorInputOptionsService {
                 new UxInspectorViewCatalogResponse.SourceRevision(catalog.sourceRevision().branch(),
                         catalog.sourceRevision().revision()), catalog.status().name(),
                 catalog.views().stream().map(value -> new UxInspectorViewCatalogResponse.ViewOption(
-                        value.viewId(), value.label(), value.routePattern(), value.status(), value.limitations())).toList(),
+                        value.viewId(), value.label(), value.routePattern(), value.componentSelectors(),
+                        value.status(), value.limitations())).toList(),
                 catalog.diagnostics().stream().map(value -> new UxInspectorViewCatalogResponse.Diagnostic(
                         value.severity(), value.code(), value.message(), value.sourcePath())).toList(), catalog.limitations());
     }

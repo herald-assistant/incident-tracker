@@ -17,9 +17,12 @@ public record UxInspectorViewCatalogResponse(
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
     }
     public record SourceRevision(String branch, String revision) {}
-    public record ViewOption(String viewId, String label, String routePattern, String status, List<String> limitations) {
-        public ViewOption { limitations = limitations != null ? List.copyOf(limitations) : List.of(); }
+    public record ViewOption(String viewId, String label, String routePattern, List<String> componentSelectors,
+                             String status, List<String> limitations) {
+        public ViewOption {
+            componentSelectors = componentSelectors != null ? List.copyOf(componentSelectors) : List.of();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        }
     }
     public record Diagnostic(String severity, String code, String message, String sourcePath) {}
 }
-

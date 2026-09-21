@@ -1080,7 +1080,8 @@ function buildFrontendCatalogResponse(): GitLabFrontendCatalogResponse {
           outlet: 'primary',
           viewTarget: {
             symbol: 'CrmCustomerProfileComponent',
-            sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts'
+            sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+            selectors: ['crm-customer-profile']
           }
         },
         label: 'Customer profile',
@@ -1094,7 +1095,8 @@ function buildFrontendCatalogResponse(): GitLabFrontendCatalogResponse {
         redirectTarget: null,
         viewTarget: {
           symbol: 'CrmCustomerProfileComponent',
-          sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts'
+          sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+          selectors: ['crm-customer-profile']
         },
         lazyTarget: null,
         configuration: [],
@@ -1257,7 +1259,8 @@ function buildAngularRouteBranchSliceResponse(): GitLabAngularRouteBranchSliceRe
         status: 'RESOLVED',
         viewTarget: {
           symbol: 'CrmCustomerHistoryComponent',
-          sourcePath: 'apps/crm-agent/src/app/customer/customer-history.ts'
+          sourcePath: 'apps/crm-agent/src/app/customer/customer-history.ts',
+          selectors: ['crm-customer-history']
         },
         redirectTarget: null,
         structural: false,

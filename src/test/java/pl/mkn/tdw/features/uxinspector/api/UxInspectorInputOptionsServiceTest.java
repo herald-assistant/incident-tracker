@@ -28,8 +28,10 @@ class UxInspectorInputOptionsServiceTest {
         });
         var result = service.views("crm-agent-portal", "main", false);
         assertThat(result.sourceRevision().revision()).isEqualTo("abc123crm");
-        assertThat(result.views()).singleElement().extracting(UxInspectorViewCatalogResponse.ViewOption::viewId)
-                .isEqualTo("crm-contact-create");
+        assertThat(result.views()).singleElement().satisfies(view -> {
+            assertThat(view.viewId()).isEqualTo("crm-contact-create");
+            assertThat(view.componentSelectors()).containsExactly("crm-contact-create");
+        });
         verify(views).loadCatalog("crm-agent-portal", "main", false);
     }
 
@@ -68,7 +70,8 @@ class UxInspectorInputOptionsServiceTest {
         return new FrontendViewCatalog("crm-agent-portal", "CRM Agent Portal",
                 new FrontendViewCatalog.SourceRevision("main", "abc123crm"), FrontendViewCatalog.Status.READY,
                 List.of(new FrontendViewCatalog.View("crm-contact-create", "Nowy kontakt", "/contacts/new", "/contacts",
-                        "RESOLVED", false, List.of(), List.of(), List.of())), List.of(), List.of(),
+                        List.of("crm-contact-create"), "RESOLVED", false, List.of(), List.of(), List.of())),
+                List.of(), List.of(),
                 new FrontendViewCatalog.Boundary(1, 1, 4, 0, 0, false, 400, 80, 300, 500, 12));
     }
 }

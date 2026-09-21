@@ -63,7 +63,9 @@ public final class UxInspectorTestFixtures {
 
     public static GitLabFrontendScreenReachabilityGraph graph(List<GitLabFrontendReachabilityComponent> components) {
         var scope = new GitLabFrontendRepositoryScope("CRM", "crm-ui", "main", List.of("src/app"));
-        var target = new GitLabFrontendRouteTarget("CrmContactCreateComponent", SOURCE_PATH);
+        var target = new GitLabFrontendRouteTarget(
+                "CrmContactCreateComponent", SOURCE_PATH, List.of("crm-contact-create")
+        );
         var screen = new GitLabFrontendScreenIdentity(VIEW_ID, "route-contact-create", "/contacts/new", "primary", target);
         var sourceRef = new GitLabFrontendSourceReference("src/app/app.routes.ts", "routes", 10, 18);
         var dirtyCheck = new GitLabFrontendRouteConfiguration(

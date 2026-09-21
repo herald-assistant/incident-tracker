@@ -415,7 +415,11 @@ export class UxInspectorFacade {
     if (!capture || !catalog || this.controlsLocked() || this.selectedViewId()) return;
     if (catalog.systemId !== this.selectedSystemId() || catalog.sourceRevision.branch !== this.branch().trim()) return;
 
-    const match = matchCapturedRouteToView(capture.page.path, catalog.views);
+    const match = matchCapturedRouteToView(
+      capture.page.path,
+      catalog.views,
+      capture.target.domFingerprint.componentBoundaryTags
+    );
     if (!match) return;
     this.selectedViewId.set(match.viewId);
     this.viewMatchedFromCapture.set(true);

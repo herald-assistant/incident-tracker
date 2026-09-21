@@ -157,7 +157,9 @@ class UiExplorerScreenReachabilityContextServiceTest {
                 "apps/crm-agent/src/app/app.routes.ts", "crmContactRoutes", 10, 18
         );
         var viewPath = "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts";
-        var target = new GitLabFrontendRouteTarget("CrmContactPreferencesComponent", viewPath);
+        var target = new GitLabFrontendRouteTarget(
+                "CrmContactPreferencesComponent", viewPath, List.of("crm-contact-preferences")
+        );
         var screenIdentity = new GitLabFrontendScreenIdentity(
                 "screen-crm-contact-preferences", "route-crm-preferences",
                 "/contacts/:contactId/preferences", "primary", target

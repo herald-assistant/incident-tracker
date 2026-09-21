@@ -512,7 +512,9 @@ class UiExplorerInitialPromptMatrixTest {
     ) {
         var routeNodeId = "route-" + id;
         var mainComponent = components.get(0);
-        var target = new GitLabFrontendRouteTarget(mainComponent.symbol(), mainComponent.sourcePath());
+        var target = new GitLabFrontendRouteTarget(
+                mainComponent.symbol(), mainComponent.sourcePath(), List.of(mainComponent.selector())
+        );
         var routePattern = routePatterns.get(routePatterns.size() - 1);
         var integrationIdentity = new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenIdentity(
                 id,

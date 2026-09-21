@@ -59,6 +59,10 @@ Potrzeba pojawia sie, gdy uzytkownik:
    przejetego elementu oraz strony.
 4. Uzytkownik wybiera lub potwierdza frontend system, branch i view, wybiera
    model oraz reasoning effort i wpisuje pytanie albo polecenie w textarea.
+   Gdy kilka View pasuje do tego samego URL-u, TDW powinien wykorzystac
+   potwierdzone selektory komponentow widoku i runtime ancestry z capture do
+   jednoznacznej sugestii; nierozstrzygniety remis pozostaje jawnym wyborem
+   operatora.
 5. Po uruchomieniu joba prawa czesc ekranu pokazuje stan analizy, jej kroki,
    aktywnosc Copilota i uzyte narzedzia w tym samym wzorcu co UI Explorer.
 6. Wynikiem jest jedna skupiona sekcja odpowiedzi. Sekcja pokazuje confidence,

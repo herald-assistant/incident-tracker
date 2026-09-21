@@ -911,3 +911,65 @@ read-only charakter tools pozostaja bez zmian.
 Pilot jakosciowy z rzeczywistym Copilot/GitLab pozostaje osobnym kryterium
 produktowym. Powinien objac pytania o walidacje, pochodzenie danych,
 dostepnosc/stany i skutek akcji oraz porownanie z szerokim runem UI Explorera.
+
+## Inkrement: dopasowanie View przez runtime component boundaries
+
+Status: complete
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-21 rozszerzenie automatycznego
+dopasowania View o selektory komponentow z przypietego katalogu zrodlowego.
+
+Source need: [UX Inspector - pytania o wskazany element uruchomionej aplikacji](../needs/ux-inspector.md)
+
+Klasyfikacja: **L2**. Zmienia sie neutralny `FrontendViewCatalog`, jego cache,
+mapowanie API UX Inspectora oraz feature-owned algorytm sugestii View. UI
+Explorer pozostaje konsumentem katalogu, ale nie zmienia swojego publicznego
+kontraktu ani sposobu wyboru ekranu.
+
+### Baseline i conformance delta
+
+- Baseline: frontend wybiera View tylko z `page.path` i `routePattern`; remis
+  pozostawia wybor pusty, mimo ze capture zawiera uporzadkowane
+  `componentBoundaryTags`, a discovery zna komponent wejściowy kazdego View.
+- Delta: neutralny katalog dolacza selektory `@Component` potwierdzone w tej
+  samej rewizji co graf routingu. URL nadal wyznacza najlepsza grupe
+  kandydatow, a runtime component boundary rozstrzyga tylko remis tej grupy.
+- Delta: brak selektora, selector nieelementowy, brak runtime boundary albo
+  kolejny remis zachowuje reczny wybor; selector nie jest dowodem ownership
+  targetu i nie omija pozniejszego deterministycznego resolvera.
+
+### Konsumenci i testy
+
+- Neutralne: traversal i route graph GitLab, publiczny GitLab frontend catalog,
+  `FrontendViewCatalog` oraz cache.
+- UX Inspector: views API, model frontendu, route/view matcher i facade.
+- UI Explorer: mapowanie wspolnego katalogu musi pozostac kompatybilne.
+- GitLab Evidence Console: wspolny model `GitLabFrontendRouteTarget` otrzymuje
+  wymagane `selectors`; stary wariant kontraktu nie jest utrzymywany.
+- Testy: parsowanie selectorow na przypietym source, mapowanie katalogu/API,
+  invalidacja starego cache, ranking URL + najblizszy component boundary,
+  bezpieczny fallback przy remisie oraz regresja obu konsumentow.
+
+### Kroki
+
+- [x] Dolaczyc selektory komponentu wejściowego do neutralnego route/view
+  catalogu i podniesc wersje cache.
+- [x] Rozszerzyc UX Inspector API i dopasowanie View o uporzadkowane
+  `componentBoundaryTags`, zachowujac reczny fallback.
+- [x] Zaktualizowac dokumentacje, wykonac testy celowane, frontend test/build
+  oraz `mvn -q -Pbackend-dev clean package`.
+
+### Weryfikacja inkrementu
+
+- PASS: testy celowane traversal/route graph, cache v3, UX Inspector views API,
+  UI Explorer catalog, GitLab frontend API i `PackageDependencyGuardTest`.
+- PASS: `npm --prefix frontend test -- --watch=false` — 74 pliki testowe,
+  619 testow.
+- PASS: `npm --prefix frontend run build`; produkcyjny bundle zapisany w
+  `src/main/resources/static`.
+- PASS: `mvn -q -Pbackend-dev clean package`.
+- Architecture diff: selektory sa neutralna metadana route targetu i View;
+  UX Inspector wykorzystuje je tylko po remisie najlepszego score URL-u,
+  UI Explorer nie zmienia zachowania, a Evidence Console korzysta z nowego
+  wymaganego pola. Cache v2 jest odrzucany przez v3; nie ma konstruktora,
+  migratora ani odczytu starego kontraktu.

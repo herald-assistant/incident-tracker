@@ -37,8 +37,12 @@ record GitLabFrontendRouteSourceTraversalResult(
             String sourcePath,
             String symbol,
             String routePath,
-            GitLabFrontendRouteGraphEdgeKind relation
+            GitLabFrontendRouteGraphEdgeKind relation,
+            List<String> selectors
     ) {
+        ComponentTarget {
+            selectors = selectors != null ? List.copyOf(selectors) : List.of();
+        }
     }
 
     record RouteKey(String collectionId, int sourceOffset) {

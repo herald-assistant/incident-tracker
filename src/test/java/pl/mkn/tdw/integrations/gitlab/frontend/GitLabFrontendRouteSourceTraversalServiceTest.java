@@ -68,6 +68,11 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
                         "CrmValuationComponent",
                         "CrmCustomerComponent"
                 );
+        assertThat(result.componentTargets())
+                .filteredOn(target -> "CrmContactCreateComponent".equals(target.symbol()))
+                .singleElement()
+                .extracting(GitLabFrontendRouteSourceTraversalResult.ComponentTarget::selectors)
+                .isEqualTo(List.of("crm-contact-create"));
         assertThat(result.routeCollections())
                 .extracting(GitLabFrontendRouteSourceTraversalResult.RouteCollection::relation)
                 .contains(
@@ -532,7 +537,7 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
         files.put("libs/crm/navigation/views/contact-shell.component.ts",
                 "export class CrmContactShellComponent {}");
         files.put("libs/crm/navigation/views/contact-create.component.ts",
-                "export class CrmContactCreateComponent {}");
+                "@Component({ selector: 'crm-contact-create', template: '' }) export class CrmContactCreateComponent {}");
         files.put("libs/crm/navigation/views/contact-summary.component.ts",
                 "export default class CrmContactSummaryComponent {}");
         files.put("libs/crm/navigation/valuation/valuation.component.ts",

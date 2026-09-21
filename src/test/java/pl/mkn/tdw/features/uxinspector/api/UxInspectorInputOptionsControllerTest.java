@@ -29,7 +29,8 @@ class UxInspectorInputOptionsControllerTest {
                 "crm-agent-portal", "CRM Agent Portal",
                 new UxInspectorViewCatalogResponse.SourceRevision("main", "abc123crm"), "READY",
                 List.of(new UxInspectorViewCatalogResponse.ViewOption(
-                        "crm-contact-create", "Nowy kontakt", "/contacts/new", "RESOLVED", List.of())),
+                        "crm-contact-create", "Nowy kontakt", "/contacts/new",
+                        List.of("crm-contact-create"), "RESOLVED", List.of())),
                 List.of(), List.of()));
 
         mockMvc.perform(get("/api/ux-inspector/input-options"))
@@ -40,7 +41,8 @@ class UxInspectorInputOptionsControllerTest {
                         .param("systemId", "crm-agent-portal").param("branch", "main"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sourceRevision.revision").value("abc123crm"))
-                .andExpect(jsonPath("$.views[0].viewId").value("crm-contact-create"));
+                .andExpect(jsonPath("$.views[0].viewId").value("crm-contact-create"))
+                .andExpect(jsonPath("$.views[0].componentSelectors[0]").value("crm-contact-create"));
 
         when(service.views("crm-agent-portal", "main", true)).thenReturn(new UxInspectorViewCatalogResponse(
                 "crm-agent-portal", "CRM Agent Portal",

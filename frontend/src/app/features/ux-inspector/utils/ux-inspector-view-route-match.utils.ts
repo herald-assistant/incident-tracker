@@ -2,7 +2,8 @@ import { UxInspectorViewOption } from '../models/ux-inspector.models';
 
 export function matchCapturedRouteToView(
   capturedPath: string,
-  views: UxInspectorViewOption[]
+  views: UxInspectorViewOption[],
+  componentBoundaryTags: string[] = []
 ): UxInspectorViewOption | null {
   const candidates = views
     .map((view) => ({ view, score: routeMatchScore(capturedPath, view.routePattern) }))
@@ -12,8 +13,37 @@ export function matchCapturedRouteToView(
     .sort((left, right) => right.score - left.score);
 
   const best = candidates[0];
-  if (!best || candidates[1]?.score === best.score) return null;
+  if (!best) return null;
+  const equallySpecific = candidates.filter((candidate) => candidate.score === best.score);
+  if (equallySpecific.length > 1) {
+    return matchNearestComponentBoundary(equallySpecific.map((candidate) => candidate.view), componentBoundaryTags);
+  }
   return best.view;
+}
+
+function matchNearestComponentBoundary(
+  views: UxInspectorViewOption[],
+  componentBoundaryTags: string[]
+): UxInspectorViewOption | null {
+  const boundaries = componentBoundaryTags.map((tag) => tag.trim().toLocaleLowerCase());
+  const ranked = views
+    .map((view) => ({
+      view,
+      boundaryIndex: nearestBoundaryIndex(view.componentSelectors, boundaries)
+    }))
+    .filter((candidate) => candidate.boundaryIndex >= 0)
+    .sort((left, right) => left.boundaryIndex - right.boundaryIndex);
+
+  const best = ranked[0];
+  if (!best || ranked[1]?.boundaryIndex === best.boundaryIndex) return null;
+  return best.view;
+}
+
+function nearestBoundaryIndex(selectors: string[], boundaries: string[]): number {
+  const elementSelectors = selectors
+    .map((selector) => selector.trim().toLocaleLowerCase())
+    .filter((selector) => /^[a-z][a-z0-9-]*$/.test(selector) && selector.includes('-'));
+  return boundaries.findIndex((boundary) => elementSelectors.includes(boundary));
 }
 
 function routeMatchScore(capturedPath: string, routePattern: string): number | null {

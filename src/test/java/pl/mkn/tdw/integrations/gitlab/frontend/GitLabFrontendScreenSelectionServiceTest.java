@@ -112,7 +112,8 @@ class GitLabFrontendScreenSelectionServiceTest {
                 )), routeSource, List.of()
         );
         var target = new GitLabFrontendRouteTarget(
-                "CrmPreferencesComponent", "apps/crm-agent/src/app/preferences/crm-preferences.component.ts"
+                "CrmPreferencesComponent", "apps/crm-agent/src/app/preferences/crm-preferences.component.ts",
+                List.of("crm-preferences")
         );
         var identity = new GitLabFrontendScreenIdentity(
                 "screen-crm-preferences", "route-crm-preferences", "/contacts/:contactId/preferences",
@@ -129,7 +130,8 @@ class GitLabFrontendScreenSelectionServiceTest {
         );
         var childTarget = new GitLabFrontendRouteTarget(
                 "CrmPreferenceHistoryComponent",
-                "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts"
+                "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts",
+                List.of("crm-preference-history")
         );
         var childIdentity = new GitLabFrontendScreenIdentity(
                 "screen-crm-preference-history", "route-crm-preference-history",

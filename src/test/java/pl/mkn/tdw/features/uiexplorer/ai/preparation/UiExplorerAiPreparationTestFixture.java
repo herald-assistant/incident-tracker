@@ -56,7 +56,9 @@ public final class UiExplorerAiPreparationTestFixture {
     }
 
     public static UiExplorerScreenReachabilityContext context() {
-        var target = new GitLabFrontendRouteTarget("CrmContactPreferencesComponent", COMPONENT_PATH);
+        var target = new GitLabFrontendRouteTarget(
+                "CrmContactPreferencesComponent", COMPONENT_PATH, List.of("crm-contact-preferences")
+        );
         var identity = new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenIdentity(
                 "crm-contact-preferences", "crm-contact-preferences-route",
                 "/contacts/:contactId/preferences", "primary", target

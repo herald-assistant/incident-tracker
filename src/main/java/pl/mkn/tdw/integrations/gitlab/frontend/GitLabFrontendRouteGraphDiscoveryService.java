@@ -56,11 +56,11 @@ public class GitLabFrontendRouteGraphDiscoveryService {
             var parentNodeId = draft.parentKey() != null ? nodeIds.get(draft.parentKey()) : null;
             var component = componentTargets.get(draft.key());
             var viewTarget = component != null
-                    ? new GitLabFrontendRouteTarget(component.symbol(), component.sourcePath())
+                    ? new GitLabFrontendRouteTarget(component.symbol(), component.sourcePath(), component.selectors())
                     : null;
             var lazy = lazyTargets.get(draft.key());
             var lazyTarget = lazy != null
-                    ? new GitLabFrontendRouteTarget(lazy.symbol(), lazy.sourcePath())
+                    ? new GitLabFrontendRouteTarget(lazy.symbol(), lazy.sourcePath(), List.of())
                     : null;
             var limitations = limitations(draft, component, lazy);
             var kind = kind(draft.route(), viewTarget, limitations);
@@ -369,7 +369,7 @@ public class GitLabFrontendRouteGraphDiscoveryService {
 
     private GitLabFrontendRouteTarget target(String symbol, String importPath) {
         return StringUtils.hasText(symbol) || StringUtils.hasText(importPath)
-                ? new GitLabFrontendRouteTarget(symbol, importPath)
+                ? new GitLabFrontendRouteTarget(symbol, importPath, List.of())
                 : null;
     }
 

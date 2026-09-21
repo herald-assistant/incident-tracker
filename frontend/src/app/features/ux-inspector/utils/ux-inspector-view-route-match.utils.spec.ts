@@ -30,6 +30,20 @@ describe('matchCapturedRouteToView', () => {
     ])).toBeNull();
   });
 
+  it('resolves an equally specific route by the nearest captured component boundary', () => {
+    expect(matchCapturedRouteToView('/contacts/customer-a7', [
+      view('contact-shell', '/contacts/:contactId', ['crm-contact-shell']),
+      view('contact-details', '/contacts/:contactKey', ['crm-contact-details'])
+    ], ['crm-contact-details', 'crm-contact-shell', 'crm-app'])?.viewId).toBe('contact-details');
+  });
+
+  it('does not use attribute selectors or guess when the nearest boundary is shared', () => {
+    expect(matchCapturedRouteToView('/contacts/customer-a7', [
+      view('contact-by-id', '/contacts/:contactId', ['[crmContact]', 'crm-contact-shell']),
+      view('contact-by-key', '/contacts/:contactKey', ['crm-contact-shell'])
+    ], ['crm-contact-shell'])).toBeNull();
+  });
+
   it('does not select a view when no route matches', () => {
     expect(matchCapturedRouteToView('/accounts', [view('contact-list', '/contacts')])).toBeNull();
   });
@@ -41,6 +55,6 @@ describe('matchCapturedRouteToView', () => {
   });
 });
 
-function view(viewId: string, routePattern: string): UxInspectorViewOption {
-  return { viewId, routePattern, label: viewId, status: 'READY', limitations: [] };
+function view(viewId: string, routePattern: string, componentSelectors: string[] = []): UxInspectorViewOption {
+  return { viewId, routePattern, componentSelectors, label: viewId, status: 'READY', limitations: [] };
 }

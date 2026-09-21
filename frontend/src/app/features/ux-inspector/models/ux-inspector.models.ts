@@ -177,6 +177,7 @@ export interface UxInspectorViewOption {
   viewId: string;
   label: string;
   routePattern: string;
+  componentSelectors: string[];
   status: string;
   limitations: string[];
 }

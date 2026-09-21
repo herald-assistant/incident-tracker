@@ -262,7 +262,9 @@ class GitLabFrontendScreenReachabilityServiceTest {
         var routeSource = new GitLabFrontendSourceReference(
                 "apps/synthetic-crm/src/app/app.routes.ts", "syntheticCrmRoutes", 10, 20
         );
-        var target = new GitLabFrontendRouteTarget("CrmCustomerPageComponent", ROOT_PATH);
+        var target = new GitLabFrontendRouteTarget(
+                "CrmCustomerPageComponent", ROOT_PATH, List.of("crm-customer-page")
+        );
         var identity = new GitLabFrontendScreenIdentity(
                 "screen-synthetic-crm-customer", "route-synthetic-crm-customer",
                 "/crm/customers/:customerId", "primary", target
@@ -285,7 +287,9 @@ class GitLabFrontendScreenReachabilityServiceTest {
                 )),
                 List.of("customerId")
         );
-        var routedChildTarget = new GitLabFrontendRouteTarget("CrmCustomerFormComponent", CHILD_PATH);
+        var routedChildTarget = new GitLabFrontendRouteTarget(
+                "CrmCustomerFormComponent", CHILD_PATH, List.of("crm-customer-form")
+        );
         var routedChildIdentity = new GitLabFrontendScreenIdentity(
                 "screen-synthetic-crm-customer-form", "route-synthetic-crm-customer-form",
                 "/crm/customers/:customerId/edit", "primary", routedChildTarget

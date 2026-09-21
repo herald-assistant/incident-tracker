@@ -43,7 +43,7 @@ class FileSystemFrontendViewCatalogCacheTest {
         }
         var mapper = new ObjectMapper().findAndRegisterModules();
         var entry = (ObjectNode) mapper.readTree(cacheFile.toFile());
-        entry.put("version", 1);
+        entry.put("version", 2);
         mapper.writeValue(cacheFile.toFile(), entry);
 
         assertThat(cache().find(review)).isEmpty();
@@ -67,7 +67,8 @@ class FileSystemFrontendViewCatalogCacheTest {
         return new FrontendViewCatalog("crm-agent-portal", "CRM Agent Portal",
                 new FrontendViewCatalog.SourceRevision(branch, revision), FrontendViewCatalog.Status.READY,
                 List.of(new FrontendViewCatalog.View("crm-contact-create", "Create contact", "/contacts/new",
-                        "/contacts", "RESOLVED", false, List.of(), List.of(), List.of())),
+                        "/contacts", List.of("crm-contact-create"), "RESOLVED", false,
+                        List.of(), List.of(), List.of())),
                 List.of(), List.of(),
                 new FrontendViewCatalog.Boundary(2, 2, 9, 3, 0, false, 400, 80, 300, 500, 12));
     }

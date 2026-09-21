@@ -52,6 +52,8 @@ class GitLabFrontendDiscoveryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sourceRevision.commitId").value("crm-ui-revision-20260815"))
                 .andExpect(jsonPath("$.nodes[0].screen.screenId").value("screen-crm-customer-profile"))
+                .andExpect(jsonPath("$.nodes[0].screen.viewTarget.selectors[0]")
+                        .value("crm-customer-profile"))
                 .andExpect(jsonPath("$.nodes[0].routePattern").value("/crm/customers/:customerId"))
                 .andExpect(jsonPath("$.coverage.sourceReadCount").value(7))
                 .andExpect(jsonPath("$.repositoryFileCount").doesNotExist())
@@ -240,7 +242,8 @@ class GitLabFrontendDiscoveryControllerTest {
                 "apps/crm-agent/src/app/app.routes.ts", "crmCustomerRoutes", 12, 22
         );
         var target = new GitLabFrontendRouteTarget(
-                "CrmCustomerProfileComponent", "apps/crm-agent/src/app/customer/customer-profile.component.ts"
+                "CrmCustomerProfileComponent", "apps/crm-agent/src/app/customer/customer-profile.component.ts",
+                List.of("crm-customer-profile")
         );
         var identity = new GitLabFrontendScreenIdentity(
                 "screen-crm-customer-profile", "route-crm-customer-profile",

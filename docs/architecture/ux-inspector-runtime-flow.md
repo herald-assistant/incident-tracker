@@ -112,12 +112,22 @@ TDW. Uklad i zachowanie tych kontrolek odpowiada UI Explorerowi:
 - katalog jest wspolnie cache'owany przez neutralny `frontendcatalog` per
   system, repository scope, ref i limity discovery,
 - `Load views` wymusza odswiezenie tylko aktualnego scope'u,
+- katalog View dolacza potwierdzone w source selektory `@Component` komponentu
+  wejściowego; sa to neutralne metadane widoku z tej samej rewizji co graf
+  routingu, a cache bez tego kontraktu nie jest odczytywany,
 - gdy capture i katalog sa dostepne, frontend porownuje `page.path` z
-  `routePattern` i uzupelnia View tylko dla jednego najlepszego dopasowania;
-  segment statyczny ma pierwszenstwo przed parametrem, wildcard jest
-  najslabszy, a remis albo brak dopasowania pozostawia wybor pusty,
+  `routePattern`; segment statyczny ma pierwszenstwo przed parametrem, a
+  wildcard jest najslabszy,
+- jezeli jeden kandydat ma najlepsze dopasowanie URL-u, frontend uzupelnia
+  View tak jak dotychczas; jezeli najlepszy wynik dzieli kilka View, porownuje
+  ich proste selektory elementowe z uporzadkowanymi od najblizszego komponentu
+  `componentBoundaryTags` i wybiera tylko jeden najblizszy wynik,
+- brak selektora, selector atrybutowy, brak pasujacego runtime boundary,
+  ponowny remis albo brak dopasowania URL-u pozostawia wybor pusty,
 - sugestia View nie zmienia Application ani Branch, jest oznaczona jako
-  pochodzaca z URL-u capture i moze zostac zastapiona recznie przez operatora,
+  pochodzaca z capture i moze zostac zastapiona recznie przez operatora;
+  dopasowanie selektora sluzy tylko sugestii View i nie dowodzi ownership
+  wskazanego targetu w kodzie,
 - View jest zwiazany z pokazanym immutable source revision,
 - Model AI i Reasoning effort sa wybierane przed wpisaniem pytania.
 

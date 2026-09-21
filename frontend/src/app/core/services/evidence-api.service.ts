@@ -177,6 +177,7 @@ export interface GitLabFrontendSourceReference {
 export interface GitLabFrontendRouteTarget {
   symbol?: string | null;
   sourcePath?: string | null;
+  selectors: string[];
 }
 
 export interface GitLabFrontendScreenIdentity {

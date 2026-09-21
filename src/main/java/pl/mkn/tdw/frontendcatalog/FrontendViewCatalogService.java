@@ -58,8 +58,9 @@ public class FrontendViewCatalogService {
                 .filter(node -> node.screen() != null)
                 .map(node -> new FrontendViewCatalog.View(node.screen().screenId(),
                         StringUtils.hasText(node.label()) ? node.label() : node.routePattern(), node.routePattern(),
-                        parentRoutePattern(node, nodesById), node.status().name(), node.lazyBoundary(), guards(node),
-                        node.routeParameters(), node.limitations())).toList();
+                        parentRoutePattern(node, nodesById), node.screen().viewTarget().selectors(),
+                        node.status().name(), node.lazyBoundary(), guards(node), node.routeParameters(),
+                        node.limitations())).toList();
         var diagnostics = source.diagnostics().stream().map(value -> new FrontendViewCatalog.Diagnostic(
                 value.severity().name(), value.code().name(), value.message(),
                 value.source() != null ? value.source().path() : null)).toList();

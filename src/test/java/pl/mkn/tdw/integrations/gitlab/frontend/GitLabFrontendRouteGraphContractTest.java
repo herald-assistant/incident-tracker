@@ -29,7 +29,8 @@ class GitLabFrontendRouteGraphContractTest {
                 null,
                 new GitLabFrontendRouteTarget(
                         "CrmContactPreferencesComponent",
-                        "libs/crm-agent/feature-contact/src/lib/preferences/crm-contact-preferences.component.ts"
+                        "libs/crm-agent/feature-contact/src/lib/preferences/crm-contact-preferences.component.ts",
+                        List.of("crm-contact-preferences")
                 )
         );
         var rootNode = routeNode(
@@ -146,7 +147,7 @@ class GitLabFrontendRouteGraphContractTest {
 
     @Test
     void shouldRejectAnInconsistentCrmScreenAndEffectiveChain() {
-        var target = new GitLabFrontendRouteTarget("CrmContactComponent", null);
+        var target = new GitLabFrontendRouteTarget("CrmContactComponent", null, List.of("crm-contact"));
         var inconsistentScreen = new GitLabFrontendScreenIdentity(
                 "screen-crm-contact",
                 "route-crm-contact-other",

@@ -82,6 +82,7 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
                 .filter(node -> "primary".equals(node.outlet()))
                 .findFirst()
                 .orElseThrow();
+        assertThat(primaryContact.screen().viewTarget().selectors()).containsExactly("crm-contact");
         var contactChain = graph.effectiveRouteChains().stream()
                 .filter(chain -> chain.screen().equals(primaryContact.screen()))
                 .findFirst()
@@ -401,12 +402,13 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
                 """);
         files.put("apps/crm-agent/src/app/contact.component.ts", """
                 import { CrmContactClient } from '../../../libs/crm/data/crm-contact.client';
+                @Component({ selector: 'crm-contact', template: '' })
                 export class CrmContactComponent {}
                 """);
         files.put("apps/crm-agent/src/app/contact-drawer.component.ts",
-                "export class CrmContactDrawerComponent {}");
+                "@Component({ selector: 'crm-contact-drawer', template: '' }) export class CrmContactDrawerComponent {}");
         files.put("apps/crm-agent/src/app/valuation.component.ts",
-                "export default class CrmValuationComponent {}");
+                "@Component({ selector: 'crm-valuation', template: '' }) export default class CrmValuationComponent {}");
         return files;
     }
 

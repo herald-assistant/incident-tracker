@@ -280,8 +280,11 @@ public class GitLabFrontendRouteSourceTraversalService {
         var target = targets.get(0);
         var key = ownerRoute.collectionId() + "#" + ownerRoute.sourceOffset() + "|"
                 + target.sourcePath() + "#" + target.symbol();
+        var selectors = AngularComponentSelectorParser.selectors(
+                session.readOptional(target.sourcePath()), target.symbol()
+        );
         components.putIfAbsent(key, new GitLabFrontendRouteSourceTraversalResult.ComponentTarget(
-                ownerRoute, target.sourcePath(), target.symbol(), routePath, relation
+                ownerRoute, target.sourcePath(), target.symbol(), routePath, relation, selectors
         ));
     }
 

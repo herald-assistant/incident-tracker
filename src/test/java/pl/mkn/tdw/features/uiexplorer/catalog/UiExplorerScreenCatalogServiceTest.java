@@ -194,7 +194,8 @@ class UiExplorerScreenCatalogServiceTest {
                 "apps/crm-agent/src/app/app.routes.ts", "crmCustomerRoutes", 12, 22
         );
         var target = new GitLabFrontendRouteTarget(
-                "CrmCustomerProfileComponent", "apps/crm-agent/src/app/customer/customer-profile.component.ts"
+                "CrmCustomerProfileComponent", "apps/crm-agent/src/app/customer/customer-profile.component.ts",
+                List.of("crm-customer-profile")
         );
         var screenIdentity = new GitLabFrontendScreenIdentity(
                 "screen-crm-customer-profile", "route-crm-customer-profile",

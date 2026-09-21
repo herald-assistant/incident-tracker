@@ -153,7 +153,8 @@ class GitLabAngularRouteBranchSliceServiceTest {
         var path = "apps/crm-agent/src/app/crm.routes.ts";
         var line = lineOf(source, "{\n    path: 'customers'");
         var target = new GitLabFrontendRouteTarget(
-                "CrmCustomerComponent", "apps/crm-agent/src/app/customer/crm-customer.component.ts"
+                "CrmCustomerComponent", "apps/crm-agent/src/app/customer/crm-customer.component.ts",
+                List.of("crm-customer")
         );
         var screen = new GitLabFrontendScreenIdentity(
                 "screen-crm-customers", "route-crm-customers", "/customers", "primary", target
@@ -213,7 +214,9 @@ class GitLabAngularRouteBranchSliceServiceTest {
             String component
     ) {
         var target = component != null
-                ? new GitLabFrontendRouteTarget(component, routeSourcePath.replace("crm.routes.ts", component + ".ts"))
+                ? new GitLabFrontendRouteTarget(
+                        component, routeSourcePath.replace("crm.routes.ts", component + ".ts"), List.of()
+                )
                 : null;
         var screen = screenId != null
                 ? new GitLabFrontendScreenIdentity(screenId, nodeId, routePattern, "primary", target)

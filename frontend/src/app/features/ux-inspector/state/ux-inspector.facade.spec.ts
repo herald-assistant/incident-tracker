@@ -29,7 +29,8 @@ describe('UxInspectorFacade', () => {
     getViews: vi.fn(() => of({
       systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
       sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' }, status: 'READY',
-      views: [{ viewId: 'crm-contact-create', label: 'Nowy kontakt', routePattern: '/contacts/new', status: 'READY', limitations: [] }],
+      views: [{ viewId: 'crm-contact-create', label: 'Nowy kontakt', routePattern: '/contacts/new',
+        componentSelectors: ['crm-contact-create'], status: 'READY', limitations: [] }],
       diagnostics: [], limitations: []
     })),
     startJob: vi.fn((_request: UxInspectorJobStartRequest) => of(snapshot('QUEUED'))),
@@ -160,6 +161,32 @@ describe('UxInspectorFacade', () => {
     expect(facade.viewMatchedFromCapture()).toBe(false);
   });
 
+  it('uses the nearest captured component boundary to resolve equally specific views', () => {
+    captureSignal.set({
+      ...captureFixture(),
+      page: { ...captureFixture().page, path: '/contacts/customer-a7' },
+      target: {
+        ...captureFixture().target,
+        domFingerprint: {
+          ...captureFixture().target.domFingerprint,
+          componentBoundaryTags: ['crm-contact-details', 'crm-contact-shell']
+        }
+      }
+    });
+    api.getViews.mockReturnValue(of(viewCatalog([
+      view('crm-contact-shell', '/contacts/:contactId', ['crm-contact-shell']),
+      view('crm-contact-details', '/contacts/:contactKey', ['crm-contact-details'])
+    ])));
+    const facade = TestBed.inject(UxInspectorFacade);
+
+    facade.initialize();
+    facade.loadViews();
+    TestBed.tick();
+
+    expect(facade.selectedViewId()).toBe('crm-contact-details');
+    expect(facade.viewMatchedFromCapture()).toBe(true);
+  });
+
   it('keeps a manual override and removes the capture-route marker', () => {
     api.getViews.mockReturnValue(of(viewCatalog([
       view('crm-contact-details', '/contacts/:contactId'),
@@ -178,8 +205,8 @@ describe('UxInspectorFacade', () => {
   });
 });
 
-function view(viewId: string, routePattern: string) {
-  return { viewId, label: viewId, routePattern, status: 'READY', limitations: [] };
+function view(viewId: string, routePattern: string, componentSelectors: string[] = []) {
+  return { viewId, label: viewId, routePattern, componentSelectors, status: 'READY', limitations: [] };
 }
 
 function viewCatalog(views: ReturnType<typeof view>[]) {
