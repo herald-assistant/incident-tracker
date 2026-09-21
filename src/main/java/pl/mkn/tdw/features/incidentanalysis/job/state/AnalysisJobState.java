@@ -11,7 +11,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
-import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
@@ -51,7 +51,7 @@ public final class AnalysisJobState {
     private final List<AnalysisEvidenceSection> toolEvidenceSections;
     private final List<AnalysisAiActivityEvent> aiActivityEvents;
     private final List<AnalysisAiToolFeedback> toolFeedback;
-    private final List<ChatMessageState> chatMessages;
+    private final List<AnalysisChatMessageState> chatMessages;
 
     private AnalysisJobStatus status;
     private String currentStepCode;
@@ -213,17 +213,8 @@ public final class AnalysisJobState {
         var history = chatHistory();
         var toolSections = continuationToolEvidenceSections();
         var now = Instant.now();
-        chatMessages.add(ChatMessageState.completed(
-                userMessageId,
-                AnalysisChatMessageRole.USER,
-                message,
-                now
-        ));
-        chatMessages.add(ChatMessageState.inProgress(
-                assistantMessageId,
-                AnalysisChatMessageRole.ASSISTANT,
-                now
-        ));
+        chatMessages.add(AnalysisChatMessageState.completedUser(userMessageId, message, now));
+        chatMessages.add(AnalysisChatMessageState.inProgressAssistant(assistantMessageId, now));
         touch();
 
         return new AnalysisAiChatRequest(
@@ -258,7 +249,7 @@ public final class AnalysisJobState {
             return;
         }
 
-        assistantMessage(assistantMessageId).markToolEvidenceUpdated(section);
+        assistantMessage(assistantMessageId).addToolEvidence(section);
         touch();
     }
 
@@ -267,7 +258,7 @@ public final class AnalysisJobState {
             return;
         }
 
-        assistantMessage(assistantMessageId).markAiActivity(event);
+        assistantMessage(assistantMessageId).addActivity(event);
         touch();
     }
 
@@ -277,15 +268,25 @@ public final class AnalysisJobState {
             String prompt,
             String copilotSessionId
     ) {
+        markChatCompleted(assistantMessageId, content, prompt, copilotSessionId, null);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId,
+            String content,
+            String prompt,
+            String copilotSessionId,
+            pl.mkn.tdw.shared.ai.AnalysisAiUsage usage
+    ) {
         if (StringUtils.hasText(copilotSessionId)) {
             latestCopilotSessionId = copilotSessionId;
         }
-        assistantMessage(assistantMessageId).markCompleted(content, prompt);
+        assistantMessage(assistantMessageId).complete(content, prompt, usage);
         touch();
     }
 
     public synchronized void markChatFailed(String assistantMessageId, String code, String message) {
-        assistantMessage(assistantMessageId).markFailed(code, message);
+        assistantMessage(assistantMessageId).fail(code, message);
         touch();
     }
 
@@ -338,7 +339,7 @@ public final class AnalysisJobState {
                 List.copyOf(toolEvidenceSections),
                 List.copyOf(aiActivityEvents),
                 List.copyOf(toolFeedback),
-                chatMessages.stream().map(ChatMessageState::snapshot).toList(),
+                chatMessages.stream().map(AnalysisChatMessageState::snapshot).toList(),
                 preparedPrompt,
                 result,
                 report
@@ -346,25 +347,23 @@ public final class AnalysisJobState {
     }
 
     private boolean hasActiveAssistantMessage() {
-        return chatMessages.stream()
-                .anyMatch(message -> message.role == AnalysisChatMessageRole.ASSISTANT
-                        && message.status == AnalysisChatMessageStatus.IN_PROGRESS);
+        return chatMessages.stream().anyMatch(AnalysisChatMessageState::activeAssistant);
     }
 
-    private ChatMessageState assistantMessage(String assistantMessageId) {
+    private AnalysisChatMessageState assistantMessage(String assistantMessageId) {
         return chatMessages.stream()
-                .filter(message -> message.id.equals(assistantMessageId)
-                        && message.role == AnalysisChatMessageRole.ASSISTANT)
+                .filter(message -> message.id().equals(assistantMessageId)
+                        && AnalysisChatMessageState.ASSISTANT.equals(message.role()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown assistant chat message: " + assistantMessageId));
     }
 
     private List<AnalysisAiChatTurn> chatHistory() {
         return chatMessages.stream()
-                .filter(message -> StringUtils.hasText(message.content))
-                .filter(message -> message.role == AnalysisChatMessageRole.USER
-                        || message.status == AnalysisChatMessageStatus.COMPLETED)
-                .map(message -> new AnalysisAiChatTurn(message.role.name().toLowerCase(), message.content))
+                .filter(message -> StringUtils.hasText(message.content()))
+                .filter(message -> AnalysisChatMessageState.USER.equals(message.role())
+                        || AnalysisChatMessageState.COMPLETED.equals(message.status()))
+                .map(message -> new AnalysisAiChatTurn(message.role().toLowerCase(), message.content()))
                 .toList();
     }
 
@@ -372,7 +371,7 @@ public final class AnalysisJobState {
         var sections = new ArrayList<AnalysisEvidenceSection>();
         sections.addAll(toolEvidenceSections);
         for (var message : chatMessages) {
-            sections.addAll(message.toolEvidenceSections);
+            sections.addAll(message.snapshot().toolEvidenceSections());
         }
         return List.copyOf(sections);
     }
@@ -515,120 +514,6 @@ public final class AnalysisJobState {
                     producesEvidence,
                     usage
             );
-        }
-    }
-
-    private static final class ChatMessageState {
-
-        private final String id;
-        private final AnalysisChatMessageRole role;
-        private final Instant createdAt;
-        private final List<AnalysisEvidenceSection> toolEvidenceSections;
-        private final List<AnalysisAiActivityEvent> aiActivityEvents;
-        private final List<AnalysisAiToolFeedback> toolFeedback;
-        private AnalysisChatMessageStatus status;
-        private String content;
-        private String errorCode;
-        private String errorMessage;
-        private String prompt;
-        private Instant updatedAt;
-        private Instant completedAt;
-
-        private ChatMessageState(
-                String id,
-                AnalysisChatMessageRole role,
-                AnalysisChatMessageStatus status,
-                String content,
-                Instant createdAt
-        ) {
-            this.id = id;
-            this.role = role;
-            this.status = status;
-            this.content = content;
-            this.createdAt = createdAt;
-            this.updatedAt = createdAt;
-            this.completedAt = status == AnalysisChatMessageStatus.COMPLETED ? createdAt : null;
-            this.toolEvidenceSections = new ArrayList<>();
-            this.aiActivityEvents = new ArrayList<>();
-            this.toolFeedback = new ArrayList<>();
-        }
-
-        private static ChatMessageState completed(
-                String id,
-                AnalysisChatMessageRole role,
-                String content,
-                Instant createdAt
-        ) {
-            return new ChatMessageState(id, role, AnalysisChatMessageStatus.COMPLETED, content, createdAt);
-        }
-
-        private static ChatMessageState inProgress(
-                String id,
-                AnalysisChatMessageRole role,
-                Instant createdAt
-        ) {
-            return new ChatMessageState(id, role, AnalysisChatMessageStatus.IN_PROGRESS, "", createdAt);
-        }
-
-        private void markToolEvidenceUpdated(AnalysisEvidenceSection section) {
-            if (appendToolFeedback(toolFeedback, section)) {
-                updatedAt = Instant.now();
-                return;
-            }
-
-            upsertSection(toolEvidenceSections, section);
-            updatedAt = Instant.now();
-        }
-
-        private void markAiActivity(AnalysisAiActivityEvent event) {
-            aiActivityEvents.add(event);
-            updatedAt = Instant.now();
-        }
-
-        private void markCompleted(String content, String prompt) {
-            this.status = AnalysisChatMessageStatus.COMPLETED;
-            this.content = StringUtils.hasText(content) ? content : "";
-            this.prompt = StringUtils.hasText(prompt) ? prompt : null;
-            this.completedAt = Instant.now();
-            this.updatedAt = completedAt;
-        }
-
-        private void markFailed(String code, String message) {
-            this.status = AnalysisChatMessageStatus.FAILED;
-            this.errorCode = code;
-            this.errorMessage = message;
-            this.completedAt = Instant.now();
-            this.updatedAt = completedAt;
-        }
-
-        private AnalysisChatMessageResponse snapshot() {
-            return new AnalysisChatMessageResponse(
-                    id,
-                    role.name(),
-                    status.name(),
-                    content,
-                    errorCode,
-                    errorMessage,
-                    createdAt,
-                    updatedAt,
-                    completedAt,
-                    List.copyOf(toolEvidenceSections),
-                    List.copyOf(aiActivityEvents),
-                    List.copyOf(toolFeedback),
-                    prompt
-            );
-        }
-
-        private static void upsertSection(List<AnalysisEvidenceSection> sections, AnalysisEvidenceSection candidate) {
-            for (int index = 0; index < sections.size(); index++) {
-                var current = sections.get(index);
-                if (current.provider().equals(candidate.provider()) && current.category().equals(candidate.category())) {
-                    sections.set(index, candidate);
-                    return;
-                }
-            }
-
-            sections.add(candidate);
         }
     }
 

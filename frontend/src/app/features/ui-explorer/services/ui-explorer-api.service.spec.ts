@@ -135,6 +135,15 @@ describe('UiExplorerApiService', () => {
     pollRequest.flush({ jobId: 'crm/job-1', status: 'COMPLETED' });
   });
 
+  it('sends a follow-up message to the encoded live job endpoint', () => {
+    service.sendChatMessage('crm/job-1', 'Kiedy zapis preferencji jest dostępny?').subscribe();
+
+    const request = http.expectOne('/api/ui-explorer/jobs/crm%2Fjob-1/chat/messages');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ message: 'Kiedy zapis preferencji jest dostępny?' });
+    request.flush({ jobId: 'crm/job-1', status: 'COMPLETED', chatMessages: [] });
+  });
+
   it('uses dedicated feature endpoints for portable export and server-validated import', () => {
     const portableDocument = {
       schema: 'tdw.ui-explorer-export',

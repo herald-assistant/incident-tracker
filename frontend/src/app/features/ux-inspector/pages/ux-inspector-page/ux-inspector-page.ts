@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
@@ -20,6 +21,7 @@ type OpenMenu = 'system' | 'view' | 'model' | 'reasoning' | null;
   imports: [
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
+    AnalysisFollowUpChatComponent,
     BrowserToolsSetupModalComponent,
     GitLabBranchSelectComponent,
     MatTooltipModule,
@@ -38,6 +40,9 @@ export class UxInspectorPageComponent implements OnInit {
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
   readonly aiCount = computed(() => this.facade.job()?.aiActivityEvents.length ?? 0);
   readonly feedbackCount = computed(() => this.facade.job()?.toolFeedback.length ?? 0);
+  readonly chatCount = computed(() => this.facade.chatMessages().length);
+  readonly chatActive = computed(() => this.facade.chatMessages().some(
+    (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'));
   readonly browserToolsModalOpen = signal(false);
   readonly openMenu = signal<OpenMenu>(null);
   readonly systemSearch = signal('');
@@ -210,5 +215,10 @@ export class UxInspectorPageComponent implements OnInit {
     this.facade.setPortabilityError('');
     input.value = '';
     input.click();
+  }
+
+  connectChatAuth(): void {
+    const url = this.facade.chatAuthStartUrl();
+    if (url) window.location.assign(url);
   }
 }

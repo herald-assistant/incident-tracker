@@ -625,11 +625,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export',
-    version: 5,
+    version: 6,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v5',
+      resultContract: 'ui-explorer-result-v6',
       job: crmJobSnapshot('COMPLETED')
     }
   };

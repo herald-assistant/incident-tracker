@@ -67,8 +67,8 @@ class UiExplorerPortabilityTest {
         var document = (ObjectNode) objectMapper.valueToTree(portable);
 
         assertThat(portable.schema()).isEqualTo("tdw.ui-explorer-export");
-        assertThat(portable.version()).isEqualTo(5);
-        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v5");
+        assertThat(portable.version()).isEqualTo(6);
+        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v6");
         assertThat(document.at("/payload/job/preparedPrompt").asText()).isEqualTo(PREPARED_PROMPT);
         assertThat(document.toString()).doesNotContain(
                 "CRM_RAW_SOURCE_SECRET",

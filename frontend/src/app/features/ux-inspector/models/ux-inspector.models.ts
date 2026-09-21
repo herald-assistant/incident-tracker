@@ -2,6 +2,7 @@ import {
   AnalysisAiActivityEvent,
   AnalysisAiToolFeedback,
   AnalysisAiUsage,
+  AnalysisChatMessageResponse,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse,
   AnalysisReport,
@@ -265,15 +266,21 @@ export interface UxInspectorJobStateSnapshot {
     missingCapabilities: string[];
   };
   exportAvailable: boolean;
+  chatMessages?: AnalysisChatMessageResponse[];
+  chatAvailability?: {
+    available: boolean;
+    code: string | null;
+    message: string | null;
+  };
 }
 
 export interface UxInspectorExportEnvelope {
   schema: 'tdw.ux-inspector-export';
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   payload: {
     type: 'ux-inspector-analysis';
-    resultContract: 'ux-inspector-result-v1';
+    resultContract: 'ux-inspector-result-v1' | 'ux-inspector-result-v2';
     job: UxInspectorJobStateSnapshot;
   };
 }
@@ -283,6 +290,7 @@ export interface UxInspectorResultSource {
   fileName: string;
   localRunId?: string;
   localRunName?: string;
+  continuationEnabled?: boolean;
 }
 
 export type UxInspectorIngressStatus =

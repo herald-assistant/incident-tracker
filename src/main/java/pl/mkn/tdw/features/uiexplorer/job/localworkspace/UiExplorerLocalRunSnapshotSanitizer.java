@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.ToolResultActivityDetailsSanitizer;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
@@ -134,7 +135,30 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 snapshot.usage(),
                 snapshot.sourceRevision(),
                 snapshot.outputAvailability(),
-                safeResult != null && safeReport != null
+                safeResult != null && safeReport != null && snapshot.chatMessages().stream()
+                        .noneMatch(message -> "ASSISTANT".equals(message.role())
+                                && "IN_PROGRESS".equals(message.status())),
+                snapshot.chatMessages().stream().map(this::sanitize).toList(),
+                snapshot.chatAvailability()
+        );
+    }
+
+    private AnalysisChatMessageResponse sanitize(AnalysisChatMessageResponse message) {
+        return new AnalysisChatMessageResponse(
+                message.id(),
+                message.role(),
+                message.status(),
+                message.content(),
+                message.errorCode(),
+                message.errorMessage(),
+                message.createdAt(),
+                message.updatedAt(),
+                message.completedAt(),
+                sanitizeToolEvidence(message.toolEvidenceSections()),
+                message.aiActivityEvents().stream().map(this::sanitize).toList(),
+                message.toolFeedback(),
+                message.prompt(),
+                message.usage()
         );
     }
 

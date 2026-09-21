@@ -54,7 +54,9 @@ Przed wieksza zmiana zacznij od:
     dla zmian eksperymentalnego Delivery Scope Complexity
 14. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
-15. `docs/architecture/ux-inspector-runtime-flow.md`
+15. `docs/architecture/ui-explorer-runtime-flow.md`
+    dla zmian UI Explorera
+16. `docs/architecture/ux-inspector-runtime-flow.md`
     dla zmian UX Inspectora albo TDW Browser Tools
 
 ## Najwazniejsze niezmienniki

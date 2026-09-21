@@ -35,7 +35,7 @@ class UxInspectorImportServiceTest {
             new UxInspectorCaptureNormalizer(objectMapper));
 
     @Test
-    void shouldImportOnlyStrictUxInspectorV1AsReadOnlyHistoricalResult() {
+    void shouldImportOnlyStrictUxInspectorExportAsReadOnlyHistoricalResult() {
         var document = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
 
         var imported = service.importReadOnly(document);

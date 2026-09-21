@@ -3,7 +3,7 @@ package pl.mkn.tdw.features.uxinspector.ai.copilot;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparation;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
 
-final class UxInspectorDurableSystemInstructions {
+public final class UxInspectorDurableSystemInstructions {
     private UxInspectorDurableSystemInstructions() {}
 
     static String render(UxInspectorPromptPreparation preparation) {
@@ -23,5 +23,19 @@ final class UxInspectorDurableSystemInstructions {
                 %s
                 </ux_inspector_durable_contract>
                 """.formatted(contract).trim();
+    }
+
+    public static String followUp() {
+        return """
+                <ux_inspector_follow_up_contract>
+                Kontynuujesz rozmowe o jednym elemencie z zakonczonego runu UX Inspectora.
+                Odpowiadaj po polsku, funkcjonalnie i jasno dla analityka bez znajomosci kodu.
+                Zachowaj ten sam element, widok, repository i przypieta rewizje. Jezeli pytanie
+                wymaga dodatkowego dowodu, uzyj wylacznie dostepnych read-only target/source tools.
+                Raport jest kontekstem tylko do odczytu. Nie probuj go zmieniac ani tworzyc nowego.
+                Rozdzielaj zachowanie potwierdzone w kodzie od wnioskow, ograniczen i pytan otwartych.
+                Techniczne nazwy podawaj tylko wtedy, gdy pomagaja zrozumiec zachowanie.
+                </ux_inspector_follow_up_contract>
+                """.trim();
     }
 }

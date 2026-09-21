@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -53,6 +54,20 @@ class UxInspectorJobControllerTest {
         mockMvc.perform(post("/api/ux-inspector/jobs").contentType("application/json")
                         .content(objectMapper.writeValueAsBytes(unknown)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldAcceptTrimmedFollowUpMessage() throws Exception {
+        when(jobService.startChatMessage(eq("ux-crm-job"), any())).thenReturn(null);
+
+        mockMvc.perform(post("/api/ux-inspector/jobs/ux-crm-job/chat/messages")
+                        .contentType("application/json")
+                        .content("{\"message\":\"  Co jeszcze blokuje zapis?  \"}"))
+                .andExpect(status().isAccepted());
+
+        var request = ArgumentCaptor.forClass(UxInspectorChatMessageRequest.class);
+        verify(jobService).startChatMessage(eq("ux-crm-job"), request.capture());
+        assertThat(request.getValue().message()).isEqualTo("Co jeszcze blokuje zapis?");
     }
 
     private Map<String, Object> requestDocument() {

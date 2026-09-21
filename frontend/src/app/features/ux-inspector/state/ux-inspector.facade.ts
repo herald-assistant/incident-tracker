@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subscription, finalize } from 'rxjs';
+import { Observable, Subscription, finalize } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -12,6 +12,7 @@ import { AiOptionsApiService } from '../../../core/services/ai-options-api.servi
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { downloadJsonFile, formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
+import { appendOptimisticChatTurn } from '../../../core/utils/analysis-chat-optimistic.utils';
 import {
   EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
   defaultReasoningEffortForAiModel,
@@ -62,6 +63,9 @@ export class UxInspectorFacade {
   readonly resultSource = signal<UxInspectorResultSource | null>(null);
   readonly portabilityBusy = signal(false);
   readonly portabilityError = signal('');
+  readonly chatSubmitting = signal(false);
+  readonly chatError = signal('');
+  readonly chatAuthStartUrl = signal('');
 
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
@@ -122,7 +126,7 @@ export class UxInspectorFacade {
   readonly controlsLocked = computed(() => this.isJobActive() || this.isReadOnlyResult());
   readonly canStartJob = computed(() => this.configurationReady() && !this.controlsLocked());
   readonly canRetryPolling = computed(
-    () => Boolean(this.job() && !this.isJobTerminal() && this.jobError() && !this.pollingActive())
+    () => Boolean(this.job() && (!this.isJobTerminal() || hasActiveChat(this.job()!)) && this.jobError() && !this.pollingActive())
   );
   readonly workflowIsRunning = computed(
     () => this.pollingActive() && this.job()?.status !== 'ANALYZING'
@@ -133,6 +137,15 @@ export class UxInspectorFacade {
   readonly isReadOnlyResult = computed(() => {
     const origin = this.resultSource()?.origin;
     return origin === 'history' || origin === 'imported';
+  });
+  readonly chatMessages = computed(() => this.job()?.chatMessages ?? []);
+  readonly canUseChat = computed(() => {
+    const snapshot = this.job();
+    const source = this.resultSource();
+    if (!snapshot?.report || !['COMPLETED', 'PARTIAL'].includes(snapshot.status) || source?.origin === 'imported') return false;
+    return source?.origin === 'history'
+      ? source.continuationEnabled === true
+      : snapshot.chatAvailability?.available === true;
   });
 
   constructor() {
@@ -339,10 +352,41 @@ export class UxInspectorFacade {
     });
   }
 
+  sendChatMessage(message: string): void {
+    const snapshot = this.job();
+    const source = this.resultSource();
+    const normalized = message.trim();
+    if (!snapshot || !normalized || !this.canUseChat() || this.chatSubmitting()) return;
+    const previous = snapshot;
+    this.chatError.set('');
+    this.chatAuthStartUrl.set('');
+    this.chatSubmitting.set(true);
+    this.job.set(appendOptimisticChatTurn({ ...snapshot, chatMessages: snapshot.chatMessages ?? [] }, normalized));
+    const request$: Observable<UxInspectorJobStateSnapshot | LocalAnalysisRunDetailResponse> =
+      source?.origin === 'history' && source.localRunId
+        ? this.historyApi.sendChatMessage(source.localRunId, { message: normalized })
+        : this.api.sendChatMessage(snapshot.jobId, normalized);
+    request$.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.chatSubmitting.set(false))).subscribe({
+      next: (response) => {
+        if ('exportEnvelope' in response) { this.applyLocalRun(response); return; }
+        this.job.set(response);
+        if (hasActiveChat(response)) this.startPolling(response.jobId);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.job.set(previous);
+        const payload = error.error as Partial<ApiErrorResponse> | null;
+        this.chatError.set(readApiError(error, 'Nie udało się wysłać pytania do UX Inspectora.'));
+        this.chatAuthStartUrl.set(typeof payload?.authStartUrl === 'string' ? payload.authStartUrl.trim() : '');
+      }
+    });
+  }
+
+  clearChatError(): void { this.chatError.set(''); this.chatAuthStartUrl.set(''); }
+
   setPortabilityError(value: string): void { this.portabilityError.set(value); }
   retryPolling(): void {
     const jobId = this.job()?.jobId;
-    if (jobId && !this.isJobTerminal() && !this.pollingActive()) this.startPolling(jobId);
+    if (jobId && (!this.isJobTerminal() || (this.job() && hasActiveChat(this.job()!))) && !this.pollingActive()) this.startPolling(jobId);
   }
 
   private buildRequest(): UxInspectorJobStartRequest | null {
@@ -361,7 +405,7 @@ export class UxInspectorFacade {
     this.jobError.set('');
     this.pollingActive.set(true);
     this.pollingSubscription = this.pollingService.poll({
-      load: () => this.api.getJob(jobId), isTerminal: (value) => isTerminal(value.status), intervalMs: 1500
+      load: () => this.api.getJob(jobId), isTerminal: (value) => isTerminal(value.status) && !hasActiveChat(value), intervalMs: 1500
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (snapshot) => this.job.set(snapshot),
       error: (error: HttpErrorResponse) => {
@@ -374,14 +418,15 @@ export class UxInspectorFacade {
 
   private applyLocalRun(detail: LocalAnalysisRunDetailResponse): void {
     try {
-      if (detail.feature !== 'ux-inspector' || detail.continuationEnabled) {
+      if (detail.feature !== 'ux-inspector') {
         throw new Error('Wybrany wpis historii nie jest runem UX Inspectora.');
       }
       const envelope = detail.exportEnvelope;
       if (!isUxInspectorExport(envelope)) throw new Error('Run ma nieobsługiwany kontrakt UX Inspectora.');
       const snapshot = envelope.payload.job;
       this.job.set(snapshot);
-      this.resultSource.set({ origin: 'history', fileName: '', localRunId: detail.analysisId, localRunName: detail.name });
+      this.resultSource.set({ origin: 'history', fileName: '', localRunId: detail.analysisId, localRunName: detail.name,
+        continuationEnabled: detail.continuationEnabled });
       if (!isTerminal(snapshot.status)) this.startPolling(snapshot.jobId);
     } catch (error) {
       this.portabilityError.set(error instanceof Error ? error.message : 'Nie udało się odtworzyć runu UX Inspectora.');
@@ -435,12 +480,18 @@ function isReadable(snapshot: UxInspectorJobStateSnapshot): boolean {
     Boolean(snapshot.report && snapshot.result && snapshot.exportAvailable);
 }
 
+function hasActiveChat(snapshot: UxInspectorJobStateSnapshot): boolean {
+  return (snapshot.chatMessages ?? []).some((message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS');
+}
+
 function isUxInspectorExport(value: unknown): value is UxInspectorExportEnvelope {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const envelope = value as Partial<UxInspectorExportEnvelope>;
-  return envelope.schema === 'tdw.ux-inspector-export' && envelope.version === 1 &&
+  const contractSupported = (envelope.version === 1 && envelope.payload?.resultContract === 'ux-inspector-result-v1') ||
+    (envelope.version === 2 && envelope.payload?.resultContract === 'ux-inspector-result-v2');
+  return envelope.schema === 'tdw.ux-inspector-export' && contractSupported &&
     envelope.payload?.type === 'ux-inspector-analysis' &&
-    envelope.payload?.resultContract === 'ux-inspector-result-v1' && Boolean(envelope.payload.job);
+    Boolean(envelope.payload.job);
 }
 
 function readApiError(error: HttpErrorResponse, fallback: string): string {

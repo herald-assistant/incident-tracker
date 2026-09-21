@@ -138,11 +138,12 @@ class UiExplorerJobServiceTest {
                 .extracting(artifact -> artifact.displayName())
                 .contains("ui-explorer/functional-writing-contract.md");
         verify(analysisProvider, times(1)).analyze(any(), any(), any(), any(), any(), any(), any());
-        verify(localRunPersistence).persistTerminalSnapshot(
+        verify(localRunPersistence).persistRunSnapshot(
                 org.mockito.ArgumentMatchers.argThat(snapshot ->
                         snapshot.status() == UiExplorerJobStatus.COMPLETED
                                 && snapshot.result() != null
-                                && snapshot.report() != null)
+                                && snapshot.report() != null),
+                any(), any(), any()
         );
     }
 
@@ -295,7 +296,7 @@ class UiExplorerJobServiceTest {
                 ));
         var localRunPersistence = mock(UiExplorerLocalRunPersistence.class);
         doThrow(new IllegalStateException("synthetic CRM local history unavailable"))
-                .when(localRunPersistence).persistTerminalSnapshot(any());
+                .when(localRunPersistence).persistRunSnapshot(any(), any(), any(), any());
         var executor = new CapturingTaskExecutor();
         var service = UiExplorerJobServiceTestCreator.create(
                 UiExplorerJobServiceTestCreator.reachabilityContextService(context()),
@@ -308,7 +309,7 @@ class UiExplorerJobServiceTest {
         executor.runCaptured();
 
         assertThat(service.getJob(accepted.jobId()).status()).isEqualTo(UiExplorerJobStatus.COMPLETED);
-        verify(localRunPersistence).persistTerminalSnapshot(any());
+        verify(localRunPersistence).persistRunSnapshot(any(), any(), any(), any());
     }
 
     @Test

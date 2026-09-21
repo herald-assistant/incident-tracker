@@ -6,6 +6,9 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
+import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpChatRequest;
+import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpChatService;
+import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpPromptService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
@@ -13,6 +16,7 @@ import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContex
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContextService;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
+import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerChatMessageRequest;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobNotFoundException;
 import pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunPersistence;
@@ -20,6 +24,7 @@ import pl.mkn.tdw.features.uiexplorer.job.state.UiExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +38,7 @@ public class UiExplorerJobService {
     private final Map<String, UiExplorerJobState> jobs = new ConcurrentHashMap<>();
     private final Map<String, UiExplorerScreenReachabilityContext> reachabilityContexts = new ConcurrentHashMap<>();
     private final Map<String, UiExplorerPromptPreparation> promptPreparations = new ConcurrentHashMap<>();
+    private final Map<String, AnalysisAiAuthRef> authRefs = new ConcurrentHashMap<>();
     private final UiExplorerScreenReachabilityContextService reachabilityContextService;
     private final UiExplorerScreenReachabilityEvidenceMapper reachabilityEvidenceMapper;
     private final UiExplorerPromptPreparationService promptPreparationService;
@@ -41,12 +47,16 @@ public class UiExplorerJobService {
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final UiExplorerLocalRunPersistence localRunPersistence;
+    private final UiExplorerFollowUpChatService followUpChatService;
+    private final UiExplorerFollowUpPromptService followUpPromptService;
+    private final LocalAnalysisRunOperationGuard operationGuard;
 
     public UiExplorerJobStateSnapshot startJob(UiExplorerJobStartRequest request) {
         var authRef = authRefResolver.resolveForCurrentRequest();
         var jobId = UUID.randomUUID().toString();
         var job = new UiExplorerJobState(jobId, request);
         jobs.put(jobId, job);
+        authRefs.put(jobId, authRef);
         var acceptedSnapshot = job.snapshot();
         try {
             applicationTaskExecutor.execute(() -> runJob(jobId, job, request, authRef));
@@ -127,6 +137,73 @@ public class UiExplorerJobService {
         return jobOrThrow(jobId).snapshot();
     }
 
+    public UiExplorerJobStateSnapshot startChatMessage(String jobId, UiExplorerChatMessageRequest request) {
+        var normalized = normalize(jobId);
+        var job = jobOrThrow(normalized);
+        var context = reachabilityContexts.get(normalized);
+        var authRef = authRefs.get(normalized);
+        if (context == null || authRef == null) {
+            throw new pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobChatUnavailableException(
+                    "UI_EXPLORER_CHAT_CONTEXT_UNAVAILABLE",
+                    "The UI Explorer run no longer has its live continuation context. Open it from Analysis History."
+            );
+        }
+        var lease = operationGuard.tryAcquire(normalized)
+                .orElseThrow(() -> new pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobChatUnavailableException(
+                        "UI_EXPLORER_CHAT_IN_PROGRESS", "Another operation is already in progress for this UI Explorer run."));
+        var userMessageId = UUID.randomUUID().toString();
+        var assistantMessageId = UUID.randomUUID().toString();
+        final String sessionId;
+        try {
+            sessionId = job.startChatMessage(userMessageId, assistantMessageId, request.message());
+        } catch (RuntimeException exception) {
+            lease.close();
+            throw exception;
+        }
+        var chatRequest = new UiExplorerFollowUpChatRequest(
+                "ui-explorer-follow-up-" + assistantMessageId,
+                job.initialRequest(), context, job.currentReport(), request.message(), sessionId, authRef
+        );
+        persistSnapshot(job, authRef, context);
+        try {
+            applicationTaskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest, authRef, context, lease));
+        } catch (RuntimeException exception) {
+            job.markChatFailed(assistantMessageId, "UI_EXPLORER_CHAT_SCHEDULING_FAILED",
+                    "UI Explorer follow-up could not be scheduled.");
+            persistSnapshot(job, authRef, context);
+            lease.close();
+        }
+        return job.snapshot();
+    }
+
+    private void runChat(
+            UiExplorerJobState job,
+            String assistantMessageId,
+            UiExplorerFollowUpChatRequest request,
+            AnalysisAiAuthRef authRef,
+            UiExplorerScreenReachabilityContext context,
+            LocalAnalysisRunOperationGuard.Lease lease
+    ) {
+        try {
+            var prompt = followUpPromptService.prepare(request);
+            var response = followUpChatService.chat(
+                    request,
+                    section -> job.markChatToolEvidenceUpdated(assistantMessageId, section),
+                    event -> job.markChatAiActivity(assistantMessageId, event)
+            );
+            job.markChatCompleted(assistantMessageId, response.content(), prompt, response.usage(), response.sessionId());
+        } catch (RuntimeException exception) {
+            log.error("UI Explorer follow-up failed jobId={} message={}", job.snapshot().jobId(), exception.getMessage(), exception);
+            job.markChatFailed(assistantMessageId, "UI_EXPLORER_CHAT_FAILED",
+                    StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "UI Explorer follow-up failed unexpectedly.");
+        } finally {
+            persistSnapshot(job, authRef, context);
+            lease.close();
+        }
+    }
+
     UiExplorerScreenReachabilityContext reachabilityContext(String jobId) {
         var normalized = normalize(jobId);
         var reachabilityContext = reachabilityContexts.get(normalized);
@@ -161,7 +238,13 @@ public class UiExplorerJobService {
     private void persistTerminalSnapshot(UiExplorerJobState job) {
         var snapshot = job.snapshot();
         try {
-            localRunPersistence.persistTerminalSnapshot(snapshot);
+            var context = reachabilityContexts.get(snapshot.jobId());
+            var authRef = authRefs.get(snapshot.jobId());
+            if (context != null) {
+                localRunPersistence.persistRunSnapshot(snapshot, authRef, job.copilotSessionId(), context);
+            } else {
+                localRunPersistence.persistTerminalSnapshot(snapshot);
+            }
         } catch (RuntimeException exception) {
             log.warn(
                     "Failed to persist local UI Explorer run jobId={} status={} reason={}",
@@ -169,6 +252,19 @@ public class UiExplorerJobService {
                     snapshot.status(),
                     exception.getMessage()
             );
+        }
+    }
+
+    private void persistSnapshot(
+            UiExplorerJobState job,
+            AnalysisAiAuthRef authRef,
+            UiExplorerScreenReachabilityContext context
+    ) {
+        try {
+            localRunPersistence.persistRunSnapshot(job.snapshot(), authRef, job.copilotSessionId(), context);
+        } catch (RuntimeException exception) {
+            log.warn("Failed to persist UI Explorer chat snapshot jobId={} reason={}",
+                    job.snapshot().jobId(), exception.getMessage());
         }
     }
 }

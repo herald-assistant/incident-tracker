@@ -12,6 +12,7 @@ import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPrepara
 import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportMapper;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextService;
 import pl.mkn.tdw.features.flowexplorer.job.localworkspace.FlowExplorerLocalRunPersistence;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
@@ -97,7 +98,8 @@ final class FlowExplorerJobServiceTestCreator {
                 authRefResolver,
                 runAuthMapper,
                 accessTokenResolver,
-                localRunPersistence
+                localRunPersistence,
+                new LocalAnalysisRunOperationGuard()
         );
     }
 }

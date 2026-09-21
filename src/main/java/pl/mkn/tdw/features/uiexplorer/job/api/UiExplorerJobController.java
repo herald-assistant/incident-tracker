@@ -33,6 +33,15 @@ public class UiExplorerJobController {
         return uiExplorerJobService.getJob(jobId);
     }
 
+    @PostMapping("/{jobId}/chat/messages")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public UiExplorerJobStateSnapshot chat(
+            @PathVariable String jobId,
+            @Valid @RequestBody UiExplorerChatMessageRequest request
+    ) {
+        return uiExplorerJobService.startChatMessage(jobId, request);
+    }
+
     @GetMapping("/{jobId}/export")
     public UiExplorerExportEnvelope export(@PathVariable String jobId) {
         return uiExplorerExportService.export(jobId);

@@ -10,6 +10,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisLogInput;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisExecution;
@@ -19,6 +20,7 @@ import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobInputOptionsRespo
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
 import pl.mkn.tdw.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.tdw.features.incidentanalysis.job.state.AnalysisJobState;
 import pl.mkn.tdw.features.incidentanalysis.job.state.AnalysisJobStateListener;
@@ -26,6 +28,7 @@ import pl.mkn.tdw.features.incidentanalysis.job.validation.AnalysisJobStartValid
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
 import java.util.UUID;
@@ -45,6 +48,7 @@ public class AnalysisJobFacade {
     private final IncidentAnalysisLocalRunPersistence localRunPersistence;
     private final AnalysisJobInputOptionsService inputOptionsService;
     private final AnalysisJobStartValidationService startValidationService;
+    private final LocalAnalysisRunOperationGuard operationGuard;
 
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
 
@@ -80,14 +84,22 @@ public class AnalysisJobFacade {
 
     public AnalysisJobStateSnapshot startChatMessage(String analysisId, AnalysisChatMessageRequest request) {
         var job = jobOrThrow(analysisId);
+        var lease = operationGuard.tryAcquire(analysisId)
+                .orElseThrow(() -> new AnalysisJobChatUnavailableException(
+                        "ANALYSIS_CHAT_IN_PROGRESS", "Another operation is already in progress for this analysis."));
+        try {
         accessTokenResolver.resolve(runAuthMapper.toRunAuth(job.completedAuthRefForChat()));
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var chatRequest = job.startChatMessage(userMessageId, assistantMessageId, request.message());
 
-        applicationTaskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest));
+        applicationTaskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest, lease));
 
         return job.snapshot();
+        } catch (RuntimeException exception) {
+            lease.close();
+            throw exception;
+        }
     }
 
     public AnalysisJobInputOptionsResponse inputOptions() {
@@ -167,7 +179,8 @@ public class AnalysisJobFacade {
     private void runChat(
             AnalysisJobState job,
             String assistantMessageId,
-            AnalysisAiChatRequest request
+            AnalysisAiChatRequest request,
+            LocalAnalysisRunOperationGuard.Lease lease
     ) {
         try {
             var response = analysisAiChatProvider.chat(
@@ -179,7 +192,8 @@ public class AnalysisJobFacade {
                     assistantMessageId,
                     response.content(),
                     response.prompt(),
-                    response.copilotSessionId()
+                    response.copilotSessionId(),
+                    response.usage()
             );
         } catch (RuntimeException exception) {
             log.error(
@@ -195,6 +209,22 @@ public class AnalysisJobFacade {
                             ? exception.getMessage()
                             : "Unexpected follow-up chat failure."
             );
+        } finally {
+            persistChatSnapshot(job, request);
+            lease.close();
+        }
+    }
+
+    private void persistChatSnapshot(AnalysisJobState job, AnalysisAiChatRequest request) {
+        var initialRequest = new InitialAnalysisRequest(
+                request.correlationId(), request.environment(), request.gitLabBranch(), request.gitLabGroup(),
+                request.evidenceSections(), request.options(), request.authRef()
+        );
+        try {
+            localRunPersistence.persistRunSnapshot(job.snapshot(), initialRequest, request.copilotSessionId());
+        } catch (RuntimeException exception) {
+            log.warn("Failed to persist incident follow-up analysisId={} reason={}",
+                    job.snapshot().analysisId(), exception.getMessage());
         }
     }
 

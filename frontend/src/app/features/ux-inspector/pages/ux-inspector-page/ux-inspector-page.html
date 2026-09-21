@@ -389,10 +389,35 @@
         [progressCount]="progressCount()"
         [aiCount]="aiCount()"
         [feedbackCount]="feedbackCount()"
-        [showChat]="false"
+        [showChat]="!!snapshot.report"
+        [chatActive]="chatActive()"
+        [chatCount]="chatCount()"
       >
         <div progressPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
         <div aiPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+        <div chatPanel>
+          <app-analysis-follow-up-chat
+            [messages]="facade.chatMessages()"
+            [error]="facade.chatError()"
+            [canUseChat]="facade.canUseChat()"
+            [isSubmitting]="facade.chatSubmitting()"
+            [needsAuth]="!!facade.chatAuthStartUrl()"
+            [openByDefault]="facade.resultSource()?.origin === 'live'"
+            [staticPanel]="true"
+            eyebrow="Follow-up chat"
+            title="Dopytaj o ten element"
+            emptyText="Możesz doprecyzować odpowiedź albo rozszerzyć analizę tego samego elementu. Raport pozostaje bez zmian."
+            inputLabel="Pytanie do AI"
+            placeholder="Np. od czego jeszcze zależy dostępność tego pola?"
+            pendingText="AI analizuje pytanie i w razie potrzeby sprawdza kod tej samej rewizji."
+            submitLabel="Wyślij"
+            submittingLabel="Wysyłanie..."
+            ariaLabel="UX Inspector follow-up chat"
+            (sendMessage)="facade.sendChatMessage($event)"
+            (clearError)="facade.clearChatError()"
+            (connectAuth)="connectChatAuth()"
+          />
+        </div>
         <div feedbackPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showAiWorkflow]="false" [staticPanels]="true" /></div>
       </app-analysis-feature-aside>
     }

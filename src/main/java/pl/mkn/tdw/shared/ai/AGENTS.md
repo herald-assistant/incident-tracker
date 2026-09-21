@@ -19,7 +19,9 @@ Obecnie obejmuje:
   `AnalysisEvidenceSection`,
 - `AnalysisJobStepResponse` i `AnalysisChatMessageResponse` jako neutralne
   kontrakty zasilajace wspolne komponenty UI przebiegu pracy i follow-up
-  chatu w wielu feature'ach,
+  chatu w wielu feature'ach; usage odpowiedzi nalezy do konkretnej wiadomosci,
+- `chat/` jako neutralny stan wiadomosci oraz capture evidence, activity i
+  feedback, bez promptu, session id, tool policy i semantyki feature'a,
 - `report/` jako neutralny model raportu analitycznego, bez semantyki
   konkretnego feature'a ani runtime AI.
 

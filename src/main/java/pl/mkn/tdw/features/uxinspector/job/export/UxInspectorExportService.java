@@ -38,10 +38,8 @@ public class UxInspectorExportService {
     private UxInspectorJobStateSnapshot parse(String id, com.fasterxml.jackson.databind.JsonNode node) {
         try {
             var envelope = objectMapper.treeToValue(node, UxInspectorExportEnvelope.class);
-            if (envelope == null || !UxInspectorExportEnvelope.SCHEMA.equals(envelope.schema())
-                    || envelope.version() != UxInspectorExportEnvelope.VERSION || envelope.payload() == null
+            if (envelope == null || !envelope.supported() || envelope.payload() == null
                     || !UxInspectorExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
-                    || !UxInspectorExportEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())
                     || envelope.payload().job() == null || !id.equals(envelope.payload().job().jobId())) throw new IllegalArgumentException();
             return envelope.payload().job();
         } catch (Exception exception) {
@@ -50,4 +48,3 @@ public class UxInspectorExportService {
         }
     }
 }
-

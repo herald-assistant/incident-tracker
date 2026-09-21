@@ -135,7 +135,9 @@
         [progressCount]="progressCount()"
         [aiCount]="aiCount()"
         [feedbackCount]="feedbackCount()"
-        [showChat]="false"
+        [showChat]="!!snapshot.report"
+        [chatActive]="chatActive()"
+        [chatCount]="chatCount()"
       >
         <div progressPanel>
           <app-analysis-steps-panel
@@ -167,6 +169,30 @@
             [showToolFeedback]="false"
             [staticPanels]="true"
           ></app-analysis-steps-panel>
+        </div>
+
+        <div chatPanel>
+          <app-analysis-follow-up-chat
+            [messages]="facade.chatMessages()"
+            [error]="facade.chatError()"
+            [canUseChat]="facade.canUseChat()"
+            [isSubmitting]="facade.chatSubmitting()"
+            [needsAuth]="!!facade.chatAuthStartUrl()"
+            [openByDefault]="facade.resultSource()?.origin === 'live'"
+            [staticPanel]="true"
+            eyebrow="Follow-up chat"
+            title="Dopytaj o ten widok"
+            emptyText="Po analizie możesz dopytać o działanie widoku, reguły, dane albo integracje. Raport pozostaje bez zmian."
+            inputLabel="Pytanie do AI"
+            placeholder="Np. co dzieje się po zapisaniu formularza i skąd pochodzą widoczne dane?"
+            pendingText="AI analizuje pytanie i w razie potrzeby sprawdza kod źródłowy tej samej rewizji."
+            submitLabel="Wyślij"
+            submittingLabel="Wysyłanie..."
+            ariaLabel="UI Explorer follow-up chat"
+            (sendMessage)="facade.sendChatMessage($event)"
+            (clearError)="facade.clearChatError()"
+            (connectAuth)="connectChatAuth()"
+          ></app-analysis-follow-up-chat>
         </div>
 
         <div feedbackPanel>

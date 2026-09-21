@@ -19,12 +19,41 @@ describe('UI Explorer import and export contract', () => {
   });
 
   it('rejects a corrupt current-version CRM snapshot', () => {
-    const envelope = localEnvelope();
+    const envelope = localEnvelope() as any;
     envelope.payload.job = { jobId: 'crm-ui-history-corrupt' } as UiExplorerJobStateSnapshot;
 
     expect(() => parseUiExplorerLocalRunEnvelope(envelope)).toThrow(
       'Lokalny run UI Explorer zawiera uszkodzony snapshot.'
     );
+  });
+
+  it('marks a pending assistant response as interrupted after backend restart', () => {
+    const envelope = localEnvelope() as any;
+    envelope.version = 6;
+    envelope.payload.resultContract = 'ui-explorer-result-v6';
+    envelope.payload.job.chatMessages = [
+      {
+        id: 'crm-assistant-pending',
+        role: 'ASSISTANT',
+        status: 'IN_PROGRESS',
+        content: '',
+        errorCode: '',
+        errorMessage: '',
+        createdAt: '2026-08-15T10:05:00Z',
+        updatedAt: '2026-08-15T10:05:00Z',
+        completedAt: '',
+        toolEvidenceSections: [],
+        aiActivityEvents: [],
+        toolFeedback: [],
+        prompt: ''
+      }
+    ];
+    envelope.payload.job.chatAvailability = { available: true, code: null, message: null };
+
+    const parsed = parseUiExplorerLocalRunEnvelope(envelope);
+
+    expect(parsed.job.chatMessages?.[0]?.status).toBe('FAILED');
+    expect(parsed.job.chatMessages?.[0]?.errorCode).toBe('UI_EXPLORER_CHAT_INTERRUPTED');
   });
 });
 

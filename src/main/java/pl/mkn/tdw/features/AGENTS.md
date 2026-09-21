@@ -60,6 +60,10 @@ natural-language data diagnostics.
   analizy incydentu.
 - `features.incidentanalysis.job` zawiera job API, state i follow-up chat dla
   analizy incydentu.
+- `features.uiexplorer.ai.chat` oraz `features.uiexplorer.job` posiadaja
+  merytoryke i orchestration read-only follow-up chatu UI Explorera. Reuse
+  obejmuje neutralny stan wiadomosci/capture i guard operacji, bez przenoszenia
+  promptu, policy ani prywatnego scope'u do `shared`.
 - Produkcyjny i testowy root `analysis.*` jest zamkniety. Nie dodawaj tam
   nowych klas, testow ani lokalnych instrukcji; nowe elementy feature'a trzymaj
   pod `features.*`, a reusable capability w `integrations`, `agenttools`,

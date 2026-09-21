@@ -24,12 +24,10 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
-import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
-import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
-import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -74,7 +72,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var startedAt = Instant.now();
-        var captured = new CapturedAssistantState();
+        var captured = new AnalysisChatAssistantCapture();
         var response = executeChat(chatRequest, captured);
         var completedAt = Instant.now();
         var updatedSnapshot = appendCompletedChat(
@@ -208,13 +206,13 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
 
     private AnalysisAiChatResponse executeChat(
             AnalysisAiChatRequest request,
-            CapturedAssistantState captured
+            AnalysisChatAssistantCapture captured
     ) {
         try {
             return analysisAiChatProvider.chat(
                     request,
                     captured::addToolEvidence,
-                    captured::addActivityEvent
+                    captured::addActivity
             );
         } catch (CopilotLocalTokenMissingException
                  | GitHubCopilotAuthRequiredException
@@ -236,7 +234,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
             String assistantMessageId,
             String message,
             AnalysisAiChatResponse response,
-            CapturedAssistantState captured,
+            AnalysisChatAssistantCapture captured,
             Instant startedAt,
             Instant completedAt
     ) {
@@ -269,7 +267,8 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 captured.toolEvidenceSections(),
                 captured.aiActivityEvents(),
                 captured.toolFeedback(),
-                response != null ? response.prompt() : null
+                response != null ? response.prompt() : null,
+                response != null ? response.usage() : null
         ));
 
         return new AnalysisJobStateSnapshot(
@@ -339,65 +338,4 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
         return values != null ? values : List.of();
     }
 
-    private static final class CapturedAssistantState {
-
-        private final List<AnalysisEvidenceSection> toolEvidenceSections = new ArrayList<>();
-        private final List<AnalysisAiActivityEvent> aiActivityEvents = new ArrayList<>();
-        private final List<AnalysisAiToolFeedback> toolFeedback = new ArrayList<>();
-
-        private void addToolEvidence(AnalysisEvidenceSection section) {
-            if (section == null || !section.hasItems()) {
-                return;
-            }
-            if (appendToolFeedback(section)) {
-                return;
-            }
-
-            upsertSection(section);
-        }
-
-        private void addActivityEvent(AnalysisAiActivityEvent event) {
-            if (event != null) {
-                aiActivityEvents.add(event);
-            }
-        }
-
-        private List<AnalysisEvidenceSection> toolEvidenceSections() {
-            return List.copyOf(toolEvidenceSections);
-        }
-
-        private List<AnalysisAiActivityEvent> aiActivityEvents() {
-            return List.copyOf(aiActivityEvents);
-        }
-
-        private List<AnalysisAiToolFeedback> toolFeedback() {
-            return List.copyOf(toolFeedback);
-        }
-
-        private boolean appendToolFeedback(AnalysisEvidenceSection section) {
-            if (!AnalysisAiToolFeedbackEvidenceMapper.isToolFeedbackSection(section)) {
-                return false;
-            }
-
-            for (var feedback : AnalysisAiToolFeedbackEvidenceMapper.fromSection(section)) {
-                if (toolFeedback.stream().noneMatch(existing -> existing.feedbackId().equals(feedback.feedbackId()))) {
-                    toolFeedback.add(feedback);
-                }
-            }
-            return true;
-        }
-
-        private void upsertSection(AnalysisEvidenceSection candidate) {
-            for (int index = 0; index < toolEvidenceSections.size(); index++) {
-                var current = toolEvidenceSections.get(index);
-                if (current.provider().equals(candidate.provider())
-                        && current.category().equals(candidate.category())) {
-                    toolEvidenceSections.set(index, candidate);
-                    return;
-                }
-            }
-
-            toolEvidenceSections.add(candidate);
-        }
-    }
 }

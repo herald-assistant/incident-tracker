@@ -3,6 +3,7 @@ package pl.mkn.tdw.api.analysisruns;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
@@ -13,6 +14,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationExcept
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.List;
 
@@ -23,17 +25,29 @@ public class AnalysisRunHistoryService {
     private final LocalAnalysisRunStore localAnalysisRunStore;
     private final List<LocalAnalysisRunChatHandler> chatHandlers;
     private final CopilotSessionCleanup copilotSessionCleanup;
+    private final LocalAnalysisRunOperationGuard operationGuard;
 
+    @Autowired
     public AnalysisRunHistoryService(
             LocalAnalysisRunStore localAnalysisRunStore,
             List<LocalAnalysisRunChatHandler> chatHandlers,
-            CopilotSessionCleanup copilotSessionCleanup
+            CopilotSessionCleanup copilotSessionCleanup,
+            LocalAnalysisRunOperationGuard operationGuard
     ) {
         this.localAnalysisRunStore = localAnalysisRunStore;
         this.chatHandlers = chatHandlers != null ? List.copyOf(chatHandlers) : List.of();
         this.copilotSessionCleanup = copilotSessionCleanup != null
                 ? copilotSessionCleanup
                 : CopilotSessionCleanup.NO_OP;
+        this.operationGuard = operationGuard != null ? operationGuard : new LocalAnalysisRunOperationGuard();
+    }
+
+    public AnalysisRunHistoryService(
+            LocalAnalysisRunStore localAnalysisRunStore,
+            List<LocalAnalysisRunChatHandler> chatHandlers,
+            CopilotSessionCleanup copilotSessionCleanup
+    ) {
+        this(localAnalysisRunStore, chatHandlers, copilotSessionCleanup, new LocalAnalysisRunOperationGuard());
     }
 
     public LocalAnalysisRunListResponse listRuns() {
@@ -66,29 +80,36 @@ public class AnalysisRunHistoryService {
             String analysisId,
             LocalAnalysisRunChatMessageRequest request
     ) {
-        var indexEntry = indexEntryOrThrow(analysisId);
-        var record = recordOrThrow(indexEntry.analysisId());
-        if (record.continuation() == null || !record.continuation().enabled()) {
-            throw new LocalAnalysisRunContinuationUnavailableException(
-                    "Local run cannot be continued because continuation metadata is disabled."
-            );
-        }
-
-        var handler = chatHandler(indexEntry.feature());
-        try {
+        var normalized = requireAnalysisId(analysisId);
+        try (var lease = operationGuard.tryAcquire(normalized)
+                .orElseThrow(() -> new LocalAnalysisRunContinuationUnavailableException(
+                        "Another operation is already in progress for this local run."))) {
+            var indexEntry = indexEntryOrThrow(normalized);
+            var record = recordOrThrow(indexEntry.analysisId());
+            var handler = chatHandler(indexEntry.feature());
+            if (!handler.canContinue(indexEntry, record)) {
+                throw new LocalAnalysisRunContinuationUnavailableException(
+                        "Local run cannot be continued because continuation metadata is disabled."
+                );
+            }
             var result = handler.continueRun(indexEntry, record, request.message());
             var updatedEntry = indexEntry.withUpdatedAt(result.updatedAt());
             localAnalysisRunStore.save(updatedEntry, result.record());
             return toDetail(updatedEntry, result.record());
         } catch (LocalAnalysisRunContinuationException exception) {
-            throw mapContinuationException(indexEntry.analysisId(), exception);
+            throw mapContinuationException(normalized, exception);
         }
     }
 
     public void deleteRun(String analysisId) {
-        var indexEntry = indexEntryOrThrow(analysisId);
-        cleanupCopilotSession(indexEntry.analysisId());
-        localAnalysisRunStore.delete(indexEntry.analysisId());
+        var normalized = requireAnalysisId(analysisId);
+        try (var lease = operationGuard.tryAcquire(normalized)
+                .orElseThrow(() -> new LocalAnalysisRunContinuationUnavailableException(
+                        "Another operation is already in progress for this local run."))) {
+            var indexEntry = indexEntryOrThrow(normalized);
+            cleanupCopilotSession(indexEntry.analysisId());
+            localAnalysisRunStore.delete(indexEntry.analysisId());
+        }
     }
 
     private void cleanupCopilotSession(String analysisId) {
@@ -184,6 +205,11 @@ public class AnalysisRunHistoryService {
             LocalAnalysisRunIndexEntry entry,
             LocalAnalysisRunRecord record
     ) {
+        var continuationEnabled = chatHandlers.stream()
+                .filter(handler -> handler.feature().equals(entry.feature()))
+                .findFirst()
+                .map(handler -> handler.canContinue(entry, record))
+                .orElse(record.continuation() != null && record.continuation().enabled());
         return new LocalAnalysisRunDetailResponse(
                 entry.analysisId(),
                 entry.feature(),
@@ -193,7 +219,7 @@ public class AnalysisRunHistoryService {
                 entry.updatedAt(),
                 entry.completedAt(),
                 record.exportEnvelope(),
-                record.continuation() != null && record.continuation().enabled()
+                continuationEnabled
         );
     }
 

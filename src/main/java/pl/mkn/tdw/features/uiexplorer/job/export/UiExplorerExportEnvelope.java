@@ -12,9 +12,11 @@ public record UiExplorerExportEnvelope(
 ) {
 
     public static final String SCHEMA = "tdw.ui-explorer-export";
-    public static final int VERSION = 5;
+    public static final int VERSION = 6;
+    public static final int LEGACY_VERSION = 5;
     public static final String PAYLOAD_TYPE = "ui-explorer-analysis";
-    public static final String RESULT_CONTRACT = "ui-explorer-result-v5";
+    public static final String RESULT_CONTRACT = "ui-explorer-result-v6";
+    public static final String LEGACY_RESULT_CONTRACT = "ui-explorer-result-v5";
 
     public static UiExplorerExportEnvelope from(
             UiExplorerJobStateSnapshot sanitizedSnapshot,

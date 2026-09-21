@@ -18,12 +18,32 @@ public record AnalysisChatMessageResponse(
         List<AnalysisEvidenceSection> toolEvidenceSections,
         List<AnalysisAiActivityEvent> aiActivityEvents,
         List<AnalysisAiToolFeedback> toolFeedback,
-        String prompt
+        String prompt,
+        AnalysisAiUsage usage
 ) {
 
     public AnalysisChatMessageResponse {
         toolEvidenceSections = toolEvidenceSections != null ? List.copyOf(toolEvidenceSections) : List.of();
         aiActivityEvents = aiActivityEvents != null ? List.copyOf(aiActivityEvents) : List.of();
         toolFeedback = toolFeedback != null ? List.copyOf(toolFeedback) : List.of();
+    }
+
+    public AnalysisChatMessageResponse(
+            String id,
+            String role,
+            String status,
+            String content,
+            String errorCode,
+            String errorMessage,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant completedAt,
+            List<AnalysisEvidenceSection> toolEvidenceSections,
+            List<AnalysisAiActivityEvent> aiActivityEvents,
+            List<AnalysisAiToolFeedback> toolFeedback,
+            String prompt
+    ) {
+        this(id, role, status, content, errorCode, errorMessage, createdAt, updatedAt, completedAt,
+                toolEvidenceSections, aiActivityEvents, toolFeedback, prompt, null);
     }
 }

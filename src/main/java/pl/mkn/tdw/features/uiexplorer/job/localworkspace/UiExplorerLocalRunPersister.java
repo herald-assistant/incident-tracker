@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.uiexplorer.job.localworkspace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
@@ -10,12 +10,13 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
+import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.time.Instant;
 import java.util.EnumSet;
 
 @Component
-@RequiredArgsConstructor
 public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistence {
 
     static final String FEATURE = "ui-explorer";
@@ -29,6 +30,28 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
     private final ObjectMapper objectMapper;
     private final LocalAnalysisRunStore localAnalysisRunStore;
     private final UiExplorerLocalRunSnapshotSanitizer sanitizer;
+    private final UiExplorerContinuationSnapshotStore continuationSnapshotStore;
+
+    @Autowired
+    public UiExplorerLocalRunPersister(
+            ObjectMapper objectMapper,
+            LocalAnalysisRunStore localAnalysisRunStore,
+            UiExplorerLocalRunSnapshotSanitizer sanitizer,
+            UiExplorerContinuationSnapshotStore continuationSnapshotStore
+    ) {
+        this.objectMapper = objectMapper;
+        this.localAnalysisRunStore = localAnalysisRunStore;
+        this.sanitizer = sanitizer;
+        this.continuationSnapshotStore = continuationSnapshotStore;
+    }
+
+    UiExplorerLocalRunPersister(
+            ObjectMapper objectMapper,
+            LocalAnalysisRunStore localAnalysisRunStore,
+            UiExplorerLocalRunSnapshotSanitizer sanitizer
+    ) {
+        this(objectMapper, localAnalysisRunStore, sanitizer, null);
+    }
 
     @Override
     public void persistTerminalSnapshot(UiExplorerJobStateSnapshot snapshot) {
@@ -44,6 +67,60 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
                 new LocalAnalysisRunContinuation(false, null, null, null, null, null, null)
         );
         localAnalysisRunStore.save(indexEntry(sanitizedSnapshot), record);
+    }
+
+    @Override
+    public void persistRunSnapshot(
+            UiExplorerJobStateSnapshot snapshot,
+            AnalysisAiAuthRef authRef,
+            String copilotSessionId,
+            UiExplorerScreenReachabilityContext context
+    ) {
+        if (snapshot == null || snapshot.status() == null || !TERMINAL_STATUSES.contains(snapshot.status())) {
+            return;
+        }
+        var sanitizedSnapshot = sanitizer.sanitize(snapshot);
+        var continuation = continuation(snapshot, authRef, copilotSessionId, context);
+        if (continuation.enabled()) {
+            if (continuationSnapshotStore == null) {
+                throw new IllegalStateException("UI Explorer continuation snapshot store is unavailable.");
+            }
+            continuationSnapshotStore.save(UiExplorerContinuationSnapshot.from(snapshot, context, storedAt(snapshot)));
+        }
+        var record = LocalAnalysisRunRecord.v1(
+                objectMapper.valueToTree(UiExplorerLocalRunEnvelope.from(sanitizedSnapshot, storedAt(sanitizedSnapshot))),
+                continuation
+        );
+        localAnalysisRunStore.save(indexEntry(sanitizedSnapshot), record);
+    }
+
+    private LocalAnalysisRunContinuation continuation(
+            UiExplorerJobStateSnapshot snapshot,
+            AnalysisAiAuthRef authRef,
+            String copilotSessionId,
+            UiExplorerScreenReachabilityContext context
+    ) {
+        var eligibleStatus = snapshot.status() == UiExplorerJobStatus.COMPLETED
+                || snapshot.status() == UiExplorerJobStatus.PARTIAL;
+        var enabled = eligibleStatus
+                && snapshot.result() != null
+                && snapshot.report() != null
+                && StringUtils.hasText(copilotSessionId)
+                && context != null
+                && context.sourceScope() != null
+                && context.sourceRevision() != null;
+        if (!enabled) {
+            return new LocalAnalysisRunContinuation(false, null, null, null, null, null, null);
+        }
+        return new LocalAnalysisRunContinuation(
+                true,
+                context.sourceScope().gitLabGroup(),
+                authRef != null ? authRef.mode() : AnalysisAiAuthRef.MODE_LOCAL_TOKEN,
+                authRef != null ? authRef.principalId() : null,
+                copilotSessionId.trim(),
+                LocalAnalysisRunContinuation.COPILOT_RUNTIME_GITHUB_COPILOT_SDK,
+                LocalAnalysisRunContinuation.CONTINUATION_MODE_COPILOT_SESSION
+        );
     }
 
     private LocalAnalysisRunIndexEntry indexEntry(UiExplorerJobStateSnapshot snapshot) {

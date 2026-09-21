@@ -17,6 +17,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
+import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +31,7 @@ import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalR
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.PREPARED_PROMPT;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.SOURCE_PATH;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.snapshot;
+import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.context;
 
 class UiExplorerLocalRunPersisterTest {
 
@@ -37,6 +39,40 @@ class UiExplorerLocalRunPersisterTest {
             .addModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .build();
+
+    @Test
+    void shouldPersistResumableCrmSessionAndPrivateScopeAfterRestart(@TempDir Path workspace) throws Exception {
+        var properties = new LocalWorkspaceProperties();
+        properties.setEnabled(true);
+        properties.setDirectory(workspace.resolve("crm-ui-continuation").toString());
+        var paths = new LocalWorkspacePaths(properties);
+        var jsonFileStore = new LocalWorkspaceJsonFileStore(objectMapper);
+        var store = new FileSystemLocalAnalysisRunStore(properties, paths, jsonFileStore);
+        var continuationStore = new UiExplorerContinuationSnapshotStore(paths, jsonFileStore);
+        var persister = new UiExplorerLocalRunPersister(
+                objectMapper, store, new UiExplorerLocalRunSnapshotSanitizer(), continuationStore);
+        var completed = snapshot(UiExplorerJobStatus.COMPLETED);
+
+        persister.persistRunSnapshot(
+                completed,
+                AnalysisAiAuthRef.localToken(null),
+                "crm-ui-copilot-session",
+                context()
+        );
+
+        var record = store.findById(completed.jobId()).orElseThrow();
+        assertThat(record.continuation().enabled()).isTrue();
+        assertThat(record.continuation().copilotSessionId()).isEqualTo("crm-ui-copilot-session");
+        var restored = continuationStore.findById(completed.jobId()).orElseThrow();
+        assertThat(restored.toContext().sourceRevision().revision()).isEqualTo("crm-commit-abc123");
+        assertThat(restored.toContext().sourceScope().projectName()).isEqualTo("crm-agent-portal");
+        assertThat(restored.fingerprint()).hasSize(64);
+        assertThat(restored.matches(completed)).isTrue();
+        assertThat(Files.readString(paths.runDirectory(completed.jobId())
+                .resolve("ui-explorer-continuation.json")))
+                .doesNotContain("CustomerPreferencesComponent {}")
+                .doesNotContain("preparedPrompt");
+    }
 
     @Test
     void shouldPersistSanitizedCompletedCrmRunWithoutRawOrHiddenContext() throws Exception {
@@ -56,9 +92,9 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(record.continuation().copilotSessionId()).isNull();
         var envelope = record.exportEnvelope();
         assertThat(envelope.path("schema").asText()).isEqualTo("tdw.ui-explorer-local-run");
-        assertThat(envelope.path("version").asInt()).isEqualTo(5);
+        assertThat(envelope.path("version").asInt()).isEqualTo(6);
         assertThat(envelope.at("/payload/type").asText()).isEqualTo("ui-explorer-analysis");
-        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v5");
+        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v6");
         assertThat(envelope.at("/payload/job/sourceRevision/revision").asText())
                 .isEqualTo("crm-commit-abc123");
         assertThat(envelope.at("/payload/job/result/sections/0/sourceReferences/0/repository").isNull()).isTrue();

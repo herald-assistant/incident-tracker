@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subscription, finalize } from 'rxjs';
+import { Observable, Subscription, finalize } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -13,6 +13,7 @@ import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-ru
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AppUiConfigService } from '../../../core/services/app-ui-config.service';
 import { downloadJsonFile } from '../../../core/utils/json-file.utils';
+import { appendOptimisticChatTurn } from '../../../core/utils/analysis-chat-optimistic.utils';
 import {
   EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
   defaultReasoningEffortForAiModel,
@@ -67,6 +68,9 @@ export class UiExplorerFacade {
   readonly resultSource = signal<UiExplorerResultSource | null>(null);
   readonly portabilityBusy = signal(false);
   readonly portabilityError = signal('');
+  readonly chatSubmitting = signal(false);
+  readonly chatError = signal('');
+  readonly chatAuthStartUrl = signal('');
 
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
@@ -135,7 +139,12 @@ export class UiExplorerFacade {
     () => this.configurationReady() && this.executionAvailable() && !this.isJobActive()
   );
   readonly canRetryPolling = computed(
-    () => Boolean(this.job() && !this.isJobTerminal() && this.jobError() && !this.pollingActive())
+    () => Boolean(
+      this.job()
+        && (!this.isJobTerminal() || hasActiveChat(this.job()!))
+        && this.jobError()
+        && !this.pollingActive()
+    )
   );
   readonly workflowIsRunning = computed(
     () => this.pollingActive() && this.job()?.status !== 'ANALYZING'
@@ -146,6 +155,18 @@ export class UiExplorerFacade {
   readonly isReadOnlyResult = computed(() => {
     const origin = this.resultSource()?.origin;
     return origin === 'history' || origin === 'imported';
+  });
+  readonly chatMessages = computed(() => this.job()?.chatMessages ?? []);
+  readonly canUseChat = computed(() => {
+    const snapshot = this.job();
+    const source = this.resultSource();
+    if (!snapshot?.report || !['COMPLETED', 'PARTIAL'].includes(snapshot.status) || source?.origin === 'imported') {
+      return false;
+    }
+    if (source?.origin === 'history') {
+      return source.continuationEnabled === true;
+    }
+    return snapshot.chatAvailability?.available === true;
   });
 
   constructor() {
@@ -473,16 +494,65 @@ export class UiExplorerFacade {
       });
   }
 
+  sendChatMessage(message: string): void {
+    const snapshot = this.job();
+    const source = this.resultSource();
+    const normalized = message.trim();
+    if (!snapshot || !normalized || !this.canUseChat() || this.chatSubmitting()) {
+      return;
+    }
+    const previous = snapshot;
+    this.chatError.set('');
+    this.chatAuthStartUrl.set('');
+    this.chatSubmitting.set(true);
+    this.job.set(appendOptimisticChatTurn({ ...snapshot, chatMessages: snapshot.chatMessages ?? [] }, normalized));
+
+    const request$: Observable<UiExplorerJobStateSnapshot | LocalAnalysisRunDetailResponse> =
+      source?.origin === 'history' && source.localRunId
+      ? this.historyApi.sendChatMessage(source.localRunId, { message: normalized })
+      : this.api.sendChatMessage(snapshot.jobId, normalized);
+    request$
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.chatSubmitting.set(false))
+      )
+      .subscribe({
+        next: (response) => {
+          if ('exportEnvelope' in response) {
+            this.applyLocalRun(response);
+            return;
+          }
+          this.job.set(response);
+          if (hasActiveChat(response)) {
+            this.startPolling(response.jobId);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.job.set(previous);
+          const apiError = error.error as Partial<ApiErrorResponse> | null;
+          this.chatError.set(readApiError(error, 'Nie udało się wysłać pytania do UI Explorer.'));
+          this.chatAuthStartUrl.set(
+            typeof apiError?.authStartUrl === 'string' ? apiError.authStartUrl.trim() : ''
+          );
+        }
+      });
+  }
+
+  clearChatError(): void {
+    this.chatError.set('');
+    this.chatAuthStartUrl.set('');
+  }
+
   setPortabilityError(message: string): void {
     this.portabilityError.set(message);
   }
 
   retryPolling(): void {
-    const jobId = this.job()?.jobId;
-    if (!jobId || this.isJobTerminal() || this.pollingActive()) {
+    const snapshot = this.job();
+    if (!snapshot || (this.isJobTerminal() && !hasActiveChat(snapshot)) || this.pollingActive()) {
       return;
     }
-    this.startPolling(jobId);
+    this.startPolling(snapshot.jobId);
   }
 
   private buildStartRequest(): UiExplorerJobStartRequest | null {
@@ -514,7 +584,7 @@ export class UiExplorerFacade {
     this.pollingSubscription = this.pollingService
       .poll({
         load: () => this.api.getJob(jobId),
-        isTerminal: (snapshot) => isTerminalJobStatus(snapshot.status),
+        isTerminal: (snapshot) => isTerminalJobStatus(snapshot.status) && !hasActiveChat(snapshot),
         intervalMs: 1500
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -533,10 +603,6 @@ export class UiExplorerFacade {
       if (detail.feature !== 'ui-explorer') {
         throw new Error(`Lokalny run ${detail.analysisId} nie jest runem UI Explorer.`);
       }
-      if (detail.continuationEnabled) {
-        throw new Error('Lokalny run UI Explorer nie może udostępniać continuation.');
-      }
-
       const restored = parseUiExplorerLocalRunEnvelope(detail.exportEnvelope);
       this.job.set(restored.job);
       this.resultSource.set({
@@ -544,7 +610,8 @@ export class UiExplorerFacade {
         exportedAt: restored.storedAt,
         fileName: '',
         localRunId: detail.analysisId,
-        localRunName: detail.name
+        localRunName: detail.name,
+        continuationEnabled: detail.continuationEnabled
       });
     } catch (error) {
       this.portabilityError.set(
@@ -580,6 +647,12 @@ export class UiExplorerFacade {
 
 function isTerminalJobStatus(status: UiExplorerJobStatus | undefined): boolean {
   return status === 'COMPLETED' || status === 'PARTIAL' || status === 'BLOCKED' || status === 'FAILED';
+}
+
+function hasActiveChat(snapshot: UiExplorerJobStateSnapshot): boolean {
+  return (snapshot.chatMessages ?? []).some(
+    (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'
+  );
 }
 
 function readApiError(error: HttpErrorResponse, fallback: string): string {

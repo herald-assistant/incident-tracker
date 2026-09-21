@@ -121,10 +121,13 @@ kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane
 dostepny rowniez po bledzie pozniejszej sesji AI. Terminalne snapshoty sa
 sanitizowane z ukrytego scope'u i szczegolow tools, zachowuja prompt i sa
 zapisywane w lokalnej historii pod feature key `ui-explorer`;
-shared `/api/analysis/runs` odczytuje je po restarcie bez mozliwosci
-kontynuacji. Osobny `tdw.ui-explorer-export/v5` zapewnia sanitizowany export
-terminalnego wyniku oraz read-only import z dokladna walidacja wersji i
-ponowna sanitizacja przed zapisem do historii. Workspace Angular pod
+shared `/api/analysis/runs` odczytuje je po restarcie i dla zakonczonej albo
+czesciowej analizy moze wznowic te sama sesje Copilota. Prywatny,
+feature-owned snapshot zachowuje minimalny frozen scope widoku i immutable
+commit poza publicznym runem oraz exportem. Osobny
+`tdw.ui-explorer-export/v6` zapewnia sanitizowany export wyniku i rozmowy;
+reader zachowuje jawna migracje v5, a import v5/v6 jest zawsze read-only i
+ponownie sanitizowany przed zapisem do historii. Workspace Angular pod
 `/ui-explorer` udostepnia route, sidebar i landing card oraz feature-owned
 konfiguracje z prawdziwych `input-options`, katalogu ekranow i shared katalogu
 AI. Workspace uzywa tego samego zwartego wzorca analysis composer co Flow
@@ -145,6 +148,12 @@ zachowuje ostatni snapshot i pozwala jawnie ponowic odczyt. Terminalne statusy
 to `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Dla `COMPLETED` i `PARTIAL`
 workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
 aktywne sekcje, confidence, references, visibility limits i open questions.
+Obok raportu shared follow-up chat pozwala pytac o wyjasnienia i rozszerzac
+analize. Odpowiedz uzywa prostego jezyka analityka, moze wykonac celowany
+odczyt kodu przez piec read-only tools na pierwotnym commicie, ale nie dostaje
+report tools i nie modyfikuje opublikowanego raportu. Wiadomosci maja wlasne
+evidence, activity, feedback i usage. Live POST zwraca `202` z odpowiedzia
+`IN_PROGRESS`; UI kontynuuje polling do zakonczenia turnu.
 Feature-owned `result` zasila business-first Markdown o kanonicznej strukturze
 dla kazdej aktywnej sekcji; nie posiada osobnego kontraktu ani appendixu
 zaleznosci przekrojowych. Techniczne source refs
@@ -159,12 +168,14 @@ lecz nie sa podtytulem raportu. `BLOCKED`, `FAILED` oraz terminalny stan
 bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
 feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
 ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
-koperta `tdw.ui-explorer-local-run/v5`, odtwarza konfiguracje i raport jako
-read-only oraz nie uruchamia pollingu, continuation, follow-up chatu ani resume.
+koperta `tdw.ui-explorer-local-run/v6`, odtwarza konfiguracje, raport i chat
+oraz wlacza history continuation tylko przy poprawnym prywatnym snapshotcie i
+session id. Niedokonczony turn po restarcie staje sie `FAILED` bez ponownego
+wyslania. Importowany run pozostaje read-only i nigdy nie uzyskuje continuation.
 Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
 history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
 UI jawnie rozroznia wszystkie trzy pochodzenia, zachowuje copy/download Markdown
-i odrzuca obca, starsza, nowsza lub uszkodzona koperta bez fallbacku.
+i odrzuca obca, nieobslugiwana lub uszkodzona koperta bez fallbacku.
 UX Inspector jest osobnym pionem dla jednego pytania o element wskazany przez
 TDW Browser Tools. Statyczne zasoby sa dostepne tylko pod `/browser-tools/**`;
 selection runtime tworzy capture v1 w jawnym profilu `ELEMENT_CONTEXT` albo
@@ -191,7 +202,7 @@ wywolan; inny projekt lub branch jest odrzucany. Sesja ma
 report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest
 wynikiem ani fallbackiem. Run jest zapisywany jako `QUEUED` przed dispatch,
 trafia do Analysis History i uzywa scislego
-`tdw.ux-inspector-export/v1`. Workspace reuse'uje layout UI Explorera oraz
+`tdw.ux-inspector-export/v2` z kompatybilnym odczytem v1. Workspace reuse'uje layout UI Explorera oraz
 wspolny aside; jednosekcyjny renderer pokazuje scalone metadata raz pod
 odpowiedzia, ale feature nie importuje modeli ani workflow UI Explorera.
 Szczegoly sa w `ux-inspector-runtime-flow.md`.

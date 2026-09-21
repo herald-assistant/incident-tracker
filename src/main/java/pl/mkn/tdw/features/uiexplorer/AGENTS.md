@@ -4,7 +4,7 @@
 
 Ten katalog jest wlascicielem feature'a `ui-explorer`: publicznego requestu i
 wyniku dokumentacji widoku, kontraktu sekcji, feature-owned API, joba,
-context pipeline, przygotowania AI, raportu i przyszlej persistence.
+context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
 
 ## Dozwolone zaleznosci
 
@@ -21,7 +21,7 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
 - Jednostka analizy to jeden widok w konkretnym scenariuszu i rewizji zrodla.
 - UI Explorer tworzy wylacznie dokumentacje funkcjonalna; publiczny kontrakt
   nie zawiera wyboru profilu ani celu analizy.
-- Sekcje to osiem identyfikatorow z planu UI Explorer, a tryby to `OFF`,
+- Sekcje to osiem identyfikatorow z kanonicznego runtime flow UI Explorera, a tryby to `OFF`,
   `COMPACT` i `DEEP`.
 - Kazda aktywna sekcja publikuje business-first Markdown o kanonicznej
   strukturze dla danego `sectionId`. Nie przywracaj generycznych `findings`,
@@ -68,12 +68,19 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
 - Feature deterministycznie waliduje source references raportu wobec
   przygotowanego kontekstu i captured tool evidence, a nastepnie projektuje
   raport na feature-specific `UiExplorerResultResponse` dla publicznego API.
+- Follow-up wznawia te sama sesje Copilota dla `COMPLETED` i `PARTIAL`, uzywa
+  pierwotnego immutable commita i pieciu read-only research tools. Nie
+  rejestruje report tools ani hidden report scope; raport initial pozostaje
+  niezmienny, a prosba o korekte daje propozycje tekstu tylko w rozmowie.
+- Local history zapisuje minimalny prywatny continuation snapshot bez tokenow,
+  kodu i promptu. Import nigdy nie aktywuje continuation. Przerwany turn po
+  restarcie ma status `FAILED` i nie jest automatycznie ponawiany.
 
 ## Non-goals MVP
 
 - Brak uruchamiania badanego UI i automatyzacji przegladarki.
 - Brak przejmowania sesji Keycloak i nowych credentiali.
-- Brak multi-repository traversal, follow-up chat i continuation.
+- Brak multi-repository traversal i edycji raportu przez follow-up chat.
 - Brak modyfikacji badanego repozytorium albo publikacji dokumentacji.
 
 ## Testy

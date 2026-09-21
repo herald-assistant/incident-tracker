@@ -23,10 +23,12 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
+import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.tdw.features.flowexplorer.job.localworkspace.FlowExplorerLocalRunPersistence;
 import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
 import java.util.UUID;
@@ -51,6 +53,7 @@ public class FlowExplorerJobService {
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
     private final FlowExplorerLocalRunPersistence localRunPersistence;
+    private final LocalAnalysisRunOperationGuard operationGuard;
 
     public FlowExplorerJobStateSnapshot startJob(FlowExplorerJobStartRequest request) {
         var authRef = authRefResolver.resolveForCurrentRequest();
@@ -153,20 +156,29 @@ public class FlowExplorerJobService {
 
     public FlowExplorerJobStateSnapshot startChatMessage(String jobId, FlowExplorerChatMessageRequest request) {
         var job = jobOrThrow(jobId);
+        var lease = operationGuard.tryAcquire(jobId)
+                .orElseThrow(() -> new FlowExplorerJobChatUnavailableException(
+                        "FLOW_EXPLORER_CHAT_IN_PROGRESS", "Another operation is already in progress for this Flow Explorer job."));
+        try {
         accessTokenResolver.resolve(runAuthMapper.toRunAuth(job.authRefForChat()));
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var chatRequest = job.startChatMessage(userMessageId, assistantMessageId, request.message());
 
-        applicationTaskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest));
+        applicationTaskExecutor.execute(() -> runChat(job, assistantMessageId, chatRequest, lease));
 
         return job.snapshot();
+        } catch (RuntimeException exception) {
+            lease.close();
+            throw exception;
+        }
     }
 
     private void runChat(
             FlowExplorerJobState job,
             String assistantMessageId,
-            FlowExplorerFollowUpChatRequest chatRequest
+            FlowExplorerFollowUpChatRequest chatRequest,
+            LocalAnalysisRunOperationGuard.Lease lease
     ) {
         try {
             var promptPreparation = followUpPromptPreparationService.prepare(
@@ -190,7 +202,8 @@ public class FlowExplorerJobService {
                     assistantMessageId,
                     executionResult.content(),
                     promptPreparation.prompt(),
-                    executionResult.sessionId()
+                    executionResult.sessionId(),
+                    executionResult.usage()
             );
         } catch (RuntimeException exception) {
             log.error(
@@ -207,6 +220,9 @@ public class FlowExplorerJobService {
                             ? exception.getMessage()
                             : "Unexpected Flow Explorer follow-up chat failure."
             );
+        } finally {
+            persistRunSnapshot(job, chatRequest.authRef(), job.copilotSessionId());
+            lease.close();
         }
     }
 

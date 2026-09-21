@@ -49,10 +49,9 @@ public class UiExplorerExportService {
             var envelope = objectMapper.treeToValue(document, UiExplorerLocalRunEnvelope.class);
             if (envelope == null
                     || !UiExplorerLocalRunEnvelope.SCHEMA.equals(envelope.schema())
-                    || envelope.version() != UiExplorerLocalRunEnvelope.VERSION
                     || envelope.payload() == null
+                    || !supportedLocalEnvelope(envelope)
                     || !UiExplorerLocalRunEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
-                    || !UiExplorerLocalRunEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())
                     || envelope.payload().job() == null
                     || !requestedJobId.equals(envelope.payload().job().jobId())) {
                 throw unavailableHistory();
@@ -65,11 +64,20 @@ public class UiExplorerExportService {
         }
     }
 
+    private boolean supportedLocalEnvelope(UiExplorerLocalRunEnvelope envelope) {
+        return envelope.version() == UiExplorerLocalRunEnvelope.VERSION
+                && UiExplorerLocalRunEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())
+                || envelope.version() == UiExplorerLocalRunEnvelope.LEGACY_VERSION
+                && UiExplorerLocalRunEnvelope.LEGACY_RESULT_CONTRACT.equals(envelope.payload().resultContract());
+    }
+
     private void validateExportable(UiExplorerJobStateSnapshot snapshot) {
         var status = snapshot.status();
         if ((status != UiExplorerJobStatus.COMPLETED && status != UiExplorerJobStatus.PARTIAL)
                 || snapshot.result() == null
-                || snapshot.report() == null) {
+                || snapshot.report() == null
+                || snapshot.chatMessages().stream().anyMatch(message -> "ASSISTANT".equals(message.role())
+                        && "IN_PROGRESS".equals(message.status()))) {
             throw new UiExplorerExportUnavailableException(
                     "Only a completed UI Explorer run with a result and report can be exported."
             );

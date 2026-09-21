@@ -7,6 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorAnalysisProvider;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatRequest;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetEvidenceMapper;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
@@ -18,6 +21,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class UxInspectorJobService {
     private final Map<String, UxInspectorJobState> jobs = new ConcurrentHashMap<>();
+    private final Map<String, pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext> targetContexts = new ConcurrentHashMap<>();
+    private final Map<String, AnalysisAiAuthRef> authRefs = new ConcurrentHashMap<>();
     private final UxInspectorCaptureNormalizer captureNormalizer;
     private final UxInspectorAiSelectionValidator aiSelectionValidator;
     private final UxInspectorTargetResolver targetResolver;
@@ -37,6 +43,9 @@ public class UxInspectorJobService {
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final UxInspectorLocalRunPersistence localRunPersistence;
+    private final UxInspectorFollowUpChatService followUpChatService;
+    private final UxInspectorFollowUpPromptService followUpPromptService;
+    private final LocalAnalysisRunOperationGuard operationGuard;
 
     public UxInspectorJobStateSnapshot startJob(UxInspectorJobStartRequest request) {
         var auth = authRefResolver.resolveForCurrentRequest();
@@ -47,6 +56,7 @@ public class UxInspectorJobService {
         var id = UUID.randomUUID().toString();
         var state = new UxInspectorJobState(id, normalizedRequest);
         jobs.put(id, state);
+        authRefs.put(id, auth);
         persistRequired(state);
         var accepted = state.snapshot();
         try {
@@ -66,6 +76,7 @@ public class UxInspectorJobService {
         try {
             var context = targetResolver.resolve(request.systemId(), request.branch(), request.viewId(),
                     request.sourceRevision(), request.capture());
+            targetContexts.put(id, context);
             state.targetResolved(context, evidenceMapper.map(context));
             persist(state);
             state.preparationStarted();
@@ -98,13 +109,64 @@ public class UxInspectorJobService {
         return value.snapshot();
     }
 
+    public UxInspectorJobStateSnapshot startChatMessage(String jobId, UxInspectorChatMessageRequest request) {
+        var normalized = normalize(jobId);
+        var state = jobs.get(normalized);
+        if (state == null) throw new UxInspectorJobException("UX_INSPECTOR_JOB_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
+                "UX Inspector job was not found.");
+        var context = targetContexts.get(normalized);
+        var auth = authRefs.get(normalized);
+        if (context == null || auth == null) {
+            throw new pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobChatUnavailableException(
+                    "UX_INSPECTOR_CHAT_CONTEXT_UNAVAILABLE",
+                    "The UX Inspector run no longer has its live continuation context. Open it from Analysis History.");
+        }
+        var lease = operationGuard.tryAcquire(normalized).orElseThrow(() ->
+                new pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobChatUnavailableException(
+                        "UX_INSPECTOR_CHAT_IN_PROGRESS", "Another operation is already in progress for this UX Inspector run."));
+        var userId = UUID.randomUUID().toString();
+        var assistantId = UUID.randomUUID().toString();
+        final String sessionId;
+        try { sessionId = state.startChatMessage(userId, assistantId, request.message()); }
+        catch (RuntimeException exception) { lease.close(); throw exception; }
+        var chatRequest = new UxInspectorFollowUpChatRequest(
+                "ux-inspector-follow-up-" + assistantId, state.initialRequest(), context, state.currentReport(),
+                request.message(), sessionId, auth);
+        persist(state);
+        try {
+            applicationTaskExecutor.execute(() -> runChat(state, assistantId, chatRequest, lease));
+        } catch (RuntimeException exception) {
+            state.chatFailed(assistantId, "UX_INSPECTOR_CHAT_SCHEDULING_FAILED",
+                    "UX Inspector follow-up could not be scheduled.");
+            persist(state); lease.close();
+        }
+        return state.snapshot();
+    }
+
+    private void runChat(UxInspectorJobState state, String assistantId,
+                         UxInspectorFollowUpChatRequest request, LocalAnalysisRunOperationGuard.Lease lease) {
+        try {
+            var prompt = followUpPromptService.prepare(request);
+            var response = followUpChatService.chat(request,
+                    section -> state.chatToolEvidence(assistantId, section),
+                    event -> state.chatActivity(assistantId, event));
+            state.chatCompleted(assistantId, response.content(), prompt, response.usage(), response.sessionId());
+        } catch (RuntimeException exception) {
+            log.error("UX Inspector follow-up failed jobId={} message={}", state.snapshot().jobId(), exception.getMessage(), exception);
+            state.chatFailed(assistantId, "UX_INSPECTOR_CHAT_FAILED",
+                    StringUtils.hasText(exception.getMessage()) ? exception.getMessage() : "UX Inspector follow-up failed unexpectedly.");
+        } finally {
+            persist(state); lease.close();
+        }
+    }
+
     private void persist(UxInspectorJobState state) {
-        try { localRunPersistence.persistRunSnapshot(state.snapshot()); }
+        try { localRunPersistence.persistRunSnapshot(state.snapshot(), authRefs.get(state.snapshot().jobId()), state.copilotSessionId()); }
         catch (RuntimeException exception) { log.warn("Failed to persist UX Inspector run jobId={} reason={}", state.snapshot().jobId(), exception.getMessage()); }
     }
     private void persistRequired(UxInspectorJobState state) {
         try {
-            localRunPersistence.persistRunSnapshot(state.snapshot());
+            localRunPersistence.persistRunSnapshot(state.snapshot(), authRefs.get(state.snapshot().jobId()), state.copilotSessionId());
         } catch (RuntimeException exception) {
             jobs.remove(state.snapshot().jobId());
             throw new UxInspectorJobException("UX_INSPECTOR_HISTORY_UNAVAILABLE",

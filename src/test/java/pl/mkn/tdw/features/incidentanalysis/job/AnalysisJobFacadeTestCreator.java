@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.incidentanalysis.job.validation.AnalysisJobStartValid
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogCsvImportService;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 final class AnalysisJobFacadeTestCreator {
 
@@ -33,7 +34,8 @@ final class AnalysisJobFacadeTestCreator {
                 accessTokenResolver,
                 localRunPersistence,
                 inputOptionsService,
-                new AnalysisJobStartValidationService(inputOptionsService, new ElasticLogCsvImportService())
+                new AnalysisJobStartValidationService(inputOptionsService, new ElasticLogCsvImportService()),
+                new LocalAnalysisRunOperationGuard()
         );
     }
 }

@@ -4,7 +4,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
 
-final class UiExplorerDurableSystemInstructions {
+public final class UiExplorerDurableSystemInstructions {
 
     private UiExplorerDurableSystemInstructions() {
     }
@@ -44,6 +44,22 @@ final class UiExplorerDurableSystemInstructions {
                 %s
                 </ui_explorer_durable_contract>
                 """.formatted(screenCatalogEntry, reportContract).trim();
+    }
+
+    public static String followUp() {
+        return """
+                <ui_explorer_follow_up_contract>
+                To jest rozmowa po zapisaniu raportu UI Explorera. Odpowiadaj na konkretne pytanie
+                analityka po polsku, w czytelnym Markdown. Wyjasniaj warunek, zachowanie systemu
+                i skutek dla uzytkownika. Nazwy klas, metod i plikow sa tylko dowodem pomocniczym.
+
+                Raport przekazany w wiadomosci jest read-only. Nie aktualizuj go i nie probuj
+                wywolywac report tools. Gdy uzytkownik prosi o zmiane dokumentu, zaproponuj tresc
+                w rozmowie i jawnie powiedz, ze raport pozostal bez zmian. Dla nowych lub
+                kwestionowanych ustalen uzyj dostepnych scoped GitLab tools. Oddziel fakty,
+                wnioski i ograniczenia widocznosci. Nie uruchamiaj ponownie initial workflow.
+                </ui_explorer_follow_up_contract>
+                """.trim();
     }
 
     private static String requiredArtifact(UiExplorerPromptPreparation preparation, String artifactName) {

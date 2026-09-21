@@ -2,6 +2,7 @@ import {
   AnalysisAiActivityEvent,
   AnalysisAiToolFeedback,
   AnalysisAiUsage,
+  AnalysisChatMessageResponse,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse,
   AnalysisReport
@@ -227,15 +228,21 @@ export interface UiExplorerJobStateSnapshot {
   sourceRevision: UiExplorerSourceRevision | null;
   outputAvailability: UiExplorerOutputAvailability;
   exportAvailable: boolean;
+  chatMessages?: AnalysisChatMessageResponse[];
+  chatAvailability?: {
+    available: boolean;
+    code: string | null;
+    message: string | null;
+  };
 }
 
 export interface UiExplorerExportEnvelope {
   schema: 'tdw.ui-explorer-export';
-  version: 5;
+  version: 5 | 6;
   exportedAt: string;
   payload: {
     type: 'ui-explorer-analysis';
-    resultContract: 'ui-explorer-result-v5';
+    resultContract: 'ui-explorer-result-v5' | 'ui-explorer-result-v6';
     job: UiExplorerJobStateSnapshot;
   };
 }
@@ -246,4 +253,5 @@ export interface UiExplorerResultSource {
   fileName: string;
   localRunId?: string;
   localRunName?: string;
+  continuationEnabled?: boolean;
 }

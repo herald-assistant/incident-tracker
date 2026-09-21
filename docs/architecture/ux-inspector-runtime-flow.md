@@ -14,7 +14,7 @@ dokument oraz otwarty Shadow DOM dostepny dla skryptu. Operator wybiera profil
 `ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`; drugi profil zamraza dozwolone
 wartosci najblizszego formularza i jego natywny stan walidacji.
 
-## Publiczne wejscia i kontrakty v1
+## Publiczne wejscia i kontrakty
 
 - Modal na `/ux-inspector` udostepnia przeciagany bookmarklet Browser Tools.
 - `GET /api/ux-inspector/input-options` zwraca zarejestrowane frontendy.
@@ -22,17 +22,19 @@ wartosci najblizszego formularza i jego natywny stan walidacji.
   widoki i immutable source revision; `refresh=true` omija cache tego scope'u.
 - `POST /api/ux-inspector/jobs` tworzy run i zwraca snapshot `QUEUED`.
 - `GET /api/ux-inspector/jobs/{jobId}` zwraca aktualny snapshot.
-- `GET /api/ux-inspector/jobs/{jobId}/export` zwraca tylko
-  `tdw.ux-inspector-export` w wersji 1 dla ukonczonego wyniku.
-- `POST /api/ux-inspector/imports` przyjmuje tylko export v1 z capture v1 i
+- `GET /api/ux-inspector/jobs/{jobId}/export` zwraca
+  `tdw.ux-inspector-export` v2 z historia follow-up; import zachowuje
+  kompatybilnosc z wynikiem v1.
+- `POST /api/ux-inspector/imports` przyjmuje export v2 albo legacy v1 z capture v1 i
   zapisuje nowy read-only wpis historii. Import nie naklada arbitralnego limitu
   rozmiaru na caly poprawny envelope; nadal wymaga scislego kontraktu,
   kanonicznego capture oraz spojnego, zakonczonego wyniku.
 - `/ux-inspector` jest jedynym receiverem capture i workspace'em feature'a.
 
-Launcher, protocol, capture i export maja wersje 1. Nie ma aliasow, migratorow,
-dual-read, recznego kanalu capture ani alternatywnego formatu uruchomienia.
-Kazda inna wersja jest odrzucana.
+Launcher, protocol i capture maja wersje 1. Portable export ma wersje 2,
+z kontrolowanym odczytem legacy v1. Nie ma aliasow, legacy endpointow,
+recznego kanalu capture ani alternatywnego formatu uruchomienia. Kazda inna
+wersja jest odrzucana.
 
 ## Przeplyw Browser Tools
 
@@ -258,6 +260,24 @@ Kanoniczny wynik to `AnalysisReport` z dokladnie jedna sekcja `answer`.
 Odpowiedz jest biznesowo czytelna; kod i symbole sa dowodami, nie glownym
 jezykiem narracji.
 
+Po zapisaniu raportu UX Inspector udostepnia follow-up chat. Kolejne pytania
+wznawiaja te sama sesje Copilota, zachowuja jeden przypiety projekt, branch i
+commit oraz moga korzystac z tych samych read-only target/source tools co
+initial research. Report tools nie sa dostepne w follow-up, a raport pozostaje
+kontekstem tylko do odczytu. Prosba o korekte moze zwrocic propozycje tekstu
+w rozmowie, lecz nie zmienia raportu.
+
+Jeden run dopuszcza jeden aktywny turn. Wiadomosci, ich usage, evidence,
+activity i feedback sa zapisywane w runie, przy czym usage nie jest renderowane
+pod trescia odpowiedzi. Historia moze byc kontynuowana po restarcie backendu.
+Dla starszego rodzimego runu handler uznaje continuation tylko wtedy, gdy
+istnieje deterministycznie nazwana sesja `ux-inspector-{jobId}` i mozna
+ponownie zbudowac ten sam pinned target context. Przerwany turn staje sie
+`FAILED` bez automatycznego ponowienia. Import pozostaje read-only.
+
+Platformowa polityka context tier obejmuje create, resume i follow-up.
+UX Inspector nie ustawia rozmiarow okna ani `long_context` bezposrednio.
+
 Canonical initial prompt zawiera staly kontrakt tlumaczenia source evidence
 na zachowanie zrozumiale dla analityka. UX Inspector nie uruchamia w tym celu
 runtime skilla ani dodatkowego turnu. Kontrakt:
@@ -287,9 +307,10 @@ Ekran pokazuje:
 - scalone Visibility limits, Gaps i Warnings tylko raz, pod odpowiedzia i po
   prawej stronie jak w UI Explorerze; UX Inspector nie pokazuje References.
 
-Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Import nie
-wznawia sesji AI. Export i import sa scisle ograniczone do envelope v1,
-jednosekcyjnego raportu, capture v1 i spojnego source revision.
+Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Export
+zapisuje envelope v2 z historia chatu. Import akceptuje v2 oraz legacy v1,
+waliduje jednosekcyjny raport, capture v1 i spojny source revision, a nastepnie
+tworzy wynik read-only bez prawa do wznowienia sesji.
 
 ## Granice pakietow
 
@@ -321,7 +342,7 @@ Minimalna macierz obejmuje:
 - jednosekcyjny report oraz pojedyncza prezentacje scalonych metadata,
 - business-first answer contract: zachowanie `as-is` versus wymaganie,
   frontend/backend, obserwowalne scenariusze oraz zweryfikowane `METHOD path`,
-- `QUEUED` przed dispatch, strict import/export v1 i odrzucenie obcych wersji,
+- `QUEUED` przed dispatch, strict import/export v2 z odczytem legacy v1 i odrzucenie obcych wersji,
 - modal bookmarkleta, brak alternatywnego launchera i brak osobnej karty
   read-only,
 - testy Angulara, build produkcyjny, `FrontendPageTest` i pakiet backend-dev.

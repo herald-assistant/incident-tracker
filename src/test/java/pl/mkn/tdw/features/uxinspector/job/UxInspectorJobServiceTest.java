@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.core.task.TaskExecutor;
 import pl.mkn.tdw.features.uxinspector.ai.*;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetEvidenceMapper;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
@@ -14,6 +16,7 @@ import pl.mkn.tdw.features.uxinspector.job.localworkspace.UxInspectorLocalRunPer
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.report.*;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +39,7 @@ class UxInspectorJobServiceTest {
 
         assertThat(accepted.status()).isEqualTo(UxInspectorJobStatus.QUEUED);
         var snapshots = ArgumentCaptor.forClass(UxInspectorJobStateSnapshot.class);
-        verify(persistence).persistRunSnapshot(snapshots.capture());
+        verify(persistence).persistRunSnapshot(snapshots.capture(), any(), isNull());
         assertThat(snapshots.getValue().status()).isEqualTo(UxInspectorJobStatus.QUEUED);
         assertThat(tasks).singleElement();
 
@@ -47,7 +50,7 @@ class UxInspectorJobServiceTest {
         assertThat(completed.report().sections()).singleElement()
                 .extracting(AnalysisReportSection::id).isEqualTo("answer");
         assertThat(completed.exportAvailable()).isTrue();
-        verify(persistence, atLeast(7)).persistRunSnapshot(any());
+        verify(persistence, atLeast(7)).persistRunSnapshot(any(), any(), nullable(String.class));
     }
 
     @Test
@@ -55,7 +58,7 @@ class UxInspectorJobServiceTest {
         var executor = mock(TaskExecutor.class);
         var persistence = mock(UxInspectorLocalRunPersistence.class);
         doThrow(new IllegalStateException("Synthetic CRM store unavailable"))
-                .when(persistence).persistRunSnapshot(any());
+                .when(persistence).persistRunSnapshot(any(), any(), nullable(String.class));
         var service = service(executor, persistence);
 
         assertThatThrownBy(() -> service.startJob(request()))
@@ -105,7 +108,8 @@ class UxInspectorJobServiceTest {
         var auth = mock(AnalysisAiAuthRefResolver.class);
         when(auth.resolveForCurrentRequest()).thenReturn(AnalysisAiAuthRef.localToken("CRM test"));
         return new UxInspectorJobService(normalizer, selection, resolver, evidence, preparation, provider,
-                executor, auth, persistence);
+                executor, auth, persistence, mock(UxInspectorFollowUpChatService.class),
+                mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard());
     }
 
     private UxInspectorAiAnalysis completedAnalysis() {

@@ -35,6 +35,7 @@ describe('UiExplorerFacade', () => {
     getScreens: vi.fn(() => of(screenCatalog)),
     startJob: vi.fn((_request: UiExplorerJobStartRequest) => of(crmJobSnapshot('QUEUED'))),
     getJob: vi.fn(() => of(crmJobSnapshot('COMPLETED'))),
+    sendChatMessage: vi.fn((_jobId: string, _message: string) => of(crmReadableSnapshot('COMPLETED'))),
     exportJob: vi.fn(() => of(crmPortableEnvelope())),
     importAnalysis: vi.fn((_document: unknown) => of(crmReadableSnapshot('COMPLETED')))
   };
@@ -51,7 +52,8 @@ describe('UiExplorerFacade', () => {
         exportEnvelope: crmLocalEnvelope(),
         continuationEnabled: false
       })
-    )
+    ),
+    sendChatMessage: vi.fn()
   };
   const polling = {
     poll: vi.fn(<T>(options: AnalysisJobPollingOptions<T>) => options.load())
@@ -322,10 +324,98 @@ describe('UiExplorerFacade', () => {
       exportedAt: '2026-08-15T10:02:00Z',
       fileName: '',
       localRunId: 'crm-ui-history-1',
-      localRunName: 'CRM contact creation documentation'
+      localRunName: 'CRM contact creation documentation',
+      continuationEnabled: false
     });
     expect(facade.isReadOnlyResult()).toBe(true);
     expect(polling.poll).not.toHaveBeenCalled();
+  });
+
+  it('sends a live CRM follow-up and keeps the report immutable', () => {
+    const before = crmReadableSnapshot('COMPLETED');
+    const completed = {
+      ...before,
+      chatMessages: [],
+      chatAvailability: { available: true, code: null, message: null }
+    };
+    const after = {
+      ...completed,
+      chatMessages: [
+        {
+          id: 'crm-user-1', role: 'USER', status: 'COMPLETED', content: 'Co dzieje się po zapisie?',
+          errorCode: '', errorMessage: '', createdAt: completed.updatedAt, updatedAt: completed.updatedAt,
+          completedAt: completed.updatedAt, toolEvidenceSections: [], aiActivityEvents: [], toolFeedback: [], prompt: ''
+        },
+        {
+          id: 'crm-assistant-1', role: 'ASSISTANT', status: 'COMPLETED',
+          content: 'Widok zapisuje preferencje klienta i pokazuje wynik operacji.',
+          errorCode: '', errorMessage: '', createdAt: completed.updatedAt, updatedAt: completed.updatedAt,
+          completedAt: completed.updatedAt, toolEvidenceSections: [], aiActivityEvents: [], toolFeedback: [],
+          prompt: 'crm follow-up prompt'
+        }
+      ]
+    };
+    api.sendChatMessage.mockReturnValueOnce(of(after));
+    const facade = TestBed.inject(UiExplorerFacade);
+    facade.job.set(completed);
+    facade.resultSource.set({ origin: 'live', exportedAt: '', fileName: '' });
+
+    facade.sendChatMessage('Co dzieje się po zapisie?');
+
+    expect(api.sendChatMessage).toHaveBeenCalledWith(completed.jobId, 'Co dzieje się po zapisie?');
+    expect(facade.chatMessages().at(-1)?.content).toContain('zapisuje preferencje');
+    expect(facade.job()?.report).toBe(before.report);
+  });
+
+  it('retries polling a follow-up even though the analysis job is already terminal', () => {
+    const completed = {
+      ...crmReadableSnapshot('COMPLETED'),
+      chatAvailability: { available: true, code: null, message: null }
+    };
+    const active = {
+      ...completed,
+      chatMessages: [
+        {
+          id: 'crm-user-1', role: 'USER' as const, status: 'COMPLETED' as const,
+          content: 'Co dzieje się po zapisie?', errorCode: '', errorMessage: '',
+          createdAt: completed.updatedAt, updatedAt: completed.updatedAt, completedAt: completed.updatedAt,
+          toolEvidenceSections: [], aiActivityEvents: [], toolFeedback: [], prompt: ''
+        },
+        {
+          id: 'crm-assistant-1', role: 'ASSISTANT' as const, status: 'IN_PROGRESS' as const,
+          content: '', errorCode: '', errorMessage: '', createdAt: completed.updatedAt,
+          updatedAt: completed.updatedAt, completedAt: '', toolEvidenceSections: [],
+          aiActivityEvents: [], toolFeedback: [], prompt: 'crm follow-up prompt'
+        }
+      ]
+    };
+    const answered = {
+      ...completed,
+      chatMessages: active.chatMessages.map((message) =>
+        message.role === 'ASSISTANT'
+          ? { ...message, status: 'COMPLETED' as const, content: 'CRM zapisuje dane klienta.' }
+          : message
+      )
+    };
+    api.sendChatMessage.mockReturnValueOnce(of(active));
+    polling.poll
+      .mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 503 })))
+      .mockReturnValueOnce(of(answered));
+    const facade = TestBed.inject(UiExplorerFacade);
+    facade.job.set(completed);
+    facade.resultSource.set({ origin: 'live', exportedAt: '', fileName: '' });
+
+    facade.sendChatMessage('Co dzieje się po zapisie?');
+
+    expect(facade.job()?.status).toBe('COMPLETED');
+    expect(facade.chatMessages().at(-1)?.status).toBe('IN_PROGRESS');
+    expect(facade.canRetryPolling()).toBe(true);
+
+    facade.retryPolling();
+
+    expect(polling.poll).toHaveBeenCalledTimes(2);
+    expect(facade.chatMessages().at(-1)?.status).toBe('COMPLETED');
+    expect(facade.jobError()).toBe('');
   });
 
   it('delegates an untrusted portable CRM document to the backend and keeps the import read-only', () => {
@@ -538,11 +628,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export' as const,
-    version: 5 as const,
+    version: 6 as const,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis' as const,
-      resultContract: 'ui-explorer-result-v5' as const,
+      resultContract: 'ui-explorer-result-v6' as const,
       job: crmReadableSnapshot('COMPLETED')
     }
   };

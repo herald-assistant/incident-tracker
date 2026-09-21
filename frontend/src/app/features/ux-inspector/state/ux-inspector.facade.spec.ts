@@ -35,10 +35,11 @@ describe('UxInspectorFacade', () => {
     })),
     startJob: vi.fn((_request: UxInspectorJobStartRequest) => of(snapshot('QUEUED'))),
     getJob: vi.fn(() => of(snapshot('COMPLETED'))),
+    sendChatMessage: vi.fn(() => of(chatSnapshot())),
     exportJob: vi.fn(), importAnalysis: vi.fn()
   };
   const polling = { poll: vi.fn(<T>(options: AnalysisJobPollingOptions<T>) => options.load()) };
-  const history = { getRun: vi.fn() };
+  const history = { getRun: vi.fn(), sendChatMessage: vi.fn() };
   const aiOptions = { getOptions: vi.fn(() => of({
     defaultModel: 'gpt-crm', defaultReasoningEffort: 'medium', defaultReasoningEfforts: ['low', 'medium'],
     models: [{ id: 'gpt-crm', name: 'CRM model', supportsReasoningEffort: true,
@@ -203,6 +204,18 @@ describe('UxInspectorFacade', () => {
     expect(facade.selectedViewId()).toBe('crm-contact-details');
     expect(facade.viewMatchedFromCapture()).toBe(false);
   });
+
+  it('continues a live run through the UX Inspector chat endpoint', () => {
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.job.set(chatSnapshot());
+    facade.resultSource.set({ origin: 'live', fileName: '' });
+
+    expect(facade.canUseChat()).toBe(true);
+    facade.sendChatMessage('Co jeszcze blokuje zapis?');
+
+    expect(api.sendChatMessage).toHaveBeenCalledWith('ux-crm-job', 'Co jeszcze blokuje zapis?');
+    expect(facade.chatMessages().at(-1)?.content).toContain('Uprawnienie');
+  });
 });
 
 function view(viewId: string, routePattern: string, componentSelectors: string[] = []) {
@@ -247,5 +260,19 @@ function snapshot(status: UxInspectorJobStateSnapshot['status']): UxInspectorJob
     sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
     outputAvailability: { status: 'BLOCKED', code: terminal ? 'DONE' : 'RUNNING', message: '', missingCapabilities: [] },
     exportAvailable: terminal
+  };
+}
+
+function chatSnapshot(): UxInspectorJobStateSnapshot {
+  return {
+    ...snapshot('COMPLETED'),
+    result: {} as UxInspectorJobStateSnapshot['result'],
+    report: { reportId: 'ux-inspector-report-crm', header: 'UX Inspector', subHeader: 'Kontakt', markdownSummary: 'Zapis kontaktu',
+      sections: [], meta: { references: [], visibilityLimits: [], openQuestions: [], gaps: [], confidence: 'high', warnings: [] } },
+    chatMessages: [{ id: 'assistant-1', role: 'ASSISTANT', status: 'COMPLETED',
+      content: 'Uprawnienie operatora wpływa na zapis.', errorCode: '', errorMessage: '',
+      createdAt: '2026-09-15T10:00:03Z', updatedAt: '2026-09-15T10:00:04Z', completedAt: '2026-09-15T10:00:04Z',
+      toolEvidenceSections: [], aiActivityEvents: [], toolFeedback: [], prompt: '', usage: null }],
+    chatAvailability: { available: true, code: 'UX_INSPECTOR_CHAT_AVAILABLE', message: null }
   };
 }

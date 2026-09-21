@@ -18,7 +18,12 @@ public class UxInspectorJobController {
     public UxInspectorJobStateSnapshot start(@Valid @RequestBody UxInspectorJobStartRequest request) { return jobService.startJob(request); }
     @GetMapping("/{jobId}")
     public UxInspectorJobStateSnapshot get(@PathVariable String jobId) { return jobService.getJob(jobId); }
+    @PostMapping("/{jobId}/chat/messages")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public UxInspectorJobStateSnapshot chat(@PathVariable String jobId,
+                                            @Valid @RequestBody UxInspectorChatMessageRequest request) {
+        return jobService.startChatMessage(jobId, request);
+    }
     @GetMapping("/{jobId}/export")
     public UxInspectorExportEnvelope export(@PathVariable String jobId) { return exportService.export(jobId); }
 }
-

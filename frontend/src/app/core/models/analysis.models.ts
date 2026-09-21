@@ -255,6 +255,7 @@ export interface AnalysisChatMessageResponse {
   aiActivityEvents: AnalysisAiActivityEvent[];
   toolFeedback: AnalysisAiToolFeedback[];
   prompt: string;
+  usage?: AnalysisAiUsage | null;
 }
 
 export interface AnalysisJobStateSnapshot {

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -160,6 +161,35 @@ class UiExplorerJobControllerTest {
     }
 
     @Test
+    void shouldAcceptFollowUpMessage() throws Exception {
+        when(uiExplorerJobService.startChatMessage(eq("crm-ui-job-123"), any(UiExplorerChatMessageRequest.class)))
+                .thenReturn(snapshot("crm-ui-job-123"));
+
+        mockMvc.perform(post("/api/ui-explorer/jobs/crm-ui-job-123/chat/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "message": "Wyjaśnij, kiedy użytkownik może zapisać preferencje." }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").value("crm-ui-job-123"));
+
+        verify(uiExplorerJobService).startChatMessage(
+                "crm-ui-job-123",
+                new UiExplorerChatMessageRequest("Wyjaśnij, kiedy użytkownik może zapisać preferencje."));
+    }
+
+    @Test
+    void shouldRejectBlankFollowUpMessage() throws Exception {
+        mockMvc.perform(post("/api/ui-explorer/jobs/crm-ui-job-123/chat/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "message": "   " }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void shouldReturnNotFoundForUnknownJob() throws Exception {
         when(uiExplorerJobService.getJob("crm-missing-job"))
                 .thenThrow(new UiExplorerJobNotFoundException("crm-missing-job"));
@@ -181,9 +211,9 @@ class UiExplorerJobControllerTest {
         mockMvc.perform(get("/api/ui-explorer/jobs/crm-ui-job-123/export"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schema").value("tdw.ui-explorer-export"))
-                .andExpect(jsonPath("$.version").value(5))
+                .andExpect(jsonPath("$.version").value(6))
                 .andExpect(jsonPath("$.payload.type").value("ui-explorer-analysis"))
-                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v5"));
+                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v6"));
     }
 
     @Test

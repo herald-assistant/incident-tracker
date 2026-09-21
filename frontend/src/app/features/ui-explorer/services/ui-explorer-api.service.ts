@@ -42,6 +42,13 @@ export class UiExplorerApiService {
     );
   }
 
+  sendChatMessage(jobId: string, message: string): Observable<UiExplorerJobStateSnapshot> {
+    return this.http.post<UiExplorerJobStateSnapshot>(
+      `/api/ui-explorer/jobs/${encodeURIComponent(jobId)}/chat/messages`,
+      { message }
+    );
+  }
+
   exportJob(jobId: string): Observable<UiExplorerExportEnvelope> {
     return this.http.get<UiExplorerExportEnvelope>(
       `/api/ui-explorer/jobs/${encodeURIComponent(jobId)}/export`

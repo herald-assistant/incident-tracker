@@ -120,7 +120,7 @@ Reuse'uje jedynie neutralny model
 `CopilotRenderedArtifact` i mapper tresci z `aiplatform`; nie uruchamia sesji,
 nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
 
-`features.uiexplorer.ai.readiness`, `report` i `copilot` posiadaja runtime
+`features.uiexplorer.ai.readiness`, `report`, `chat` i `copilot` posiadaja runtime
 konkretnego feature'a: readiness aktywnych sekcji, initial `AnalysisReport`,
 hidden repository/report scope, default-deny allowliste, goal-driven targeted
 GitLab fallback bez feature'owego limitu call count oraz zlozenie
@@ -139,18 +139,24 @@ preparation/execution z `aiplatform`, frontend tools z `agenttools` i
 platformowe report tools. Zapisany raport jest walidowany wobec deterministic
 oraz captured tool evidence i deterministycznie projektowany na
 `UiExplorerResultResponse`; finalna odpowiedz tekstowa nie jest kontraktem
-wyniku. `features.uiexplorer.job`
+wyniku. Follow-up `chat` wznawia te sama sesje z read-only raportem i
+repository scope przypietym do initial commita; jego allowlista nie zawiera
+report tools. `features.uiexplorer.job`
 uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,
 evidence, activity, usage, result i report oraz mapuje kontrolowane stany
 terminalne. `features.uiexplorer.job.localworkspace` posiada feature codec i
-sanitizer, mapuje terminalny snapshot na neutralny `LocalAnalysisRunRecord` i
-zapisuje go przez `LocalAnalysisRunStore`. Shared History API oraz
+sanitizer, prywatny continuation snapshot oraz history chat handler, mapuje
+terminalny snapshot na neutralny `LocalAnalysisRunRecord` i zapisuje go przez
+`LocalAnalysisRunStore`. Neutralny `LocalAnalysisRunOperationGuard` chroni
+caly turn i delete. Shared History API oraz
 `localworkspace` nie importuja UI Explorer. Platforma, tools i integracje nie
 importuja tych pakietow. `features.uiexplorer.job.export` posiada odrebny
 portable contract i odczytuje feature-owned local envelope tylko jako fallback
 po restarcie. `features.uiexplorer.job.importing` waliduje i sanitizuje
 niezaufany portable payload, po czym zapisuje nowy read-only run przez port
-persistence feature'a; nie importuje shared `api.analysisruns`.
+persistence feature'a; nie importuje shared `api.analysisruns`. Wspolne
+`shared.ai.chat` posiada wylacznie neutralny stan wiadomosci i capture
+evidence/activity/feedback, uzywany także przez Incident i Flow.
 
 `frontendcatalog` posiada neutralne rozpoznanie zarejestrowanego frontendu z
 Operational Context, katalog widokow nad `integrations.gitlab.frontend` oraz

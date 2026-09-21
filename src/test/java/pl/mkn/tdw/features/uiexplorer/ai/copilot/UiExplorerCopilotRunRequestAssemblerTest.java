@@ -37,6 +37,21 @@ class UiExplorerCopilotRunRequestAssemblerTest {
             CopilotToolDescriptionContext.profile("ui-explorer");
 
     @Test
+    void shouldExposeOnlyReadOnlyResearchToolsForFollowUp() {
+        var policy = UiExplorerCopilotToolAccessPolicy.forFollowUp(registeredTools());
+
+        assertThat(policy.fallbackAvailable()).isTrue();
+        assertThat(policy.availableToolNames()).containsExactlyInAnyOrder(
+                GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
+                GitLabToolNames.READ_REPOSITORY_FILE,
+                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
+        );
+        assertThat(policy.availableToolNames()).noneMatch(CopilotReportToolNames::isReportTool);
+    }
+
+    @Test
     void shouldAssemblePartialCrmRunWithOnlyScopedFallbackToolsAndSkill() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);

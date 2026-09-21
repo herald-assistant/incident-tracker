@@ -39,6 +39,11 @@ describe('UxInspectorApiService', () => {
     service.getJob('job/crm').subscribe();
     expect(http.expectOne('/api/ux-inspector/jobs/job%2Fcrm').request.method).toBe('GET');
 
+    service.sendChatMessage('job/crm', 'Co jeszcze blokuje zapis?').subscribe();
+    const chat = http.expectOne('/api/ux-inspector/jobs/job%2Fcrm/chat/messages');
+    expect(chat.request.method).toBe('POST');
+    expect(chat.request.body).toEqual({ message: 'Co jeszcze blokuje zapis?' });
+
     service.exportJob('job/crm').subscribe();
     expect(http.expectOne('/api/ux-inspector/jobs/job%2Fcrm/export').request.method).toBe('GET');
 

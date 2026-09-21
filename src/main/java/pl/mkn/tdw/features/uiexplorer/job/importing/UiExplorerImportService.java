@@ -69,16 +69,24 @@ public class UiExplorerImportService {
         if (envelope == null || !UiExplorerExportEnvelope.SCHEMA.equals(envelope.schema())) {
             throw invalid("Unsupported UI Explorer export schema.");
         }
-        if (envelope.version() != UiExplorerExportEnvelope.VERSION) {
+        if (envelope.version() != UiExplorerExportEnvelope.VERSION
+                && envelope.version() != UiExplorerExportEnvelope.LEGACY_VERSION) {
             throw invalid("Unsupported UI Explorer export version.");
         }
         if (envelope.exportedAt() == null
                 || envelope.payload() == null
                 || !UiExplorerExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
-                || !UiExplorerExportEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())) {
+                || !supportedContract(envelope.version(), envelope.payload().resultContract())) {
             throw invalid("Unsupported UI Explorer result contract.");
         }
         validateJob(envelope.payload().job());
+    }
+
+    private boolean supportedContract(int version, String resultContract) {
+        return version == UiExplorerExportEnvelope.VERSION
+                && UiExplorerExportEnvelope.RESULT_CONTRACT.equals(resultContract)
+                || version == UiExplorerExportEnvelope.LEGACY_VERSION
+                && UiExplorerExportEnvelope.LEGACY_RESULT_CONTRACT.equals(resultContract);
     }
 
     private void validateJob(UiExplorerJobStateSnapshot job) {
@@ -140,7 +148,13 @@ public class UiExplorerImportService {
                 source.usage(),
                 source.sourceRevision(),
                 outputAvailability,
-                true
+                true,
+                source.chatMessages(),
+                new pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerChatAvailability(
+                        false,
+                        "UI_EXPLORER_IMPORTED_CHAT_READ_ONLY",
+                        "Imported UI Explorer chat is read-only."
+                )
         );
     }
 

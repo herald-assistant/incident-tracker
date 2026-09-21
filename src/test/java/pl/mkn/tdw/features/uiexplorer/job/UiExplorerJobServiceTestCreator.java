@@ -7,12 +7,15 @@ import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationEvidenceMapper;
+import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpChatService;
+import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpPromptService;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContextService;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunPersistence;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
@@ -56,7 +59,10 @@ final class UiExplorerJobServiceTestCreator {
                 analysisProvider,
                 taskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),
-                localRunPersistence
+                localRunPersistence,
+                mock(UiExplorerFollowUpChatService.class),
+                new UiExplorerFollowUpPromptService(new ObjectMapper()),
+                new LocalAnalysisRunOperationGuard()
         );
     }
 

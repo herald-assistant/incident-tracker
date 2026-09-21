@@ -9,6 +9,8 @@ import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
+import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
+import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobChatUnavailableException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,6 +46,8 @@ public final class UxInspectorJobState {
     private pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse result;
     private AnalysisReport report;
     private AnalysisAiUsage usage;
+    private String copilotSessionId;
+    private final List<AnalysisChatMessageState> chatMessages = new ArrayList<>();
 
     public UxInspectorJobState(String jobId, UxInspectorJobStartRequest request) {
         this.jobId = jobId;
@@ -116,6 +120,9 @@ public final class UxInspectorJobState {
 
     public synchronized void analysisCompleted(UxInspectorAiAnalysis analysis) {
         usage = analysis.usage();
+        if (analysis.sessionId() != null && !analysis.sessionId().isBlank()) {
+            copilotSessionId = analysis.sessionId().trim();
+        }
         if (analysis.status() == UxInspectorAiAnalysisStatus.COMPLETED || analysis.status() == UxInspectorAiAnalysisStatus.PARTIAL) {
             if (analysis.result() == null || analysis.report() == null) {
                 fail("UX_INSPECTOR_REPORT_UNAVAILABLE", "AI session finished without a valid report saved through report tools.");
@@ -153,7 +160,64 @@ public final class UxInspectorJobState {
                 new UxInspectorOutputAvailability(available ? "AVAILABLE" : "BLOCKED",
                         available ? "UX_INSPECTOR_OUTPUT_AVAILABLE" : errorCode != null ? errorCode : "UX_INSPECTOR_IN_PROGRESS",
                         available ? "Focused UX Inspector answer is available." : errorMessage != null ? errorMessage : "Analysis is still in progress.",
-                        available ? List.of() : pendingSteps()), available);
+                        available ? List.of() : pendingSteps()), available && !hasActiveAssistant(),
+                chatMessages.stream().map(AnalysisChatMessageState::snapshot).toList(), chatAvailability());
+    }
+
+    public synchronized String startChatMessage(String userMessageId, String assistantMessageId, String message) {
+        if ((status != UxInspectorJobStatus.COMPLETED && status != UxInspectorJobStatus.PARTIAL)
+                || report == null || result == null) {
+            throw new UxInspectorJobChatUnavailableException("UX_INSPECTOR_CHAT_NOT_READY",
+                    "Follow-up chat is available only after a completed UX Inspector report.");
+        }
+        if (copilotSessionId == null || copilotSessionId.isBlank()) {
+            throw new UxInspectorJobChatUnavailableException("UX_INSPECTOR_CHAT_SESSION_UNAVAILABLE",
+                    "The completed UX Inspector run does not have a resumable AI session.");
+        }
+        if (hasActiveAssistant()) {
+            throw new UxInspectorJobChatUnavailableException("UX_INSPECTOR_CHAT_IN_PROGRESS",
+                    "A follow-up response is already in progress for this UX Inspector run.");
+        }
+        var now = Instant.now();
+        chatMessages.add(AnalysisChatMessageState.completedUser(userMessageId, message, now));
+        chatMessages.add(AnalysisChatMessageState.inProgressAssistant(assistantMessageId, now));
+        updatedAt = now;
+        return copilotSessionId;
+    }
+
+    public synchronized void chatToolEvidence(String assistantId, AnalysisEvidenceSection section) {
+        assistantMessage(assistantId).addToolEvidence(section); updatedAt = Instant.now();
+    }
+    public synchronized void chatActivity(String assistantId, AnalysisAiActivityEvent event) {
+        assistantMessage(assistantId).addActivity(event); updatedAt = Instant.now();
+    }
+    public synchronized void chatCompleted(String assistantId, String content, String prompt,
+                                           AnalysisAiUsage valueUsage, String latestSessionId) {
+        if (latestSessionId != null && !latestSessionId.isBlank()) copilotSessionId = latestSessionId.trim();
+        assistantMessage(assistantId).complete(content, prompt, valueUsage); updatedAt = Instant.now();
+    }
+    public synchronized void chatFailed(String assistantId, String code, String message) {
+        assistantMessage(assistantId).fail(code, message); updatedAt = Instant.now();
+    }
+    public synchronized String copilotSessionId() { return copilotSessionId; }
+    public synchronized UxInspectorJobStartRequest initialRequest() { return request; }
+    public synchronized AnalysisReport currentReport() { return report; }
+
+    private boolean hasActiveAssistant() { return chatMessages.stream().anyMatch(AnalysisChatMessageState::activeAssistant); }
+    private AnalysisChatMessageState assistantMessage(String id) {
+        return chatMessages.stream().filter(value -> value.id().equals(id) && value.activeAssistant()).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown active assistant message: " + id));
+    }
+    private UxInspectorChatAvailability chatAvailability() {
+        if (hasActiveAssistant()) return new UxInspectorChatAvailability(false, "UX_INSPECTOR_CHAT_IN_PROGRESS",
+                "AI is preparing the current follow-up response.");
+        if ((status == UxInspectorJobStatus.COMPLETED || status == UxInspectorJobStatus.PARTIAL)
+                && report != null && result != null && copilotSessionId != null && !copilotSessionId.isBlank()) {
+            return new UxInspectorChatAvailability(true, "UX_INSPECTOR_CHAT_AVAILABLE",
+                    "Follow-up chat can continue the completed UX Inspector session.");
+        }
+        return new UxInspectorChatAvailability(false, "UX_INSPECTOR_CHAT_UNAVAILABLE",
+                "Follow-up chat requires a completed report and a resumable AI session.");
     }
 
     private void terminate(UxInspectorJobStatus terminalStatus, String code, String message, String stepStatus) {

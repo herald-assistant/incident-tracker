@@ -10,11 +10,14 @@ import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobRequestSnapshot;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStatus;
+import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerChatAvailability;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerOutputAvailability;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerOutputAvailabilityStatus;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
+import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
+import pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobChatUnavailableException;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -67,6 +70,8 @@ public final class UiExplorerJobState {
     private AnalysisAiUsage usage;
     private UiExplorerSourceRevision sourceRevision;
     private String preparedPrompt;
+    private String copilotSessionId;
+    private final List<AnalysisChatMessageState> chatMessages = new ArrayList<>();
 
     public UiExplorerJobState(String jobId, UiExplorerJobStartRequest request) {
         this.jobId = jobId;
@@ -223,6 +228,9 @@ public final class UiExplorerJobState {
             return;
         }
         usage = analysis.usage();
+        if (analysis.sessionId() != null && !analysis.sessionId().isBlank()) {
+            copilotSessionId = analysis.sessionId().trim();
+        }
         switch (analysis.status()) {
             case COMPLETED -> completeWithOutput(
                     UiExplorerJobStatus.COMPLETED,
@@ -295,8 +303,82 @@ public final class UiExplorerJobState {
                 usage,
                 sourceRevision,
                 outputAvailability,
-                outputAvailability.status() == UiExplorerOutputAvailabilityStatus.AVAILABLE
+                outputAvailability.status() == UiExplorerOutputAvailabilityStatus.AVAILABLE && !hasActiveAssistant(),
+                chatMessages.stream().map(AnalysisChatMessageState::snapshot).toList(),
+                chatAvailability()
         );
+    }
+
+    public synchronized String startChatMessage(String userMessageId, String assistantMessageId, String message) {
+        if ((status != UiExplorerJobStatus.COMPLETED && status != UiExplorerJobStatus.PARTIAL)
+                || report == null || result == null) {
+            throw new UiExplorerJobChatUnavailableException("UI_EXPLORER_CHAT_NOT_READY",
+                    "Follow-up chat is available only after a completed UI Explorer report.");
+        }
+        if (copilotSessionId == null || copilotSessionId.isBlank()) {
+            throw new UiExplorerJobChatUnavailableException("UI_EXPLORER_CHAT_SESSION_UNAVAILABLE",
+                    "The completed UI Explorer run does not have a resumable AI session.");
+        }
+        if (hasActiveAssistant()) {
+            throw new UiExplorerJobChatUnavailableException("UI_EXPLORER_CHAT_IN_PROGRESS",
+                    "A follow-up response is already in progress for this UI Explorer run.");
+        }
+        var now = Instant.now();
+        chatMessages.add(AnalysisChatMessageState.completedUser(userMessageId, message, now));
+        chatMessages.add(AnalysisChatMessageState.inProgressAssistant(assistantMessageId, now));
+        updatedAt = now;
+        return copilotSessionId;
+    }
+
+    public synchronized void markChatToolEvidenceUpdated(String assistantMessageId, AnalysisEvidenceSection section) {
+        assistantMessage(assistantMessageId).addToolEvidence(section);
+        updatedAt = Instant.now();
+    }
+
+    public synchronized void markChatAiActivity(String assistantMessageId, AnalysisAiActivityEvent event) {
+        assistantMessage(assistantMessageId).addActivity(event);
+        updatedAt = Instant.now();
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId, String content, String prompt,
+            AnalysisAiUsage chatUsage, String latestSessionId
+    ) {
+        if (latestSessionId != null && !latestSessionId.isBlank()) copilotSessionId = latestSessionId.trim();
+        assistantMessage(assistantMessageId).complete(content, prompt, chatUsage);
+        updatedAt = Instant.now();
+    }
+
+    public synchronized void markChatFailed(String assistantMessageId, String code, String message) {
+        assistantMessage(assistantMessageId).fail(code, message);
+        updatedAt = Instant.now();
+    }
+
+    public synchronized String copilotSessionId() { return copilotSessionId; }
+    public synchronized UiExplorerJobStartRequest initialRequest() { return request; }
+    public synchronized AnalysisReport currentReport() { return report; }
+
+    private boolean hasActiveAssistant() {
+        return chatMessages.stream().anyMatch(AnalysisChatMessageState::activeAssistant);
+    }
+
+    private AnalysisChatMessageState assistantMessage(String id) {
+        return chatMessages.stream().filter(message -> message.id().equals(id) && message.activeAssistant())
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown active assistant message: " + id));
+    }
+
+    private UiExplorerChatAvailability chatAvailability() {
+        if (hasActiveAssistant()) {
+            return new UiExplorerChatAvailability(false, "UI_EXPLORER_CHAT_IN_PROGRESS",
+                    "AI is preparing the current follow-up response.");
+        }
+        if ((status == UiExplorerJobStatus.COMPLETED || status == UiExplorerJobStatus.PARTIAL)
+                && result != null && report != null && copilotSessionId != null && !copilotSessionId.isBlank()) {
+            return new UiExplorerChatAvailability(true, "UI_EXPLORER_CHAT_AVAILABLE",
+                    "Follow-up chat can continue the completed UI Explorer session.");
+        }
+        return new UiExplorerChatAvailability(false, "UI_EXPLORER_CHAT_UNAVAILABLE",
+                "Follow-up chat requires a completed report and a resumable AI session.");
     }
 
     private void completeWithOutput(

@@ -19,7 +19,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
-import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
@@ -56,7 +56,7 @@ public final class FlowExplorerJobState {
     private final List<AnalysisEvidenceSection> toolEvidenceSections;
     private final List<AnalysisAiActivityEvent> aiActivityEvents;
     private final List<AnalysisAiToolFeedback> toolFeedback;
-    private final List<ChatMessageState> chatMessages;
+    private final List<AnalysisChatMessageState> chatMessages;
 
     private String status;
     private String currentStepCode;
@@ -289,17 +289,8 @@ public final class FlowExplorerJobState {
         }
 
         var now = Instant.now();
-        chatMessages.add(ChatMessageState.completed(
-                userMessageId,
-                FlowExplorerChatMessageRole.USER,
-                message,
-                now
-        ));
-        chatMessages.add(ChatMessageState.inProgress(
-                assistantMessageId,
-                FlowExplorerChatMessageRole.ASSISTANT,
-                now
-        ));
+        chatMessages.add(AnalysisChatMessageState.completedUser(userMessageId, message, now));
+        chatMessages.add(AnalysisChatMessageState.inProgressAssistant(assistantMessageId, now));
         touch();
 
         return new FlowExplorerFollowUpChatRequest(
@@ -316,7 +307,7 @@ public final class FlowExplorerJobState {
             return;
         }
 
-        assistantMessage(assistantMessageId).markToolEvidenceUpdated(section);
+        assistantMessage(assistantMessageId).addToolEvidence(section);
         touch();
     }
 
@@ -325,7 +316,7 @@ public final class FlowExplorerJobState {
             return;
         }
 
-        assistantMessage(assistantMessageId).markAiActivity(event);
+        assistantMessage(assistantMessageId).addActivity(event);
         touch();
     }
 
@@ -339,13 +330,23 @@ public final class FlowExplorerJobState {
             String prompt,
             String copilotSessionId
     ) {
+        markChatCompleted(assistantMessageId, content, prompt, copilotSessionId, null);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId,
+            String content,
+            String prompt,
+            String copilotSessionId,
+            AnalysisAiUsage usage
+    ) {
         rememberCopilotSession(copilotSessionId);
-        assistantMessage(assistantMessageId).markCompleted(content, prompt);
+        assistantMessage(assistantMessageId).complete(content, prompt, usage);
         touch();
     }
 
     public synchronized void markChatFailed(String assistantMessageId, String code, String message) {
-        assistantMessage(assistantMessageId).markFailed(code, message);
+        assistantMessage(assistantMessageId).fail(code, message);
         touch();
     }
 
@@ -376,7 +377,7 @@ public final class FlowExplorerJobState {
                 List.copyOf(toolEvidenceSections),
                 List.copyOf(aiActivityEvents),
                 List.copyOf(toolFeedback),
-                chatMessages.stream().map(ChatMessageState::snapshot).toList(),
+                chatMessages.stream().map(AnalysisChatMessageState::snapshot).toList(),
                 preparedPrompt,
                 result,
                 report
@@ -385,6 +386,10 @@ public final class FlowExplorerJobState {
 
     public AnalysisAiAuthRef authRefForChat() {
         return authRef;
+    }
+
+    public synchronized String copilotSessionId() {
+        return copilotSessionId;
     }
 
     private FlowExplorerResultResponse resultFromAi(
@@ -719,15 +724,13 @@ public final class FlowExplorerJobState {
     }
 
     private boolean hasActiveAssistantMessage() {
-        return chatMessages.stream()
-                .anyMatch(message -> message.role == FlowExplorerChatMessageRole.ASSISTANT
-                        && message.status == FlowExplorerChatMessageStatus.IN_PROGRESS);
+        return chatMessages.stream().anyMatch(AnalysisChatMessageState::activeAssistant);
     }
 
-    private ChatMessageState assistantMessage(String assistantMessageId) {
+    private AnalysisChatMessageState assistantMessage(String assistantMessageId) {
         return chatMessages.stream()
-                .filter(message -> message.id.equals(assistantMessageId)
-                        && message.role == FlowExplorerChatMessageRole.ASSISTANT)
+                .filter(message -> message.id().equals(assistantMessageId)
+                        && AnalysisChatMessageState.ASSISTANT.equals(message.role()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown Flow Explorer assistant chat message: "
                         + assistantMessageId));
@@ -740,117 +743,4 @@ public final class FlowExplorerJobState {
                 && java.util.Objects.equals(left.category(), right.category());
     }
 
-    private static final class ChatMessageState {
-
-        private final String id;
-        private final FlowExplorerChatMessageRole role;
-        private final Instant createdAt;
-        private final List<AnalysisEvidenceSection> toolEvidenceSections;
-        private final List<AnalysisAiActivityEvent> aiActivityEvents;
-        private final List<AnalysisAiToolFeedback> toolFeedback;
-        private FlowExplorerChatMessageStatus status;
-        private String content;
-        private String errorCode;
-        private String errorMessage;
-        private String prompt;
-        private Instant updatedAt;
-        private Instant completedAt;
-
-        private ChatMessageState(
-                String id,
-                FlowExplorerChatMessageRole role,
-                FlowExplorerChatMessageStatus status,
-                String content,
-                Instant createdAt
-        ) {
-            this.id = id;
-            this.role = role;
-            this.status = status;
-            this.content = content;
-            this.createdAt = createdAt;
-            this.updatedAt = createdAt;
-            this.completedAt = status == FlowExplorerChatMessageStatus.COMPLETED ? createdAt : null;
-            this.toolEvidenceSections = new ArrayList<>();
-            this.aiActivityEvents = new ArrayList<>();
-            this.toolFeedback = new ArrayList<>();
-        }
-
-        private static ChatMessageState completed(
-                String id,
-                FlowExplorerChatMessageRole role,
-                String content,
-                Instant createdAt
-        ) {
-            return new ChatMessageState(id, role, FlowExplorerChatMessageStatus.COMPLETED, content, createdAt);
-        }
-
-        private static ChatMessageState inProgress(
-                String id,
-                FlowExplorerChatMessageRole role,
-                Instant createdAt
-        ) {
-            return new ChatMessageState(id, role, FlowExplorerChatMessageStatus.IN_PROGRESS, "", createdAt);
-        }
-
-        private void markToolEvidenceUpdated(AnalysisEvidenceSection section) {
-            if (appendToolFeedback(toolFeedback, section)) {
-                updatedAt = Instant.now();
-                return;
-            }
-
-            upsertSection(toolEvidenceSections, section);
-            updatedAt = Instant.now();
-        }
-
-        private void markAiActivity(AnalysisAiActivityEvent event) {
-            aiActivityEvents.add(event);
-            updatedAt = Instant.now();
-        }
-
-        private void markCompleted(String content, String prompt) {
-            this.status = FlowExplorerChatMessageStatus.COMPLETED;
-            this.content = StringUtils.hasText(content) ? content.trim() : "";
-            this.prompt = StringUtils.hasText(prompt) ? prompt.trim() : null;
-            this.completedAt = Instant.now();
-            this.updatedAt = completedAt;
-        }
-
-        private void markFailed(String code, String message) {
-            this.status = FlowExplorerChatMessageStatus.FAILED;
-            this.errorCode = code;
-            this.errorMessage = message;
-            this.completedAt = Instant.now();
-            this.updatedAt = completedAt;
-        }
-
-        private AnalysisChatMessageResponse snapshot() {
-            return new AnalysisChatMessageResponse(
-                    id,
-                    role.name(),
-                    status.name(),
-                    content,
-                    errorCode,
-                    errorMessage,
-                    createdAt,
-                    updatedAt,
-                    completedAt,
-                    List.copyOf(toolEvidenceSections),
-                    List.copyOf(aiActivityEvents),
-                    List.copyOf(toolFeedback),
-                    prompt
-            );
-        }
-
-        private static void upsertSection(List<AnalysisEvidenceSection> sections, AnalysisEvidenceSection candidate) {
-            for (var index = 0; index < sections.size(); index++) {
-                var current = sections.get(index);
-                if (current.provider().equals(candidate.provider()) && current.category().equals(candidate.category())) {
-                    sections.set(index, candidate);
-                    return;
-                }
-            }
-
-            sections.add(candidate);
-        }
-    }
 }

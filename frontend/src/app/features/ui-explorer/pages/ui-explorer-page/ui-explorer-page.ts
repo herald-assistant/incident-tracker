@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { UiExplorerConfigurationComponent } from '../../components/ui-explorer-configuration/ui-explorer-configuration';
 import { UiExplorerResultComponent } from '../../components/ui-explorer-result/ui-explorer-result';
 import { UiExplorerJobStatus } from '../../models/ui-explorer.models';
@@ -15,6 +16,7 @@ import { readJsonFile } from '../../../../core/utils/json-file.utils';
   imports: [
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
+    AnalysisFollowUpChatComponent,
     UiExplorerConfigurationComponent,
     UiExplorerResultComponent
   ],
@@ -30,6 +32,12 @@ export class UiExplorerPageComponent implements OnInit {
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
   readonly aiCount = computed(() => this.facade.job()?.aiActivityEvents.length ?? 0);
   readonly feedbackCount = computed(() => this.facade.job()?.toolFeedback.length ?? 0);
+  readonly chatCount = computed(() => this.facade.chatMessages().length);
+  readonly chatActive = computed(() =>
+    this.facade.chatMessages().some(
+      (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'
+    )
+  );
   readonly screenLabel = computed(
     () =>
       this.facade.job()?.result?.screen.label ??
@@ -64,6 +72,13 @@ export class UiExplorerPageComponent implements OnInit {
     this.facade.setPortabilityError('');
     fileInput.value = '';
     fileInput.click();
+  }
+
+  connectChatAuth(): void {
+    const url = this.facade.chatAuthStartUrl();
+    if (url) {
+      window.location.assign(url);
+    }
   }
 
   async importResult(event: Event): Promise<void> {

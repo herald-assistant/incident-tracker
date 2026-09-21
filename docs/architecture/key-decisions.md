@@ -800,6 +800,11 @@ Decyzje:
   `flow-explorer-follow-up-chat`, zeby odpowiedz domyslnie byla Markdownem,
   nie initial JSON result contract, i zeby poglebianie przez tools oraz jezyk
   domenowy byly jawna czescia kontraktu rozmowy,
+- UI Explorer follow-up ma osobny prompt, durable instructions i skill
+  `ui-explorer-follow-up-chat`. Dostaje biezacy raport jako read-only kontekst,
+  odpowiada jezykiem funkcjonalnym dla nietechnicznego analityka i zachowuje
+  piec initial research tools na przypietym commicie. Report tools oraz hidden
+  report scope nie sa rejestrowane, wiec rozmowa nie zmienia raportu,
 - przy resume backend ponownie przekazuje aktualne tools, hidden context,
   hooks, permission handler, model i `reasoningEffort`; platforma podpina ten
   sam wspolny katalog skilli co dla nowej sesji,
@@ -812,6 +817,11 @@ Decyzje:
 - raw SQL pozostaje wylaczony domyslnie; chat preferuje typed DB tools,
 - tool evidence pobrane w follow-up jest przypisane do odpowiedzi chatu, a nie
   do deterministycznego pipeline evidence.
+- pojedynczy guard runu obejmuje live execution, history read-update-save i
+  delete, aby dwa wejscia nie uruchomily rownoleglych turnow,
+- UI Explorer zapisuje poza publiczna koperta minimalny prywatny continuation
+  snapshot; po restarcie history handler odtwarza scope i te sama sesje SDK,
+  a przerwany assistant `IN_PROGRESS` oznacza jako `FAILED` bez retry.
 
 Konsekwencje:
 
@@ -822,6 +832,8 @@ Konsekwencje:
   nowej sesji,
 - chat moze prosic AI o weryfikacje w repo, DB albo wygenerowanie raportu, ale
   model nie powinien wymyslac scope'u ani obchodzic blokady lokalnego workspace.
+- zwykly import UI Explorera zachowuje tekst rozmowy, ale nigdy session handle,
+  auth ani prywatny scope; dlatego pozostaje read-only także dla formatu v6.
 
 ## 21. Optymalizacje Copilota prowadzimy inkrementalnie
 
@@ -1159,4 +1171,4 @@ kanonicznej procedury, pinned scope, read-only tool policy ani kontraktu
 raportu. Opaque `targetRef` jest session-bound i jednorazowy.
 `NOT_FOUND` blokuje AI zamiast uruchamiac broad search; `AMBIGUOUS` pozostaje
 jawnym stanem. Pierwszy snapshot `QUEUED` musi zostac zapisany przed dispatch,
-a import akceptuje wylacznie `tdw.ux-inspector-export/v1` z capture v1.
+a import akceptuje `tdw.ux-inspector-export/v2` oraz legacy v1 z capture v1.

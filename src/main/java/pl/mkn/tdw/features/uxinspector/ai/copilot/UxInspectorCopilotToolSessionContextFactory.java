@@ -39,4 +39,17 @@ public class UxInspectorCopilotToolSessionContextFactory {
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.view().viewId());
         return new CopilotToolSessionContext(runId, "ux-inspector-" + runId, hidden);
     }
+
+    public CopilotToolSessionContext createFollowUp(
+            String runReference,
+            String copilotSessionId,
+            UxInspectorTargetContext context
+    ) {
+        var created = create(runReference, context);
+        return new CopilotToolSessionContext(
+                created.analysisRunId(),
+                StringUtils.hasText(copilotSessionId) ? copilotSessionId.trim() : created.copilotSessionId(),
+                created.hiddenContext()
+        );
+    }
 }

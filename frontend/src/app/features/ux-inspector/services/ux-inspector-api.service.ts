@@ -40,6 +40,13 @@ export class UxInspectorApiService {
     );
   }
 
+  sendChatMessage(jobId: string, message: string): Observable<UxInspectorJobStateSnapshot> {
+    return this.http.post<UxInspectorJobStateSnapshot>(
+      `/api/ux-inspector/jobs/${encodeURIComponent(jobId)}/chat/messages`,
+      { message }
+    );
+  }
+
   exportJob(jobId: string): Observable<UxInspectorExportEnvelope> {
     return this.http.get<UxInspectorExportEnvelope>(
       `/api/ux-inspector/jobs/${encodeURIComponent(jobId)}/export`

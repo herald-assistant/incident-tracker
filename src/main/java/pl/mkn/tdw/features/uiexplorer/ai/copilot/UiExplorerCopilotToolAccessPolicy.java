@@ -44,6 +44,19 @@ public record UiExplorerCopilotToolAccessPolicy(
         return new UiExplorerCopilotToolAccessPolicy(enabled, names, fallbackRequired, available);
     }
 
+    public static UiExplorerCopilotToolAccessPolicy forFollowUp(List<ToolDefinition> registeredTools) {
+        var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
+                .filter(tool -> FALLBACK_TOOLS.contains(tool.name()))
+                .toList();
+        var names = enabled.stream().map(ToolDefinition::name).toList();
+        var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
+                && names.contains(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE)
+                && names.contains(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES)
+                && (names.contains(GitLabToolNames.READ_REPOSITORY_FILE)
+                || names.contains(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK));
+        return new UiExplorerCopilotToolAccessPolicy(enabled, names, true, available);
+    }
+
     public boolean reportToolsAvailable() {
         return availableToolNames.containsAll(CopilotReportToolNames.allToolNames());
     }

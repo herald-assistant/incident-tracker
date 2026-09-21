@@ -30,6 +30,9 @@ report, historie oraz import/export.
   sie przez to rozstrzygnietym targetem.
 - Jedynym wynikiem AI jest `AnalysisReport` z sekcja `answer`; tekst finalny
   Copilota nigdy nie jest fallbackiem.
+- Follow-up chat wznawia te sama sesje i zachowuje pinned repository scope,
+  ale nie udostepnia report mutation tools. Raport jest kontekstem read-only,
+  a odpowiedzi sa osobnymi wiadomosciami dla nietechnicznego analityka.
 - Nowe feature-specific tools nie przyjmuja group, project, branch, ref ani
   path. Istniejace neutralne GitLab file-read tools zachowuja swoje uniwersalne
   schema. Feature-owned policy wymusza wybrany project i branch, a ukryty

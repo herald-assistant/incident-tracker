@@ -54,10 +54,10 @@ public class UxInspectorImportService {
     }
     private void validateEnvelope(UxInspectorExportEnvelope value) {
         if (value == null || !UxInspectorExportEnvelope.SCHEMA.equals(value.schema())) throw invalid("Unsupported UX Inspector export schema.");
-        if (value.version() != UxInspectorExportEnvelope.VERSION) throw invalid("Unsupported UX Inspector export version.");
+        if (!value.supported()) throw invalid("Unsupported UX Inspector export version.");
         var payload = value.payload();
         if (value.exportedAt() == null || payload == null || !UxInspectorExportEnvelope.PAYLOAD_TYPE.equals(payload.type())
-                || !UxInspectorExportEnvelope.RESULT_CONTRACT.equals(payload.resultContract())) throw invalid("Unsupported UX Inspector result contract.");
+                ) throw invalid("Unsupported UX Inspector result contract.");
         var job = payload.job();
         if (job == null || job.request() == null || job.result() == null || job.report() == null
                 || job.completedAt() == null || job.sourceRevision() == null
@@ -66,7 +66,7 @@ public class UxInspectorImportService {
                 || job.report().sections().size() != 1 || !"answer".equals(job.report().sections().get(0).id())
                 || job.request().capture() == null
                 || job.request().capture().version() != UxInspectorCapture.VERSION) {
-            throw invalid("Only a completed UX Inspector export v1 result with capture v1 can be imported.");
+            throw invalid("Only a completed UX Inspector export v2 or legacy v1 result with capture v1 can be imported.");
         }
         try {
             if (!captureNormalizer.normalize(job.request().capture()).equals(job.request().capture())) {
