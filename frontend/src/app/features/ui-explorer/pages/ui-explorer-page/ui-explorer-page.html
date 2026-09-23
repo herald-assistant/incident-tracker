@@ -1,5 +1,5 @@
 <div class="page-shell ui-explorer-page">
-  <main class="ui-explorer-workspace" aria-labelledby="uiExplorerWorkspaceTitle">
+  <main class="ui-explorer-workspace" aria-label="UI Explorer">
     <input
       #importInput
       class="ui-explorer-file-input"
@@ -9,12 +9,10 @@
     />
 
     @if (facade.isReadOnlyResult() && facade.job(); as readOnlySnapshot) {
-      <section class="analysis-card ui-explorer-read-only" aria-labelledby="uiExplorerWorkspaceTitle">
+      <section class="analysis-card ui-explorer-read-only" aria-label="Parametry analizy">
         <header class="ui-explorer-read-only__header">
           <div>
-            <p class="section-eyebrow">UI Explorer · read-only</p>
-            <h2 id="uiExplorerWorkspaceTitle">{{ resultSourceLabel() }}</h2>
-            <p>Konfiguracja i raport zostały odtworzone bez wznawiania sesji AI.</p>
+            <p class="section-eyebrow">Parametry analizy · {{ resultSourceLabel() }}</p>
           </div>
         </header>
 
@@ -26,14 +24,14 @@
           <div><dt>Model / effort</dt><dd>{{ readOnlySnapshot.request.aiModel || 'Default' }} · {{ readOnlySnapshot.request.reasoningEffort || 'Default' }}</dd></div>
         </dl>
 
-        <div class="ui-explorer-read-only__sections">
-          <span class="field-label">Section modes</span>
+        <details class="ui-explorer-read-only__sections">
+          <summary>Section modes ({{ readOnlySnapshot.request.sectionModes.length }})</summary>
           <div>
             @for (section of readOnlySnapshot.request.sectionModes; track section.sectionId) {
               <span class="ui-explorer-read-only__section">{{ section.sectionId }} · {{ section.mode }}</span>
             }
           </div>
-        </div>
+        </details>
 
         @if (readOnlySnapshot.request.scenarioDescription) {
           <div class="ui-explorer-read-only__scenario">
@@ -56,57 +54,51 @@
     }
 
     @if (facade.job(); as snapshot) {
-      <section class="analysis-card ui-explorer-run" aria-live="polite">
-        <header class="ui-explorer-run__header">
-          <div>
-            <p class="section-eyebrow">{{ resultSourceLabel() }}</p>
-            <h2>{{ screenLabel() }}</h2>
-            <p>
-              {{ snapshot.request.systemLabel }} · {{ snapshot.request.branch }} ·
-              {{ snapshot.sourceRevision?.revision || snapshot.request.sourceRevision }}
-            </p>
-          </div>
-          <div class="ui-explorer-run__header-actions">
-            <span [class]="jobStatusClass(snapshot.status)">
-              {{ jobStatusLabel(snapshot.status) }}
-            </span>
-          </div>
-        </header>
+      @if (!snapshot.report || !facade.isJobTerminal()) {
+        <section class="analysis-card ui-explorer-run" aria-live="polite">
+          <header class="ui-explorer-run__header">
+            <div>
+              <p class="section-eyebrow">{{ resultSourceLabel() }}</p>
+              <h2>{{ screenLabel() }}</h2>
+              <p>
+                {{ snapshot.request.systemLabel }} · {{ snapshot.request.branch }} ·
+                {{ snapshot.sourceRevision?.revision || snapshot.request.sourceRevision }}
+              </p>
+            </div>
+            <div class="ui-explorer-run__header-actions">
+              <span [class]="jobStatusClass(snapshot.status)">
+                {{ jobStatusLabel(snapshot.status) }}
+              </span>
+            </div>
+          </header>
 
-        @if (facade.jobError()) {
-          <div class="ui-explorer-run__message ui-explorer-run__message--error" role="alert">
-            <span class="material-symbols-outlined" aria-hidden="true">error</span>
-            <span>{{ facade.jobError() }}</span>
-            @if (facade.canRetryPolling()) {
-              <button class="secondary-button secondary-button--compact" type="button" (click)="facade.retryPolling()">
-                Retry status
-              </button>
-            }
-          </div>
-        }
-
-        @if (!facade.isJobTerminal()) {
-          <div class="ui-explorer-run__body">
-            <span class="ui-explorer-run__spinner" aria-hidden="true"></span>
-            <h3>{{ snapshot.currentStepLabel || 'Preparing screen analysis' }}</h3>
-            <p>Postęp, tok pracy AI, evidence i usage są aktualizowane automatycznie.</p>
-          </div>
-        } @else if (!snapshot.report) {
-          <div class="ui-explorer-run__body ui-explorer-run__body--terminal">
-            <span class="material-symbols-outlined" aria-hidden="true">
-              {{ snapshot.status === 'PARTIAL' ? 'warning' : snapshot.status === 'COMPLETED' ? 'report_off' : 'error' }}
-            </span>
-            <h3>{{ terminalTitle(snapshot.status) }}</h3>
-            <p>
-              @if (snapshot.errorMessage) {
-                {{ snapshot.errorMessage }}
-              } @else {
-                {{ snapshot.outputAvailability.message || 'Raport nie jest dostępny dla tego przebiegu.' }}
+          @if (facade.jobError()) {
+            <div class="ui-explorer-run__message ui-explorer-run__message--error" role="alert">
+              <span class="material-symbols-outlined" aria-hidden="true">error</span>
+              <span>{{ facade.jobError() }}</span>
+              @if (facade.canRetryPolling()) {
+                <button class="secondary-button secondary-button--compact" type="button" (click)="facade.retryPolling()">
+                  Retry status
+                </button>
               }
-            </p>
-          </div>
-        }
-      </section>
+            </div>
+          }
+
+          @if (!facade.isJobTerminal()) {
+            <app-analysis-run-state
+              [title]="snapshot.currentStepLabel || 'Przygotowanie analizy'"
+              description="Postęp, praca AI i użyte narzędzia są aktualizowane automatycznie."
+            />
+          } @else if (!snapshot.report) {
+            <app-analysis-run-state
+              [pending]="false"
+              [icon]="snapshot.status === 'PARTIAL' ? 'warning' : snapshot.status === 'COMPLETED' ? 'report_off' : 'error'"
+              [title]="terminalTitle(snapshot.status)"
+              [description]="snapshot.errorMessage || snapshot.outputAvailability.message || 'Raport nie jest dostępny dla tego przebiegu.'"
+            />
+          }
+        </section>
+      }
 
       @if (snapshot.report && (snapshot.status === 'COMPLETED' || snapshot.status === 'PARTIAL')) {
         <app-ui-explorer-result

@@ -38,7 +38,7 @@ describe('UxInspectorPageComponent', () => {
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
-    const main = page.querySelector<HTMLElement>('main[aria-labelledby="uxInspectorTitle"]');
+    const main = page.querySelector<HTMLElement>('main[aria-label="UX Inspector"]');
     expect(main).not.toBeNull();
     expect(page.querySelector('#uxInspectorTitle')?.textContent).toContain('Zapytaj o wskazany element');
     expect(page.textContent).toContain('Zapisz kontakt');

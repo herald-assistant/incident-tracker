@@ -35,14 +35,6 @@ export class UxInspectorResultComponent {
   readonly resultMeta = computed(() =>
     mergeReportMeta(this.report().meta, this.answerSection()?.meta)
   );
-
-
-  protected statusClass(): string {
-    return this.status() === 'PARTIAL'
-      ? 'status-pill status-pill--queued'
-      : 'status-pill status-pill--done';
-  }
-
 }
 
 function mergeReportMeta(

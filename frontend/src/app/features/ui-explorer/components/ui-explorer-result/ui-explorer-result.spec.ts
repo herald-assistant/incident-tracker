@@ -38,7 +38,10 @@ describe('UiExplorerResultComponent', () => {
       .toBe('CrmContactCreateComponent');
     expect(compiled.textContent).not.toContain('main @ crm-revision-a1b2c3');
     expect(compiled.querySelectorAll('.ui-explorer-result__sections > section')).toHaveLength(8);
-    expect(compiled.textContent).toContain('Raport jest częściowy');
+    expect(compiled.querySelector('.analysis-result-header__partial-notice')?.getAttribute('aria-label'))
+      .toContain('Raport jest częściowy');
+    expect(compiled.textContent).not.toContain('wynik częściowy');
+    expect(compiled.querySelector('.ui-explorer-result__notice')).toBeNull();
     expect(compiled.textContent).toContain('Dynamiczna walidacja kontaktu CRM kontroluje zapis.');
     expect(compiled.textContent).not.toContain('Zależności przekrojowe');
     expect(compiled.textContent).not.toContain('Powiązane warunki i zależności');

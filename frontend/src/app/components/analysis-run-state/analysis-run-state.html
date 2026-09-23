@@ -1,0 +1,11 @@
+<div class="analysis-run-state" [class.analysis-run-state--terminal]="!pending()" [attr.role]="pending() ? 'status' : 'alert'">
+  @if (pending()) {
+    <span class="analysis-run-state__spinner" aria-hidden="true"></span>
+  } @else {
+    <span class="analysis-run-state__icon material-symbols-outlined" aria-hidden="true">{{ icon() }}</span>
+  }
+  <div class="analysis-run-state__text">
+    <h3>{{ title() }}</h3>
+    @if (description()) { <p>{{ description() }}</p> }
+  </div>
+</div>

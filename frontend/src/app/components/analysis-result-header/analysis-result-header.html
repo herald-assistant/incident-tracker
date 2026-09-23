@@ -20,6 +20,17 @@
       </div>
     }
 
+    @if (partialNotice()) {
+      <span
+        class="analysis-result-header__partial-notice material-symbols-outlined"
+        role="img"
+        tabindex="0"
+        [attr.aria-label]="partialNotice()"
+        [matTooltip]="partialNotice()"
+        matTooltipPosition="below"
+      >info</span>
+    }
+
     @if (shareDocument(); as document) {
       <app-analysis-share-menu [document]="document" />
     }

@@ -10,7 +10,12 @@
 .ux-inspector-composer,
 .ux-inspector-run {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+}
+
+.ux-inspector-run--with-report {
+  gap: 10px;
+  padding: 16px 18px;
 }
 
 .ux-inspector-file-input {
@@ -436,41 +441,6 @@
 
 .ux-inspector-actions button {
   min-height: 44px;
-}
-
-.ux-inspector-run__progress {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  min-height: 170px;
-  padding: 18px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--surface-soft);
-  text-align: center;
-}
-
-.ux-inspector-run__progress h3,
-.ux-inspector-run__progress p {
-  margin: 0;
-}
-
-.ux-inspector-run__progress p {
-  color: var(--text-muted);
-}
-
-.ux-inspector-run__progress--terminal > .material-symbols-outlined {
-  color: var(--color-danger);
-  font-size: 36px;
-}
-
-.ux-inspector-spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid var(--primary-soft);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: uxiSpin 800ms linear infinite;
 }
 
 .ux-inspector-run__context {

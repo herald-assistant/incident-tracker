@@ -195,7 +195,9 @@ describe('UiExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Co robi ten widok');
     expect(compiled.textContent).toContain('Formularz kontaktu CRM zachowuje reguły segmentu.');
     expect(compiled.querySelector('app-ui-explorer-result')).not.toBeNull();
-    expect(compiled.textContent).toContain('CRM Agent Portal · main · crm-revision-a1b2c3');
+    expect(compiled.querySelector('app-ui-explorer-configuration details')?.hasAttribute('open')).toBe(false);
+    expect(compiled.querySelector('#uiExplorerWorkspaceTitle')).toBeNull();
+    expect(compiled.querySelector('.ui-explorer-run')).toBeNull();
     expect(compiled.querySelector('app-analysis-feature-aside')).not.toBeNull();
     expect(compiled.querySelectorAll('app-analysis-steps-panel')).toHaveLength(3);
     const asidePanels = fixture.debugElement.queryAll(By.directive(AnalysisStepsPanelComponent));
@@ -271,8 +273,9 @@ describe('UiExplorerPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Analysis History · CRM contact creation documentation');
-    expect(compiled.textContent).toContain('UI Explorer · read-only');
-    expect(compiled.textContent).toContain('Konfiguracja i raport zostały odtworzone bez wznawiania sesji AI.');
+    expect(compiled.textContent).toContain('Parametry analizy');
+    expect(compiled.querySelector('.ui-explorer-read-only h2')).toBeNull();
+    expect(compiled.querySelector('.ui-explorer-run')).toBeNull();
     expect(compiled.querySelector('app-ui-explorer-configuration')).toBeNull();
     expect(compiled.querySelector('app-ui-explorer-result')).not.toBeNull();
     expect(compiled.textContent).not.toContain('Import another');

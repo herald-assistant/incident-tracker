@@ -1,14 +1,20 @@
-<details class="ui-explorer-collapsible" open>
+<details class="ui-explorer-collapsible" [open]="!facade.job()?.report">
   <summary class="section-heading ui-explorer-composer__heading ui-explorer-collapsible__summary">
     <div>
-      <p class="section-eyebrow">UI Explorer</p>
-      <h2 id="uiExplorerWorkspaceTitle">Screen documentation workspace</h2>
-      <p class="field-hint">
-        Wybierz frontend, widok i zakres dokumentacji, a platforma przygotuje opis funkcjonalny
-        albo techniczny oparty na kodzie źródłowym.
-      </p>
+      @if (facade.job()?.report) {
+        <p class="section-eyebrow">Parametry analizy</p>
+      } @else {
+        <p class="section-eyebrow">UI Explorer</p>
+        <h2 id="uiExplorerWorkspaceTitle">Screen documentation workspace</h2>
+        <p class="field-hint">
+          Wybierz frontend, widok i zakres dokumentacji, a platforma przygotuje opis funkcjonalny
+          albo techniczny oparty na kodzie źródłowym.
+        </p>
+      }
     </div>
-    <span [class]="statusPillClass()">{{ statusLabel() }}</span>
+    @if (!facade.job()?.report) {
+      <span [class]="statusPillClass()">{{ statusLabel() }}</span>
+    }
   </summary>
 
   <div class="ui-explorer-collapsible__body">

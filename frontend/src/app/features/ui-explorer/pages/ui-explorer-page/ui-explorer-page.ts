@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisRunStateComponent } from '../../../../components/analysis-run-state/analysis-run-state';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { UiExplorerConfigurationComponent } from '../../components/ui-explorer-configuration/ui-explorer-configuration';
 import { UiExplorerResultComponent } from '../../components/ui-explorer-result/ui-explorer-result';
@@ -16,6 +17,7 @@ import { readJsonFile } from '../../../../core/utils/json-file.utils';
   imports: [
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
+    AnalysisRunStateComponent,
     AnalysisFollowUpChatComponent,
     UiExplorerConfigurationComponent,
     UiExplorerResultComponent

@@ -6,12 +6,20 @@
 
 .analysis-result-header {
   align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.analysis-result-header > div:first-child {
+  flex: 1 1 320px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .analysis-result-header__actions {
   display: flex;
   flex: 0 0 auto;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
 }
@@ -19,10 +27,8 @@
 .analysis-result-header__confidence {
   display: flex;
   flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  text-align: right;
+  align-items: center;
+  gap: 6px;
 }
 
 .analysis-result-header__confidence .result-card-label {
@@ -35,24 +41,21 @@
   line-height: 1.2;
 }
 
-.analysis-result-header__copy-button,
-.analysis-result-header__download-button {
-  min-height: 36px;
+.analysis-result-header__partial-notice {
+  color: var(--warning-text, var(--text-muted));
+  font-size: 20px;
+  cursor: help;
 }
 
-.analysis-result-header__copy-button .material-symbols-outlined,
-.analysis-result-header__download-button .material-symbols-outlined {
-  font-size: 18px;
+.analysis-result-header__partial-notice:focus-visible {
+  border-radius: 50%;
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 @media (max-width: 860px) {
   .analysis-result-header__actions {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .analysis-result-header__confidence {
-    align-items: flex-start;
-    text-align: left;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }

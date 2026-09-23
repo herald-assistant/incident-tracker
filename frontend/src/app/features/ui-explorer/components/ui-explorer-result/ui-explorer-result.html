@@ -3,20 +3,9 @@
     [title]="report().header || 'UI Explorer result'"
     [context]="report().subHeader"
     [confidence]="report().meta.confidence"
+    [partialNotice]="status() === 'PARTIAL' ? 'Raport jest częściowy. Zachowano potwierdzone sekcje, a braki i ograniczenia są wskazane przy wyniku.' : ''"
     [shareDocument]="shareDocument()"
   ></app-analysis-result-header>
-
-  <div class="ui-explorer-result__status-line">
-    <span [class]="statusClass()">{{ statusLabel() }}</span>
-  </div>
-
-  @if (status() === 'PARTIAL') {
-    <div class="ui-explorer-result__notice" role="status">
-      <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-      <p>Raport jest częściowy. Zachowano potwierdzone sekcje, a braki i ograniczenia są wskazane przy wyniku.</p>
-    </div>
-  }
-
 
   @if (hasText(report().markdownSummary)) {
     <section class="ui-explorer-result-block" aria-label="Podsumowanie funkcjonalne">

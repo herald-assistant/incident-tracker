@@ -239,6 +239,16 @@ sekcje, confidence, references, visibility limits oraz open questions. Mozna
 go skopiowac lub pobrac jako Markdown. UI rozroznia wynik live, history i
 imported; import jest wyraznie read-only.
 
+W trakcie runu ekran pokazuje kompaktowy wspolny stan oczekiwania. Po
+zakonczeniu z raportem konfiguracja jest domyslnie zwinieta, a osobna karta
+runu znika; glowny tytul i confidence sa w naglowku wyniku. Przy `PARTIAL`
+ikona obok confidence pokazuje podpowiedz o ograniczeniach zamiast osobnego
+statusu i banera. Przy statusie terminalnym bez raportu wspolny stan runu
+pokazuje przyczyne braku wyniku.
+
+Wynik z historii lub importu pokazuje zwarty wiersz parametrow wejsciowych;
+tryby sekcji mozna rozwinac na zadanie.
+
 Glowna identyfikacja widoku uzywa `routePattern`. Nazwa komponentu pozostaje
 pomocniczym metadata, a branch i commit opisuja wersje zrodla. Raw source i
 raw JSON nie sa glowna trescia raportu.

@@ -5,32 +5,14 @@
 
 .ux-inspector-result {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  padding: 20px;
+  padding: 18px;
   border-radius: var(--radius-xl);
 }
 
-.ux-inspector-result__status-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ux-inspector-result__notice {
-  display: flex;
-  gap: 9px;
-  align-items: flex-start;
-  padding: 10px 12px;
-  border: 1px solid var(--warning-border, var(--border-strong));
-  border-radius: var(--radius-md);
-  background: var(--warning-soft, var(--surface-soft));
-  color: var(--warning-text, var(--text-main));
-}
-
-.ux-inspector-result__notice p {
-  margin: 0;
-  line-height: 1.45;
+.ux-inspector-result > app-analysis-result-header {
+  padding-right: 24px;
 }
 
 .ux-inspector-result__summary,

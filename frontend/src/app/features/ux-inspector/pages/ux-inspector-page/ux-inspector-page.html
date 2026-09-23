@@ -1,5 +1,5 @@
 <div class="page-shell ux-inspector-page">
-  <main class="ux-inspector-workspace" aria-labelledby="uxInspectorTitle">
+  <main class="ux-inspector-workspace" aria-label="UX Inspector">
     <input
       #importInput
       class="ux-inspector-file-input"
@@ -344,15 +344,19 @@
     }
 
     @if (facade.job(); as snapshot) {
-      <section class="analysis-card ux-inspector-run" aria-live="polite">
+      <section class="analysis-card ux-inspector-run" [class.ux-inspector-run--with-report]="!!snapshot.report" aria-live="polite">
         <header>
           <div>
-            <p class="section-eyebrow">{{ resultSourceLabel() }}</p>
-            <h2 [attr.id]="facade.isReadOnlyResult() ? 'uxInspectorTitle' : null">{{ snapshot.result?.targetLabel || targetLabel() }}</h2>
+            <p class="section-eyebrow">{{ snapshot.report ? 'Parametry analizy · ' + resultSourceLabel() : resultSourceLabel() }}</p>
+            @if (!snapshot.report) {
+              <h2>{{ snapshot.result?.targetLabel || targetLabel() }}</h2>
+            }
           </div>
-          <div class="ux-inspector-run__actions">
-            <span [class]="statusClass(snapshot.status)">{{ statusLabel(snapshot.status) }}</span>
-          </div>
+          @if (!snapshot.report) {
+            <div class="ux-inspector-run__actions">
+              <span [class]="statusClass(snapshot.status)">{{ statusLabel(snapshot.status) }}</span>
+            </div>
+          }
         </header>
         @if (facade.jobError()) {
           <div class="ux-inspector-message ux-inspector-message--error" role="alert">
@@ -361,9 +365,9 @@
           </div>
         }
         @if (!facade.isJobTerminal()) {
-          <div class="ux-inspector-run__progress"><span class="ux-inspector-spinner" aria-hidden="true"></span><h3>{{ snapshot.currentStepLabel || 'Przygotowanie analizy' }}</h3><p>Postęp, praca AI, tools i usage aktualizują się automatycznie.</p></div>
+          <app-analysis-run-state [title]="snapshot.currentStepLabel || 'Przygotowanie analizy'" description="Postęp, praca AI i użyte narzędzia są aktualizowane automatycznie." />
         } @else if (!snapshot.report) {
-          <div class="ux-inspector-run__progress ux-inspector-run__progress--terminal"><span class="material-symbols-outlined" aria-hidden="true">error</span><h3>Raport nie jest dostępny</h3><p>{{ snapshot.errorMessage || snapshot.outputAvailability.message }}</p></div>
+          <app-analysis-run-state [pending]="false" title="Raport nie jest dostępny" [description]="snapshot.errorMessage || snapshot.outputAvailability.message" />
         }
         <footer class="ux-inspector-run__context">
           <span><strong>Application:</strong> {{ snapshot.request.systemLabel }}</span>

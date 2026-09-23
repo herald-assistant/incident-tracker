@@ -21,7 +21,10 @@ describe('UxInspectorResultComponent', () => {
     const sectionContent = fixture.debugElement.query(By.directive(AnalysisReportSectionContentComponent));
 
     expect(compiled.textContent).toContain('Pole właściciela ustawia osobę odpowiedzialną za kontakt CRM.');
-    expect(compiled.textContent).toContain('Odpowiedź jest częściowa');
+    expect(compiled.querySelector('.analysis-result-header__partial-notice')?.getAttribute('aria-label'))
+      .toContain('Odpowiedź jest częściowa');
+    expect(compiled.textContent).not.toContain('wynik częściowy');
+    expect(compiled.querySelector('.ux-inspector-result__notice')).toBeNull();
     expect(compiled.textContent).not.toContain('Meta raportu');
     expect(compiled.querySelectorAll('app-analysis-report-meta')).toHaveLength(1);
     expect((sectionContent.componentInstance as AnalysisReportSectionContentComponent).metaAlign()).toBe('end');

@@ -36,16 +36,6 @@ export class UiExplorerResultComponent {
     buildReportShareDocument(this.report(), buildUiExplorerReportFileName(this.result()))
   );
 
-  protected statusClass(): string {
-    return this.status() === 'PARTIAL'
-      ? 'status-pill status-pill--queued'
-      : 'status-pill status-pill--done';
-  }
-
-  protected statusLabel(): string {
-    return this.status() === 'PARTIAL' ? 'wynik częściowy' : 'wynik kompletny';
-  }
-
   protected sectionMode(section: AnalysisReportSection): UiExplorerSectionMode | null {
     const sectionId = section.id as UiExplorerSectionId;
     return this.sectionModes().find((assignment) => assignment.sectionId === sectionId)?.mode ?? null;

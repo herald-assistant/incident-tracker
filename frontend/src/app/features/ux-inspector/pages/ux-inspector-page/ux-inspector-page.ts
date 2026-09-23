@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisRunStateComponent } from '../../../../components/analysis-run-state/analysis-run-state';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
@@ -21,6 +22,7 @@ type OpenMenu = 'system' | 'view' | 'model' | 'reasoning' | null;
   imports: [
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
+    AnalysisRunStateComponent,
     AnalysisFollowUpChatComponent,
     BrowserToolsSetupModalComponent,
     GitLabBranchSelectComponent,

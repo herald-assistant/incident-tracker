@@ -307,6 +307,11 @@ Ekran pokazuje:
 - scalone Visibility limits, Gaps i Warnings tylko raz, pod odpowiedzia i po
   prawej stronie jak w UI Explorerze; UX Inspector nie pokazuje References.
 
+Podczas runu ekran uzywa tego samego kompaktowego stanu oczekiwania co UI
+Explorer. Po zakonczeniu naglowek karty wejscia jest skrocony, a confidence
+i akcja share pozostaja w naglowku wyniku. Dla `PARTIAL` ikona obok confidence
+udostepnia podpowiedz o brakujacych dowodach bez osobnego statusu i banera.
+
 Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Export
 zapisuje envelope v2 z historia chatu. Import akceptuje v2 oraz legacy v1,
 waliduje jednosekcyjny raport, capture v1 i spojny source revision, a nastepnie
