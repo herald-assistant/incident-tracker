@@ -12,7 +12,6 @@ import { AiOptionsApiService } from '../../../core/services/ai-options-api.servi
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AppUiConfigService } from '../../../core/services/app-ui-config.service';
-import { downloadJsonFile } from '../../../core/utils/json-file.utils';
 import { appendOptimisticChatTurn } from '../../../core/utils/analysis-chat-optimistic.utils';
 import {
   EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
@@ -35,8 +34,6 @@ import {
 } from '../models/ui-explorer.models';
 import { UiExplorerApiService } from '../services/ui-explorer-api.service';
 import {
-  buildUiExplorerExportFileName,
-  isUiExplorerExportEnvelope,
   parseUiExplorerLocalRunEnvelope
 } from '../utils/ui-explorer-import-export.utils';
 
@@ -456,40 +453,6 @@ export class UiExplorerFacade {
         error: (error: HttpErrorResponse) =>
           this.portabilityError.set(
             readApiError(error, 'Nie udało się zaimportować wyniku UI Explorer.')
-          )
-      });
-  }
-
-  exportCurrentResult(): void {
-    const snapshot = this.job();
-    if (!snapshot?.exportAvailable || this.portabilityBusy()) {
-      return;
-    }
-
-    this.portabilityError.set('');
-    this.portabilityBusy.set(true);
-    this.api
-      .exportJob(snapshot.jobId)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.portabilityBusy.set(false))
-      )
-      .subscribe({
-        next: (envelope) => {
-          if (!isUiExplorerExportEnvelope(envelope)) {
-            this.portabilityError.set(
-              'Backend zwrócił eksport UI Explorer w nieobsługiwanym formacie.'
-            );
-            return;
-          }
-          downloadJsonFile(
-            buildUiExplorerExportFileName(snapshot, envelope.exportedAt),
-            envelope
-          );
-        },
-        error: (error: HttpErrorResponse) =>
-          this.portabilityError.set(
-            readApiError(error, 'Nie udało się wyeksportować wyniku UI Explorer.')
           )
       });
   }

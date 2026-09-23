@@ -289,12 +289,6 @@
           <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
           Import
         </button>
-        @if (canExport()) {
-          <button type="button" class="secondary-button" (click)="exportResult()">
-            <span class="material-symbols-outlined" aria-hidden="true">download</span>
-            Export
-          </button>
-        }
         <button
           type="button"
           class="primary-button"
@@ -350,9 +344,14 @@
             }
           </p>
         </div>
-        <span [attr.class]="statusClass(component.status)">
-          {{ statusLabel(component.status) }}
-        </span>
+        <div class="runtime-actions">
+          @if (shareDocument(); as document) {
+            <app-analysis-share-menu [document]="document" />
+          }
+          <span [attr.class]="statusClass(component.status)">
+            {{ statusLabel(component.status) }}
+          </span>
+        </div>
       </section>
 
       @if (component.status === 'FAILED') {

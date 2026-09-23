@@ -1,9 +1,12 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 import { hasMeaningfulValue } from '../../core/utils/analysis-display.utils';
+import { AnalysisShareDocument } from '../../core/utils/analysis-share.utils';
+import { AnalysisShareMenuComponent } from '../analysis-share-menu/analysis-share-menu';
 
 @Component({
   selector: 'app-analysis-result-header',
+  imports: [AnalysisShareMenuComponent],
   templateUrl: './analysis-result-header.html',
   styleUrl: './analysis-result-header.scss'
 })
@@ -11,13 +14,7 @@ export class AnalysisResultHeaderComponent {
   readonly title = input('Finalna analiza');
   readonly context = input('');
   readonly confidence = input('');
-  readonly copied = input(false);
-  readonly copyAriaLabel = input('Kopiuj wynik analizy');
-  readonly copiedAriaLabel = input('Skopiowano wynik analizy');
-  readonly downloadVisible = input(false);
-  readonly downloadAriaLabel = input('Pobierz wynik analizy jako Markdown');
-  readonly copyRequested = output<void>();
-  readonly downloadRequested = output<void>();
+  readonly shareDocument = input<AnalysisShareDocument | null>(null);
 
   protected readonly hasMeaningfulValue = hasMeaningfulValue;
 }

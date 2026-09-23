@@ -26,11 +26,6 @@
           <button type="button" class="secondary-button" (click)="triggerImport(changeVerificationImportFileInput)">
             <span class="material-symbols-outlined" aria-hidden="true">upload_file</span><span>Import</span>
           </button>
-          @if (canExportResult()) {
-            <button type="button" class="secondary-button" (click)="exportChangeVerificationResult()">
-              <span class="material-symbols-outlined" aria-hidden="true">download</span><span>Export</span>
-            </button>
-          }
           <button type="button" class="primary-button" (click)="expandComposer()">
             <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span><span>Nowa weryfikacja</span>
           </button>
@@ -91,11 +86,6 @@
           <button type="button" class="secondary-button" [disabled]="isSubmitting() || workflowIsRunning()" (click)="triggerImport(changeVerificationImportFileInput)">
             <span class="material-symbols-outlined" aria-hidden="true">upload_file</span><span>Import</span>
           </button>
-          @if (canExportResult()) {
-            <button type="button" class="secondary-button" (click)="exportChangeVerificationResult()">
-              <span class="material-symbols-outlined" aria-hidden="true">download</span><span>Export</span>
-            </button>
-          }
           <button type="button" class="primary-button" [disabled]="!canStartJob()" (click)="startJob()">
             <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span><span>{{ isSubmitting() ? 'Starting...' : 'Run Verification' }}</span>
           </button>
@@ -114,12 +104,8 @@
               title="Wynik weryfikacji"
               [context]="currentJob.issueKey || currentJob.issueUrl"
               confidence=""
-              [copied]="resultCopied()"
-              copyAriaLabel="Kopiuj wynik Change Verification"
-              copiedAriaLabel="Skopiowano wynik Change Verification"
-              (copyRequested)="copyResultMarkdown()"
+              [shareDocument]="shareDocument()"
             ></app-analysis-result-header>
-            @if (resultCopyError()) { <p class="change-verification-error">{{ resultCopyError() }}</p> }
             <app-change-verification-rule-ledger [ledger]="verificationResult.ruleLedger"></app-change-verification-rule-ledger>
           </article>
         </section>

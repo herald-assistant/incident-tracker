@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 import { AnalysisReport, AnalysisResultResponse } from '../../core/models/analysis.models';
 import { AnalysisFinalResultComponent } from './analysis-final-result';
+import { AnalysisShareMenuComponent } from '../analysis-share-menu/analysis-share-menu';
 
 describe('AnalysisFinalResultComponent', () => {
   const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -14,28 +16,16 @@ describe('AnalysisFinalResultComponent', () => {
     Reflect.deleteProperty(navigator, 'clipboard');
   });
 
-  it('should copy incident result as two markdown sections', async () => {
-    const writeText = vi.fn<(value: string) => Promise<void>>(() => Promise.resolve());
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText }
-    });
-
+  it('prepares substantive incident Markdown and separate meta', async () => {
     const fixture = await renderResult();
-    clickButtonContaining(fixture.nativeElement, 'Copy result');
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-    fixture.detectChanges();
-
-    const copiedMarkdown = writeText.mock.calls[0]?.[0] as string | undefined;
-    expect(writeText).toHaveBeenCalledTimes(1);
-    expect(copiedMarkdown).toContain('## Analiza funkcjonalna');
-    expect(copiedMarkdown).toContain('Proces biznesowy zatrzymuje się na walidacji.');
-    expect(copiedMarkdown).toContain('## Analiza techniczna');
-    expect(copiedMarkdown).toContain('Timeout powstaje w `CustomerClient`.');
-    expect(copiedMarkdown).not.toContain('Detected problem');
-    expect(copiedMarkdown).not.toContain('LOW_CONFIDENCE');
-    expect(copiedMarkdown).not.toContain('Brak logów aplikacyjnych.');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
+    const document = (fixture.debugElement.query(By.directive(AnalysisShareMenuComponent))
+      .componentInstance as AnalysisShareMenuComponent).document();
+    expect(document?.markdown).toContain('## Analiza funkcjonalna');
+    expect(document?.markdown).toContain('Proces biznesowy zatrzymuje się na walidacji.');
+    expect(document?.markdown).toContain('## Analiza techniczna');
+    expect(document?.markdown).toContain('Timeout powstaje w `CustomerClient`.');
+    expect(document?.markdown).not.toContain('Brak logów aplikacyjnych.');
+    expect(document?.markdownWithMeta).toContain('Brak logów aplikacyjnych.');
   });
 
   it('should render report sections in tabs and hide empty meta groups', async () => {

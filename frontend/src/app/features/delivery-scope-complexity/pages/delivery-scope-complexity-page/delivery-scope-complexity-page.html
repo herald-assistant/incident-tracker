@@ -41,16 +41,9 @@
             >
               <span class="material-symbols-outlined" aria-hidden="true">csv</span>
             </button>
-            <button
-              type="button"
-              class="icon-button"
-              aria-label="Eksportuj run"
-              matTooltip="Eksportuj run"
-              [disabled]="!canExport()"
-              (click)="exportRun()"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">download</span>
-            </button>
+            @if (shareDocument(); as document) {
+              <app-analysis-share-menu [document]="document" />
+            }
           }
         </div>
       </div>

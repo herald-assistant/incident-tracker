@@ -11,7 +11,6 @@ import {
 import { AiOptionsApiService } from '../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
-import { downloadJsonFile, formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import { appendOptimisticChatTurn } from '../../../core/utils/analysis-chat-optimistic.utils';
 import {
   EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
@@ -325,29 +324,6 @@ export class UxInspectorFacade {
       },
       error: (error: HttpErrorResponse) => this.portabilityError.set(
         readApiError(error, 'Nie udało się zaimportować wyniku UX Inspectora.')
-      )
-    });
-  }
-
-  exportCurrentResult(): void {
-    const snapshot = this.job();
-    if (!snapshot?.exportAvailable || this.portabilityBusy()) return;
-    this.portabilityBusy.set(true);
-    this.portabilityError.set('');
-    this.api.exportJob(snapshot.jobId).pipe(
-      takeUntilDestroyed(this.destroyRef),
-      finalize(() => this.portabilityBusy.set(false))
-    ).subscribe({
-      next: (envelope) => {
-        if (!isUxInspectorExport(envelope)) {
-          this.portabilityError.set('Backend zwrócił nieobsługiwany format eksportu UX Inspectora.');
-          return;
-        }
-        const target = sanitizeFileNamePart(snapshot.result?.targetLabel || snapshot.request.viewId || 'target');
-        downloadJsonFile(`ux-inspector-${target}-${formatFileTimestamp(envelope.exportedAt)}.json`, envelope);
-      },
-      error: (error: HttpErrorResponse) => this.portabilityError.set(
-        readApiError(error, 'Nie udało się wyeksportować wyniku UX Inspectora.')
       )
     });
   }

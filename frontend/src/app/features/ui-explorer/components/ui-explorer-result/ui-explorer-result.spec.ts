@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 
 import { AnalysisReport } from '../../../../core/models/analysis.models';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
+import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
 import { UiExplorerResultResponse } from '../../models/ui-explorer.models';
 import { UiExplorerResultComponent } from './ui-explorer-result';
 
@@ -52,35 +53,17 @@ describe('UiExplorerResultComponent', () => {
     expect(compiled.textContent).not.toContain('raw CRM source body');
   });
 
-  it('copies the complete business-readable CRM report as Markdown', async () => {
-    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-    const writeText = vi.fn(async (_value: string): Promise<void> => undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText }
-    });
-
-    try {
-      clickButtonContaining(fixture.nativeElement, 'Copy result');
-      await fixture.whenStable();
-      fixture.detectChanges();
-
-      expect(writeText).toHaveBeenCalledTimes(1);
-      const markdown = String(writeText.mock.calls[0]?.[0]);
+  it('prepares the complete business-readable CRM report as Markdown', () => {
+      const document = (fixture.debugElement.query(By.directive(AnalysisShareMenuComponent))
+        .componentInstance as AnalysisShareMenuComponent).document();
+      const markdown = document?.markdown ?? '';
       expect(markdown).toContain('# /contacts/new');
       expect(markdown).toContain('_CrmContactCreateComponent_');
       expect(markdown).toContain('## Formularze i reguły');
       expect(markdown).not.toContain('## Zależności przekrojowe');
       expect(markdown).not.toContain('## Materiał do przygotowania zmiany');
-      expect(markdown).toContain('Reguły runtime słownika CRM nie były widoczne.');
-      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
-    } finally {
-      if (originalClipboard) {
-        Object.defineProperty(navigator, 'clipboard', originalClipboard);
-      } else {
-        Reflect.deleteProperty(navigator, 'clipboard');
-      }
-    }
+      expect(markdown).not.toContain('Reguły runtime słownika CRM nie były widoczne.');
+      expect(document?.markdownWithMeta).toContain('Reguły runtime słownika CRM nie były widoczne.');
   });
 
   it('downloads a Markdown file named from the anonymized CRM screen and revision', async () => {
@@ -103,7 +86,12 @@ describe('UiExplorerResultComponent', () => {
     }) as typeof document.createElement);
 
     try {
-      clickButtonContaining(fixture.nativeElement, 'Download Markdown');
+      const document = (fixture.debugElement.query(By.directive(AnalysisShareMenuComponent))
+        .componentInstance as AnalysisShareMenuComponent).document();
+      expect(document?.fileName).toBe('ui-explorer-crm-contact-create-crm-revision-a1b2c3.md');
+      const share = fixture.debugElement.query(By.directive(AnalysisShareMenuComponent))
+        .componentInstance as AnalysisShareMenuComponent;
+      (share as unknown as { download: (includeMeta: boolean) => void }).download(false);
 
       expect(createObjectURL).toHaveBeenCalledTimes(1);
       const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
@@ -207,12 +195,4 @@ function crmResult(): UiExplorerResultResponse {
     unresolvedQuestions: ['Która syntetyczna rola CRM zatwierdza kontakt?'],
     usage: null
   };
-}
-
-function clickButtonContaining(root: HTMLElement, text: string): void {
-  const button = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find((candidate) =>
-    candidate.textContent?.includes(text)
-  );
-  expect(button).toBeDefined();
-  button?.click();
 }

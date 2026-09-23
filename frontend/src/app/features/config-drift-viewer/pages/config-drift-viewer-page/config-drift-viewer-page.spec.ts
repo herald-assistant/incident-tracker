@@ -150,6 +150,8 @@ describe('ConfigDriftViewerPageComponent', () => {
   });
 
   it('should start BASIC verification without AI-only request fields or AI result state', () => {
+    const basic = basicResult();
+    basic.visibilityLimits = ['Nie potwierdzono runtime.'];
     const completed = job({
       mode: 'BASIC',
       codeRef: null,
@@ -157,7 +159,7 @@ describe('ConfigDriftViewerPageComponent', () => {
       reasoningEffort: null,
       status: 'COMPLETED',
       preparedPrompt: null,
-      result: basicResult(),
+      result: basic,
       report: null
     });
     api.startJob.mockReturnValue(of(job({
@@ -195,6 +197,10 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(compiled.textContent).not.toContain('AI second opinion');
     expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Raport operatora');
+    expect(compiled.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    expect(fixture.componentInstance.shareDocument()?.markdown).toContain('## Ustalenia deterministyczne');
+    expect(fixture.componentInstance.shareDocument()?.markdown).not.toContain('Nie potwierdzono runtime.');
+    expect(fixture.componentInstance.shareDocument()?.markdownWithMeta).toContain('Nie potwierdzono runtime.');
   });
 
   it('should render ordered component tabs, switch file results and isolate a failed component', () => {

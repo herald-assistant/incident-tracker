@@ -72,6 +72,16 @@ modele, komponenty i mechanizmy prezentacji:
 - powtarzalne drobne elementy rezultatu, np. sekcje evidence, source refs,
   visibility limits, confidence, warnings i next actions.
 
+Udostepnianie merytorycznego wyniku na ekranach analiz ma jeden frontendowy
+komponent `AnalysisShareMenuComponent`: ikona `share` otwiera menu Material z
+kopiowaniem lub pobraniem Markdown oraz Markdown + Meta. Wspolny renderer
+`AnalysisReport` zachowuje kolejnosc sekcji i oddziela tresc od referencji,
+limitow widocznosci, otwartych pytan, luk i ostrzezen. Feature'y bez
+`AnalysisReport` przygotowuja ten sam kontrakt dokumentu przez adapter.
+Menu i jego overlay uzywaja globalnych tokenow wizualnych platformy.
+Archiwalny JSON jest dostepny w Analysis History; dedykowany CSV ocen Delivery
+pozostaje formatem danych dla trendow.
+
 Glowny rezultat analizy moze i czesto powinien byc feature-specific, bo Flow
 Explorer, Incident Analysis i Data Diagnostics odpowiadaja na inne pytania.
 Jednak jego mniejsze klocki UI/UX powinny wpisywac sie w poznane juz wzorce,

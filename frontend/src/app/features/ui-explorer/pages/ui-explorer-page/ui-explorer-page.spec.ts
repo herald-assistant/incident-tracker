@@ -310,7 +310,7 @@ describe('UiExplorerPageComponent', () => {
     http.verify();
   });
 
-  it('exports a live completed CRM result through the versioned backend contract', async () => {
+  it('shows the shared result action without a JSON export button', async () => {
     const fixture = TestBed.createComponent(UiExplorerPageComponent);
     const http = TestBed.inject(HttpTestingController);
     const createObjectUrlSpy = vi.fn(() => 'blob:crm-ui-export');
@@ -341,18 +341,10 @@ describe('UiExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const exportButton = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>('.ui-explorer-run__header-actions button')
-    ).find((button) => button.textContent?.includes('Export JSON'));
-    expect(exportButton).toBeDefined();
-    exportButton?.click();
-    const exportRequest = http.expectOne('/api/ui-explorer/jobs/crm-ui-job-1/export');
-    expect(exportRequest.request.method).toBe('GET');
-    exportRequest.flush(crmPortableEnvelope());
-    await fixture.whenStable();
-
-    expect(createObjectUrlSpy).toHaveBeenCalledTimes(1);
-    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(compiled.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    expect(compiled.textContent).not.toContain('Export JSON');
+    expect(createObjectUrlSpy).not.toHaveBeenCalled();
+    expect(clickSpy).not.toHaveBeenCalled();
     http.verify();
   });
 });

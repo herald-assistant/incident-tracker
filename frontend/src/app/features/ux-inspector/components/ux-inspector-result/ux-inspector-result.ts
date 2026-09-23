@@ -1,11 +1,11 @@
-import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 import {
   AnalysisReport,
   AnalysisReportMeta,
   AnalysisReportReference
 } from '../../../../core/models/analysis.models';
-import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
+import { buildReportShareDocument } from '../../../../core/utils/analysis-share.utils';
 import { sanitizeFileNamePart } from '../../../../core/utils/json-file.utils';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
 import { AnalysisResultHeaderComponent } from '../../../../components/analysis-result-header/analysis-result-header';
@@ -23,48 +23,19 @@ import { UxInspectorJobStatus, UxInspectorResultResponse } from '../../models/ux
   styleUrl: './ux-inspector-result.scss'
 })
 export class UxInspectorResultComponent {
-  private readonly destroyRef = inject(DestroyRef);
-  private copyFeedbackHandle: number | null = null;
-
   readonly report = input.required<AnalysisReport>();
   readonly result = input<UxInspectorResultResponse | null>(null);
   readonly status = input<UxInspectorJobStatus>('COMPLETED');
-  readonly copied = signal(false);
-  readonly actionError = signal('');
+  protected readonly shareDocument = computed(() => {
+    const target = sanitizeFileNamePart(this.result()?.targetLabel || 'element');
+    const revision = sanitizeFileNamePart(this.result()?.sourceRevision.revision || 'revision');
+    return buildReportShareDocument(this.report(), `ux-inspector-${target}-${revision}.md`);
+  });
   readonly answerSection = computed(() => this.report().sections[0] ?? null);
   readonly resultMeta = computed(() =>
     mergeReportMeta(this.report().meta, this.answerSection()?.meta)
   );
 
-  constructor() {
-    this.destroyRef.onDestroy(() => this.clearCopyFeedback());
-  }
-
-  protected async copyResult(): Promise<void> {
-    const copied = await copyTextToClipboard(buildUxInspectorMarkdown(this.report()));
-    if (!copied) {
-      this.actionError.set('Nie udało się skopiować odpowiedzi UX Inspectora.');
-      return;
-    }
-    this.actionError.set('');
-    this.copied.set(true);
-    this.clearCopyFeedback();
-    this.copyFeedbackHandle = window.setTimeout(() => {
-      this.copied.set(false);
-      this.copyFeedbackHandle = null;
-    }, 1600);
-  }
-
-  protected downloadResult(): void {
-    try {
-      const target = sanitizeFileNamePart(this.result()?.targetLabel || 'element');
-      const revision = sanitizeFileNamePart(this.result()?.sourceRevision.revision || 'revision');
-      downloadMarkdown(`ux-inspector-${target}-${revision}.md`, buildUxInspectorMarkdown(this.report()));
-      this.actionError.set('');
-    } catch {
-      this.actionError.set('Nie udało się pobrać odpowiedzi UX Inspectora.');
-    }
-  }
 
   protected statusClass(): string {
     return this.status() === 'PARTIAL'
@@ -72,12 +43,6 @@ export class UxInspectorResultComponent {
       : 'status-pill status-pill--done';
   }
 
-  private clearCopyFeedback(): void {
-    if (this.copyFeedbackHandle !== null) {
-      window.clearTimeout(this.copyFeedbackHandle);
-      this.copyFeedbackHandle = null;
-    }
-  }
 }
 
 function mergeReportMeta(
@@ -119,28 +84,4 @@ function uniqueReferences(values: AnalysisReportReference[]): AnalysisReportRefe
     }
   }
   return [...unique.values()];
-}
-
-function buildUxInspectorMarkdown(report: AnalysisReport): string {
-  const section = report.sections[0];
-  return [
-    `# ${report.header?.trim() || 'UX Inspector'}`,
-    report.subHeader?.trim() ? `_${report.subHeader.trim()}_` : '',
-    report.markdownSummary?.trim() ?? '',
-    section?.markdown?.trim() ?? ''
-  ]
-    .filter(Boolean)
-    .join('\n\n');
-}
-
-function downloadMarkdown(fileName: string, markdown: string): void {
-  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }

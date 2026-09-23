@@ -351,9 +351,6 @@
             <h2 [attr.id]="facade.isReadOnlyResult() ? 'uxInspectorTitle' : null">{{ snapshot.result?.targetLabel || targetLabel() }}</h2>
           </div>
           <div class="ux-inspector-run__actions">
-            @if (snapshot.exportAvailable) {
-              <button class="secondary-button secondary-button--compact" type="button" [disabled]="facade.portabilityBusy()" (click)="facade.exportCurrentResult()"><span class="material-symbols-outlined" aria-hidden="true">download</span> Export JSON</button>
-            }
             <span [class]="statusClass(snapshot.status)">{{ statusLabel(snapshot.status) }}</span>
           </div>
         </header>

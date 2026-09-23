@@ -12,10 +12,6 @@ import {
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
 import {
   AnalysisAiModelOptionsResponse,
-  AnalysisReport,
-  AnalysisReportMeta,
-  AnalysisReportReference,
-  AnalysisReportSection,
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
@@ -25,13 +21,11 @@ import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisResultHeaderComponent } from '../../../../components/analysis-result-header/analysis-result-header';
+import { buildReportShareDocument } from '../../../../core/utils/analysis-share.utils';
 import { ChangeVerificationRuleLedgerComponent } from '../../components/change-verification-rule-ledger/change-verification-rule-ledger';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
-import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
-import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
+import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import {
-  buildChangeVerificationExportEnvelope,
-  buildChangeVerificationExportFileName,
   ChangeVerificationExportState,
   parseImportedChangeVerificationResult
 } from '../../utils/change-verification-import-export.utils';
@@ -86,19 +80,16 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly exportState = signal<ChangeVerificationExportState | null>(null);
   readonly composerExpanded = signal(true);
-  readonly resultCopied = signal(false);
-  readonly resultCopyError = signal('');
-  private resultCopyFeedbackHandle: number | null = null;
+  readonly shareDocument = computed(() => {
+    const report = this.job()?.report;
+    return report ? buildReportShareDocument(report, 'change-verification.md') : null;
+  });
 
   readonly canStartJob = computed(
     () => Boolean(this.issueInput().trim())
       && (this.checkStoryCompliance() || this.checkInstructionCompliance())
       && !this.isSubmitting()
   );
-  readonly canExportResult = computed(() => {
-    const exportState = this.exportState();
-    return Boolean(exportState?.job.status === 'COMPLETED' && exportState.job.result && exportState.job.report);
-  });
   readonly importExportHint = computed(() => {
     const exportState = this.exportState();
     if (exportState?.origin === 'imported') {
@@ -259,27 +250,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     return hasText(value);
   }
 
-  protected async copyResultMarkdown(): Promise<void> {
-    const report = this.job()?.report;
-    if (!report) {
-      return;
-    }
-
-    const copied = await copyTextToClipboard(buildChangeVerificationReportMarkdown(report));
-    if (!copied) {
-      this.resultCopyError.set('Nie udało się skopiować wyniku weryfikacji do schowka.');
-      return;
-    }
-
-    this.resultCopyError.set('');
-    this.resultCopied.set(true);
-    this.clearResultCopyFeedback();
-    this.resultCopyFeedbackHandle = window.setTimeout(() => {
-      this.resultCopied.set(false);
-      this.resultCopyFeedbackHandle = null;
-    }, 1600);
-  }
-
   protected triggerImport(fileInput: HTMLInputElement): void {
     this.jobError.set('');
     fileInput.value = '';
@@ -321,33 +291,10 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     }
   }
 
-  protected exportChangeVerificationResult(): void {
-    const exportState = this.exportState();
-    if (!exportState) {
-      return;
-    }
-
-    try {
-      const exportedAt = new Date().toISOString();
-      const payload = buildChangeVerificationExportEnvelope(exportState.job, exportedAt);
-      downloadJsonFile(buildChangeVerificationExportFileName(exportState.job, exportedAt), payload);
-    } catch (error) {
-      this.jobError.set(error instanceof Error ? error.message : 'Nie udało się wyeksportować wyniku.');
-    }
-  }
-
   ngOnDestroy(): void {
     this.pollingSubscription?.unsubscribe();
-    this.clearResultCopyFeedback();
   }
 
-  private clearResultCopyFeedback(): void {
-    if (this.resultCopyFeedbackHandle === null) {
-      return;
-    }
-    window.clearTimeout(this.resultCopyFeedbackHandle);
-    this.resultCopyFeedbackHandle = null;
-  }
 
   private jobStartRequest(): ChangeVerificationJobStartRequest {
     const issue = this.issueInput().trim();
@@ -589,62 +536,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
 
 function looksLikeUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
-}
-
-function buildChangeVerificationReportMarkdown(report: AnalysisReport): string {
-  const lines = [
-    `# ${cleanText(report.header) || 'Change Verification result'}`,
-    cleanText(report.subHeader),
-    cleanText(report.markdownSummary)
-  ].filter(hasText);
-
-  sortedSections(report.sections).forEach((section) => {
-    lines.push('', `## ${cleanText(section.title) || cleanText(section.id) || 'Section'}`);
-    lines.push(cleanText(section.markdown));
-    lines.push(...metaMarkdown(section.meta));
-  });
-
-  const appendix = metaMarkdown(report.meta, 'Report metadata');
-  if (appendix.length > 0) {
-    lines.push('', ...appendix);
-  }
-
-  return lines.filter((line, index, all) => line !== '' || all[index - 1] !== '').join('\n');
-}
-
-function metaMarkdown(meta: AnalysisReportMeta | null | undefined, title = 'Section metadata'): string[] {
-  const parts = [
-    bulletGroup('References', (meta?.references ?? []).map(referenceText)),
-    bulletGroup('Visibility limits', meta?.visibilityLimits ?? []),
-    bulletGroup('Open questions', meta?.openQuestions ?? []),
-    bulletGroup('Gaps', meta?.gaps ?? []),
-    bulletGroup('Warnings', meta?.warnings ?? [])
-  ].flat();
-  return parts.length > 0 ? [`### ${title}`, ...parts] : [];
-}
-
-function bulletGroup(title: string, values: string[]): string[] {
-  const cleaned = values.map(cleanText).filter(hasText);
-  return cleaned.length > 0 ? [`#### ${title}`, ...cleaned.map((value) => `- ${value}`)] : [];
-}
-
-function referenceText(reference: AnalysisReportReference): string {
-  return [reference.label, reference.type, reference.target, reference.description]
-    .map(cleanText)
-    .filter(hasText)
-    .join(' | ');
-}
-
-function sortedSections(sections: AnalysisReportSection[] | null | undefined): AnalysisReportSection[] {
-  return [...(sections ?? [])].sort((left, right) => {
-    const leftOrder = typeof left.order === 'number' ? left.order : Number.MAX_SAFE_INTEGER;
-    const rightOrder = typeof right.order === 'number' ? right.order : Number.MAX_SAFE_INTEGER;
-    return leftOrder - rightOrder;
-  });
-}
-
-function cleanText(value: string | null | undefined): string {
-  return typeof value === 'string' ? value.trim() : '';
 }
 
 function hasText(value: string | null | undefined): value is string {

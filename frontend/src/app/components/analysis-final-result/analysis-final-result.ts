@@ -1,15 +1,14 @@
-import { Component, OnDestroy, computed, input, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 
 import {
   AnalysisReport,
   AnalysisReportMeta,
-  AnalysisReportReference,
   AnalysisReportSection,
   AnalysisResultResponse
 } from '../../core/models/analysis.models';
 import { buildIncidentAnalysisResultMarkdown } from '../../core/utils/analysis-result-markdown.utils';
 import { hasMeaningfulValue } from '../../core/utils/analysis-display.utils';
-import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
+import { buildAnalysisShareDocument, buildReportShareDocument, markdownList } from '../../core/utils/analysis-share.utils';
 import { AnalysisReportMetaComponent } from '../analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../analysis-report-section-content/analysis-report-section-content';
 import { AnalysisResultHeaderComponent } from '../analysis-result-header/analysis-result-header';
@@ -55,17 +54,23 @@ const EMPTY_REPORT_META: AnalysisReportMeta = {
   templateUrl: './analysis-final-result.html',
   styleUrl: './analysis-final-result.scss'
 })
-export class AnalysisFinalResultComponent implements OnDestroy {
+export class AnalysisFinalResultComponent {
   readonly result = input<AnalysisResultResponse | null>(null);
   readonly report = input<AnalysisReport | null>(null);
   readonly status = input('');
 
   protected readonly display = computed(() => incidentDisplay(this.result(), this.report()));
   protected readonly activeAnalysisTab = signal<AnalysisResultTab>('FUNCTIONAL_ANALYSIS');
-  protected readonly resultCopied = signal(false);
-  protected readonly copyError = signal('');
+  protected readonly shareDocument = computed(() => {
+    const report = this.report();
+    if (report) return buildReportShareDocument(report, 'incident-analysis.md');
+    const result = this.result();
+    if (!result) return null;
+    const content = [`# ${result.detectedProblem || 'Wynik analizy incydentu'}`, buildIncidentAnalysisResultMarkdown(result)].join('\n\n');
+    return buildAnalysisShareDocument('incident-analysis.md', content,
+      markdownList('Limity widoczności', result.visibilityLimits ?? []));
+  });
   protected readonly hasMeaningfulValue = hasMeaningfulValue;
-  private resultCopyFeedbackHandle: number | null = null;
 
   protected selectAnalysisTab(tab: string): void {
     if (tab === 'FUNCTIONAL_ANALYSIS' || tab === 'TECHNICAL_HANDOFF') {
@@ -73,41 +78,6 @@ export class AnalysisFinalResultComponent implements OnDestroy {
     }
   }
 
-  protected async copyResultMarkdown(): Promise<void> {
-    const result = this.result();
-    const report = this.report();
-    if (!result && !report) {
-      return;
-    }
-
-    const copied = await copyTextToClipboard(
-      report ? buildIncidentReportMarkdown(report) : buildIncidentAnalysisResultMarkdown(result!)
-    );
-    if (!copied) {
-      this.copyError.set('Nie udało się skopiować wyniku analizy do schowka.');
-      return;
-    }
-
-    this.copyError.set('');
-    this.resultCopied.set(true);
-    this.clearResultCopyFeedback();
-    this.resultCopyFeedbackHandle = window.setTimeout(() => {
-      this.resultCopied.set(false);
-      this.resultCopyFeedbackHandle = null;
-    }, 1600);
-  }
-
-  ngOnDestroy(): void {
-    this.clearResultCopyFeedback();
-  }
-
-  private clearResultCopyFeedback(): void {
-    if (this.resultCopyFeedbackHandle === null) {
-      return;
-    }
-    window.clearTimeout(this.resultCopyFeedbackHandle);
-    this.resultCopyFeedbackHandle = null;
-  }
 }
 
 function incidentDisplay(
@@ -213,68 +183,10 @@ function normalizedMeta(meta: AnalysisReportMeta | null | undefined): AnalysisRe
   };
 }
 
-function buildIncidentReportMarkdown(report: AnalysisReport): string {
-  const lines = [
-    `# ${cleanText(report.header) || 'Incident analysis result'}`,
-    cleanText(report.subHeader),
-    cleanText(report.markdownSummary)
-  ].filter(hasText);
-
-  sortedSections(report.sections).forEach((section) => {
-    lines.push('');
-    lines.push(`## ${cleanText(section.title) || cleanText(section.id) || 'Section'}`);
-    lines.push(cleanText(section.markdown));
-    lines.push(...metaMarkdown(section.meta));
-  });
-
-  const appendix = metaMarkdown(report.meta, 'Report metadata');
-  if (appendix.length > 0) {
-    lines.push('');
-    lines.push(...appendix);
-  }
-
-  return lines.filter((line, index, all) => line !== '' || all[index - 1] !== '').join('\n');
-}
-
-function metaMarkdown(meta: AnalysisReportMeta | null | undefined, title = 'Section metadata'): string[] {
-  const parts = [
-    bulletGroup('References', (meta?.references ?? []).map(referenceText)),
-    bulletGroup('Visibility limits', meta?.visibilityLimits ?? []),
-    bulletGroup('Open questions', meta?.openQuestions ?? []),
-    bulletGroup('Gaps', meta?.gaps ?? []),
-    bulletGroup('Warnings', meta?.warnings ?? [])
-  ].flat();
-  return parts.length > 0 ? [`### ${title}`, ...parts] : [];
-}
-
-function bulletGroup(title: string, values: string[]): string[] {
-  const cleaned = cleanTextList(values);
-  return cleaned.length > 0 ? [`#### ${title}`, ...cleaned.map((value) => `- ${value}`)] : [];
-}
-
-function referenceText(reference: AnalysisReportReference): string {
-  return [reference.label, reference.type, reference.target, reference.description]
-    .map(cleanText)
-    .filter(hasText)
-    .join(' | ');
-}
-
-function sortedSections(sections: AnalysisReportSection[] | null | undefined): AnalysisReportSection[] {
-  return [...(sections ?? [])].sort((left, right) => {
-    const leftOrder = typeof left.order === 'number' ? left.order : Number.MAX_SAFE_INTEGER;
-    const rightOrder = typeof right.order === 'number' ? right.order : Number.MAX_SAFE_INTEGER;
-    return leftOrder - rightOrder;
-  });
-}
-
 function cleanTextList(values: string[] | null | undefined): string[] {
-  return (values ?? []).map(cleanText).filter(hasText);
+  return (values ?? []).map(cleanText).filter((value) => value.length > 0);
 }
 
 function cleanText(value: string | null | undefined): string {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function hasText(value: string | null | undefined): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
 }

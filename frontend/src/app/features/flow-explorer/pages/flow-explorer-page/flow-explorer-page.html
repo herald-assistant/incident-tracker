@@ -704,17 +704,6 @@
             <span>Import</span>
           </button>
 
-          @if (exportState()) {
-            <button
-              class="secondary-button secondary-button--accent"
-              type="button"
-              (click)="exportFlowExplorerAnalysis()"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              <span>Export</span>
-            </button>
-          }
-
           @if (exportState(); as snapshotExport) {
             @if (snapshotExport.origin === 'imported') {
               <span class="field-hint">Wczytany plik: {{ snapshotExport.fileName }}</span>
@@ -829,19 +818,9 @@
                 <span [class]="confidencePillClass(result.confidence)">
                   {{ result.confidence || 'confidence n/a' }}
                 </span>
-                <button
-                  class="secondary-button flow-explorer-result__copy-button"
-                  type="button"
-                  data-clipboard-exclude
-                  [attr.aria-label]="resultCopied() ? 'Skopiowano wynik Flow Explorera' : 'Kopiuj caly wynik Flow Explorera'"
-                  [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj caly wynik'"
-                  (click)="$event.preventDefault(); $event.stopPropagation(); copyFlowExplorerResult()"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">
-                    {{ resultCopied() ? 'task_alt' : 'content_copy' }}
-                  </span>
-                  <span>{{ resultCopied() ? 'Copied' : 'Copy result' }}</span>
-                </button>
+                @if (shareDocument(); as document) {
+                  <app-analysis-share-menu [document]="document" />
+                }
               </div>
             </summary>
 

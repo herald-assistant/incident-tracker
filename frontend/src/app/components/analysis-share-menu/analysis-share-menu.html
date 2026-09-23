@@ -1,0 +1,32 @@
+<button
+  type="button"
+  class="analysis-share-menu__trigger"
+  aria-label="Udostępnij wynik"
+  title="Udostępnij wynik"
+  [disabled]="!document()?.markdown"
+  [matMenuTriggerFor]="shareMenu"
+  (click)="$event.stopPropagation()"
+>
+  <span class="material-symbols-outlined" aria-hidden="true">share</span>
+</button>
+<mat-menu #shareMenu="matMenu" class="analysis-share-menu-panel" aria-label="Udostępnij wynik">
+  <button mat-menu-item type="button" aria-label="Kopiuj Markdown" (click)="copy(false)">
+    <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+    <span>Markdown</span>
+  </button>
+  <button mat-menu-item type="button" aria-label="Kopiuj Markdown z meta" (click)="copy(true)">
+    <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+    <span>Markdown + Meta</span>
+  </button>
+  <button mat-menu-item type="button" aria-label="Pobierz Markdown" (click)="download(false)">
+    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+    <span>Markdown</span>
+  </button>
+  <button mat-menu-item type="button" aria-label="Pobierz Markdown z meta" (click)="download(true)">
+    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+    <span>Markdown + Meta</span>
+  </button>
+</mat-menu>
+@if (feedback()) {
+  <span class="analysis-share-menu__feedback" role="status">{{ feedback() }}</span>
+}

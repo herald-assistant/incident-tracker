@@ -4,13 +4,8 @@
       [title]="status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza'"
       [context]="analysisResult.subTitle"
       [confidence]="analysisResult.confidence"
-      [copied]="resultCopied()"
-      (copyRequested)="copyResultMarkdown()"
+      [shareDocument]="shareDocument()"
     ></app-analysis-result-header>
-
-    @if (copyError()) {
-      <p class="form-error">{{ copyError() }}</p>
-    }
 
     @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
       <div class="analysis-highlights">

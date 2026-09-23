@@ -220,6 +220,7 @@
           <span>{{ historyReadOnly() || reviewComplete()
             ? 'Przejrzyj propozycje i zapisane decyzje.'
             : 'Wybierz propozycję, popraw wartości i sprawdź zestaw przed zapisem. Przegląd zapisuje się automatycznie.' }}</span>
+          @if (shareDocument(); as document) { <app-analysis-share-menu [document]="document" /> }
         </div>
         @if (!draft.proposals.length) { <p>Nie ma bezpiecznej propozycji zmiany. Sprawdź ograniczenia poniżej.</p> }
         @if (draft.visibilityLimits.length) {

@@ -9,6 +9,7 @@ import { Subscription, finalize } from 'rxjs';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
 import {
   AnalysisAiModelOptionsResponse,
   AnalysisPreparedPrompt,
@@ -28,9 +29,8 @@ import {
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
+import { buildDeliveryShareDocument } from '../../../../core/utils/analysis-share.utils';
 import {
-  downloadJsonFile,
-  formatFileTimestamp,
   readJsonFile,
   sanitizeFileNamePart
 } from '../../../../core/utils/json-file.utils';
@@ -56,7 +56,8 @@ type FilterOption = { value: string; label: string; issueCount: number; delivere
     DecimalPipe,
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
-    AnalysisStepsPanelComponent
+    AnalysisStepsPanelComponent,
+    AnalysisShareMenuComponent
   ],
   templateUrl: './delivery-complexity-assessment-page.html',
   styleUrl: './delivery-complexity-assessment-page.scss'
@@ -144,6 +145,40 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
       return null;
     }
     return this.filtersActive() ? aggregateForUnits(this.visibleUnits()) : job.aggregate;
+  });
+  readonly shareDocument = computed(() => {
+    const job = this.job();
+    const aggregate = this.visibleAggregate();
+    if (!job || !this.hasTerminalRun() || !aggregate) return null;
+    return buildDeliveryShareDocument(
+      `delivery-complexity-assessment-${sanitizeFileNamePart(job.jiraProject)}-${job.fromDate}-${job.toDate}.md`,
+      `Delivery Complexity Assessment · ${job.jiraProject}`,
+      `${job.fromDate} – ${job.toDate}${this.filtersActive() ? ' · aktualny filtr' : ''}`,
+      [
+        `Delivered Story Points: ${aggregate.totalDeliveredStoryPoints}`,
+        `Ocenione jednostki: ${aggregate.assessedUnits} / ${aggregate.totalUnits}`,
+        `Confidence: ${aggregate.confidence}`
+      ],
+      this.visibleUnits().map((unit) => ({
+        title: unit.issues.map((issue) => `${issue.issueKey} ${issue.summary}`).join(', ') || unit.unitId,
+        status: unit.status,
+        result: unit.assessment ? [
+          `Delivered Story Points: ${unit.assessment.deliveredStoryPoints}`,
+          `Wynik: ${unit.assessment.score100}/100`,
+          `Confidence: ${this.percent(unit.assessment.confidence)}`
+        ] : [],
+        dimensions: unit.assessment ? this.dimensions(unit.assessment.dimensions).map(
+          (dimension) => `${dimension.label}: ${dimension.value}`
+        ) : [],
+        evidence: unit.assessment?.evidenceSummary ?? [],
+        references: [
+          ...unit.issues.map((issue) => `${issue.issueKey}: ${issue.issueUrl}`),
+          ...unit.mergeRequests.map((mr) => `${mr.title}: ${mr.webUrl}`)
+        ],
+        limits: unit.visibilityLimits,
+        warnings: [...(unit.assessment?.qualityFlags ?? []), ...(unit.errorMessage ? [unit.errorMessage] : [])]
+      }))
+    );
   });
   readonly teamFilterOptions = computed<FilterOption[]>(() =>
     filterOptions(
@@ -320,26 +355,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
         error instanceof Error ? error.message : 'Nie udało się odczytać pliku importu.'
       );
     }
-  }
-
-  protected exportRun(): void {
-    const job = this.job();
-    if (!job || !this.canExport()) {
-      return;
-    }
-
-    this.jobError.set('');
-    this.portabilityBusy.set(true);
-    this.historyApi
-      .exportRun(job.jobId)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.portabilityBusy.set(false))
-      )
-      .subscribe({
-        next: (document) => downloadJsonFile(this.exportFileName(job, document), document),
-        error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
-      });
   }
 
   protected exportCsv(): void {
@@ -723,23 +738,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     ));
   }
 
-  private exportFileName(
-    job: DeliveryComplexityAssessmentJobStateSnapshot,
-    document: unknown
-  ): string {
-    const envelope = document as Partial<DeliveryComplexityAssessmentExportEnvelope> | null;
-    const exportedAt = envelope?.exportedAt
-      || job.completedAt
-      || job.updatedAt
-      || new Date().toISOString();
-    return [
-      'delivery-complexity-assessment',
-      sanitizeFileNamePart(job.jiraProject),
-      job.fromDate,
-      job.toDate,
-      formatFileTimestamp(exportedAt)
-    ].join('-') + '.json';
-  }
 }
 
 function defaultDate(dayOffset: number): string {

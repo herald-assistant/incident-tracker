@@ -449,44 +449,16 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('CRM-1');
   });
 
-  it('should export a terminal assessment through Analysis History', async () => {
+  it('shares the visible assessment without a JSON export action', async () => {
     const completed = snapshot('COMPLETED', 8, [completedUnit()]);
-    const originalCreateObjectURL = URL.createObjectURL;
-    const originalRevokeObjectURL = URL.revokeObjectURL;
-    const createObjectURL = vi.fn(() => 'blob:delivery-scope-export');
-    const revokeObjectURL = vi.fn();
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
-    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
-
-    try {
-      const { fixture, history } = await createComponent({
-        localRun: completed,
-        localRunId: 'job-1'
-      });
-      const exportButton = fixture.nativeElement.querySelector(
-        'button[aria-label="Eksportuj run"]'
-      ) as HTMLButtonElement;
-
-      expect(exportButton.disabled).toBe(false);
-      exportButton.click();
-      await vi.waitFor(() => {
-        fixture.detectChanges();
-        expect(history.exportRun).toHaveBeenCalledWith('job-1');
-        expect(createObjectURL).toHaveBeenCalledTimes(1);
-      });
-      expect(clickSpy).toHaveBeenCalledTimes(1);
-    } finally {
-      clickSpy.mockRestore();
-      Object.defineProperty(URL, 'createObjectURL', {
-        configurable: true,
-        value: originalCreateObjectURL
-      });
-      Object.defineProperty(URL, 'revokeObjectURL', {
-        configurable: true,
-        value: originalRevokeObjectURL
-      });
-    }
+    const { fixture, history } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+    const document = fixture.componentInstance.shareDocument();
+    expect(document?.markdown).toContain('Punkty złożoności');
+    expect(document?.markdown).toContain('CRM-1');
+    expect(document?.markdownWithMeta).toContain('Referencje');
+    expect(fixture.nativeElement.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('button[aria-label="Eksportuj run"]')).toBeNull();
+    expect(history.exportRun).not.toHaveBeenCalled();
   });
 
   it('should download a dedicated business CSV for a terminal assessment', async () => {

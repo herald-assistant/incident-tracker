@@ -3,13 +3,7 @@
     [title]="report().header || 'UI Explorer result'"
     [context]="report().subHeader"
     [confidence]="report().meta.confidence"
-    [copied]="resultCopied()"
-    [downloadVisible]="true"
-    copyAriaLabel="Kopiuj cały raport UI Explorer"
-    copiedAriaLabel="Skopiowano raport UI Explorer"
-    downloadAriaLabel="Pobierz raport UI Explorer jako Markdown"
-    (copyRequested)="copyReport()"
-    (downloadRequested)="downloadReport()"
+    [shareDocument]="shareDocument()"
   ></app-analysis-result-header>
 
   <div class="ui-explorer-result__status-line">
@@ -23,9 +17,6 @@
     </div>
   }
 
-  @if (actionError()) {
-    <p class="form-error" role="alert">{{ actionError() }}</p>
-  }
 
   @if (hasText(report().markdownSummary)) {
     <section class="ui-explorer-result-block" aria-label="Podsumowanie funkcjonalne">

@@ -5,9 +5,11 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subject, Subscription, catchError, concatMap, debounceTime, map, of } from 'rxjs';
 
 import { AnalysisStepsPanelComponent } from '../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisShareMenuComponent } from '../../../components/analysis-share-menu/analysis-share-menu';
 import { AnalysisFeatureAsideComponent } from '../../../components/analysis-feature-aside/analysis-feature-aside';
 import { GitLabBranchSelectComponent } from '../../../components/gitlab-branch-select/gitlab-branch-select';
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
+import { buildAnalysisShareDocument, markdownList } from '../../../core/utils/analysis-share.utils';
 import {
   OperationalContextAssistanceJob,
   OperationalContextAssistanceBatchPreview,
@@ -42,7 +44,7 @@ interface BatchFieldIssue {
 
 @Component({
   selector: 'app-context-assistance-panel',
-  imports: [ReactiveFormsModule, AnalysisStepsPanelComponent, AnalysisFeatureAsideComponent, GitLabBranchSelectComponent],
+  imports: [ReactiveFormsModule, AnalysisStepsPanelComponent, AnalysisFeatureAsideComponent, GitLabBranchSelectComponent, AnalysisShareMenuComponent],
   templateUrl: './context-assistance-panel.html',
   styleUrl: './context-assistance-panel.scss'
 })
@@ -105,6 +107,38 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   readonly editError = signal('');
   readonly isRunning = computed(() => this.starting() || Boolean(this.job() && !isTerminalAssistanceStatus(this.job()!.status)));
   readonly reviewComplete = computed(() => Boolean(this.job()?.proposalDecisions?.length));
+  readonly shareDocument = computed(() => {
+    const job = this.job();
+    const draft = job?.draft;
+    if (!job || !draft?.proposals.length) return null;
+    const content = [
+      '# Asysta Operational Context',
+      `Status: ${this.statusLabel(job.status)}`,
+      ...draft.proposals.map((proposal, index) => {
+        const selected = new Set(this.selectedPaths(index, proposal));
+        return [
+          `## ${this.proposalTitle(index, proposal)}`,
+          `${proposal.operation} · ${proposal.entityType}/${proposal.entityId}`,
+          ...proposal.changes.filter((change) => selected.has(change.path)).map((change) =>
+            `- **${change.path}:** ${this.valueText(this.effectiveAfter(index, change))}${change.reason ? ` — ${change.reason}` : ''}`
+          )
+        ].join('\n\n');
+      })
+    ].join('\n\n');
+    const meta = [
+      markdownList('Referencje', job.sourceRefs),
+      markdownList('Limity widoczności', [...job.visibilityLimits, ...draft.visibilityLimits]),
+      ...draft.proposals.map((proposal, index) => [
+        `### ${this.proposalTitle(index, proposal)}`,
+        markdownList('Referencje', proposal.changes.flatMap((change) => change.sourceRefs)),
+        markdownList('Limity widoczności', proposal.visibilityLimits),
+        markdownList('Luki i otwarte pytania', proposal.changes
+          .filter((change) => change.requiresConfirmation && !this.isConfirmed(index, change.path))
+          .map((change) => `${change.path}: wymaga potwierdzenia`))
+      ].filter(Boolean).join('\n\n'))
+    ].filter(Boolean).join('\n\n');
+    return buildAnalysisShareDocument(`operational-context-assistance-${job.jobId}.md`, content, meta);
+  });
   readonly analysisProgressRunning = computed(() => Boolean(!this.historyReadOnly() && this.job()
     && !isTerminalAssistanceStatus(this.job()!.status)));
   readonly aiWorkRunning = computed(() => !this.historyReadOnly() && this.job()?.status === 'ANALYZING');

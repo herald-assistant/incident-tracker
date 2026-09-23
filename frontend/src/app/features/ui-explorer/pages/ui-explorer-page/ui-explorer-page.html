@@ -67,17 +67,6 @@
             </p>
           </div>
           <div class="ui-explorer-run__header-actions">
-            @if (snapshot.exportAvailable) {
-              <button
-                class="secondary-button secondary-button--compact"
-                type="button"
-                [disabled]="facade.portabilityBusy()"
-                (click)="facade.exportCurrentResult()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                <span>{{ facade.portabilityBusy() ? 'Working…' : 'Export JSON' }}</span>
-              </button>
-            }
             <span [class]="jobStatusClass(snapshot.status)">
               {{ jobStatusLabel(snapshot.status) }}
             </span>

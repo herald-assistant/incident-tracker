@@ -12,6 +12,8 @@ import {
   AnalysisResultTabsComponent
 } from '../../../../components/analysis-result-tabs/analysis-result-tabs';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
+import { buildAnalysisShareDocument, buildReportShareDocument, markdownList } from '../../../../core/utils/analysis-share.utils';
 import {
   AnalysisAiModelOptionsResponse,
   ApiErrorResponse,
@@ -30,7 +32,7 @@ import {
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
-import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
+import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import {
   ConfigDriftViewerDiffRendererComponent
 } from '../../components/config-drift-viewer-diff-renderer/config-drift-viewer-diff-renderer';
@@ -44,10 +46,6 @@ import {
   ConfigDriftViewerMode
 } from '../../models/config-drift-viewer.models';
 import { ConfigDriftViewerApiService } from '../../services/config-drift-viewer-api.service';
-import {
-  buildConfigDriftViewerExportEnvelope,
-  buildConfigDriftViewerExportFileName
-} from '../../utils/config-drift-viewer-import-export.utils';
 
 type ResultOrigin = 'live' | 'local' | 'imported';
 type SelectOption = { value: string; label: string };
@@ -67,6 +65,7 @@ const EMPTY_INPUT_OPTIONS: ConfigDriftViewerInputOptions = {
     AnalysisReportPanelComponent,
     AnalysisResultTabsComponent,
     AnalysisStepsPanelComponent,
+    AnalysisShareMenuComponent,
     ConfigDriftViewerDiffRendererComponent
   ],
   templateUrl: './config-drift-viewer-page.html',
@@ -229,9 +228,41 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
     unique((this.deterministic()?.findings ?? []).map((finding) => finding.severity))
   );
   readonly resultAvailable = computed(() => Boolean(this.activeComponent()?.result));
-  readonly canExport = computed(() => Boolean(
-    this.job()?.components.some((component) => component.result) && this.isTerminal(this.job()?.status)
-  ));
+  readonly shareDocument = computed(() => {
+    const component = this.activeComponent();
+    const result = component?.result;
+    if (!component || !result) return null;
+    const fileName = `config-drift-viewer-${component.systemId.replace(/[^a-zA-Z0-9_-]/g, '-')}.md`;
+    if (component.report) return buildReportShareDocument(component.report, fileName);
+    const differences = result.deterministicResult.differences.map((difference) =>
+      `- ${difference.path}: ${difference.kind} (${difference.sourceValueToken ?? 'brak'} → ${difference.targetValueToken ?? 'brak'})`
+    );
+    const findings = result.deterministicResult.findings.map((finding) =>
+      `- ${finding.path}: ${this.findingTitle(finding)}${this.findingDescription(finding) ? ` — ${this.findingDescription(finding)}` : ''}`
+    );
+    const opinion = result.aiSecondOpinion;
+    const content = [
+      `# Config Drift Viewer: ${component.systemLabel || component.systemId}`,
+      `${this.job()?.sourceBranch} → ${this.job()?.targetBranch}`,
+      this.deterministicSummary(result.deterministicResult),
+      '## Różnice konfiguracji',
+      differences.join('\n') || 'Brak różnic.',
+      '## Ustalenia deterministyczne',
+      findings.join('\n') || 'Brak ustaleń.',
+      opinion ? `## Druga opinia AI\n\n${opinion.summary}` : '',
+      ...(opinion?.observations ?? []).map((observation) =>
+        `### ${observation.summary}\n\n${observation.explanation}`
+      ),
+      opinion ? markdownList('Zalecane kontrole', opinion.recommendedHumanChecks) : ''
+    ].filter(Boolean).join('\n\n');
+    const meta = [
+      markdownList('Referencje', result.deterministicResult.references.map((reference) =>
+        `${reference.referenceId}: ${reference.sourcePath} → ${reference.targetPath}`
+      )),
+      markdownList('Limity widoczności', [...result.visibilityLimits, ...(opinion?.visibilityLimits ?? [])])
+    ].filter(Boolean).join('\n\n');
+    return buildAnalysisShareDocument(fileName, content, meta);
+  });
 
   constructor() {
     this.modeControl.valueChanges
@@ -472,18 +503,6 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
     } finally {
       input.value = '';
     }
-  }
-
-  protected exportResult(): void {
-    const job = this.job();
-    if (!job?.components.some((component) => component.result)) {
-      return;
-    }
-    const exportedAt = new Date().toISOString();
-    downloadJsonFile(
-      buildConfigDriftViewerExportFileName(job),
-      buildConfigDriftViewerExportEnvelope(job, exportedAt)
-    );
   }
 
   protected trackFinding(_: number, finding: ConfigDriftViewerFinding): string {

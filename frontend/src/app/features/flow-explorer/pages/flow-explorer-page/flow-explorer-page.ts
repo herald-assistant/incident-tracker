@@ -34,19 +34,18 @@ import {
   FlowExplorerSystemOption
 } from '../../models/flow-explorer.models';
 import { FlowExplorerApiService } from '../../services/flow-explorer-api.service';
-import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
+import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import {
-  buildFlowExplorerExportEnvelope,
-  buildFlowExplorerExportFileName,
   FlowExplorerExportState,
   normalizeFlowExplorerJob,
   parseImportedFlowExplorerAnalysis
 } from '../../utils/flow-explorer-import-export.utils';
-import { buildFlowExplorerReportMarkdown } from '../../utils/flow-explorer-result-markdown.utils';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
+import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
+import { buildReportShareDocument } from '../../../../core/utils/analysis-share.utils';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
@@ -192,6 +191,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     AnalysisFollowUpChatComponent,
     AnalysisReportMetaComponent,
     AnalysisReportSectionContentComponent,
+    AnalysisShareMenuComponent,
     AnalysisStepsPanelComponent,
     GitLabBranchSelectComponent,
   ],
@@ -208,7 +208,6 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
   private inventoryRequestId = 0;
-  private resultCopyFeedbackHandle: number | null = null;
   private followUpPromptCopyFeedbackHandle: number | null = null;
 
   readonly analysisGoals = ANALYSIS_GOALS;
@@ -246,7 +245,10 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelOptionsError = signal('');
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
-  readonly resultCopied = signal(false);
+  readonly shareDocument = computed(() => {
+    const report = this.job()?.report;
+    return report ? buildReportShareDocument(report, 'flow-explorer.md') : null;
+  });
   readonly copiedFollowUpPromptIndex = signal<number | null>(null);
 
   readonly filteredSystems = computed(() => {
@@ -501,7 +503,6 @@ export class FlowExplorerPageComponent implements OnInit {
       });
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
-      this.clearResultCopyFeedback();
       this.clearFollowUpPromptCopyFeedback();
     });
   }
@@ -919,44 +920,6 @@ export class FlowExplorerPageComponent implements OnInit {
     }
   }
 
-  exportFlowExplorerAnalysis(): void {
-    const exportState = this.exportState();
-    if (!exportState) {
-      return;
-    }
-
-    const exportedAt = new Date().toISOString();
-    const payload = buildFlowExplorerExportEnvelope(exportState.job, exportedAt);
-    downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), payload);
-  }
-
-  protected async copyFlowExplorerResult(): Promise<void> {
-    const job = this.job();
-    if (!job?.report) {
-      return;
-    }
-
-    const markdown = buildFlowExplorerReportMarkdown(job.report, `${job.httpMethod} ${job.endpointPath}`);
-
-    if (!markdown) {
-      return;
-    }
-
-    const copied = await copyTextToClipboard(markdown);
-    if (!copied) {
-      this.jobError.set('Nie udalo sie skopiowac wyniku Flow Explorera do schowka.');
-      return;
-    }
-
-    this.jobError.set('');
-    this.resultCopied.set(true);
-    this.clearResultCopyFeedback();
-    this.resultCopyFeedbackHandle = window.setTimeout(() => {
-      this.resultCopied.set(false);
-      this.resultCopyFeedbackHandle = null;
-    }, 1600);
-  }
-
   protected async copyFollowUpPrompt(prompt: string, index: number): Promise<void> {
     const copied = await copyTextToClipboard(prompt);
     if (!copied) {
@@ -1314,14 +1277,6 @@ export class FlowExplorerPageComponent implements OnInit {
     this.pollingSubscription = undefined;
   }
 
-  private clearResultCopyFeedback(): void {
-    if (this.resultCopyFeedbackHandle === null) {
-      return;
-    }
-    window.clearTimeout(this.resultCopyFeedbackHandle);
-    this.resultCopyFeedbackHandle = null;
-  }
-
   private clearFollowUpPromptCopyFeedback(): void {
     if (this.followUpPromptCopyFeedbackHandle === null) {
       return;
@@ -1332,12 +1287,10 @@ export class FlowExplorerPageComponent implements OnInit {
 
   private resetJobState(): void {
     this.stopPolling();
-    this.clearResultCopyFeedback();
     this.clearFollowUpPromptCopyFeedback();
     this.job.set(null);
     this.exportState.set(null);
     this.jobError.set('');
-    this.resultCopied.set(false);
     this.copiedFollowUpPromptIndex.set(null);
     this.isSubmitting.set(false);
     this.chatError.set('');

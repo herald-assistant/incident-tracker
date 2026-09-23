@@ -478,11 +478,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.querySelector('app-analysis-feature-aside [aria-label="Koszt AI"]')).not.toBeNull();
   });
 
-  it('should copy the completed Flow Explorer result as clean markdown', async () => {
-    const clipboard = mockRichClipboard();
+  it('prepares separate substantive Markdown and metadata for Flow Explorer', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
-
-    try {
       fixture.detectChanges();
       selectSystem(fixture, 'CRM Service');
       selectEndpoint(fixture, '/api/customers/{id}');
@@ -490,27 +487,14 @@ describe('FlowExplorerPageComponent', () => {
       clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
       fixture.detectChanges();
 
-      clickButtonContaining(fixture.nativeElement, 'Copy result');
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-      fixture.detectChanges();
-
-      const copiedText = clipboard.writeText.mock.calls[0]?.[0] as string | undefined;
-
-      expect(clipboard.writeText).toHaveBeenCalledTimes(1);
-      expect(copiedText).toContain('# Flow Explorer: GET /api/customers/{id}');
-      expect(copiedText).toContain('## Overview');
-      expect(copiedText).toContain('## Functional flow');
-      expect(copiedText).toContain('### Report metadata');
-      expect(copiedText).toContain('Runtime trace was not available.');
-      expect(copiedText).toContain('No runtime database records were queried.');
-      expect(copiedText).toContain('Legacy customer status mapping needs owner confirmation.');
-      expect(copiedText).not.toContain('Copy result');
-      expect(copiedText).not.toContain('CustomerController.getCustomer L12-L24');
-      expect(copiedText).not.toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
-      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
-    } finally {
-      clipboard.restore();
-    }
+      const document = fixture.componentInstance.shareDocument();
+      expect(document?.markdown).toContain('# Flow Explorer: GET /api/customers/{id}');
+      expect(document?.markdown).toContain('## Overview');
+      expect(document?.markdown).toContain('## Functional flow');
+      expect(document?.markdown).not.toContain('Runtime trace was not available.');
+      expect(document?.markdownWithMeta).toContain('Runtime trace was not available.');
+      expect(document?.markdownWithMeta).toContain('No runtime database records were queried.');
+      expect(document?.markdownWithMeta).toContain('Legacy customer status mapping needs owner confirmation.');
   });
 
   it('should not render legacy result content when the canonical report is missing', () => {
@@ -542,9 +526,7 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).not.toContain('The endpoint reads the requested customer');
   });
 
-  it('should export completed Flow Explorer results to a JSON file', async () => {
-    const downloadMock = mockFileDownload();
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  it('shows the shared action without a JSON export button', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
@@ -553,17 +535,8 @@ describe('FlowExplorerPageComponent', () => {
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
-    clickButtonContaining(fixture.nativeElement, 'Export');
-
-    const blob = downloadMock.createObjectURL.mock.calls[0]?.[0] as Blob;
-    expect(downloadMock.createObjectURL).toHaveBeenCalledTimes(1);
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(blob.type).toBe('application/json');
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-    expect(downloadMock.revokeObjectURL).toHaveBeenCalledWith('blob:flow-explorer-export');
-
-    clickSpy.mockRestore();
-    downloadMock.restore();
+    expect((fixture.nativeElement as HTMLElement).querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Export JSON');
   });
 
   it('should import a completed Flow Explorer export as a read-only result', async () => {
