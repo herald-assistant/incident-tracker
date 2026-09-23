@@ -26,14 +26,14 @@ describe('ContextAssistancePanelComponent', () => {
         status: 'COMPLETED', message: 'Prompt gotowy.', itemCount: 1,
         startedAt: '2026-09-13T10:00:00Z', completedAt: '2026-09-13T10:00:01Z' }],
       usage: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0,
-        totalTokens: 120, cost: 0, apiDurationMs: 1000, apiCallCount: 1, model: 'gpt-5.4',
+        totalTokens: 120, aiCredits: 0, apiDurationMs: 1000, apiCallCount: 1, model: 'gpt-5.4',
         contextTokenLimit: null, contextCurrentTokens: null, contextMessages: null }
     };
     const fixture = await initialJobFixture(completed);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-analysis-feature-aside')).not.toBeNull();
-    expect(compiled.querySelector('.assistance-run__aside-usage')?.textContent).toContain('120');
-    expect(compiled.querySelector('.assistance-run__aside-usage')?.textContent).toContain('Koszt');
+    expect(compiled.querySelector('.assistance-run__aside-usage')).toBeNull();
+    expect(compiled.querySelector('app-analysis-feature-aside [aria-label="Koszt AI"]')).not.toBeNull();
     expect(compiled.querySelector('app-analysis-feature-aside')?.textContent)
       .toContain('Inicjalny prompt asysty Operational Context');
     expect(compiled.querySelector<HTMLTextAreaElement>('.prepared-prompt__textarea')?.value)

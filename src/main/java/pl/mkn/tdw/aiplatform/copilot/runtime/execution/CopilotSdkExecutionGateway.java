@@ -405,7 +405,7 @@ public class CopilotSdkExecutionGateway {
                     data.outputTokens(),
                     data.cacheReadTokens(),
                     data.cacheWriteTokens(),
-                    data.cost(),
+                    data.copilotUsage() != null ? data.copilotUsage().totalNanoAiu() : null,
                     data.duration()
             );
             return;
@@ -692,14 +692,12 @@ public class CopilotSdkExecutionGateway {
             put(details, "outputTokens", data.outputTokens());
             put(details, "cacheReadTokens", data.cacheReadTokens());
             put(details, "cacheWriteTokens", data.cacheWriteTokens());
-            put(details, "cost", data.cost());
             put(details, "durationMs", data.duration());
             put(details, "initiator", data.initiator());
             put(details, "apiCallId", data.apiCallId());
             put(details, "providerCallId", data.providerCallId());
             put(details, "parentToolCallId", data.parentToolCallId());
             put(details, "quotaSnapshots", data.quotaSnapshots());
-            put(details, "copilotUsage", data.copilotUsage());
             return activity(
                     event,
                     "USAGE",

@@ -474,15 +474,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Runtime trace was not available.');
     expect(compiled.textContent).toContain('Legacy customer status mapping needs owner confirmation.');
     expect(compiled.querySelector('app-analysis-report-panel')).toBeNull();
-    expect(compiled.textContent).toContain('Tokens');
-    expect(compiled.textContent).toContain('2,820');
-    expect(compiled.textContent).toContain('Credits');
-    expect(compiled.textContent).toContain('Dollars');
-    expect(compiled.textContent).not.toContain('Cost $0.0123');
-
-    const usage = compiled.querySelector('.flow-explorer-result-usage') as HTMLElement | null;
-    expect(usage?.getAttribute('aria-label')).toContain('Wywolania modelu: 1');
-    expect(usage?.getAttribute('aria-label')).toContain('Dollars: $0.00');
+    expect(compiled.querySelector('.flow-explorer-result-usage')).toBeNull();
+    expect(compiled.querySelector('app-analysis-feature-aside [aria-label="Koszt AI"]')).not.toBeNull();
   });
 
   it('should copy the completed Flow Explorer result as clean markdown', async () => {
@@ -1432,7 +1425,7 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
       totalTokens: 2820,
-      cost: 0.0123,
+      aiCredits: 1.23,
       apiDurationMs: 1200,
       apiCallCount: 1,
       model: 'gpt-5-mini',

@@ -293,7 +293,8 @@ public class DeliveryComplexityAssessmentJobState {
                 usages.stream().mapToLong(AnalysisAiUsage::cacheReadTokens).sum(),
                 usages.stream().mapToLong(AnalysisAiUsage::cacheWriteTokens).sum(),
                 usages.stream().mapToLong(AnalysisAiUsage::totalTokens).sum(),
-                usages.stream().mapToDouble(AnalysisAiUsage::cost).sum(),
+                usages.stream().allMatch(usage -> usage.aiCredits() != null)
+                        ? usages.stream().mapToDouble(AnalysisAiUsage::aiCredits).sum() : null,
                 usages.stream().mapToLong(AnalysisAiUsage::apiDurationMs).sum(),
                 usages.stream().mapToInt(AnalysisAiUsage::apiCallCount).sum(),
                 usages.stream().map(AnalysisAiUsage::model).filter(java.util.Objects::nonNull).findFirst().orElse(null),

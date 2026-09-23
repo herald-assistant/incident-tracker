@@ -72,7 +72,7 @@ export interface AnalysisAiUsage {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   totalTokens: number;
-  cost: number;
+  aiCredits: number | null;
   apiDurationMs: number;
   apiCallCount: number;
   model: string;

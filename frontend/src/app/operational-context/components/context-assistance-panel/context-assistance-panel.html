@@ -169,6 +169,7 @@
       </div>
       <app-analysis-feature-aside
         ariaLabel="Panel pracy asysty Operational Context"
+        [usage]="currentJob.usage ?? null"
         [progressActive]="analysisProgressRunning()"
         [aiActive]="aiWorkRunning()"
         [progressCount]="currentJob.steps.length"
@@ -187,14 +188,6 @@
           ></app-analysis-steps-panel>
         </div>
         <div aiPanel>
-          @if (currentJob.usage; as usage) {
-            <div class="assistance-run__aside-usage" aria-label="Koszt asysty AI">
-              <span class="panel-chip"><span>Model</span> <strong>{{ usage.model }}</strong></span>
-              <span class="panel-chip"><span>Tokeny</span> <strong>{{ usage.totalTokens }}</strong></span>
-              <span class="panel-chip"><span>Kredyty</span> <strong>{{ usageCredits(usage) }}</strong></span>
-              <span class="panel-chip"><span>Koszt</span> <strong>{{ usageCost(usage) }}</strong></span>
-            </div>
-          }
           <app-analysis-steps-panel
             [steps]="currentJob.steps || []"
             [aiActivityEvents]="currentJob.aiActivityEvents || []"
@@ -206,9 +199,6 @@
       </app-analysis-feature-aside>
       @if (currentJob.sourceRevision; as revision) {
         <p class="assistance-run__source">GitLab: {{ revision.project }}&#64;{{ revision.requestedRef }} · commit <code>{{ revision.commitId }}</code></p>
-      }
-      @if (currentJob.usage; as usage) {
-        <p class="assistance-run__usage">AI: {{ usage.model }} · {{ usage.totalTokens }} tokenów · {{ usageCost(usage) }}</p>
       }
       @if (currentJob.sourceRefs.length || currentJob.visibilityLimits.length) {
         <details class="assistance-run__evidence">

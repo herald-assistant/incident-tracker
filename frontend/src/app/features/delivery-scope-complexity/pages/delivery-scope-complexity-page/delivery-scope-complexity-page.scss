@@ -692,9 +692,7 @@
 }
 
 .overall-result__primary span,
-.overall-result__metrics dt,
-.cost-summary span,
-.cost-summary dt {
+.overall-result__metrics dt {
   color: var(--text-muted);
   font-size: 0.76rem;
 }
@@ -747,42 +745,12 @@
 }
 
 .overall-result__metrics dt,
-.overall-result__metrics dd,
-.cost-summary dt,
-.cost-summary dd {
+.overall-result__metrics dd {
   margin: 0;
 }
 
-.overall-result__metrics dd,
-.cost-summary dd {
+.overall-result__metrics dd {
   font-weight: 700;
-}
-
-.cost-summary {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.cost-summary__primary strong {
-  margin-right: 8px;
-  font-size: 1.1rem;
-}
-
-.cost-summary dl {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(86px, 1fr));
-  gap: 24px;
-  margin: 0;
-}
-
-.cost-summary dl > div {
-  display: grid;
-  gap: 3px;
-  text-align: right;
 }
 
 .units-empty,
@@ -879,8 +847,7 @@
 
   .unit-row__mrs::before,
   .unit-row__status::before,
-  .unit-row__points::before,
-  .unit-row__cost::before {
+  .unit-row__points::before {
     color: var(--text-muted);
     font-size: 0.68rem;
     font-weight: 700;
@@ -899,10 +866,6 @@
     content: "Wynik";
   }
 
-  .unit-row__cost::before {
-    content: "Koszt AI";
-  }
-
   .unit-row__status {
     flex-wrap: wrap;
   }
@@ -911,17 +874,4 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .cost-summary {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .cost-summary dl {
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cost-summary dl > div {
-    text-align: left;
-  }
 }

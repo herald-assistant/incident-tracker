@@ -10,7 +10,6 @@ import {
   AnalysisAiActivityEvent,
   AnalysisAiToolResultContent,
   AnalysisAiToolFeedback,
-  AnalysisAiUsage,
   AnalysisEvidenceAttribute,
   AnalysisEvidenceReference,
   AnalysisEvidenceSection,
@@ -33,11 +32,6 @@ import {
   hasMeaningfulValue,
   isLargeAttribute
 } from '../../core/utils/analysis-display.utils';
-import {
-  AnalysisAiCostEstimate,
-  estimateAnalysisAiCost,
-  GITHUB_AI_CREDIT_USD
-} from '../../core/utils/analysis-ai-usage-cost.utils';
 import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
@@ -347,15 +341,7 @@ interface StepView {
   preparedPrompts: AnalysisPreparedPrompt[];
   promptPanelTitle: string;
   promptPanelDescription: string;
-  showUsage: boolean;
-  usageStats: UsageStatView[];
-  usageTooltip: string;
   emptyStateMessage: string;
-}
-
-interface UsageStatView {
-  label: string;
-  value: string;
 }
 
 interface ToolFeedbackView {
@@ -608,8 +594,6 @@ export class AnalysisStepsPanelComponent {
       const stepPreparedPrompts = resolvePreparedPrompts(step.code, this.preparedPrompts());
       const showPreparedPromptView = Boolean(stepPreparedPrompt) || stepPreparedPrompts.length > 0;
       const key = buildStepKey(step, index);
-      const usageEstimate = estimateAnalysisAiCost(step.usage ?? null);
-      const usageStats = buildUsageStats(step.usage ?? null, usageEstimate);
 
       return {
         key,
@@ -630,9 +614,6 @@ export class AnalysisStepsPanelComponent {
         preparedPrompts: stepPreparedPrompts,
         promptPanelTitle: buildPreparedPromptTitle(step.code),
         promptPanelDescription: buildPreparedPromptDescription(step.code),
-        showUsage: usageStats.length > 0,
-        usageStats,
-        usageTooltip: buildUsageTooltip(step.usage ?? null, usageEstimate),
         emptyStateMessage: buildEmptyStateMessage(
           step,
           detailSections.length,
@@ -837,115 +818,6 @@ function buildEvidenceFlowMeta(step: AnalysisJobStepResponse): string[] {
   return meta;
 }
 
-function buildUsageStats(
-  usage: AnalysisAiUsage | null,
-  estimate: AnalysisAiCostEstimate | null
-): UsageStatView[] {
-  if (!usage || usage.totalTokens <= 0 || !estimate) {
-    return [];
-  }
-
-  return [
-    { label: 'Tokens', value: formatCompactTokenCount(usage.totalTokens) },
-    { label: 'Credits', value: formatCredits(estimate.credits) },
-    { label: 'Dollars', value: formatDollars(estimate.dollars) }
-  ];
-}
-
-function buildUsageTooltip(
-  usage: AnalysisAiUsage | null,
-  estimate: AnalysisAiCostEstimate | null
-): string {
-  if (!usage || !estimate) {
-    return '';
-  }
-
-  const lines = [
-    'Szacowany koszt analizy AI',
-    '',
-    `Tokeny: ${formatTokenCount(usage.totalTokens)} - miara tekstu odczytanego i wygenerowanego przez AI.`,
-    `Kredyty GitHub AI: ${formatCredits(estimate.credits)} - szacowane zużycie pakietu.`,
-    `Koszt w USD: ${formatDollars(estimate.dollars)} - szacowany koszt po wykorzystaniu pakietu.`,
-    '',
-    'Jak to liczymy:',
-    `Nowy kontekst wysłany do AI: ${formatTokenCount(
-      estimate.newInputTokens
-    )} tokenów × ${formatUsdRate(estimate.inputUsdPerMillion)} / 1M.`,
-    `Ponownie użyty kontekst: ${formatTokenCount(
-      estimate.cachedInputTokens
-    )} tokenów × ${formatUsdRate(
-      estimate.cachedInputUsdPerMillion
-    )} / 1M. To wcześniejsza część rozmowy, za którą zwykle nalicza się niższą stawkę.`,
-    `Odpowiedź AI: ${formatTokenCount(estimate.outputTokens)} tokenów × ${formatUsdRate(
-      estimate.outputUsdPerMillion
-    )} / 1M.`
-  ];
-
-  if (estimate.cacheWriteTokens > 0) {
-    if (estimate.cacheWriteUsdPerMillion !== null) {
-      lines.push(
-        `Zapis do pamięci podręcznej: ${formatTokenCount(estimate.cacheWriteTokens)} tokenów × ${formatUsdRate(
-          estimate.cacheWriteUsdPerMillion
-        )} / 1M.`
-      );
-    } else {
-      lines.push(
-        `Zapis do pamięci podręcznej: ${formatTokenCount(
-          estimate.cacheWriteTokens
-        )} tokenów. Nie znamy osobnej stawki za ten zapis, więc pokazujemy go informacyjnie.`
-      );
-    }
-  }
-
-  lines.push('');
-  lines.push(
-    `Stawki: ${estimate.pricingModel}${
-      estimate.usedFallbackPricing ? ' (model nierozpoznany, użyty domyślny przelicznik)' : ''
-    }, 1 kredyt = ${formatDollars(GITHUB_AI_CREDIT_USD)}.`
-  );
-
-  if (usage.apiCallCount > 0) {
-    lines.push(
-      `Wywołania modelu: ${formatTokenCount(
-        usage.apiCallCount
-      )}. Jedna analiza może mieć kilka rund, zwłaszcza gdy AI pobiera dodatkowe dane.`
-    );
-  }
-
-  if (usage.apiDurationMs > 0) {
-    lines.push(`Czas po stronie API: ${formatDurationMs(usage.apiDurationMs)}.`);
-  }
-
-  if (usage.model) {
-    lines.push(`Użyty model: ${usage.model}.`);
-  }
-
-  if (usage.contextCurrentTokens !== null && usage.contextTokenLimit !== null) {
-    lines.push(
-      `Aktualny rozmiar kontekstu sesji: ${formatTokenCount(
-        usage.contextCurrentTokens
-      )} / ${formatTokenCount(
-        usage.contextTokenLimit
-      )} tokenów. To bieżąca wielkość rozmowy, a nie dodatkowy koszt.`
-    );
-  }
-
-  if (usage.contextMessages !== null) {
-    lines.push(
-      `Wiadomości w sesji: ${formatTokenCount(
-        usage.contextMessages
-      )}; obejmują również komunikaty techniczne i wyniki narzędzi.`
-    );
-  }
-
-  lines.push('');
-  lines.push(
-    'To przybliżenie, a nie kwota na fakturze. Rzeczywisty koszt zależy od planu, pozostałych kredytów i cennika GitHub.'
-  );
-
-  return lines.join('\n');
-}
-
 function prepareToolFeedbackItems(feedback: AnalysisAiToolFeedback[]): ToolFeedbackView[] {
   return (feedback || []).map((item, index) => ({
     key: item.feedbackId || `${item.targetToolName}-${item.targetToolCallId}-${index}`,
@@ -1040,27 +912,6 @@ function formatCompactTokenCount(value: number): string {
   }
 
   return formatTokenCount(roundedValue);
-}
-
-function formatCredits(value: number): string {
-  return new Intl.NumberFormat('pl-PL', {
-    minimumFractionDigits: value < 10 ? 2 : 1,
-    maximumFractionDigits: value < 10 ? 2 : 1
-  }).format(value);
-}
-
-function formatDollars(value: number): string {
-  return `$${new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value)}`;
-}
-
-function formatUsdRate(value: number): string {
-  return `$${new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: value < 1 ? 3 : 2,
-    maximumFractionDigits: 3
-  }).format(value)}`;
 }
 
 function formatDurationMs(value: number): string {

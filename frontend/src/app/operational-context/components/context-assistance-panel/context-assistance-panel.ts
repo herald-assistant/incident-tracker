@@ -7,9 +7,7 @@ import { Subject, Subscription, catchError, concatMap, debounceTime, map, of } f
 import { AnalysisStepsPanelComponent } from '../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisFeatureAsideComponent } from '../../../components/analysis-feature-aside/analysis-feature-aside';
 import { GitLabBranchSelectComponent } from '../../../components/gitlab-branch-select/gitlab-branch-select';
-import { AnalysisAiUsage } from '../../../core/models/analysis.models';
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
-import { estimateAnalysisAiCost } from '../../../core/utils/analysis-ai-usage-cost.utils';
 import {
   OperationalContextAssistanceJob,
   OperationalContextAssistanceBatchPreview,
@@ -1095,16 +1093,6 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       case 'MEDIUM': return 'średnia pewność';
       case 'HIGH': return 'wysoka pewność';
     }
-  }
-
-  usageCost(usage: AnalysisAiUsage): string {
-    const estimate = estimateAnalysisAiCost(usage);
-    return estimate ? `~${estimate.dollars.toFixed(4)} USD (szacunek)` : 'brak szacunku kosztu';
-  }
-
-  usageCredits(usage: AnalysisAiUsage): string {
-    const estimate = estimateAnalysisAiCost(usage);
-    return estimate ? `~${estimate.credits.toFixed(2)}` : '—';
   }
 
   private startPolling(jobId: string): void {

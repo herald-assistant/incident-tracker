@@ -288,23 +288,6 @@
                 <span [attr.class]="'status-pill ' + step.statusClass">
                   {{ step.statusLabel }}
                 </span>
-                @if (step.showUsage) {
-                  <span
-                    class="status-pill usage-pill"
-                    [attr.aria-label]="step.usageTooltip"
-                    [matTooltip]="step.usageTooltip"
-                    matTooltipPosition="above"
-                    matTooltipClass="analysis-rich-tooltip"
-                    [matTooltipShowDelay]="120"
-                  >
-                    @for (stat of step.usageStats; track stat.label) {
-                      <span class="usage-pill__metric">
-                        <span class="usage-pill__label">{{ stat.label }}</span>
-                        <span class="usage-pill__value">{{ stat.value }}</span>
-                      </span>
-                    }
-                  </span>
-                }
               </div>
             </div>
 

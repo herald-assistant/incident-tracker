@@ -286,11 +286,9 @@ Na dzisiaj projekt ma:
   `gitlab_read_frontend_typescript_symbol_slice` panel wyciaga z rezultatu
   `content` i metadane pliku, aby pokazac numerowany kod takze bez osobnego
   wpisu tool evidence,
-- w ekranie `GET /incident-analysis` ostatni krok AI pokazuje sumaryczne tokeny oraz
-  uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
-  nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy. Wycena
-  traktuje zwykly input, cache read, cache write i output jako rozlaczne
-  kategorie; zwykly input odejmuje oba rodzaje tokenow cache,
+- ekrany analiz pokazuja kredyty GitHub AI, ekwiwalent USD, tokeny i liczbe
+  wywolan w jednym wspolnym tabie `Koszt AI` bocznego panelu; glowny wynik
+  i kroki przebiegu nie powielaja tych danych,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
   `GET /confluence`, `GET /config-drift-viewer-tools`, `GET /database` i
   `GET /operational-context` do recznego
@@ -1021,10 +1019,11 @@ Znaczenie grup UI:
 - Zuzycie tokenow jest zbierane z eventow sesji Copilota i wystawiane do UI
   jako generyczne `shared.ai.AnalysisAiUsage`, bez typow SDK w kontrakcie
   frontendu.
-  Frontend liczy orientacyjne GitHub AI Credits/USD z tokenow i modelu jako
-  product-facing estymacje oplacalnosci, nie jako fakture. Statyczny snapshot
-  cennika obejmuje aktualny katalog modeli i stawki Default; z agregatow
-  tokenow runu nie da sie wiarygodnie odtworzyc per-call Long context tier.
+  Runtime agreguje per-call `copilotUsage.totalNanoAiu` z eventow
+  `assistant.usage` i przelicza je na kredyty (`1e9` nano AIU = 1 kredyt).
+  Brak danych chocby jednego wywolania oznacza nieznana kwote kredytow.
+  Wspolny aside pokazuje ekwiwalent przy zalozeniu 100 kredytow = 1 USD;
+  aplikacja nie utrzymuje cennika modeli.
 - Diagnostyka OTLP z procesu Copilot CLI jest wlaczona w
   `application.properties` dla lokalnego Agent Scanner na porcie 8081.
   Pelne tresci pozostaja

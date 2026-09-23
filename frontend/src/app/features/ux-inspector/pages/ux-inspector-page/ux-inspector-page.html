@@ -384,6 +384,8 @@
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy UX Inspectora"
+        [usage]="snapshot.usage"
+        [chatMessages]="snapshot.chatMessages ?? []"
         [progressActive]="facade.workflowIsRunning()"
         [aiActive]="facade.aiWorkflowIsRunning()"
         [progressCount]="progressCount()"

@@ -756,17 +756,12 @@ nie powinien zalezec od typow Copilot SDK. Publiczne API pozostaje w modelu
 analizy aplikacji.
 
 Zuzycie tokenow jest wystawiane jako generyczne
-`shared.ai.AnalysisAiUsage`, a nie jako event albo typ Copilot SDK. Dzieki
-temu UI moze pokazac sumaryczne tokeny,
-uproszczone GitHub AI Credits/USD oraz szczegoly sesji AI bez znajomosci
-mechaniki event streamu. Estymacja kosztu jest liczona w frontendzie z tokenow
-i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
-analizy, a nie do rozliczen finansowych.
-
-Kategorie tokenow sa rozlaczne przy wycenie: zwykly input to
-`max(inputTokens - cacheReadTokens - cacheWriteTokens, 0)`. Cache read, cache
-write i output sa wyceniane osobno po swoich stawkach. `cacheWriteTokens` nie
-moze byc jednoczesnie policzone jako nowy input i zapis cache.
+`shared.ai.AnalysisAiUsage`, a nie jako event albo typ Copilot SDK. Runtime
+sumuje `copilotUsage.totalNanoAiu` z kazdego `assistant.usage`; miliard nano
+AIU oznacza jeden kredyt. Jesli ktorekolwiek wywolanie nie przekaze tej
+wartosci, suma kredytow pozostaje nieznana. Wspolny tab `Koszt AI` w aside
+pokazuje kredyty i ekwiwalent przy zalozeniu 100 kredytow = 1 USD.
+Frontend nie utrzymuje tabeli stawek modeli.
 
 Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
 fasadach `features.incidentanalysis.job` / `api.aioptions` nie powinny
@@ -1094,9 +1089,8 @@ Assessment uzywa sesji one-shot bez tools. Effective tresc skilla, instrukcja,
 Jira evidence, kod MR i kontrakt odpowiedzi sa splaszczone do jednej wiadomosci,
 a built-in `skill` jest dla tej sesji wylaczony. Dokladny prompt jest zapisywany
 na jednostce przed wyslaniem i pokazywany w kroku `AI_INPUT_PREPARATION`.
-Raport jednostki powstaje deterministycznie z finalnego JSON-a. SDK `cost` jest
-agregowany jako mnoznik rozliczeniowy i nie jest prezentowany jako USD; koszt
-tokenow w UI pozostaje osobnym oszacowaniem.
+Raport jednostki powstaje deterministycznie z finalnego JSON-a. Kredyty AI
+sa agregowane z usage jednostek i pokazywane wylacznie we wspolnym aside.
 
 ## 29. Alternatywny scoring jest izolowany jako osobny eksperyment
 

@@ -157,6 +157,33 @@
   display: none !important;
 }
 
+.analysis-feature-aside__cost {
+  max-width: 640px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.analysis-feature-aside__cost h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.analysis-feature-aside__cost-primary {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.analysis-feature-aside__cost dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
 @keyframes analysis-feature-aside-spin {
   to {
     transform: rotate(360deg);

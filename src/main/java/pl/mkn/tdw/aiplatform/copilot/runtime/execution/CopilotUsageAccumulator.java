@@ -13,7 +13,8 @@ final class CopilotUsageAccumulator {
     private double outputTokens;
     private double cacheReadTokens;
     private double cacheWriteTokens;
-    private double cost;
+    private double nanoAiu;
+    private boolean hasCompleteAiCredits = true;
     private double apiDurationMs;
     private final Set<String> models = new LinkedHashSet<>();
     private boolean hasContextUsageInfo;
@@ -27,7 +28,7 @@ final class CopilotUsageAccumulator {
             Number outputTokens,
             Number cacheReadTokens,
             Number cacheWriteTokens,
-            Number cost,
+            Number totalNanoAiu,
             Number durationMs
     ) {
         callCount++;
@@ -35,7 +36,11 @@ final class CopilotUsageAccumulator {
         this.outputTokens += numeric(outputTokens);
         this.cacheReadTokens += numeric(cacheReadTokens);
         this.cacheWriteTokens += numeric(cacheWriteTokens);
-        this.cost += numeric(cost);
+        if (totalNanoAiu == null || !Double.isFinite(totalNanoAiu.doubleValue()) || totalNanoAiu.doubleValue() < 0) {
+            hasCompleteAiCredits = false;
+        } else {
+            nanoAiu += totalNanoAiu.doubleValue();
+        }
         this.apiDurationMs += numeric(durationMs);
         if (StringUtils.hasText(model)) {
             models.add(model);
@@ -66,7 +71,7 @@ final class CopilotUsageAccumulator {
                 rounded(cacheReadTokens),
                 rounded(cacheWriteTokens),
                 roundedInputTokens + roundedOutputTokens,
-                cost,
+                hasCompleteAiCredits ? nanoAiu / 1_000_000_000D : null,
                 rounded(apiDurationMs),
                 callCount,
                 models.isEmpty() ? null : String.join(", ", models),

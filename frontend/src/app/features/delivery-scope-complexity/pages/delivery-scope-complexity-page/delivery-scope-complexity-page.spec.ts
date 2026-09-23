@@ -154,7 +154,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('nie jest Delivery Scope Complexity');
   });
 
-  it('should present the token estimate instead of formatting the SDK multiplier as USD', async () => {
+  it('should present aggregate credits in the shared aside only', async () => {
     const unit = completedUnit();
     const usage = {
       inputTokens: 1_045_393,
@@ -162,7 +162,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
       cacheReadTokens: 837_120,
       cacheWriteTokens: 0,
       totalTokens: 1_117_807,
-      cost: 15.51,
+      aiCredits: 15.51,
       apiDurationMs: 622_916,
       apiCallCount: 47,
       model: 'gpt-5.4-mini',
@@ -175,28 +175,13 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     completed.aggregate.usage = usage;
     const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
 
-    expect(fixture.nativeElement.textContent).toContain('szacowany koszt tokenów');
-    expect(fixture.nativeElement.textContent).toContain('47');
-    expect(fixture.nativeElement.querySelector('.unit-row__cost').textContent).not.toContain('—');
-    expect(fixture.nativeElement.textContent).not.toContain('jednostek mnożnika SDK');
-    const overallCostMetrics = Array.from(
-      fixture.nativeElement.querySelectorAll('.cost-summary dl > div') as NodeListOf<HTMLElement>
-    ).map((metric) => ({
-      label: metric.querySelector('dt')?.textContent.trim(),
-      value: metric.querySelector('dd')?.textContent.trim()
-    }));
-    expect(overallCostMetrics).toEqual([
-      { label: 'Input', value: '1 045 393' },
-      { label: 'Cache', value: '837 120' },
-      { label: 'Output', value: '72 414' },
-      { label: 'Wywołania AI', value: '47' }
-    ]);
-    expect(fixture.componentInstance['unitCostTooltip'](unit)).toBe(
-      'Input: 1 045 393 tokenów · Cache: 837 120 tokenów · Output: 72 414 tokenów · 47 wywołań AI'
-    );
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.unit-row__cost')).toBeNull();
+    expect(compiled.querySelector('.cost-summary')).toBeNull();
+    expect(compiled.querySelector('app-analysis-feature-aside [aria-label="Koszt AI"]')).not.toBeNull();
   });
 
-  it('should use singular AI call label in the unit cost tooltip', async () => {
+  it('should not show unit costs in the main result', async () => {
     const unit = completedUnit();
     unit.usage = {
       inputTokens: 16_000,
@@ -204,7 +189,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
       cacheReadTokens: 12_000,
       cacheWriteTokens: 0,
       totalTokens: 16_890,
-      cost: 0.03,
+      aiCredits: 0.03,
       apiDurationMs: 5_000,
       apiCallCount: 1,
       model: 'gpt-5.4-mini',
@@ -217,9 +202,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
       localRunId: 'job-1'
     });
 
-    expect(fixture.componentInstance['unitCostTooltip'](unit)).toBe(
-      'Input: 16 000 tokenów · Cache: 12 000 tokenów · Output: 890 tokenów · 1 wywołanie AI'
-    );
+    expect(fixture.nativeElement.querySelector('.unit-row__cost')).toBeNull();
   });
 
   it('should explain every overall result metric and its calculation', async () => {

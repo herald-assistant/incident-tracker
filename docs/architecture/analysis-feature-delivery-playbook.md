@@ -1380,12 +1380,9 @@ job/export state. Polling trwa do zakonczenia assistant `IN_PROGRESS`.
   feature-specific component,
 - nie duplikuj wspolnego naglowka, tabs, meta ani renderowania Markdown,
 - references, gaps, warnings, open questions i visibility limits zachowaj,
-- usage pokazuj przez `AnalysisJobStepResponse.usage` i wspolny steps panel,
-- nie przeliczaj sam total tokenow i nie reimplementuj pricing/formatterow;
-  uzyj backendowego `AnalysisAiUsage` oraz
-  `core/utils/analysis-ai-usage-cost.utils.ts`,
-- jesli potrzebny jest total usage poza steps panelem, najpierw wydziel shared
-  summary component/helper,
+- usage i koszt pokazuj tylko we wspolnym tabie `Koszt AI` komponentu
+  `analysis-feature-aside`, zasilanym przez backendowy `AnalysisAiUsage`,
+- nie przeliczaj sam kosztu z tokenow ani nie utrzymuj cennika modeli,
 - przygotowany prompt pokazuj jako faktycznie wykonany prompt.
 
 `analysis-steps-panel` ma obecnie incidentowe hardcode'y decydujace, dla
@@ -1752,7 +1749,6 @@ Czytaj te miejsca jako przyklady odpowiedzialnosci, nie jako klasy do importu:
 - `frontend/src/app/core/services/github-auth.service.ts`
 - `frontend/src/app/core/services/analysis-run-history-api.service.ts`
 - `frontend/src/app/core/utils/analysis-ai-model-options.utils.ts`
-- `frontend/src/app/core/utils/analysis-ai-usage-cost.utils.ts`
 - `frontend/src/app/core/utils/analysis-chat-optimistic.utils.ts`
 - `frontend/src/app/core/utils/analysis-import-export.utils.ts`
 - `frontend/src/app/core/utils/analysis-display.utils.ts`

@@ -942,23 +942,6 @@
               </div>
             }
 
-            @if (result.usage; as usage) {
-              <div
-                class="flow-explorer-result-usage"
-                [attr.aria-label]="usageTooltip(usage)"
-                [matTooltip]="usageTooltip(usage)"
-                matTooltipPosition="above"
-                matTooltipClass="analysis-rich-tooltip"
-                [matTooltipShowDelay]="100"
-              >
-                @for (stat of usageStats(usage); track stat.label) {
-                  <span class="panel-chip flow-explorer-result-usage__chip">
-                    <span>{{ stat.label }}</span>
-                    <strong>{{ stat.value }}</strong>
-                  </span>
-                }
-              </div>
-            }
             </div>
             </details>
           </section>
@@ -968,6 +951,8 @@
 
             <app-analysis-feature-aside
               ariaLabel="Panel pracy Flow Explorer"
+              [usage]="snapshot.result?.usage ?? null"
+              [chatMessages]="snapshot.chatMessages"
               [progressActive]="workflowIsRunning()"
               [aiActive]="aiWorkflowIsRunning()"
               [chatActive]="chatIsWaiting()"

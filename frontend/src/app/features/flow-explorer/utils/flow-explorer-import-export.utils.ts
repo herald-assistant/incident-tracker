@@ -543,7 +543,7 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
     cacheReadTokens: normalizeNumber(usageObject['cacheReadTokens']),
     cacheWriteTokens: normalizeNumber(usageObject['cacheWriteTokens']),
     totalTokens,
-    cost: normalizeNumber(usageObject['cost']),
+    aiCredits: normalizeNullableNumber(usageObject['aiCredits']),
     apiDurationMs: normalizeNumber(usageObject['apiDurationMs']),
     apiCallCount: normalizeNumber(usageObject['apiCallCount']),
     model: normalizeString(usageObject['model']),

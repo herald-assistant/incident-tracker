@@ -8,6 +8,7 @@ import com.github.copilot.generated.AssistantMessageEvent;
 import com.github.copilot.generated.AssistantMessageToolRequest;
 import com.github.copilot.generated.AssistantReasoningEvent;
 import com.github.copilot.generated.AssistantUsageEvent;
+import com.github.copilot.generated.AssistantUsageCopilotUsage;
 import com.github.copilot.generated.SessionCompactionStartEvent;
 import com.github.copilot.generated.SessionUsageInfoEvent;
 import com.github.copilot.generated.ToolExecutionCompleteEvent;
@@ -314,7 +315,7 @@ class CopilotSdkExecutionGatewayTest {
             });
             when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
                     .thenAnswer(invocation -> {
-                        eventHandler.get().accept(assistantUsage("gpt-5.4", 2400D, 420D, 300D, 50D, 2.3D, 1100D));
+                        eventHandler.get().accept(assistantUsage("gpt-5.4", 2400D, 420D, 300D, 50D, 1_250_000_000D, 1100D));
                         eventHandler.get().accept(sessionUsageInfo(128000D, 9200D, 6D));
                         return CompletableFuture.completedFuture(assistantMessage("Structured answer"));
                     });
@@ -330,6 +331,7 @@ class CopilotSdkExecutionGatewayTest {
             assertEquals(300L, usage.cacheReadTokens());
             assertEquals(50L, usage.cacheWriteTokens());
             assertEquals(1, usage.apiCallCount());
+            assertEquals(1.25D, usage.aiCredits());
             assertEquals("gpt-5.4", usage.model());
             assertEquals(128000L, usage.contextTokenLimit());
             assertEquals(9200L, usage.contextCurrentTokens());
@@ -1089,7 +1091,7 @@ class CopilotSdkExecutionGatewayTest {
             Double outputTokens,
             Double cacheReadTokens,
             Double cacheWriteTokens,
-            Double cost,
+            Double nanoAiu,
             Double duration
     ) {
         var event = new AssistantUsageEvent();
@@ -1101,11 +1103,11 @@ class CopilotSdkExecutionGatewayTest {
                 cacheWriteTokens != null ? cacheWriteTokens.longValue() : null,
                 null,
                 null,
-                cost,
+                null,
                 duration != null ? duration.longValue() : null,
                 null, null, null, null, null, null, null, null, null, null,
                 Map.of(),
-                null, null, null, null, null,
+                new AssistantUsageCopilotUsage(null, nanoAiu), null, null, null, null,
                 Map.of(),
                 null, null
         ));

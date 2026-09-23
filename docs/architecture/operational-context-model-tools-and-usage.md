@@ -605,7 +605,7 @@ z propozycjami jest wtedy co najwyzej `PARTIAL`.
 Snapshot joba zawiera status, kroki, prompt przygotowany przed
 wywolaniem Copilota, metadane jego pracy, usage/cost, source refs,
 ograniczenia, draft, preview, roboczy przeglad i decyzje. Wspolny boczny panel pokazuje przebieg
-analizy, prompt w kroku `PREPARE_AI`, tok pracy AI oraz szacunek kosztu.
+analizy, prompt w kroku `PREPARE_AI`, tok pracy AI oraz kredyty w tabie `Koszt AI`.
 Prompt moze zawierac bez zmian wartosci z opisu, katalogu i odczytanych plikow;
 jest przekazywany dostawcy AI oraz utrwalany w lokalnej historii analizy.
 Operator widzi zwarta liste propozycji i szczegoly jednej pozycji; formularz,

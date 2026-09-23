@@ -136,6 +136,7 @@
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy Change Verification"
+        [usage]="currentJob.result?.usage ?? null"
         [progressActive]="workflowIsRunning()"
         [aiActive]="aiWorkflowIsRunning()"
         [progressCount]="currentJob.steps.length"

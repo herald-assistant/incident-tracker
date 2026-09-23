@@ -503,7 +503,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(component.job()?.chatMessages[1]?.content).toContain('timeout na downstream');
   });
 
-  it('should expose detailed usage cost breakdown on the compact run context item', async () => {
+  it('should show usage only in the shared aside', async () => {
     const { fixture } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
     component.job.set(completedJobWithUsage());
@@ -516,17 +516,9 @@ describe('AnalysisConsoleComponent auth flow', () => {
       fixture.nativeElement.querySelectorAll('.analysis-run-context__item')
     ) as HTMLElement[];
     const usageItem = runContextItems.find((item) => item.textContent?.includes('Usage'));
-    const tooltip = usageItem?.getAttribute('aria-label') ?? '';
-
-    expect(usageItem).not.toBeUndefined();
-    expect(usageItem?.textContent).toContain('2 820 tokens');
-    expect(usageItem?.classList.contains('analysis-run-context__item--with-tooltip')).toBe(true);
-    expect(usageItem?.getAttribute('tabindex')).toBe('0');
-    expect(tooltip).toContain('Szacowany koszt analizy AI');
-    expect(tooltip).toContain('Nowy input: 1 800');
-    expect(tooltip).toContain('Cache read: 300');
-    expect(tooltip).toContain('Odpowiedź AI: 420');
-    expect(tooltip).toContain('Model SDK: gpt-5.4');
+    expect(usageItem).toBeUndefined();
+    const aside = fixture.nativeElement.querySelector('app-analysis-feature-aside') as HTMLElement;
+    expect(aside.querySelector('[aria-label="Koszt AI"]')).not.toBeNull();
   });
 
   it('should show auth CTA after auth-required job error', async () => {
@@ -971,7 +963,7 @@ function completedJobWithUsage(): AnalysisJobStateSnapshot {
         cacheReadTokens: 300,
         cacheWriteTokens: 0,
         totalTokens: 2820,
-        cost: 0.0123,
+        aiCredits: 1.23,
         apiDurationMs: 2430,
         apiCallCount: 2,
         model: 'gpt-5.4',

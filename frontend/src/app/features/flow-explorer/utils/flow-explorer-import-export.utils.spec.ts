@@ -477,7 +477,7 @@ function flowExplorerUsage(): NonNullable<NonNullable<FlowExplorerJobStateSnapsh
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
     totalTokens: 2820,
-    cost: 0.0123,
+    aiCredits: 1.23,
     apiDurationMs: 1200,
     apiCallCount: 1,
     model: 'gpt-5-mini',

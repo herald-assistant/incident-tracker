@@ -1,7 +1,8 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AnalysisAiUsage, AnalysisChatMessageResponse } from '../../core/models/analysis.models';
 
-type AnalysisFeatureAsidePanel = 'progress' | 'ai' | 'chat' | 'feedback';
+type AnalysisFeatureAsidePanel = 'progress' | 'ai' | 'chat' | 'feedback' | 'cost';
 
 interface AnalysisFeatureAsideTab {
   id: AnalysisFeatureAsidePanel;
@@ -34,6 +35,12 @@ const ASIDE_TABS: AnalysisFeatureAsideTab[] = [
     icon: 'reviews',
     label: 'Oceny narzędzi',
     tooltip: 'Oceny wyników narzędzi'
+  },
+  {
+    id: 'cost',
+    icon: 'paid',
+    label: 'Koszt AI',
+    tooltip: 'Zużycie kredytów i ekwiwalent USD'
   }
 ];
 
@@ -57,6 +64,42 @@ export class AnalysisFeatureAsideComponent {
   readonly showAi = input(true);
   readonly showChat = input(true);
   readonly showFeedback = input(true);
+  readonly usage = input<AnalysisAiUsage | null>(null);
+  readonly chatMessages = input<AnalysisChatMessageResponse[]>([]);
+
+  protected readonly usages = computed(() => [
+    this.usage(),
+    ...this.chatMessages()
+      .filter((message) => message.role === 'ASSISTANT')
+      .map((message) => message.usage ?? null)
+  ].filter((usage): usage is AnalysisAiUsage => usage !== null));
+  protected readonly credits = computed(() => {
+    const usages = this.usages();
+    return usages.length > 0 && usages.every((usage) => typeof usage.aiCredits === 'number' && Number.isFinite(usage.aiCredits))
+      ? usages.reduce((sum, usage) => sum + usage.aiCredits!, 0)
+      : null;
+  });
+  protected readonly totalTokens = computed(() =>
+    this.usages().reduce((sum, usage) => sum + usage.totalTokens, 0)
+  );
+  protected readonly totalCalls = computed(() =>
+    this.usages().reduce((sum, usage) => sum + usage.apiCallCount, 0)
+  );
+  protected readonly models = computed(() =>
+    [...new Set(this.usages().flatMap((usage) => (usage.model || '').split(',').map((model) => model.trim()).filter(Boolean)))].join(', ')
+  );
+
+  protected formatCredits(value: number): string {
+    return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 9 }).format(value);
+  }
+
+  protected formatUsd(value: number): string {
+    return `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 9 }).format(value)}`;
+  }
+
+  protected formatCount(value: number): string {
+    return new Intl.NumberFormat('pl-PL').format(value);
+  }
 
   protected readonly tabs = computed(() =>
     ASIDE_TABS.filter((tab) => this.isVisible(tab.id))
@@ -81,6 +124,8 @@ export class AnalysisFeatureAsideComponent {
         return this.chatActive();
       case 'feedback':
         return this.feedbackActive();
+      case 'cost':
+        return false;
     }
   }
 
@@ -94,6 +139,8 @@ export class AnalysisFeatureAsideComponent {
         return this.chatCount();
       case 'feedback':
         return this.feedbackCount();
+      case 'cost':
+        return 0;
     }
   }
 
@@ -127,6 +174,8 @@ export class AnalysisFeatureAsideComponent {
         return this.showChat();
       case 'feedback':
         return this.showFeedback();
+      case 'cost':
+        return this.usages().length > 0;
     }
   }
 }

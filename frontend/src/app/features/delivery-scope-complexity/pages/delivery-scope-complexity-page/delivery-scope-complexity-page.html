@@ -267,7 +267,6 @@
             <span role="columnheader">Merge Requests</span>
             <span role="columnheader">Status</span>
             <span role="columnheader">Wynik</span>
-            <span role="columnheader">Koszt AI</span>
             <span role="columnheader"></span>
           </div>
           @for (unit of visibleUnits(); track trackUnit($index, unit)) {
@@ -300,13 +299,6 @@
                   <strong>{{ unit.assessment?.finalScore ?? '—' }}</strong>
                   @if (unit.assessment) {
                     <small>/200</small>
-                  }
-                </div>
-                <div class="unit-row__cost" role="cell" [matTooltip]="unitCostTooltip(unit)">
-                  @if (unitCostEstimate(unit); as estimate) {
-                    <strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong>
-                  } @else {
-                    <strong>—</strong>
                   }
                 </div>
                 @if (unitHasDetails(unit)) {
@@ -574,42 +566,12 @@
             </dl>
           </section>
 
-          @if (aggregate.usage; as usage) {
-            <footer class="cost-summary" aria-label="Całościowy koszt AI">
-              <div class="cost-summary__primary">
-                <p class="section-eyebrow">Koszt AI całości</p>
-                @if (usageCostEstimate(); as estimate) {
-                  <strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong>
-                  <span>szacowany koszt tokenów</span>
-                } @else {
-                  <strong>n/a</strong>
-                }
-              </div>
-              <dl>
-                <div>
-                  <dt>Input</dt>
-                  <dd>{{ tokenCount(usage.inputTokens) }}</dd>
-                </div>
-                <div>
-                  <dt>Cache</dt>
-                  <dd>{{ tokenCount(usage.cacheReadTokens) }}</dd>
-                </div>
-                <div>
-                  <dt>Output</dt>
-                  <dd>{{ tokenCount(usage.outputTokens) }}</dd>
-                </div>
-                <div>
-                  <dt>Wywołania AI</dt>
-                  <dd>{{ usage.apiCallCount }}</dd>
-                </div>
-              </dl>
-            </footer>
-          }
         }
       </section>
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy Delivery Scope Complexity"
+        [usage]="currentJob.aggregate.usage"
         [progressActive]="workflowRunning()"
         [aiActive]="currentJob.status === 'ANALYZING'"
         [progressCount]="currentJob.steps.length"

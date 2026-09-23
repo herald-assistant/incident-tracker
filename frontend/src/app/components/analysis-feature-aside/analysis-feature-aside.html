@@ -63,5 +63,26 @@
     <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'feedback'">
       <ng-content select="[feedbackPanel]"></ng-content>
     </div>
+    <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'cost'">
+      <section class="analysis-feature-aside__cost" aria-label="Koszt wykonanej analizy AI">
+        <h2>Koszt AI</h2>
+        @if (credits() !== null) {
+          <p class="analysis-feature-aside__cost-primary">{{ formatCredits(credits()!) }} kredytów GitHub AI</p>
+          <p>Ekwiwalent: {{ formatUsd(credits()! / 100) }} przy założeniu 100 kredytów = 1 USD.</p>
+        } @else {
+          <p>Copilot nie przekazał pełnych danych o kredytach dla tego wykonania.</p>
+        }
+        <dl>
+          <div><dt>Tokeny</dt><dd>{{ formatCount(totalTokens()) }}</dd></div>
+          <div><dt>Wywołania AI</dt><dd>{{ formatCount(totalCalls()) }}</dd></div>
+          @if (models()) {
+            <div><dt>Modele</dt><dd>{{ models() }}</dd></div>
+          }
+        </dl>
+        @if (chatMessages().length > 0) {
+          <p>Łącznie z odpowiedziami follow-up, dla których zapisano usage.</p>
+        }
+      </section>
+    </div>
   </section>
 </aside>

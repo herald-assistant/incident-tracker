@@ -895,7 +895,7 @@ function result(): ConfigDriftViewerResult {
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
       totalTokens: 1500,
-      cost: 0,
+      aiCredits: 0,
       apiDurationMs: 4200,
       apiCallCount: 1,
       model: 'gpt-5.4',

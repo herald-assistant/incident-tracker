@@ -67,8 +67,6 @@
 .assistance-run__status strong { padding: .3rem .55rem; border-radius: .35rem; background: var(--color-surface-muted, #f2f5f8); }
 .assistance-run__source,
 .assistance-run__usage { margin: 0; overflow-wrap: anywhere; }
-.assistance-run__aside-usage { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
-.assistance-run__aside-usage .panel-chip { display: inline-flex; gap: .35rem; max-width: 100%; overflow-wrap: anywhere; }
 .assistance-run__list ul,
 .assistance-proposal__issues ul { margin: .4rem 0 0; padding-left: 1.2rem; }
 .assistance-run__list li,

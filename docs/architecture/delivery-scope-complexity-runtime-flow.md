@@ -97,7 +97,8 @@ starszy eksport bez nich pozostaje czytelny, a brak wartosci mapuje sie na
 
 UI ma wlasna route i API service. Pokazuje jedna rozwijalna tabele Delivery
 Units, linki Jira/MR, final score `0-200`, rozklad wymiarow, evidence, quality
-flags, visibility limits, warnings, raw response i koszt AI. Filtry team/author
+flags, visibility limits, warnings i raw response. Koszt AI jest widoczny tylko
+we wspolnym aside i dotyczy calego runu. Filtry team/author
 sa deterministyczna projekcja zakonczonego runu i nie zmieniaja zapisanych
 wynikow.
 

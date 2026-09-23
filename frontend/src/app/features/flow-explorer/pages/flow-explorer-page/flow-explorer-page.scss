@@ -740,7 +740,6 @@ article.flow-explorer-select-option {
 }
 
 .flow-explorer-result__badges,
-.flow-explorer-result-usage,
 .flow-explorer-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -1271,19 +1270,6 @@ article.flow-explorer-select-option {
 .flow-explorer-flow-step details p,
 .flow-explorer-flow-step .flow-explorer-chip-list {
   margin-top: 8px;
-}
-
-.flow-explorer-result-usage {
-  justify-content: flex-end;
-  width: fit-content;
-  max-width: 100%;
-  margin-left: auto;
-  padding-top: 2px;
-  cursor: help;
-}
-
-.flow-explorer-result-usage__chip {
-  gap: 4px;
 }
 
 .flow-explorer-warning {

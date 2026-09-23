@@ -320,6 +320,8 @@
 
           <app-analysis-feature-aside
             ariaLabel="Panel pracy Incident Analysis"
+            [usage]="currentJob.result?.usage ?? null"
+            [chatMessages]="currentJob.chatMessages"
             [progressActive]="workflowIsRunning()"
             [aiActive]="aiWorkflowIsRunning()"
             [chatActive]="chatIsWaiting()"

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -27,10 +27,6 @@ import {
   normalizeAnalysisAiModelOptions,
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
-import {
-  AnalysisAiCostEstimate,
-  estimateAnalysisAiCost
-} from '../../../../core/utils/analysis-ai-usage-cost.utils';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import {
   downloadJsonFile,
@@ -58,7 +54,6 @@ type FilterOption = { value: string; label: string; issueCount: number; complexi
   selector: 'app-delivery-scope-complexity-page',
   imports: [
     ReactiveFormsModule,
-    CurrencyPipe,
     DecimalPipe,
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
@@ -129,9 +124,6 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
         preparedAt: unit.promptPreparedAt,
         prompt: unit.preparedPrompt!
       }))
-  );
-  readonly usageCostEstimate = computed(() =>
-    estimateAnalysisAiCost(this.visibleAggregate()?.usage ?? null)
   );
   readonly filtersActive = computed(() => {
     this.filterRevision();
@@ -498,23 +490,6 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
     ];
   }
 
-  protected unitCostEstimate(unit: DeliveryScopeUnit): AnalysisAiCostEstimate | null {
-    return estimateAnalysisAiCost(unit.usage);
-  }
-
-  protected unitCostTooltip(unit: DeliveryScopeUnit): string {
-    const usage = unit.usage;
-    if (!usage) {
-      return 'AI nie zostało wywołane dla tej jednostki.';
-    }
-    return [
-      `Input: ${usage.inputTokens.toLocaleString('pl-PL')} tokenów`,
-      `Cache: ${usage.cacheReadTokens.toLocaleString('pl-PL')} tokenów`,
-      `Output: ${usage.outputTokens.toLocaleString('pl-PL')} tokenów`,
-      this.aiCallsLabel(usage.apiCallCount)
-    ].join(' · ');
-  }
-
   protected unitWarnings(unit: DeliveryScopeUnit): string[] {
     return Array.from(new Set(
       [unit.errorMessage]
@@ -827,28 +802,7 @@ function aggregateForUnits(units: DeliveryScopeUnit[]): DeliveryScopeAggregate {
     failedUnits,
     coverage,
     confidence: confidenceLabel(averageConfidence),
-    usage: aggregateUsage(units)
-  };
-}
-
-function aggregateUsage(units: DeliveryScopeUnit[]): DeliveryScopeAggregate['usage'] {
-  const usages = units.map((unit) => unit.usage).filter((usage): usage is NonNullable<typeof usage> => Boolean(usage));
-  if (!usages.length) {
-    return null;
-  }
-  return {
-    inputTokens: sum(usages, (usage) => usage.inputTokens),
-    outputTokens: sum(usages, (usage) => usage.outputTokens),
-    cacheReadTokens: sum(usages, (usage) => usage.cacheReadTokens),
-    cacheWriteTokens: sum(usages, (usage) => usage.cacheWriteTokens),
-    totalTokens: sum(usages, (usage) => usage.totalTokens),
-    cost: usages.reduce((total, usage) => total + usage.cost, 0),
-    apiDurationMs: sum(usages, (usage) => usage.apiDurationMs),
-    apiCallCount: sum(usages, (usage) => usage.apiCallCount),
-    model: usages.find((usage) => usage.model)?.model ?? '',
-    contextTokenLimit: maxDefined(usages.map((usage) => usage.contextTokenLimit)),
-    contextCurrentTokens: maxDefined(usages.map((usage) => usage.contextCurrentTokens)),
-    contextMessages: maxDefined(usages.map((usage) => usage.contextMessages))
+    usage: null
   };
 }
 
@@ -912,15 +866,6 @@ function confidenceLabel(value: number): string {
     return 'MEDIUM';
   }
   return 'LOW';
-}
-
-function sum<T>(values: T[], mapper: (value: T) => number): number {
-  return values.reduce((total, value) => total + mapper(value), 0);
-}
-
-function maxDefined(values: Array<number | null>): number | null {
-  const present = values.filter((value): value is number => value !== null && Number.isFinite(value));
-  return present.length ? Math.max(...present) : null;
 }
 
 function teamKey(team: { id: string | null; name: string; fieldId: string }): string {

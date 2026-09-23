@@ -713,6 +713,7 @@
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy Config Drift Viewer"
+        [usage]="component.result?.usage ?? null"
         [progressActive]="workflowRunning()"
         [aiActive]="aiWorkflowRunning()"
         [progressCount]="component.steps.length || currentJob.steps.length"

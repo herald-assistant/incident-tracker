@@ -430,7 +430,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea).toBeNull();
   });
 
-  it('should show token usage under the final AI step status', async () => {
+  it('should keep usage out of the AI step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStepWithUsage()]);
 
@@ -439,21 +439,8 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const usagePill = compiled.querySelector('.usage-pill') as HTMLElement | null;
-    const tooltip = usagePill?.getAttribute('aria-label') ?? '';
-
-    expect(usagePill).not.toBeNull();
-    expect(usagePill?.textContent).toContain('Tokens');
-    expect(usagePill?.textContent).toContain('2 820');
-    expect(usagePill?.textContent).toContain('Credits');
-    expect(usagePill?.textContent).toContain('1,15');
-    expect(usagePill?.textContent).toContain('Dollars');
-    expect(usagePill?.textContent).toContain('$0.01');
-    expect(tooltip).toContain('Szacowany koszt analizy AI');
-    expect(tooltip).toContain('Nowy kontekst wysłany do AI: 2 050');
-    expect(tooltip).toContain('Ponownie użyty kontekst: 300');
-    expect(tooltip).toContain('Odpowiedź AI: 420');
-    expect(tooltip).toContain('Użyty model: gpt-5.4');
+    expect(compiled.querySelector('.usage-pill')).toBeNull();
+    expect(compiled.textContent).not.toContain('kredytów');
   });
 
   it('should render Copilot activity and tool evidence in one timeline', async () => {
@@ -1597,7 +1584,7 @@ function buildCompletedAiStepWithUsage(): AnalysisJobStepResponse {
       cacheReadTokens: 300,
       cacheWriteTokens: 50,
       totalTokens: 2820,
-      cost: 2.3,
+      aiCredits: 2.3,
       apiDurationMs: 1100,
       apiCallCount: 1,
       model: 'gpt-5.4',

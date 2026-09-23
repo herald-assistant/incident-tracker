@@ -285,25 +285,25 @@ usage/cost dla calego runu. UI moze deterministycznie przeliczyc ten sam ksztalt
 agregatu dla widocznych jednostek po filtrze. Parent job konczy sie `COMPLETED`,
 `COMPLETED_WITH_WARNINGS` albo `FAILED`.
 
-Tokeny, duration, liczba wywolan i SDK `cost` sa sumowane dokladnie raz z usage
-kazdej jednostki. Pole SDK `cost` oznacza sume mnoznikow rozliczeniowych modelu,
-nie kwote USD. UI pokazuje szacowany koszt tokenow wyliczony z
-input/output/cache i cennika modelu osobno dla jednostki oraz zbiorczo na dole.
+Tokeny, duration, liczba wywolan i kredyty Copilota sa sumowane dokladnie raz
+z usage kazdej jednostki. Jezeli usage dowolnej jednostki nie zawiera kredytow,
+agregat kredytow pozostaje nieznany. Wspolny aside pokazuje kredyty i ekwiwalent
+USD przy zalozeniu 100 kredytow = 1 USD.
 
 Glowny wynik UI jest jedna rozwijalna tabela Delivery Units. Wiersz pokazuje
-issue, MR-y, status, DSP i koszt AI; ikona ostrzezenia przy statusie sygnalizuje
+issue, MR-y, status i DSP; ikona ostrzezenia przy statusie sygnalizuje
 quality flags, visibility limits albo blad jednostki. Rozwiniecie pokazuje
 MR-y jako linki oraz tylko dostepne Evidence, Quality flags, Visibility limits
 i Warnings. Na koncu `Unit insights` znajduje sie domyslnie zwiniety panel
 `Raw AI response` z dokladna trescia zwrocona przez model, przeznaczony do
 diagnostyki bez przeszukiwania logow. Nad tabela sa filtry po zespole Jira i
 autorze MR. Po wybraniu
-filtra UI pokazuje te sama tabele, wynik zbiorczy i koszt w ksztalcie
+filtra UI pokazuje te sama tabele i wynik zbiorczy w ksztalcie
 odfiltrowanym do widocznych Delivery Units. Gdy widoczne issue ma MR-y wiecej
 niz jednego autora, UI pokazuje ostrzezenie informacyjne, bo DSP dotyczy calej
 jednostki i nie jest dzielone pomiedzy osoby. Pod tabela znajduje sie prosty
-wynik zbiorczy bez ponownego wyliczania konkretnych issue, a na samym dole koszt
-widocznego zakresu albo calej analizy bez filtra. Nie ma osobnego visibility
+wynik zbiorczy bez ponownego wyliczania konkretnych issue. Koszt w aside dotyczy
+calego wykonania, niezaleznie od filtra widoku. Nie ma osobnego visibility
 band, assessment summary, report meta ani drugiej listy jednostek.
 
 ## Ownership

@@ -743,12 +743,12 @@ Execution gateway agreguje tylko zdarzenia SDK potrzebne do publicznego
 `shared.ai.AnalysisAiUsage`:
 
 - token usage z eventow `assistant.usage`: input/output/cache read/cache write,
-  liczba wywolan API, model, koszt i czas API,
+  liczba wywolan API, model, `copilotUsage.totalNanoAiu` i czas API,
 - ostatni snapshot `session.usage_info`, czyli context token limit/current
   tokens/messages length.
 
-Ten usage trafia do finalnego kroku `AI_ANALYSIS` i job state, a UI pokazuje go
-jako zuzycie tokenow/kosztu. Dane, ktorych operator nie widzi, nie sa obecnie
+Ten usage trafia do finalnego kroku `AI_ANALYSIS` i job state, a UI pokazuje
+koszt tylko we wspolnym aside. Dane, ktorych operator nie widzi, nie sa obecnie
 utrzymywane jako osobny feature runtime.
 
 Oprocz agregowanego usage runtime publikuje `AnalysisAiActivityEvent`. To jest

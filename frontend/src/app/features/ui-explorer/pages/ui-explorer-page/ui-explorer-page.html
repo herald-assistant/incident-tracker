@@ -130,6 +130,8 @@
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy UI Explorer"
+        [usage]="snapshot.usage"
+        [chatMessages]="snapshot.chatMessages ?? []"
         [progressActive]="facade.workflowIsRunning()"
         [aiActive]="facade.aiWorkflowIsRunning()"
         [progressCount]="progressCount()"

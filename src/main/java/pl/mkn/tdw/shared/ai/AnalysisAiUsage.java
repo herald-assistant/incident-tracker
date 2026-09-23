@@ -6,7 +6,7 @@ public record AnalysisAiUsage(
         long cacheReadTokens,
         long cacheWriteTokens,
         long totalTokens,
-        double cost,
+        Double aiCredits,
         long apiDurationMs,
         int apiCallCount,
         String model,
