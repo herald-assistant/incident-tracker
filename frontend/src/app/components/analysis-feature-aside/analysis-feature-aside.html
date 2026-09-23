@@ -65,22 +65,92 @@
     </div>
     <div class="analysis-feature-aside__panel-slot" [hidden]="activePanel() !== 'cost'">
       <section class="analysis-feature-aside__cost" aria-label="Koszt wykonanej analizy AI">
-        <h2>Koszt AI</h2>
-        @if (credits() !== null) {
-          <p class="analysis-feature-aside__cost-primary">{{ formatCredits(credits()!) }} kredytów GitHub AI</p>
-          <p>Ekwiwalent: {{ formatUsd(credits()! / 100) }} przy założeniu 100 kredytów = 1 USD.</p>
-        } @else {
-          <p>Copilot nie przekazał pełnych danych o kredytach dla tego wykonania.</p>
+        <header class="analysis-feature-aside__cost-header">
+          <span class="analysis-feature-aside__cost-eyebrow">Zużycie AI</span>
+          <h2>Koszt analizy</h2>
+          <p>Dane z wywołań modelu zgłoszone przez Copilota.</p>
+        </header>
+
+        <div class="analysis-feature-aside__cost-overview">
+          <div class="analysis-feature-aside__cost-credits">
+            <span>Kredyty GitHub AI</span>
+            @if (credits() !== null) {
+              <strong>{{ formatCredits(credits()!) }}</strong>
+            } @else {
+              <strong>Brak pełnych danych</strong>
+            }
+          </div>
+          <div class="analysis-feature-aside__cost-equivalent">
+            <span>Ekwiwalent USD</span>
+            @if (credits() !== null) {
+              <strong>{{ formatUsd(credits()! / 100) }}</strong>
+            } @else {
+              <strong>—</strong>
+            }
+            <small>Przy założeniu 100 kredytów = 1 USD.</small>
+          </div>
+        </div>
+        @if (credits() === null) {
+          <p class="analysis-feature-aside__cost-notice">Copilot nie przekazał danych o kredytach dla wszystkich wywołań. Nie pokazujemy częściowej kwoty.</p>
         }
-        <dl>
-          <div><dt>Tokeny</dt><dd>{{ formatCount(totalTokens()) }}</dd></div>
-          <div><dt>Wywołania AI</dt><dd>{{ formatCount(totalCalls()) }}</dd></div>
+
+        <div class="analysis-feature-aside__cost-meta" aria-label="Metadane wykonania AI">
+          <div><span>Wywołania AI</span><strong>{{ formatCount(totalCalls()) }}</strong></div>
           @if (models()) {
-            <div><dt>Modele</dt><dd>{{ models() }}</dd></div>
+            <div><span>Model</span><strong>{{ models() }}</strong></div>
           }
-        </dl>
+        </div>
+
+        <section class="analysis-feature-aside__tokens" aria-label="Podział tokenów">
+          <div class="analysis-feature-aside__tokens-heading">
+            <div>
+              <span class="analysis-feature-aside__cost-eyebrow">Ruch modelu</span>
+              <h3>Podział tokenów</h3>
+            </div>
+            <div class="analysis-feature-aside__tokens-total">
+              <span>Razem</span>
+              <strong>{{ formatCount(totalTokens()) }}</strong>
+            </div>
+          </div>
+
+          <div class="analysis-feature-aside__token-grid">
+            <article class="analysis-feature-aside__token-card">
+              <div class="analysis-feature-aside__token-card-head">
+                <div><span class="material-symbols-outlined" aria-hidden="true">input</span><h4>Input</h4></div>
+                <strong>{{ formatCount(tokenBreakdown().input) }}</strong>
+              </div>
+              <p>Tokeny przekazane modelowi jako kontekst i pytanie.</p>
+            </article>
+
+            <article class="analysis-feature-aside__token-card">
+              <div class="analysis-feature-aside__token-card-head">
+                <div><span class="material-symbols-outlined" aria-hidden="true">output</span><h4>Output</h4></div>
+                <strong>{{ formatCount(tokenBreakdown().output) }}</strong>
+              </div>
+              <p>Tokeny wygenerowane przez model, łącznie z rozumowaniem.</p>
+            </article>
+          </div>
+          <dl class="analysis-feature-aside__token-details">
+            <div>
+              <dt>Cache read</dt>
+              <dd>{{ tokenBreakdown().cacheRead === null ? 'Brak danych' : formatCount(tokenBreakdown().cacheRead!) }}</dd>
+              <small>Kontekst odczytany z pamięci podręcznej promptu.</small>
+            </div>
+            <div>
+              <dt>Cache write</dt>
+              <dd>{{ tokenBreakdown().cacheWrite === null ? 'Brak danych' : formatCount(tokenBreakdown().cacheWrite!) }}</dd>
+              <small>Kontekst zapisany do pamięci podręcznej na kolejne wywołania.</small>
+            </div>
+            <div>
+              <dt>Reasoning</dt>
+              <dd>{{ tokenBreakdown().reasoning === null ? 'Brak danych' : formatCount(tokenBreakdown().reasoning!) }}</dd>
+              <small>Tokeny rozumowania; są już częścią output.</small>
+            </div>
+          </dl>
+          <p class="analysis-feature-aside__tokens-note">„Razem” to input + output. Cache read, cache write i reasoning są pokazane osobno, bez ponownego dodawania do tej sumy.</p>
+        </section>
         @if (chatMessages().length > 0) {
-          <p>Łącznie z odpowiedziami follow-up, dla których zapisano usage.</p>
+          <p class="analysis-feature-aside__cost-follow-up">Podsumowanie uwzględnia odpowiedzi follow-up, dla których zapisano usage.</p>
         }
       </section>
     </div>

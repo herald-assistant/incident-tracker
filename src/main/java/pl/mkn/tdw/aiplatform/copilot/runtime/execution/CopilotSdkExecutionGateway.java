@@ -405,6 +405,7 @@ public class CopilotSdkExecutionGateway {
                     data.outputTokens(),
                     data.cacheReadTokens(),
                     data.cacheWriteTokens(),
+                    data.reasoningTokens(),
                     data.copilotUsage() != null ? data.copilotUsage().totalNanoAiu() : null,
                     data.duration()
             );

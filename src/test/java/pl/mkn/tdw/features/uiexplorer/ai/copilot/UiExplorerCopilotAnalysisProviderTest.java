@@ -51,8 +51,9 @@ class UiExplorerCopilotAnalysisProviderTest {
                 "crm-provider-run", null, null, null, "prepared CRM prompt", Map.of()
         ));
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var usage = new AnalysisAiUsage(100, 50, 10, 0, 160, 0.01, 200, 1,
-                "gpt-5.4", 200_000L, 1_000L, 4L);
+        var usage = new AnalysisAiUsage(100, 50, 10L, 0L, 160, 0.01, 200, 1,
+                "gpt-5.4", 200_000L, 1_000L, 4L,
+                null);
         when(executionGateway.execute(any())).thenAnswer(invocation -> {
             var session = invocation.getArgument(0, CopilotPreparedSession.class);
             session.evidenceSink().accept(fetchedCodeEvidence(FETCHED_VALIDATOR_PATH));

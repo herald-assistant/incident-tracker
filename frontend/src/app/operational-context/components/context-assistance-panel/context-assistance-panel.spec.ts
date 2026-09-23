@@ -27,7 +27,7 @@ describe('ContextAssistancePanelComponent', () => {
         startedAt: '2026-09-13T10:00:00Z', completedAt: '2026-09-13T10:00:01Z' }],
       usage: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0,
         totalTokens: 120, aiCredits: 0, apiDurationMs: 1000, apiCallCount: 1, model: 'gpt-5.4',
-        contextTokenLimit: null, contextCurrentTokens: null, contextMessages: null }
+        contextTokenLimit: null, contextCurrentTokens: null, contextMessages: null, reasoningTokens: null }
     };
     const fixture = await initialJobFixture(completed);
     const compiled = fixture.nativeElement as HTMLElement;

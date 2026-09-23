@@ -82,6 +82,23 @@ export class AnalysisFeatureAsideComponent {
   protected readonly totalTokens = computed(() =>
     this.usages().reduce((sum, usage) => sum + usage.totalTokens, 0)
   );
+  protected readonly tokenBreakdown = computed(() => {
+    const usages = this.usages();
+    const sumOptional = (select: (usage: AnalysisAiUsage) => number | null): number | null => {
+      const values = usages.map(select);
+      const reported = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+      return reported.length === values.length
+        ? reported.reduce((sum, value) => sum + value, 0)
+        : null;
+    };
+    return {
+      input: usages.reduce((sum, usage) => sum + usage.inputTokens, 0),
+      output: usages.reduce((sum, usage) => sum + usage.outputTokens, 0),
+      cacheRead: sumOptional((usage) => usage.cacheReadTokens),
+      cacheWrite: sumOptional((usage) => usage.cacheWriteTokens),
+      reasoning: sumOptional((usage) => usage.reasoningTokens)
+    };
+  });
   protected readonly totalCalls = computed(() =>
     this.usages().reduce((sum, usage) => sum + usage.apiCallCount, 0)
   );
@@ -90,11 +107,11 @@ export class AnalysisFeatureAsideComponent {
   );
 
   protected formatCredits(value: number): string {
-    return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 9 }).format(value);
+    return new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   }
 
   protected formatUsd(value: number): string {
-    return `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 9 }).format(value)}`;
+    return `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
   }
 
   protected formatCount(value: number): string {

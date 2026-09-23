@@ -169,7 +169,7 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
       model: 'gpt-5.4-mini',
       contextTokenLimit: null,
       contextCurrentTokens: null,
-      contextMessages: null
+      contextMessages: null, reasoningTokens: null
     };
     unit.usage = usage;
     const completed = snapshot('COMPLETED', 8, [unit]);
@@ -196,7 +196,7 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
       model: 'gpt-5.4-mini',
       contextTokenLimit: null,
       contextCurrentTokens: null,
-      contextMessages: null
+      contextMessages: null, reasoningTokens: null
     };
     const { fixture } = await createComponent({
       localRun: snapshot('COMPLETED', 8, [unit]),

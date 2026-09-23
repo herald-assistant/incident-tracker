@@ -169,7 +169,7 @@ class FlowExplorerLocalRunPersisterTest {
                         FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                         "Prepared prompt",
                         aiResponse(),
-                        new AnalysisAiUsage(10, 5, 0, 0, 15, 0.01, 1000, 1, "gpt-5.4", null, null, null)
+                        new AnalysisAiUsage(10, 5, 0L, 0L, 15, 0.01, 1000, 1, "gpt-5.4", null, null, null, null)
                 ),
                 report()
         );

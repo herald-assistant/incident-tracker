@@ -345,8 +345,9 @@ class UiExplorerJobServiceTest {
 
     private static AnalysisAiUsage usage() {
         return new AnalysisAiUsage(
-                100, 50, 10, 0, 160, 0.01, 200, 1,
-                "gpt-5.4", 200_000L, 1_000L, 4L
+                100, 50, 10L, 0L, 160, 0.01, 200, 1,
+                "gpt-5.4", 200_000L, 1_000L, 4L,
+                null
         );
     }
 

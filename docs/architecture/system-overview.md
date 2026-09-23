@@ -286,9 +286,10 @@ Na dzisiaj projekt ma:
   `gitlab_read_frontend_typescript_symbol_slice` panel wyciaga z rezultatu
   `content` i metadane pliku, aby pokazac numerowany kod takze bez osobnego
   wpisu tool evidence,
-- ekrany analiz pokazuja kredyty GitHub AI, ekwiwalent USD, tokeny i liczbe
-  wywolan w jednym wspolnym tabie `Koszt AI` bocznego panelu; glowny wynik
-  i kroki przebiegu nie powielaja tych danych,
+- ekrany analiz pokazuja kredyty GitHub AI, ekwiwalent USD, liczbe wywolan
+  oraz podzial tokenow na input, output, cache read, cache write i reasoning
+  w jednym wspolnym tabie `Koszt AI` bocznego panelu; glowny wynik i kroki
+  przebiegu nie powielaja tych danych,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
   `GET /confluence`, `GET /config-drift-viewer-tools`, `GET /database` i
   `GET /operational-context` do recznego
@@ -1023,7 +1024,10 @@ Znaczenie grup UI:
   `assistant.usage` i przelicza je na kredyty (`1e9` nano AIU = 1 kredyt).
   Brak danych chocby jednego wywolania oznacza nieznana kwote kredytow.
   Wspolny aside pokazuje ekwiwalent przy zalozeniu 100 kredytow = 1 USD;
-  aplikacja nie utrzymuje cennika modeli.
+  obie kwoty sa wyswietlane z dwoma miejscami po przecinku. Runtime przenosi
+  tez opcjonalne cache read/write oraz reasoning. Brak metryki w dowolnym
+  wywolaniu daje jawny brak danych w agregacie. Reasoning jest czescia output;
+  suma tokenow to input + output. Aplikacja nie utrzymuje cennika modeli.
 - Diagnostyka OTLP z procesu Copilot CLI jest wlaczona w
   `application.properties` dla lokalnego Agent Scanner na porcie 8081.
   Pelne tresci pozostaja

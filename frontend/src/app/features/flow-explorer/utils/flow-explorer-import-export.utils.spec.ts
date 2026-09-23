@@ -483,6 +483,6 @@ function flowExplorerUsage(): NonNullable<NonNullable<FlowExplorerJobStateSnapsh
     model: 'gpt-5-mini',
     contextTokenLimit: 128000,
     contextCurrentTokens: 5400,
-    contextMessages: 8
+    contextMessages: 8, reasoningTokens: null
   };
 }

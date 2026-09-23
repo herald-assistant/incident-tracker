@@ -106,7 +106,7 @@ class DeliveryComplexityAssessmentJobServiceTest {
 
     @Test
     void shouldPreserveUsageWhenAiReturnsInsufficientEvidence() {
-        var usage = new AnalysisAiUsage(100, 20, 30, 0, 120, 1.0, 500, 4, "gpt-5", null, null, null);
+        var usage = new AnalysisAiUsage(100, 20, 30L, 0L, 120, 1.0, 500, 4, "gpt-5", null, null, null, null);
         when(source.discover(any(), any())).thenReturn(new DeliveryAssessmentSourceResult(
                 "effective-jql",
                 1,

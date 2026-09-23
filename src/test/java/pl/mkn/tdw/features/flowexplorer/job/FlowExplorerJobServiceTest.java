@@ -529,13 +529,14 @@ class FlowExplorerJobServiceTest {
         return new AnalysisAiUsage(
                 100,
                 80,
-                0,
-                0,
+                0L,
+                0L,
                 180,
                 0.12,
                 1200,
                 1,
                 "gpt-5.4",
+                null,
                 null,
                 null,
                 null

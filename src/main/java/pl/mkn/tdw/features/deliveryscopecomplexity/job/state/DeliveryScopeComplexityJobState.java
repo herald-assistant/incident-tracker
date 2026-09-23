@@ -290,8 +290,10 @@ public class DeliveryScopeComplexityJobState {
         return new AnalysisAiUsage(
                 usages.stream().mapToLong(AnalysisAiUsage::inputTokens).sum(),
                 usages.stream().mapToLong(AnalysisAiUsage::outputTokens).sum(),
-                usages.stream().mapToLong(AnalysisAiUsage::cacheReadTokens).sum(),
-                usages.stream().mapToLong(AnalysisAiUsage::cacheWriteTokens).sum(),
+                usages.stream().allMatch(usage -> usage.cacheReadTokens() != null)
+                        ? usages.stream().mapToLong(AnalysisAiUsage::cacheReadTokens).sum() : null,
+                usages.stream().allMatch(usage -> usage.cacheWriteTokens() != null)
+                        ? usages.stream().mapToLong(AnalysisAiUsage::cacheWriteTokens).sum() : null,
                 usages.stream().mapToLong(AnalysisAiUsage::totalTokens).sum(),
                 usages.stream().allMatch(usage -> usage.aiCredits() != null)
                         ? usages.stream().mapToDouble(AnalysisAiUsage::aiCredits).sum() : null,
@@ -300,7 +302,9 @@ public class DeliveryScopeComplexityJobState {
                 usages.stream().map(AnalysisAiUsage::model).filter(java.util.Objects::nonNull).findFirst().orElse(null),
                 usages.stream().map(AnalysisAiUsage::contextTokenLimit).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null),
                 usages.stream().map(AnalysisAiUsage::contextCurrentTokens).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null),
-                usages.stream().map(AnalysisAiUsage::contextMessages).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null)
+                usages.stream().map(AnalysisAiUsage::contextMessages).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null),
+                usages.stream().allMatch(usage -> usage.reasoningTokens() != null)
+                        ? usages.stream().mapToLong(AnalysisAiUsage::reasoningTokens).sum() : null
         );
     }
 

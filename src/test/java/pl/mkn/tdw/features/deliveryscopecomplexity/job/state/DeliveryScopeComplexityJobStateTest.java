@@ -111,17 +111,20 @@ class DeliveryScopeComplexityJobStateTest {
         var second = unit("CRM-2", mergeRequest(2, "src/B.java", "+B"));
         ready(state, first, second);
         var firstUsage = new AnalysisAiUsage(
-                100, 20, 30, 0, 120, 0.33, 500, 1, "gpt-5.4-mini", null, null, null
+                100, 20, 30L, 0L, 120, 0.33, 500, 1, "gpt-5.4-mini", null, null, null,
+                4L
         );
         var secondUsage = new AnalysisAiUsage(
-                200, 40, 80, 0, 240, 1.0, 700, 2, "gpt-5.4-mini", null, null, null
+                200, 40, 80L, 0L, 240, 1.0, 700, 2, "gpt-5.4-mini", null, null, null,
+                7L
         );
 
         state.markUnitCompleted(first.unitId(), score(3, 0.7), firstUsage);
         state.markUnitCompleted(second.unitId(), score(5, 0.8), secondUsage);
 
         assertThat(state.snapshot().aggregate().usage()).isEqualTo(new AnalysisAiUsage(
-                300, 60, 110, 0, 360, 1.33, 1200, 3, "gpt-5.4-mini", null, null, null
+                300, 60, 110L, 0L, 360, 1.33, 1200, 3, "gpt-5.4-mini", null, null, null,
+                11L
         ));
     }
 
@@ -162,7 +165,7 @@ class DeliveryScopeComplexityJobStateTest {
     }
 
     private AnalysisAiUsage usage() {
-        return new AnalysisAiUsage(100, 20, 30, 0, 120, 1.0, 500, 4, "gpt-5", null, null, null);
+        return new AnalysisAiUsage(100, 20, 30L, 0L, 120, 1.0, 500, 4, "gpt-5", null, null, null, null);
     }
 
 }

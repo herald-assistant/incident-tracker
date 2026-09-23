@@ -901,7 +901,7 @@ function result(): ConfigDriftViewerResult {
       model: 'gpt-5.4',
       contextTokenLimit: null,
       contextCurrentTokens: null,
-      contextMessages: null
+      contextMessages: null, reasoningTokens: null
     }
   };
 }

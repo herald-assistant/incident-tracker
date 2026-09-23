@@ -315,7 +315,7 @@ class CopilotSdkExecutionGatewayTest {
             });
             when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
                     .thenAnswer(invocation -> {
-                        eventHandler.get().accept(assistantUsage("gpt-5.4", 2400D, 420D, 300D, 50D, 1_250_000_000D, 1100D));
+                        eventHandler.get().accept(assistantUsage("gpt-5.4", 2400D, 420D, 300D, 50D, 60D, 1_250_000_000D, 1100D));
                         eventHandler.get().accept(sessionUsageInfo(128000D, 9200D, 6D));
                         return CompletableFuture.completedFuture(assistantMessage("Structured answer"));
                     });
@@ -330,6 +330,7 @@ class CopilotSdkExecutionGatewayTest {
             assertEquals(2820L, usage.totalTokens());
             assertEquals(300L, usage.cacheReadTokens());
             assertEquals(50L, usage.cacheWriteTokens());
+            assertEquals(60L, usage.reasoningTokens());
             assertEquals(1, usage.apiCallCount());
             assertEquals(1.25D, usage.aiCredits());
             assertEquals("gpt-5.4", usage.model());
@@ -486,7 +487,7 @@ class CopilotSdkExecutionGatewayTest {
         });
         when(resumedSession.sendAndWait(any(MessageOptions.class), eq(300_000L))).thenAnswer(invocation -> {
             resumedHandler.get().accept(assistantUsage(
-                    "gpt-synthetic-crm", 2_400D, 420D, 300D, 50D, 2.3D, 1_100D
+                    "gpt-synthetic-crm", 2_400D, 420D, 300D, 50D, 60D, 2.3D, 1_100D
             ));
             resumedHandler.get().accept(sessionUsageInfo(1_000, 92, 9));
             return CompletableFuture.completedFuture(assistantMessage("Complete synthetic CRM report"));
@@ -1091,6 +1092,7 @@ class CopilotSdkExecutionGatewayTest {
             Double outputTokens,
             Double cacheReadTokens,
             Double cacheWriteTokens,
+            Double reasoningTokens,
             Double nanoAiu,
             Double duration
     ) {
@@ -1102,7 +1104,7 @@ class CopilotSdkExecutionGatewayTest {
                 cacheReadTokens != null ? cacheReadTokens.longValue() : null,
                 cacheWriteTokens != null ? cacheWriteTokens.longValue() : null,
                 null,
-                null,
+                reasoningTokens != null ? reasoningTokens.longValue() : null,
                 null,
                 duration != null ? duration.longValue() : null,
                 null, null, null, null, null, null, null, null, null, null,

@@ -761,7 +761,11 @@ sumuje `copilotUsage.totalNanoAiu` z kazdego `assistant.usage`; miliard nano
 AIU oznacza jeden kredyt. Jesli ktorekolwiek wywolanie nie przekaze tej
 wartosci, suma kredytow pozostaje nieznana. Wspolny tab `Koszt AI` w aside
 pokazuje kredyty i ekwiwalent przy zalozeniu 100 kredytow = 1 USD.
-Frontend nie utrzymuje tabeli stawek modeli.
+Obie kwoty sa zaokraglane w prezentacji do dwoch miejsc po przecinku.
+Panel pokazuje tez input, output oraz opcjonalne cache read, cache write
+i reasoning z opisami. Brak ktorejkolwiek metryki w wywolaniu oznacza brak
+pelnej sumy tej metryki; reasoning jest podzbiorem output, a suma tokenow
+to input + output. Frontend nie utrzymuje tabeli stawek modeli.
 
 Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
 fasadach `features.incidentanalysis.job` / `api.aioptions` nie powinny

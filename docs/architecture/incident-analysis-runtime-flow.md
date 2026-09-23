@@ -742,14 +742,18 @@ Nie zmienia on `AnalysisAiUsage`, activity, job state ani kontraktu wyniku.
 Execution gateway agreguje tylko zdarzenia SDK potrzebne do publicznego
 `shared.ai.AnalysisAiUsage`:
 
-- token usage z eventow `assistant.usage`: input/output/cache read/cache write,
-  liczba wywolan API, model, `copilotUsage.totalNanoAiu` i czas API,
+- token usage z eventow `assistant.usage`: input/output, opcjonalne cache
+  read/cache write/reasoning, liczba wywolan API, model,
+  `copilotUsage.totalNanoAiu` i czas API,
 - ostatni snapshot `session.usage_info`, czyli context token limit/current
   tokens/messages length.
 
 Ten usage trafia do finalnego kroku `AI_ANALYSIS` i job state, a UI pokazuje
-koszt tylko we wspolnym aside. Dane, ktorych operator nie widzi, nie sa obecnie
-utrzymywane jako osobny feature runtime.
+koszt i podzial tokenow tylko we wspolnym aside. Brak opcjonalnej metryki
+w ktorymkolwiek wywolaniu jest widoczny jako brak danych, nie jako zero.
+Reasoning jest podzbiorem output; suma tokenow to input + output. Dane,
+ktorych operator nie widzi, nie sa obecnie utrzymywane jako osobny feature
+runtime.
 
 Oprocz agregowanego usage runtime publikuje `AnalysisAiActivityEvent`. To jest
 jawny productized trace dla operatora: pokazuje komunikaty/rozumowanie AI,
@@ -795,8 +799,8 @@ UI pokazuje feature-specific wynik w dotychczasowych komponentach oraz wspolny
 `report` istnieje.
 
 Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
-`shared.ai.AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
-szczegolami zebranymi z eventow Copilota.
+`shared.ai.AnalysisAiUsage`. Komponent kroku nie prezentuje kosztu;
+szczegoly usage sa dostepne we wspolnym aside.
 
 Lista pracy AI nie zagniezdza turnow. `assistant.message` i
 `assistant.reasoning` sa wpisami opisujacymi tok myslenia AI, a powiazane

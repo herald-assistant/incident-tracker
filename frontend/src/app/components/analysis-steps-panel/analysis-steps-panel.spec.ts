@@ -1590,7 +1590,7 @@ function buildCompletedAiStepWithUsage(): AnalysisJobStepResponse {
       model: 'gpt-5.4',
       contextTokenLimit: 128000,
       contextCurrentTokens: 9200,
-      contextMessages: 6
+      contextMessages: 6, reasoningTokens: null
     }
   };
 }

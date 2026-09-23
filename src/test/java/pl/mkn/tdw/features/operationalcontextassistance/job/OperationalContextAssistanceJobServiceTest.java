@@ -109,7 +109,7 @@ class OperationalContextAssistanceJobServiceTest {
 
     @Test
     void createsReadOnlyReviewedDraftFromEmptyCatalog() {
-        var usage = new AnalysisAiUsage(100, 50, 0, 0, 150, 0.01, 1000, 1, "test-model", null, null, null);
+        var usage = new AnalysisAiUsage(100, 50, 0L, 0L, 150, 0.01, 1000, 1, "test-model", null, null, null, null);
         when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{draft}", usage), Set.of()));

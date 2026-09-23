@@ -13,6 +13,10 @@ final class CopilotUsageAccumulator {
     private double outputTokens;
     private double cacheReadTokens;
     private double cacheWriteTokens;
+    private boolean hasCompleteCacheReadTokens = true;
+    private boolean hasCompleteCacheWriteTokens = true;
+    private double reasoningTokens;
+    private boolean hasCompleteReasoningTokens = true;
     private double nanoAiu;
     private boolean hasCompleteAiCredits = true;
     private double apiDurationMs;
@@ -28,14 +32,28 @@ final class CopilotUsageAccumulator {
             Number outputTokens,
             Number cacheReadTokens,
             Number cacheWriteTokens,
+            Number reasoningTokens,
             Number totalNanoAiu,
             Number durationMs
     ) {
         callCount++;
         this.inputTokens += numeric(inputTokens);
         this.outputTokens += numeric(outputTokens);
-        this.cacheReadTokens += numeric(cacheReadTokens);
-        this.cacheWriteTokens += numeric(cacheWriteTokens);
+        if (cacheReadTokens == null || !Double.isFinite(cacheReadTokens.doubleValue()) || cacheReadTokens.doubleValue() < 0) {
+            hasCompleteCacheReadTokens = false;
+        } else {
+            this.cacheReadTokens += cacheReadTokens.doubleValue();
+        }
+        if (cacheWriteTokens == null || !Double.isFinite(cacheWriteTokens.doubleValue()) || cacheWriteTokens.doubleValue() < 0) {
+            hasCompleteCacheWriteTokens = false;
+        } else {
+            this.cacheWriteTokens += cacheWriteTokens.doubleValue();
+        }
+        if (reasoningTokens == null || !Double.isFinite(reasoningTokens.doubleValue()) || reasoningTokens.doubleValue() < 0) {
+            hasCompleteReasoningTokens = false;
+        } else {
+            this.reasoningTokens += reasoningTokens.doubleValue();
+        }
         if (totalNanoAiu == null || !Double.isFinite(totalNanoAiu.doubleValue()) || totalNanoAiu.doubleValue() < 0) {
             hasCompleteAiCredits = false;
         } else {
@@ -68,8 +86,8 @@ final class CopilotUsageAccumulator {
         return new AnalysisAiUsage(
                 roundedInputTokens,
                 roundedOutputTokens,
-                rounded(cacheReadTokens),
-                rounded(cacheWriteTokens),
+                hasCompleteCacheReadTokens ? rounded(cacheReadTokens) : null,
+                hasCompleteCacheWriteTokens ? rounded(cacheWriteTokens) : null,
                 roundedInputTokens + roundedOutputTokens,
                 hasCompleteAiCredits ? nanoAiu / 1_000_000_000D : null,
                 rounded(apiDurationMs),
@@ -77,7 +95,8 @@ final class CopilotUsageAccumulator {
                 models.isEmpty() ? null : String.join(", ", models),
                 hasContextUsageInfo ? rounded(contextTokenLimit) : null,
                 hasContextUsageInfo ? rounded(contextCurrentTokens) : null,
-                hasContextUsageInfo ? rounded(contextMessages) : null
+                hasContextUsageInfo ? rounded(contextMessages) : null,
+                hasCompleteReasoningTokens ? rounded(reasoningTokens) : null
         );
     }
 

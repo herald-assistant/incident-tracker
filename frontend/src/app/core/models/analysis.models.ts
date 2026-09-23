@@ -69,8 +69,8 @@ export interface AnalysisResultResponse {
 export interface AnalysisAiUsage {
   inputTokens: number;
   outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
   totalTokens: number;
   aiCredits: number | null;
   apiDurationMs: number;
@@ -79,6 +79,7 @@ export interface AnalysisAiUsage {
   contextTokenLimit: number | null;
   contextCurrentTokens: number | null;
   contextMessages: number | null;
+  reasoningTokens: number | null;
 }
 
 export interface AnalysisPreparedPrompt {

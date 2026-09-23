@@ -348,8 +348,8 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
   return {
     inputTokens,
     outputTokens,
-    cacheReadTokens: normalizeNumber(usageObject['cacheReadTokens']),
-    cacheWriteTokens: normalizeNumber(usageObject['cacheWriteTokens']),
+    cacheReadTokens: normalizeNullableNumber(usageObject['cacheReadTokens']),
+    cacheWriteTokens: normalizeNullableNumber(usageObject['cacheWriteTokens']),
     totalTokens,
     aiCredits: normalizeNullableNumber(usageObject['aiCredits']),
     apiDurationMs: normalizeNumber(usageObject['apiDurationMs']),
@@ -357,7 +357,8 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
     model: normalizeString(usageObject['model']),
     contextTokenLimit: normalizeNullableNumber(usageObject['contextTokenLimit']),
     contextCurrentTokens: normalizeNullableNumber(usageObject['contextCurrentTokens']),
-    contextMessages: normalizeNullableNumber(usageObject['contextMessages'])
+    contextMessages: normalizeNullableNumber(usageObject['contextMessages']),
+    reasoningTokens: normalizeNullableNumber(usageObject['reasoningTokens'])
   };
 }
 

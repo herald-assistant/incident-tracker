@@ -1029,7 +1029,8 @@ class AnalysisJobFacadeTest {
                             "gpt-5.4",
                             128000L,
                             6400L,
-                            7L
+                            7L,
+                            null
                     )
             );
         }
