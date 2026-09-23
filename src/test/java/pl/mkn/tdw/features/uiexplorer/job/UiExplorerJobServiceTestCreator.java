@@ -61,7 +61,7 @@ final class UiExplorerJobServiceTestCreator {
                 () -> AnalysisAiAuthRef.localToken(null),
                 localRunPersistence,
                 mock(UiExplorerFollowUpChatService.class),
-                new UiExplorerFollowUpPromptService(new ObjectMapper()),
+                new UiExplorerFollowUpPromptService(),
                 new LocalAnalysisRunOperationGuard()
         );
     }

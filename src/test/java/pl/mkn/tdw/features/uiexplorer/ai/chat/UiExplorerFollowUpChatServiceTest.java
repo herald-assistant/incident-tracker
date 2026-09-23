@@ -18,7 +18,6 @@ import pl.mkn.tdw.features.uiexplorer.ai.copilot.UiExplorerCopilotToolContextKey
 import pl.mkn.tdw.features.uiexplorer.ai.copilot.UiExplorerDurableSystemInstructions;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 
 import java.util.List;
@@ -44,7 +43,7 @@ class UiExplorerFollowUpChatServiceTest {
         var prepared = mock(CopilotPreparedSession.class);
         var runCaptor = ArgumentCaptor.forClass(CopilotRunRequest.class);
         var chatRequest = new UiExplorerFollowUpChatRequest(
-                "crm-ui-run-1", request(), context(), mock(AnalysisReport.class),
+                "crm-ui-run-1", request(), context(),
                 "Co dzieje sie po zapisie?", "crm-ui-session-1", AnalysisAiAuthRef.localToken(null)
         );
         when(promptService.prepare(chatRequest)).thenReturn("follow-up prompt");
@@ -76,7 +75,9 @@ class UiExplorerFollowUpChatServiceTest {
         assertThat(runRequest.initialReport()).isNull();
         assertThat(runRequest.artifactContents()).isEmpty();
         assertThat(runRequest.sessionConfigRequest().durableSystemInstructions())
-                .isEqualTo(UiExplorerDurableSystemInstructions.followUp());
+                .isEqualTo(UiExplorerDurableSystemInstructions.followUp())
+                .contains("konkretny kontrakt API", "schemat bazy danych", "systemu zewnetrznego")
+                .contains("Nie dodawaj szczegolow implementacji");
         assertThat(runRequest.sessionConfigRequest().availableToolNames()).containsExactlyInAnyOrder(
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,

@@ -1092,8 +1092,13 @@ Wzorzec:
 - reuse scope zakonczonego runu,
 - `CopilotSessionTarget.existing(copilotSessionId)`,
 - ponowne przekazanie tools, skilli, hidden context, hooks, modelu i effort,
-- message operatora jako jedyny nowy input albo feature-owned follow-up
-  renderer,
+- message operatora jako jedyny nowy input; feature moze dodac krotka
+  wskazowke zaladowania skilla, ale nie osadza ponownie raportu, initial
+  result, evidence ani scope'u z juz wznowionej sesji,
+- odpowiedz domyslnie wyjasnia zachowanie i skutek jezykiem analityka; na
+  konkretne pytanie o kontrakt API, schemat danych albo system zewnetrzny
+  podaje potwierdzone identyfikatory i tlumaczy ich znaczenie, bez szumu
+  implementacyjnego i bez zgadywania brakujacego evidence,
 - tool evidence/activity/feedback przypisane do odpowiedzi assistant,
 - polling tego samego job snapshotu po wyslaniu wiadomosci,
 - brak rownoleglych follow-upow dla jednego runu.

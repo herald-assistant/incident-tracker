@@ -46,6 +46,7 @@ export class AiSkillsPageComponent {
   private detailRequestGeneration = 0;
 
   readonly searchControl = new FormControl('', { nonNullable: true });
+  readonly familyControl = new FormControl<'all' | AiSkillFamilyId>('all', { nonNullable: true });
   readonly responsibilityControl = new FormControl('all', { nonNullable: true });
   readonly editorControl = new FormControl('', { nonNullable: true });
 
@@ -116,6 +117,9 @@ export class AiSkillsPageComponent {
     this.searchControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.searchText.set(value));
+    this.familyControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.familyFilter.set(value));
     this.responsibilityControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.responsibilityFilter.set(value));
@@ -153,10 +157,6 @@ export class AiSkillsPageComponent {
           );
         }
       });
-  }
-
-  setFamilyFilter(family: 'all' | AiSkillFamilyId): void {
-    this.familyFilter.set(family);
   }
 
   familyLabel(skillName: string): string {

@@ -792,18 +792,26 @@ Decyzje:
   `GET /api/analysis/jobs/{analysisId}`,
 - initial analysis uruchamia `sessionTarget=NEW`, a follow-up kontynuuje
   zapisana sesje SDK przez `sessionTarget=EXISTING(copilotSessionId)`,
+- follow-up we wszystkich feature'ach przekazuje tylko nowa wiadomosc operatora
+  i ewentualna krotka wskazowke zaladowania skilla; nie serializuje ponownie
+  raportu, initial result, evidence ani scope'u do promptu. Poprzedni material
+  pochodzi z historii wznowionej sesji, a scope tools z hidden contextu,
+- odpowiedz follow-up domyslnie jest zrozumiala bez znajomosci implementacji;
+  gdy operator pyta o konkretny kontrakt API, schemat bazy albo nazwe systemu,
+  podaje potwierdzone identyfikatory i ich znaczenie. Pelny techniczny handoff
+  incydentu wymaga wyraznej prosby o material do przekazania lub dzialania,
 - Incident Analysis follow-up wysyla do SDK tylko tresc wiadomosci operatora;
   kontekst rozmowy, evidence i poprzednie tool evidence pochodza z historii
   sesji Copilota, a nie z ponownie renderowanego promptu,
-- Flow Explorer follow-up ma feature-owned chat prompt i skill
-  `flow-explorer-follow-up-chat`, zeby odpowiedz domyslnie byla Markdownem,
-  nie initial JSON result contract, i zeby poglebianie przez tools oraz jezyk
-  domenowy byly jawna czescia kontraktu rozmowy,
+- Flow Explorer follow-up wskazuje skill `flow-explorer-follow-up-chat`, ktory
+  definiuje format Markdown, zasady poglebiania i jezyk domenowy odpowiedzi,
 - UI Explorer follow-up ma osobny prompt, durable instructions i skill
-  `ui-explorer-follow-up-chat`. Dostaje biezacy raport jako read-only kontekst,
+  `ui-explorer-follow-up-chat`. Korzysta z raportu zapisanego w historii sesji,
   odpowiada jezykiem funkcjonalnym dla nietechnicznego analityka i zachowuje
   piec initial research tools na przypietym commicie. Report tools oraz hidden
   report scope nie sa rejestrowane, wiec rozmowa nie zmienia raportu,
+- UX Inspector follow-up wysyla tylko nowa wiadomosc; krotki durable follow-up
+  contract utrzymuje zasady odpowiedzi bez ponownego osadzania raportu,
 - przy resume backend ponownie przekazuje aktualne tools, hidden context,
   hooks, permission handler, model i `reasoningEffort`; platforma podpina ten
   sam wspolny katalog skilli co dla nowej sesji,

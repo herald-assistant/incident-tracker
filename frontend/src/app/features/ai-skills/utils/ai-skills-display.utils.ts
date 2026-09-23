@@ -1,6 +1,7 @@
 export const AI_SKILL_FAMILIES = [
   { id: 'incident-analysis', label: 'Incident Analysis', prefix: 'incident-' },
   { id: 'flow-explorer', label: 'Flow Explorer', prefix: 'flow-explorer-' },
+  { id: 'ui-explorer', label: 'UI Explorer', prefix: 'ui-explorer-' },
   { id: 'change-verification', label: 'Change Verification', prefix: 'change-verification-' },
   { id: 'config-drift-viewer', label: 'Config Drift Viewer', prefix: 'config-drift-viewer-' },
   {
@@ -12,6 +13,11 @@ export const AI_SKILL_FAMILIES = [
     id: 'delivery-scope-complexity',
     label: 'Delivery Scope Complexity',
     prefix: 'delivery-scope-complexity-'
+  },
+  {
+    id: 'operational-context-assistance',
+    label: 'Operational Context Assistance',
+    prefix: 'operational-context-'
   },
   { id: 'other', label: 'Other', prefix: '' }
 ] as const;

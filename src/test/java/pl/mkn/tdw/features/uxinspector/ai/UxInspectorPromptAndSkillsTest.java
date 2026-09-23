@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.uxinspector.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.features.uxinspector.ai.copilot.UxInspectorDurableSystemInstructions;
 import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,6 +13,16 @@ import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.*;
 
 class UxInspectorPromptAndSkillsTest {
+
+    @Test
+    void shouldKeepFollowUpReadableWhileAnsweringRequestedTechnicalDetails() {
+        assertThat(UxInspectorDurableSystemInstructions.followUp())
+                .contains("funkcjonalnie i jasno dla analityka")
+                .contains("konkretny kontrakt API", "schemat bazy danych", "systemu zewnetrznego")
+                .contains("potwierdzone identyfikatory i wyjasnij ich znaczenie")
+                .contains("Nie dodawaj szczegolow implementacji bez potrzeby");
+    }
+
     private final UxInspectorRepositoryTreeArtifactService repositoryTreeArtifactService =
             mock(UxInspectorRepositoryTreeArtifactService.class);
     private final UxInspectorRepositoryGuidanceArtifactService repositoryGuidanceArtifactService =

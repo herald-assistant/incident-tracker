@@ -19,12 +19,20 @@ describe('AiSkillsPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(api.getCatalog).toHaveBeenCalledTimes(1);
-    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(5);
+    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(7);
     expect(compiled.textContent).toContain('Effective runtime catalog');
     expect(compiled.textContent).toContain('incident-analysis-orchestrator');
     expect(compiled.textContent).toContain('Flow Explorer');
     expect(compiled.textContent).toContain('Delivery Complexity Assessment');
     expect(compiled.textContent).toContain('Delivery Scope Complexity');
+    expect(compiled.textContent).toContain('UI Explorer');
+    expect(compiled.textContent).toContain('Operational Context Assistance');
+    const workflowSelect = compiled.querySelector<HTMLSelectElement>('#aiSkillsWorkflow');
+    expect(workflowSelect).not.toBeNull();
+    expect(compiled.querySelector('.ai-skills-family-filters')).toBeNull();
+    expect(Array.from(workflowSelect!.options).map((option) => option.textContent)).toContain(
+      'UI Explorer (1)'
+    );
 
     fixture.componentInstance.searchControl.setValue('follow-up');
     fixture.detectChanges();
@@ -36,8 +44,13 @@ describe('AiSkillsPageComponent', () => {
 
   it('should combine workflow and responsibility filters', async () => {
     const { fixture } = await createComponent();
+    fixture.detectChanges();
 
-    fixture.componentInstance.setFamilyFilter('flow-explorer');
+    const workflowSelect = (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>(
+      '#aiSkillsWorkflow'
+    )!;
+    workflowSelect.value = 'flow-explorer';
+    workflowSelect.dispatchEvent(new Event('change'));
     fixture.componentInstance.responsibilityControl.setValue('Orchestration');
     fixture.detectChanges();
 
@@ -51,7 +64,7 @@ describe('AiSkillsPageComponent', () => {
   it('should expose the Delivery Complexity Assessment evaluator as its own family', async () => {
     const { fixture } = await createComponent();
 
-    fixture.componentInstance.setFamilyFilter('delivery-complexity-assessment');
+    fixture.componentInstance.familyControl.setValue('delivery-complexity-assessment');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -65,7 +78,7 @@ describe('AiSkillsPageComponent', () => {
   it('should expose the Delivery Scope Complexity evaluator as its own family', async () => {
     const { fixture } = await createComponent();
 
-    fixture.componentInstance.setFamilyFilter('delivery-scope-complexity');
+    fixture.componentInstance.familyControl.setValue('delivery-scope-complexity');
     fixture.detectChanges();
 
     const rows = Array.from(
@@ -75,6 +88,22 @@ describe('AiSkillsPageComponent', () => {
     expect(rows[0]?.textContent).toContain('delivery-scope-complexity-evaluator');
     expect(rows[0]?.textContent).toContain('Delivery Scope Complexity');
     expect(rows[0]?.textContent).toContain('Assessment');
+  });
+
+  it('should filter UI Explorer and Operational Context Assistance skills by their own families', async () => {
+    const { fixture } = await createComponent();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    fixture.componentInstance.familyControl.setValue('ui-explorer');
+    fixture.detectChanges();
+    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(1);
+    expect(compiled.textContent).toContain('ui-explorer-orchestrator');
+
+    fixture.componentInstance.familyControl.setValue('operational-context-assistance');
+    fixture.detectChanges();
+    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(1);
+    expect(compiled.textContent).toContain('operational-context-catalog-revision');
+    expect(fixture.componentInstance.familyFilters().some((family) => family.id === 'other')).toBe(false);
   });
 
   it('should render a deep-linked skill and offer its exact raw source', async () => {
@@ -216,8 +245,8 @@ function catalog(): AiSkillCatalogResponse {
     version: 2,
     mode: 'EDITABLE',
     source: 'COPILOT_RUNTIME',
-    skillCount: 5,
-    defaultSkillCount: 5,
+    skillCount: 7,
+    defaultSkillCount: 7,
     customSkillCount: 0,
     skills: [
       {
@@ -238,6 +267,20 @@ function catalog(): AiSkillCatalogResponse {
         name: 'flow-explorer-follow-up-chat',
         description: 'Answers follow-up questions.',
         lineCount: 70,
+        state: 'DEFAULT',
+        restoreAvailable: true
+      },
+      {
+        name: 'ui-explorer-orchestrator',
+        description: 'Coordinates UI analysis.',
+        lineCount: 90,
+        state: 'DEFAULT',
+        restoreAvailable: true
+      },
+      {
+        name: 'operational-context-catalog-revision',
+        description: 'Prepares a CRM catalog revision for review.',
+        lineCount: 90,
         state: 'DEFAULT',
         restoreAvailable: true
       },

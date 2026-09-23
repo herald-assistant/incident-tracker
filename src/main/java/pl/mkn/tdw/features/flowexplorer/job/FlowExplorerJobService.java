@@ -181,11 +181,7 @@ public class FlowExplorerJobService {
             LocalAnalysisRunOperationGuard.Lease lease
     ) {
         try {
-            var promptPreparation = followUpPromptPreparationService.prepare(
-                    chatRequest.initialRequest(),
-                    chatRequest.contextSnapshot(),
-                    chatRequest.message()
-            );
+            var promptPreparation = followUpPromptPreparationService.prepare(chatRequest.message());
             var runAssembly = runRequestAssembler.assembleFollowUp(
                     "flow-explorer-follow-up-" + assistantMessageId,
                     chatRequest.initialRequest(),

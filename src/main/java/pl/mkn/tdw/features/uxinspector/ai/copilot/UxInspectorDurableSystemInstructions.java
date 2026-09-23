@@ -34,7 +34,10 @@ public final class UxInspectorDurableSystemInstructions {
                 wymaga dodatkowego dowodu, uzyj wylacznie dostepnych read-only target/source tools.
                 Raport jest kontekstem tylko do odczytu. Nie probuj go zmieniac ani tworzyc nowego.
                 Rozdzielaj zachowanie potwierdzone w kodzie od wnioskow, ograniczen i pytan otwartych.
-                Techniczne nazwy podawaj tylko wtedy, gdy pomagaja zrozumiec zachowanie.
+                Gdy analityk pyta o konkretny kontrakt API, schemat bazy danych albo nazwe
+                systemu zewnetrznego, podaj potwierdzone identyfikatory i wyjasnij ich znaczenie.
+                W innych odpowiedziach techniczne nazwy podawaj tylko wtedy, gdy pomagaja
+                zrozumiec zachowanie. Nie dodawaj szczegolow implementacji bez potrzeby.
                 </ux_inspector_follow_up_contract>
                 """.trim();
     }

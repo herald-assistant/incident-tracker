@@ -192,11 +192,16 @@ stan; feature nie tworzy placeholderowego raportu.
 Po `COMPLETED` albo `PARTIAL` uzytkownik moze wyjasniac raport, poglebiac
 ustalenia i pytac o pominiety wariant. Odpowiedz kontynuuje prosty,
 funkcjonalny styl raportu i nie zaklada znajomosci kodu.
+Na konkretne pytanie o API, schemat danych albo system zewnetrzny podaje
+potwierdzone identyfikatory oraz ich znaczenie dla widoku; niewidoczne
+szczegoly backendu pozostaja ograniczeniem widocznosci.
 
 Follow-up wznawia ta sama sesje Copilota i zachowuje pierwotny immutable
 commit oraz hidden repository scope. Ma piec read-only research tools z
 initial runu, ale nie dostaje report tools ani hidden report scope. Raport
-jest kontekstem tylko do odczytu. Prosba o zmiane raportu moze zwrocic
+pozostaje w historii sesji jako kontekst tylko do odczytu; prompt zawiera
+jedynie nowa wiadomosc i wskazowke skilla `ui-explorer-follow-up-chat`.
+Prosba o zmiane raportu moze zwrocic
 propozycje tekstu w rozmowie, lecz nie modyfikuje dokumentu.
 
 Jeden run dopuszcza jeden aktywny turn. Wspolny operation guard chroni przed

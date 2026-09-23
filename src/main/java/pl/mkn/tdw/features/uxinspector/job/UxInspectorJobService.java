@@ -130,7 +130,7 @@ public class UxInspectorJobService {
         try { sessionId = state.startChatMessage(userId, assistantId, request.message()); }
         catch (RuntimeException exception) { lease.close(); throw exception; }
         var chatRequest = new UxInspectorFollowUpChatRequest(
-                "ux-inspector-follow-up-" + assistantId, state.initialRequest(), context, state.currentReport(),
+                "ux-inspector-follow-up-" + assistantId, state.initialRequest(), context,
                 request.message(), sessionId, auth);
         persist(state);
         try {

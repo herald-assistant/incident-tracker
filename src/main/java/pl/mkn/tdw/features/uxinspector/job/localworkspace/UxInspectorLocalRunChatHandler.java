@@ -66,7 +66,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
         var assistantId = UUID.randomUUID().toString();
         var startedAt = Instant.now();
         var request = new UxInspectorFollowUpChatRequest(
-                "ux-inspector-follow-up-" + assistantId, startRequest, context, snapshot.report(), message,
+                "ux-inspector-follow-up-" + assistantId, startRequest, context, message,
                 continuation.copilotSessionId(), auth);
         var capture = new AnalysisChatAssistantCapture();
         var prompt = promptService.prepare(request);

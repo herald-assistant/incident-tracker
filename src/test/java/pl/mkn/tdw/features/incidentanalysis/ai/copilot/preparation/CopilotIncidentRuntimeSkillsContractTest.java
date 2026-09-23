@@ -188,7 +188,10 @@ class CopilotIncidentRuntimeSkillsContractTest {
         var functional = Files.readString(SKILLS_ROOT.resolve("incident-functional-analysis").resolve("SKILL.md"));
         assertContainsAll(functional, List.of(
                 "nie uruchamiaj tools samodzielnie",
-                "functionalAnalysis"
+                "functionalAnalysis",
+                "W zwyklym follow-upie odpowiadaj na aktualne pytanie",
+                "konkretnego kontraktu API, schematu bazy danych albo nazwy systemu zewnetrznego",
+                "bez odtwarzania formatu Functional Analysis v1"
         ));
 
         var technical = Files.readString(SKILLS_ROOT.resolve("incident-technical-handoff").resolve("SKILL.md"));
@@ -196,6 +199,9 @@ class CopilotIncidentRuntimeSkillsContractTest {
                 "W initial analysis",
                 "W follow-upie moze dociagnac tylko brakujacy, konkretny szczegol",
                 "uruchamiaj wtedy samodzielnie tools",
+                "Samo pytanie analityka o kontrakt API, schemat bazy danych albo nazwe systemu",
+                "W zwyklym follow-upie",
+                "Pelny format",
                 "nie tworz",
                 "pozornie kompletnego handoffu"
         ));

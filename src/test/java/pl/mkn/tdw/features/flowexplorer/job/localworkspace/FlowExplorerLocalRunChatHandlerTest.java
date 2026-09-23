@@ -136,10 +136,8 @@ class FlowExplorerLocalRunChatHandlerTest {
         );
 
         assertEquals("LOCAL_TOKEN", tokenResolver.auth.mode().name());
-        assertTrue(promptCaptor.getValue().prompt().contains("# Flow Explorer follow-up chat"));
-        assertTrue(promptCaptor.getValue().prompt().contains("Domyslnie odpowiedz w Markdown"));
-        assertTrue(promptCaptor.getValue().prompt().contains("Nie zwracaj pelnego JSON"));
-        assertTrue(promptCaptor.getValue().prompt().contains("Gdzie jest walidacja?"));
+        assertEquals("Uzyj skilla `flow-explorer-follow-up-chat` przed odpowiedzia.\n\nGdzie jest walidacja?",
+                promptCaptor.getValue().prompt());
         assertEquals("crm-service", requestCaptor.getValue().systemId());
         assertEquals("GET", requestCaptor.getValue().httpMethod());
         assertEquals("/api/customers/{id}", requestCaptor.getValue().endpointPath());
@@ -163,8 +161,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         assertEquals("Gdzie jest walidacja?", updatedJob.chatMessages().get(0).content());
         assertEquals("ASSISTANT", updatedJob.chatMessages().get(1).role());
         assertEquals("Odpowiedz lokalna.", updatedJob.chatMessages().get(1).content());
-        assertTrue(updatedJob.chatMessages().get(1).prompt().contains("# Flow Explorer follow-up chat"));
-        assertTrue(updatedJob.chatMessages().get(1).prompt().contains("Gdzie jest walidacja?"));
+        assertEquals(promptCaptor.getValue().prompt(), updatedJob.chatMessages().get(1).prompt());
         assertEquals(1, updatedJob.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals(1, updatedJob.chatMessages().get(1).aiActivityEvents().size());
         assertEquals("flow-report-1", updatedJob.report().reportId());

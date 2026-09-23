@@ -100,7 +100,7 @@
 
 .ai-skills-filter-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(210px, 0.65fr) auto;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(190px, 0.8fr)) auto;
   gap: 10px;
   align-items: end;
 }
@@ -139,54 +139,6 @@
   font-size: 0.82rem;
   font-weight: 800;
   white-space: nowrap;
-}
-
-.ai-skills-family-filters {
-  display: flex;
-  gap: 7px;
-  padding-bottom: 2px;
-  overflow-x: auto;
-}
-
-.ai-skills-family-filters button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 800;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.ai-skills-family-filters button:hover,
-.ai-skills-family-filters button:focus-visible,
-.ai-skills-family-filters .ai-skills-family-filter--active {
-  border-color: rgba(12, 102, 228, 0.34);
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-}
-
-.ai-skills-family-filters button:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-.ai-skills-family-filter__count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 21px;
-  height: 21px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: rgba(12, 102, 228, 0.1);
-  font-size: 0.68rem;
 }
 
 .ai-skills-list {
@@ -408,6 +360,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ai-skills-filter-row > .field-control:first-child {
+    grid-column: 1 / -1;
+  }
+
   .ai-skills-count {
     grid-column: 1 / -1;
     min-width: 0;
@@ -422,6 +378,10 @@
   .ai-skills-status,
   .ai-skills-filter-row {
     grid-template-columns: 1fr;
+  }
+
+  .ai-skills-filter-row > .field-control:first-child {
+    grid-column: auto;
   }
 
   .ai-skills-count {

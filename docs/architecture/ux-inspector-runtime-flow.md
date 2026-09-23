@@ -264,8 +264,12 @@ Po zapisaniu raportu UX Inspector udostepnia follow-up chat. Kolejne pytania
 wznawiaja te sama sesje Copilota, zachowuja jeden przypiety projekt, branch i
 commit oraz moga korzystac z tych samych read-only target/source tools co
 initial research. Report tools nie sa dostepne w follow-up, a raport pozostaje
-kontekstem tylko do odczytu. Prosba o korekte moze zwrocic propozycje tekstu
+kontekstem tylko do odczytu w historii sesji. Prompt follow-up zawiera tylko
+nowa wiadomosc; zasady odpowiedzi sa w durable follow-up contract. Prosba o korekte moze zwrocic propozycje tekstu
 w rozmowie, lecz nie zmienia raportu.
+Odpowiedz jest funkcjonalna i czytelna dla analityka; na konkretne pytanie o
+API, schemat danych albo system zewnetrzny podaje potwierdzone identyfikatory
+oraz ich znaczenie i zaznacza brakujacy dowod.
 
 Jeden run dopuszcza jeden aktywny turn. Wiadomosci, ich usage, evidence,
 activity i feedback sa zapisywane w runie, przy czym usage nie jest renderowane

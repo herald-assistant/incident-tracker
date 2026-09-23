@@ -70,7 +70,6 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
                 "ui-explorer-follow-up-" + assistantId,
                 privateSnapshot.toStartRequest(),
                 privateSnapshot.toContext(),
-                snapshot.report(),
                 message,
                 record.continuation().copilotSessionId(),
                 authRef

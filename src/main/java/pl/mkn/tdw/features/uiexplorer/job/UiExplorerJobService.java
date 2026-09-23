@@ -162,7 +162,7 @@ public class UiExplorerJobService {
         }
         var chatRequest = new UiExplorerFollowUpChatRequest(
                 "ui-explorer-follow-up-" + assistantMessageId,
-                job.initialRequest(), context, job.currentReport(), request.message(), sessionId, authRef
+                job.initialRequest(), context, request.message(), sessionId, authRef
         );
         persistSnapshot(job, authRef, context);
         try {

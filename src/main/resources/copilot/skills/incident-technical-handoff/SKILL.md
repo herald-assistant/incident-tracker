@@ -13,6 +13,13 @@ report, ticket text, przekazanie, zgloszenie, raport dla developera, raport
 dla QA, raport dla DevOps, przekazanie do innego zespolu albo dowolna
 odpowiedz, ktora ma byc gotowa do uzycia przez osobe techniczna.
 
+Samo pytanie analityka o kontrakt API, schemat bazy danych albo nazwe systemu
+zewnetrznego nie jest prosba o pelny Technical Handoff v1. W zwyklym follow-upie
+odpowiedz na konkretne pytanie prostym jezykiem; podaj dokladne, potwierdzone
+identyfikatory i ich znaczenie, jezeli sa przedmiotem pytania. Pelny format
+handoffu stosuj dopiero na wyrazna prosbe o material do przekazania lub
+dzialania dla odbiorcy technicznego.
+
 Frontend renderuje odpowiedzi chatu jako Markdown, wiec odpowiedz ma byc
 bezposrednim, dobrze ustrukturyzowanym Markdownem. Nie opakowuj handoffu w JSON,
 chyba ze uzytkownik jawnie o to prosi.
@@ -77,7 +84,7 @@ Handoff ma pomoc odbiorcy odpowiedziec:
 
 ## Kontrakt Wyniku
 
-Wynikiem jest Markdown `Technical Handoff v1` zapisany w sekcji
+W poczatkowej analizie wynikiem jest Markdown `Technical Handoff v1` zapisany w sekcji
 `TECHNICAL_HANDOFF` raportu i mapowany na publiczne pole `technicalAnalysis`.
 Korzystaj z:
 
@@ -236,7 +243,9 @@ faktu.
 
 ## Format Wyniku
 
-Uzyj dokladnie tej struktury top-level, w tej kolejnosci.
+Dla poczatkowej analizy lub wyraznie zamowionego pelnego handoffu uzyj
+dokladnie tej struktury top-level, w tej kolejnosci. Zwykly follow-up nie
+przyjmuje ponizszego formatu.
 
 ````markdown
 # Technical Handoff v1: <krotki tytul techniczny>
@@ -412,7 +421,7 @@ Stosuj `Quality Gate` jako obowiazkowa walidacje handoffu. Dodatkowo sprawdz:
 
 ## Fallbacki
 
-Jezeli brakuje evidence:
+Jezeli w poczatkowej analizie albo zamowionym handoffie brakuje evidence:
 
 - zachowaj strukture Technical Handoff v1,
 - wpisz `Brak danych w evidence`, `Hipoteza, wymaga potwierdzenia` albo

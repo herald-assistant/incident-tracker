@@ -63,6 +63,16 @@ class UiExplorerCopilotRuntimeSkillsContractTest {
     }
 
     @Test
+    void shouldKeepFollowUpReadableWhileAnsweringRequestedTechnicalDetails() throws Exception {
+        assertThat(skill("ui-explorer-follow-up-chat"))
+                .contains("Domyślnie pisz funkcjonalnie")
+                .contains("konkretny aspekt", "techniczny zrozumiały dla analityka")
+                .contains("kontraktu API", "schematu bazy", "systemu zewnętrznego")
+                .contains("Wyjaśnij znaczenie tych szczegółów")
+                .contains("Oddziel potwierdzone fakty od wniosków");
+    }
+
+    @Test
     void shouldExposeCanonicalSkillNamesWithoutAliases() {
         assertThat(UiExplorerCopilotRuntimeSkillNames.featureSkillNames())
                 .containsExactly(

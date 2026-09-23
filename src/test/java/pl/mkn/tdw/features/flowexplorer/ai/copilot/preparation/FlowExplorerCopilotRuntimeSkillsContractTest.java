@@ -186,8 +186,15 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
 
         assertContainsAll(followUpChat, List.of(
                 "flow-explorer-map-persistence-section",
-                "flow-explorer-map-integrations-section"
+                "flow-explorer-map-integrations-section",
+                "Domyslnie nie zaczynaj od nazw klas",
+                "Gdy uzytkownik pyta o konkretny aspekt techniczny zrozumialy dla analityka",
+                "kontraktu API",
+                "schematu",
+                "nazw systemow zewnetrznych",
+                "bez stalych etykiet pol"
         ));
+        assertFalse(followUpChat.contains("checkedEvidence:"));
     }
 
     @Test

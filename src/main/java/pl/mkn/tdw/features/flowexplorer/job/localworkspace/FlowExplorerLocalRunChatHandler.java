@@ -75,11 +75,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var startedAt = Instant.now();
-        var promptPreparation = followUpPromptPreparationService.prepare(
-                startRequest(snapshot),
-                snapshot.contextSnapshot(),
-                userMessage
-        );
+        var promptPreparation = followUpPromptPreparationService.prepare(userMessage);
         var captured = new AnalysisChatAssistantCapture();
         var response = executeChat(
                 snapshot,

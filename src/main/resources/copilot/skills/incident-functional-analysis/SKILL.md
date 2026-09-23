@@ -8,6 +8,12 @@ description: "Kontrakt Functional Analysis v1 dla pola functionalAnalysis: wynik
 Uzywaj tego skilla dla pola `functionalAnalysis` w kazdym poczatkowym wyniku
 analizy incydentu.
 
+W zwyklym follow-upie odpowiadaj na aktualne pytanie krotko i zrozumiale dla
+analityka, bez odtwarzania formatu Functional Analysis v1. Gdy pytanie dotyczy
+konkretnego kontraktu API, schematu bazy danych albo nazwy systemu zewnetrznego,
+podaj potwierdzone identyfikatory i wyjasnij ich znaczenie dla incydentu.
+Nie dodawaj szczegolow kodu ani implementacji, o ktore uzytkownik nie pyta.
+
 Odbiorca to analityk biznesowo-systemowy. Moze znac reguly biznesowe,
 wysokopoziomowa architekture i ownership, ale nie zna kodu.
 
@@ -63,7 +69,7 @@ ograniczenia widocznosci z perspektywy analityka.
 
 ## Kontrakt Wyniku
 
-Wynikiem jest Markdown `Functional Analysis v1` zapisany w sekcji
+W poczatkowej analizie wynikiem jest Markdown `Functional Analysis v1` zapisany w sekcji
 `FUNCTIONAL_ANALYSIS` raportu i mapowany na publiczne pole `functionalAnalysis`.
 Korzystaj z:
 
@@ -137,7 +143,8 @@ funkcjonalne. Nie zamieniaj tego pola w opis klas i metod.
 
 ## Format Wyniku
 
-Uzyj dokladnie tej struktury top-level, w tej kolejnosci.
+W poczatkowej analizie uzyj dokladnie tej struktury top-level, w tej
+kolejnosci. Zwykly follow-up odpowiada tylko na aktualne pytanie.
 
 ````markdown
 # Functional Analysis v1: <krotki tytul dla analityka>
@@ -219,7 +226,7 @@ Sprawdz:
 
 ## Fallbacki
 
-Jezeli brakuje kontekstu funkcjonalnego:
+Jezeli w poczatkowej analizie brakuje kontekstu funkcjonalnego:
 
 - zachowaj strukture sekcji,
 - uzyj `Nie ustalono`, `Brak danych w evidence` albo
