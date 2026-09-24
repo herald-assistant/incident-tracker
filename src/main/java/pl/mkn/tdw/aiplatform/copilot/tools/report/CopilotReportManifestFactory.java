@@ -112,6 +112,10 @@ final class CopilotReportManifestFactory {
         return new CopilotReportManifest.TextFingerprint(effective.length(), digestStrings(List.of(effective)), preview);
     }
 
+    static String markdownSha256(String markdown) {
+        return fingerprint(markdown).sha256();
+    }
+
     private static String reportDigest(AnalysisReport report) {
         if (report == null) {
             return digestStrings(List.of());

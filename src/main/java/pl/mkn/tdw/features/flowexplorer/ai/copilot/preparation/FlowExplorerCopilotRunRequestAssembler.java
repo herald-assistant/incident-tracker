@@ -13,10 +13,22 @@ import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportFactory;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 @Component
 @RequiredArgsConstructor
 public class FlowExplorerCopilotRunRequestAssembler {
+
+    private static final String FOLLOW_UP_REPORT_GUIDANCE = """
+            W follow-up zmieniaj AnalysisReport tylko po jawnej prosbie operatora w najnowszej
+            wiadomosci. Zwykle pytanie, prosba o wyjasnienie albo dodatkowy research nie zmienia
+            raportu. Przed korekta odczytaj biezaca sekcje przez report_get_current(sectionId).
+            Uzyj report_patch_section dla jednego jednoznacznego fragmentu z aktualnym digestem,
+            report_upsert_section dla calej sekcji, report_update_header dla naglowka i
+            report_update_meta dla globalnych metadata. Zachowaj niezmieniane tresci i potwierdz
+            zapis przez report_get_current. Gdy tool odrzuci zmiane, powiedz, ze raport nie zostal
+            zaktualizowany.
+            """;
 
     private static final CopilotToolDescriptionContext TOOL_DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("flow-explorer");
@@ -44,7 +56,7 @@ public class FlowExplorerCopilotRunRequestAssembler {
             FlowExplorerPromptPreparation preparation,
             AnalysisAiAuthRef authRef
     ) {
-        return assemble(runReference, request, contextSnapshot, preparation, false, null, authRef);
+        return assemble(runReference, request, contextSnapshot, preparation, false, null, authRef, null);
     }
 
     public FlowExplorerCopilotRunAssembly assembleFollowUp(
@@ -71,10 +83,20 @@ public class FlowExplorerCopilotRunRequestAssembler {
             String copilotSessionId,
             AnalysisAiAuthRef authRef
     ) {
+        return assembleFollowUp(runReference, request, contextSnapshot, preparation, copilotSessionId,
+                authRef, null);
+    }
+
+    public FlowExplorerCopilotRunAssembly assembleFollowUp(
+            String runReference, FlowExplorerJobStartRequest request, FlowExplorerContextSnapshot contextSnapshot,
+            FlowExplorerPromptPreparation preparation, String copilotSessionId, AnalysisAiAuthRef authRef,
+            AnalysisReport report
+    ) {
         if (!StringUtils.hasText(copilotSessionId)) {
             throw new IllegalArgumentException("Flow Explorer follow-up requires copilotSessionId for session resume.");
         }
-        return assemble(runReference, request, contextSnapshot, preparation, true, copilotSessionId, authRef);
+        return assemble(runReference, request, contextSnapshot, preparation, true, copilotSessionId, authRef,
+                report);
     }
 
     private FlowExplorerCopilotRunAssembly assemble(
@@ -84,7 +106,8 @@ public class FlowExplorerCopilotRunRequestAssembler {
             FlowExplorerPromptPreparation preparation,
             boolean followUp,
             String copilotSessionId,
-            AnalysisAiAuthRef authRef
+            AnalysisAiAuthRef authRef,
+            AnalysisReport followUpReport
     ) {
         var toolSessionContext = toolSessionContextFactory.create(
                 runReference,
@@ -92,10 +115,13 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 request,
                 contextSnapshot,
                 preparation,
-                followUp
+                followUp,
+                followUpReport
         );
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT);
-        var toolAccessPolicy = toolAccessPolicyFactory.create(registeredTools);
+        var toolAccessPolicy = followUp
+                ? toolAccessPolicyFactory.createForFollowUp(registeredTools)
+                : toolAccessPolicyFactory.create(registeredTools);
         var aiOptions = request != null ? request.aiOptions() : null;
         var sessionConfigRequest = followUp
                 ? sessionConfigRequestFactory.createForFollowUp(
@@ -108,6 +134,9 @@ public class FlowExplorerCopilotRunRequestAssembler {
                         toolAccessPolicy,
                         aiOptions
                 );
+        if (followUp) {
+            sessionConfigRequest = sessionConfigRequest.withDurableSystemInstructions(FOLLOW_UP_REPORT_GUIDANCE);
+        }
         var runRequest = new CopilotRunRequest(
                 toolSessionContext.analysisRunId(),
                 runAuthMapper.toRunAuth(authRef),
@@ -119,7 +148,7 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 preparation != null ? preparation.artifactContents() : null,
                 null
         ).withInitialReport(followUp
-                ? null
+                ? followUpReport
                 : reportFactory.createInitialReport(request, contextSnapshot, toolSessionContext));
 
         return new FlowExplorerCopilotRunAssembly(

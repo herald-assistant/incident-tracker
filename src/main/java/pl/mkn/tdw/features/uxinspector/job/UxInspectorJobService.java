@@ -19,6 +19,7 @@ import pl.mkn.tdw.features.uxinspector.job.localworkspace.UxInspectorLocalRunPer
 import pl.mkn.tdw.features.uxinspector.job.state.UxInspectorJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
@@ -44,6 +45,7 @@ public class UxInspectorJobService {
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final UxInspectorLocalRunPersistence localRunPersistence;
     private final UxInspectorFollowUpChatService followUpChatService;
+    private final UxInspectorFollowUpReportProjection followUpReportProjection;
     private final UxInspectorFollowUpPromptService followUpPromptService;
     private final LocalAnalysisRunOperationGuard operationGuard;
 
@@ -131,7 +133,7 @@ public class UxInspectorJobService {
         catch (RuntimeException exception) { lease.close(); throw exception; }
         var chatRequest = new UxInspectorFollowUpChatRequest(
                 "ux-inspector-follow-up-" + assistantId, state.initialRequest(), context,
-                request.message(), sessionId, auth);
+                request.message(), sessionId, auth, state.currentReport());
         persist(state);
         try {
             applicationTaskExecutor.execute(() -> runChat(state, assistantId, chatRequest, lease));
@@ -150,7 +152,12 @@ public class UxInspectorJobService {
             var response = followUpChatService.chat(request,
                     section -> state.chatToolEvidence(assistantId, section),
                     event -> state.chatActivity(assistantId, event));
-            state.chatCompleted(assistantId, response.content(), prompt, response.usage(), response.sessionId());
+            var mapping = followUpReportProjection.project(request.report(), response.report(),
+                    request.initialRequest().capture(), request.context(), state.snapshot().usage());
+            var reportChange = AnalysisReportChangeEvidence.between(request.report(),
+                    mapping != null ? mapping.report() : request.report());
+            if (reportChange.hasItems()) state.chatToolEvidence(assistantId, reportChange);
+            state.chatCompleted(assistantId, response.content(), prompt, response.usage(), response.sessionId(), mapping);
         } catch (RuntimeException exception) {
             log.error("UX Inspector follow-up failed jobId={} message={}", state.snapshot().jobId(), exception.getMessage(), exception);
             state.chatFailed(assistantId, "UX_INSPECTOR_CHAT_FAILED",

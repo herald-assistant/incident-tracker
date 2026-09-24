@@ -37,18 +37,18 @@ class UiExplorerCopilotRunRequestAssemblerTest {
             CopilotToolDescriptionContext.profile("ui-explorer");
 
     @Test
-    void shouldExposeOnlyReadOnlyResearchToolsForFollowUp() {
+    void shouldExposeResearchAndReportToolsForFollowUp() {
         var policy = UiExplorerCopilotToolAccessPolicy.forFollowUp(registeredTools());
 
         assertThat(policy.fallbackAvailable()).isTrue();
-        assertThat(policy.availableToolNames()).containsExactlyInAnyOrder(
+        assertThat(policy.availableToolNames()).contains(
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 GitLabToolNames.READ_REPOSITORY_FILE,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
         );
-        assertThat(policy.availableToolNames()).noneMatch(CopilotReportToolNames::isReportTool);
+        assertThat(policy.availableToolNames()).containsAll(CopilotReportToolNames.allToolNames());
     }
 
     @Test
@@ -86,7 +86,7 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
         );
         assertThat(assembly.toolAccessPolicy().availableToolNames())
-                .containsAll(CopilotReportToolNames.allToolNames());
+                .containsAll(CopilotReportToolNames.initialToolNames());
         assertThat(assembly.toolAccessPolicy().reportToolsAvailable()).isTrue();
         assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())

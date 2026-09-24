@@ -144,7 +144,7 @@ export class UiExplorerFacade {
     )
   );
   readonly workflowIsRunning = computed(
-    () => this.pollingActive() && this.job()?.status !== 'ANALYZING'
+    () => this.pollingActive() && !this.isJobTerminal() && this.job()?.status !== 'ANALYZING'
   );
   readonly aiWorkflowIsRunning = computed(
     () => this.pollingActive() && this.job()?.status === 'ANALYZING'

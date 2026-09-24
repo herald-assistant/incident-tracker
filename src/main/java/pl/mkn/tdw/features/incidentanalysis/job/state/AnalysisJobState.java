@@ -186,6 +186,11 @@ public final class AnalysisJobState {
         touch();
     }
 
+    public synchronized void replaceReport(AnalysisReport value) {
+        report = value;
+        touch();
+    }
+
     public synchronized AnalysisAiChatRequest startChatMessage(
             String userMessageId,
             String assistantMessageId,
@@ -229,7 +234,8 @@ public final class AnalysisJobState {
                 message,
                 latestCopilotSessionId,
                 completedAiRequest.options(),
-                completedAiRequest.authRef()
+                completedAiRequest.authRef(),
+                report
         );
     }
 
@@ -278,6 +284,15 @@ public final class AnalysisJobState {
             String copilotSessionId,
             pl.mkn.tdw.shared.ai.AnalysisAiUsage usage
     ) {
+        markChatCompleted(assistantMessageId, content, prompt, copilotSessionId, usage, report, result);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId, String content, String prompt, String copilotSessionId,
+            AnalysisAiUsage usage, AnalysisReport updatedReport, AnalysisResultResponse updatedResult
+    ) {
+        this.report = updatedReport;
+        this.result = updatedResult;
         if (StringUtils.hasText(copilotSessionId)) {
             latestCopilotSessionId = copilotSessionId;
         }

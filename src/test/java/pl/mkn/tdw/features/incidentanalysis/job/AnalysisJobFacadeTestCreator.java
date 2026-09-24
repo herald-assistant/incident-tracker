@@ -28,6 +28,7 @@ final class AnalysisJobFacadeTestCreator {
         return new AnalysisJobFacade(
                 analysisOrchestrator,
                 analysisAiChatProvider,
+                new IncidentFollowUpReportProjection(new pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper()),
                 applicationTaskExecutor,
                 authRefResolver,
                 new CopilotRunAuthMapper(),

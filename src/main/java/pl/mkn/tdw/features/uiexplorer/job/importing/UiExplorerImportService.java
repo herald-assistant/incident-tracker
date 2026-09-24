@@ -36,7 +36,7 @@ public class UiExplorerImportService {
         var envelope = parse(document);
         validateEnvelope(envelope);
         var importedAt = Instant.now();
-        var imported = asImported(sanitizer.sanitize(envelope.payload().job()), importedAt);
+        var imported = asImported(sanitizer.sanitizeImported(envelope.payload().job()), importedAt);
         if (!localWorkspaceProperties.isEnabled()) {
             throw new UiExplorerImportPersistenceException();
         }

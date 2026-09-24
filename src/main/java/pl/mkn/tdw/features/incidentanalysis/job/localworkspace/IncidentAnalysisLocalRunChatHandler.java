@@ -16,6 +16,7 @@ import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatResponse;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatTurn;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisResultResponse;
+import pl.mkn.tdw.features.incidentanalysis.job.IncidentFollowUpReportProjection;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.tdw.features.incidentanalysis.job.export.IncidentAnalysisExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
@@ -28,6 +29,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -48,6 +50,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
 
     private final ObjectMapper objectMapper;
     private final AnalysisAiChatProvider analysisAiChatProvider;
+    private final IncidentFollowUpReportProjection reportProjection;
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
 
@@ -200,7 +203,8 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 message,
                 continuation.copilotSessionId(),
                 new AnalysisAiOptions(snapshot.aiModel(), snapshot.reasoningEffort()),
-                authRef
+                authRef,
+                snapshot.report()
         );
     }
 
@@ -238,6 +242,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
             Instant startedAt,
             Instant completedAt
     ) {
+        var projected = reportProjection.project(snapshot.result(), snapshot.report(), response.report());
         var chatMessages = new ArrayList<>(safeList(snapshot.chatMessages()));
         chatMessages.add(new AnalysisChatMessageResponse(
                 userMessageId,
@@ -264,7 +269,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 startedAt,
                 completedAt,
                 completedAt,
-                captured.toolEvidenceSections(),
+                AnalysisReportChangeEvidence.append(captured.toolEvidenceSections(), snapshot.report(), response.report()),
                 captured.aiActivityEvents(),
                 captured.toolFeedback(),
                 response != null ? response.prompt() : null,
@@ -293,8 +298,8 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 safeList(snapshot.toolFeedback()),
                 chatMessages,
                 snapshot.preparedPrompt(),
-                snapshot.result(),
-                snapshot.report()
+                projected,
+                response.report()
         );
     }
 

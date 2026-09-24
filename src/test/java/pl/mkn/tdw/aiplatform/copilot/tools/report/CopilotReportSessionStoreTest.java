@@ -81,6 +81,52 @@ class CopilotReportSessionStoreTest {
     }
 
     @Test
+    void shouldPatchOneExactFragmentAndPreserveOtherReportFields() {
+        var store = new CopilotReportSessionStore();
+        var original = new AnalysisReport("report-1", "CRM case", "Customer care", "Summary",
+                List.of(section("OVERVIEW", 1, "First fact. Second fact.")), AnalysisReportMeta.empty());
+        store.register(original);
+        var digest = CopilotReportManifestFactory.markdownSha256("First fact. Second fact.");
+
+        var updated = store.patchSection("report-1", "OVERVIEW", digest, "Second fact", "Updated fact");
+
+        assertEquals("First fact. Updated fact.", updated.sections().get(0).markdown());
+        assertEquals(original.header(), updated.header());
+        assertEquals(original.meta(), updated.meta());
+        assertEquals(original.sections().get(0).meta(), updated.sections().get(0).meta());
+    }
+
+    @Test
+    void shouldRejectStaleOrAmbiguousPatchWithoutChangingReport() {
+        var store = new CopilotReportSessionStore();
+        var original = new AnalysisReport("report-1", "CRM case", null, null,
+                List.of(section("OVERVIEW", 1, "Repeated. Repeated.")), AnalysisReportMeta.empty());
+        store.register(original);
+        var digest = CopilotReportManifestFactory.markdownSha256("Repeated. Repeated.");
+
+        assertThrows(CopilotReportSessionException.class,
+                () -> store.patchSection("report-1", "OVERVIEW", "stale", "Repeated", "Changed"));
+        assertThrows(CopilotReportSessionException.class,
+                () -> store.patchSection("report-1", "OVERVIEW", digest, "Repeated", "Changed"));
+        assertThrows(CopilotReportSessionException.class,
+                () -> store.patchSection("report-1", "OVERVIEW", digest, "missing", "Changed"));
+        assertEquals(original, store.current("report-1").orElseThrow());
+    }
+
+    @Test
+    void shouldRejectOverlappingFragmentMatches() {
+        var store = new CopilotReportSessionStore();
+        var original = new AnalysisReport("report-1", "CRM case", null, null,
+                List.of(section("OVERVIEW", 1, "aaaa")), AnalysisReportMeta.empty());
+        store.register(original);
+        var digest = CopilotReportManifestFactory.markdownSha256("aaaa");
+
+        assertThrows(CopilotReportSessionException.class,
+                () -> store.patchSection("report-1", "OVERVIEW", digest, "aaa", "changed"));
+        assertEquals(original, store.current("report-1").orElseThrow());
+    }
+
+    @Test
     void shouldUnregisterReport() {
         var store = new CopilotReportSessionStore();
         var report = report("report-1", "Initial");

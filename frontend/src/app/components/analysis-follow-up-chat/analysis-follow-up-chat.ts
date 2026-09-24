@@ -1,8 +1,9 @@
-import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 
 import {
   AnalysisAiToolFeedback,
   AnalysisChatMessageResponse,
+  AnalysisEvidenceItem,
   AnalysisEvidenceSection
 } from '../../core/models/analysis.models';
 import {
@@ -11,6 +12,13 @@ import {
 import { copyElementToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
+import { reportChangeDiff } from './report-change-diff.utils';
+import type { ReportChangeDiffLine } from './report-change-diff.utils';
+
+interface ReportChangeGroup {
+  title: string;
+  parts: { title: string | null; lines: ReportChangeDiffLine[] }[];
+}
 
 @Component({
   selector: 'app-analysis-follow-up-chat',
@@ -46,6 +54,8 @@ export class AnalysisFollowUpChatComponent {
   readonly messageText = signal('');
   readonly localError = signal('');
   readonly copiedChatMessageId = signal<string | null>(null);
+  protected readonly reportChangeView = signal<ReportChangeGroup[] | null>(null);
+  private readonly reportChangeDialog = viewChild<ElementRef<HTMLDialogElement>>('reportChangeDialog');
 
   readonly hasActiveAssistantMessage = computed(() =>
     this.messages().some((message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS')
@@ -131,6 +141,43 @@ export class AnalysisFollowUpChatComponent {
 
   protected evidenceSectionTitle(section: AnalysisEvidenceSection): string {
     return formatEvidenceSectionTitle(section);
+  }
+
+  protected isReportChangeSection(section: AnalysisEvidenceSection): boolean {
+    return section.provider === 'report' && section.category === 'report-change';
+  }
+
+  protected reportChangeItems(message: AnalysisChatMessageResponse): AnalysisEvidenceItem[] {
+    return message.toolEvidenceSections
+      .filter((section) => this.isReportChangeSection(section))
+      .flatMap((section) => section.items)
+      .filter((item) => item.attributes.some((attribute) => attribute.name === 'before')
+        && item.attributes.some((attribute) => attribute.name === 'after'));
+  }
+
+  protected openReportChanges(message: AnalysisChatMessageResponse): void {
+    const groups = new Map<string, ReportChangeGroup>();
+    for (const item of this.reportChangeItems(message)) {
+      const delimiter = item.title.indexOf(' — ');
+      const title = delimiter >= 0 ? item.title.slice(0, delimiter) : item.title;
+      const partTitle = delimiter >= 0 ? item.title.slice(delimiter + 3) : null;
+      const before = item.attributes.find((attribute) => attribute.name === 'before')!.value;
+      const after = item.attributes.find((attribute) => attribute.name === 'after')!.value;
+      if (!groups.has(title)) {
+        groups.set(title, { title, parts: [] });
+      }
+      groups.get(title)!.parts.push({ title: partTitle, lines: reportChangeDiff(before, after) });
+    }
+    if (groups.size === 0) {
+      return;
+    }
+    this.reportChangeView.set([...groups.values()]);
+    this.reportChangeDialog()?.nativeElement.showModal();
+  }
+
+  protected closeReportChange(): void {
+    this.reportChangeDialog()?.nativeElement.close();
+    this.reportChangeView.set(null);
   }
 
   protected toolFeedbackTarget(feedback: AnalysisAiToolFeedback): string {

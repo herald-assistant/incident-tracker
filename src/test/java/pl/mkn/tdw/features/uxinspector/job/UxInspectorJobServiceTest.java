@@ -109,6 +109,7 @@ class UxInspectorJobServiceTest {
         when(auth.resolveForCurrentRequest()).thenReturn(AnalysisAiAuthRef.localToken("CRM test"));
         return new UxInspectorJobService(normalizer, selection, resolver, evidence, preparation, provider,
                 executor, auth, persistence, mock(UxInspectorFollowUpChatService.class),
+                new UxInspectorFollowUpReportProjection(new pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper()),
                 mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard());
     }
 

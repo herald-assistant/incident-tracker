@@ -121,8 +121,8 @@ public class UiExplorerReportMapper {
 
         var safeReport = new AnalysisReport(
                 report.reportId(),
-                screenPath(context),
-                componentLabel(context),
+                StringUtils.hasText(report.header()) ? report.header().trim() : screenPath(context),
+                StringUtils.hasText(report.subHeader()) ? report.subHeader().trim() : componentLabel(context),
                 summary,
                 safeSections,
                 safeReportMeta

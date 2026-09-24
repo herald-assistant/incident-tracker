@@ -69,9 +69,9 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
   przygotowanego kontekstu i captured tool evidence, a nastepnie projektuje
   raport na feature-specific `UiExplorerResultResponse` dla publicznego API.
 - Follow-up wznawia te sama sesje Copilota dla `COMPLETED` i `PARTIAL`, uzywa
-  pierwotnego immutable commita i pieciu read-only research tools. Nie
-  rejestruje report tools ani hidden report scope; raport initial pozostaje
-  niezmienny, a prosba o korekte daje propozycje tekstu tylko w rozmowie.
+  pierwotnego immutable commita i pieciu read-only research tools. Report tools
+  maja hidden scope biezacego raportu; mutacja wymaga jawnej prosby operatora
+  w najnowszej wiadomosci i ponownej walidacji report/result.
 - Local history zapisuje minimalny prywatny continuation snapshot bez tokenow,
   kodu i promptu. Import nigdy nie aktywuje continuation. Przerwany turn po
   restarcie ma status `FAILED` i nie jest automatycznie ponawiany.
@@ -80,7 +80,7 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
 
 - Brak uruchamiania badanego UI i automatyzacji przegladarki.
 - Brak przejmowania sesji Keycloak i nowych credentiali.
-- Brak multi-repository traversal i edycji raportu przez follow-up chat.
+- Brak multi-repository traversal i edycji raportu poza follow-up chatem.
 - Brak modyfikacji badanego repozytorium albo publikacji dokumentacji.
 
 ## Testy

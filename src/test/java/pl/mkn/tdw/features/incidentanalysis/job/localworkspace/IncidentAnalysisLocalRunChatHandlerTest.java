@@ -54,6 +54,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         var handler = new IncidentAnalysisLocalRunChatHandler(
                 objectMapper,
                 provider,
+                new pl.mkn.tdw.features.incidentanalysis.job.IncidentFollowUpReportProjection(new pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper()),
                 new CopilotRunAuthMapper(),
                 tokenResolver
         );
@@ -105,6 +106,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         var handler = new IncidentAnalysisLocalRunChatHandler(
                 objectMapper,
                 provider,
+                new pl.mkn.tdw.features.incidentanalysis.job.IncidentFollowUpReportProjection(new pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper()),
                 new CopilotRunAuthMapper(),
                 auth -> new CopilotAccessToken("token", null, null, false)
         );
@@ -122,6 +124,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         var handler = new IncidentAnalysisLocalRunChatHandler(
                 objectMapper,
                 new CapturingChatProvider(),
+                new pl.mkn.tdw.features.incidentanalysis.job.IncidentFollowUpReportProjection(new pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper()),
                 new CopilotRunAuthMapper(),
                 auth -> new CopilotAccessToken("token", null, null, false)
         );
@@ -194,6 +197,22 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                 ),
                 report()
         );
+    }
+
+    @Test
+    void shouldPersistExplicitReportCorrectionInLocalContinuation() throws Exception {
+        var provider = new CapturingChatProvider(true);
+        var handler = new IncidentAnalysisLocalRunChatHandler(objectMapper, provider,
+                new pl.mkn.tdw.features.incidentanalysis.job.IncidentFollowUpReportProjection(
+                        new pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper()),
+                new CopilotRunAuthMapper(), auth -> new CopilotAccessToken("token", null, null, false));
+
+        var updated = handler.continueRun(indexEntry(), record(snapshotWithPreviousChat()),
+                "Zaktualizuj raport: doprecyzuj analizę funkcjonalną.");
+        var envelope = objectMapper.treeToValue(updated.record().exportEnvelope(), IncidentAnalysisExportEnvelope.class);
+        var job = envelope.payload().job();
+        assertEquals("Skorygowana analiza funkcjonalna CRM.", job.result().functionalAnalysis());
+        assertEquals("Skorygowana analiza funkcjonalna CRM.", job.report().sections().get(0).markdown());
     }
 
     private AnalysisReport report() {
@@ -279,14 +298,24 @@ class IncidentAnalysisLocalRunChatHandlerTest {
     private static final class CapturingChatProvider implements AnalysisAiChatProvider {
 
         private final RuntimeException exception;
+        private final boolean edited;
         private AnalysisAiChatRequest request;
 
         private CapturingChatProvider() {
-            this(null);
+            this(null, false);
         }
 
         private CapturingChatProvider(RuntimeException exception) {
+            this(exception, false);
+        }
+
+        private CapturingChatProvider(boolean edited) {
+            this(null, edited);
+        }
+
+        private CapturingChatProvider(RuntimeException exception, boolean edited) {
             this.exception = exception;
+            this.edited = edited;
         }
 
         @Override
@@ -328,7 +357,13 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                     "test-provider",
                     "Odpowiedz lokalna.",
                     "Follow-up prompt",
-                    "follow-up-session-1"
+                    "follow-up-session-1",
+                    null,
+                    edited ? new AnalysisReport(request.report().reportId(), request.report().header(),
+                            request.report().subHeader(), request.report().markdownSummary(),
+                            List.of(new AnalysisReportSection("FUNCTIONAL_ANALYSIS", "Functional analysis", 1,
+                                            "Skorygowana analiza funkcjonalna CRM.", AnalysisReportMeta.empty()),
+                                    request.report().sections().get(1)), request.report().meta()) : request.report()
             );
         }
     }

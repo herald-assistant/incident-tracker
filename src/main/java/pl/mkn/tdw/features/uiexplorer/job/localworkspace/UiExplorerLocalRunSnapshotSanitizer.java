@@ -12,6 +12,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.ToolResultActivityDetailsSanitizer;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
@@ -101,6 +102,14 @@ public class UiExplorerLocalRunSnapshotSanitizer {
     );
 
     public UiExplorerJobStateSnapshot sanitize(UiExplorerJobStateSnapshot snapshot) {
+        return sanitize(snapshot, false);
+    }
+
+    public UiExplorerJobStateSnapshot sanitizeImported(UiExplorerJobStateSnapshot snapshot) {
+        return sanitize(snapshot, true);
+    }
+
+    private UiExplorerJobStateSnapshot sanitize(UiExplorerJobStateSnapshot snapshot, boolean imported) {
         if (snapshot == null) {
             return null;
         }
@@ -111,7 +120,7 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 snapshot.report(),
                 safeResult,
                 snapshot.jobId(),
-                allowedSourcePaths(safeResult, safeContextSections, safeToolEvidenceSections)
+                allowedSourcePaths(safeResult, safeContextSections, safeToolEvidenceSections), imported
         );
         return new UiExplorerJobStateSnapshot(
                 snapshot.jobId(),
@@ -166,14 +175,16 @@ public class UiExplorerLocalRunSnapshotSanitizer {
             AnalysisReport report,
             UiExplorerResultResponse result,
             String jobId,
-            Set<String> allowedPaths
+            Set<String> allowedPaths,
+            boolean imported
     ) {
         if (report == null) {
             return null;
         }
         return new AnalysisReport(
                 "ui-explorer-report-" + jobId,
-                result != null && result.screen() != null ? result.screen().routePattern() : report.header(),
+                imported && result != null && result.screen() != null
+                        ? result.screen().routePattern() : report.header(),
                 result != null && result.screen() != null ? result.screen().label() : report.subHeader(),
                 report.markdownSummary(),
                 report.sections().stream().map(section -> sanitize(section, allowedPaths)).toList(),
@@ -320,11 +331,16 @@ public class UiExplorerLocalRunSnapshotSanitizer {
 
     private List<AnalysisEvidenceSection> sanitizeToolEvidence(List<AnalysisEvidenceSection> sections) {
         return sections.stream()
-                .map(section -> new AnalysisEvidenceSection(
-                        section.provider(),
-                        section.category(),
-                        section.items().stream().map(this::sanitizeToolEvidence).toList()
-                ))
+                .map(section -> AnalysisReportChangeEvidence.PROVIDER.equals(section.provider())
+                        && AnalysisReportChangeEvidence.CATEGORY.equals(section.category())
+                        ? new AnalysisEvidenceSection(section.provider(), section.category(),
+                                section.items().stream()
+                                        .map(item -> new AnalysisEvidenceItem(item.title(),
+                                                sanitizeAttributes(item, Set.of("before", "after"))))
+                                        .filter(item -> item.attributes().size() == 2)
+                                        .toList())
+                        : new AnalysisEvidenceSection(section.provider(), section.category(),
+                                section.items().stream().map(this::sanitizeToolEvidence).toList()))
                 .filter(AnalysisEvidenceSection::hasItems)
                 .toList();
     }

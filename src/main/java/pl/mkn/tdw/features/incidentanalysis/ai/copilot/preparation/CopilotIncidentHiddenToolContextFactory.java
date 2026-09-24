@@ -38,11 +38,18 @@ public class CopilotIncidentHiddenToolContextFactory {
             return Map.of();
         }
 
-        return fromIncidentScope(
+        var context = fromIncidentScope(
                 request.correlationId(),
                 request.environment(),
                 request.evidenceSections()
         );
+        if (request.report() != null) {
+            putIfNotBlank(context, AgentToolContextKeys.REPORT_ID, request.report().reportId());
+            putIfNotBlank(context, AgentToolContextKeys.REPORT_FEATURE, REPORT_FEATURE);
+            context.put(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                    CopilotIncidentReportSectionIds.INITIAL_ALLOWED_SECTION_IDS);
+        }
+        return context;
     }
 
     private Map<String, Object> fromIncidentScope(

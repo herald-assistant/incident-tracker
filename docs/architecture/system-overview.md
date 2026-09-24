@@ -149,10 +149,14 @@ to `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Dla `COMPLETED` i `PARTIAL`
 workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
 aktywne sekcje, confidence, references, visibility limits i open questions.
 Obok raportu shared follow-up chat pozwala pytac o wyjasnienia i rozszerzac
-analize. Odpowiedz uzywa prostego jezyka analityka, moze wykonac celowany
-odczyt kodu przez piec read-only tools na pierwotnym commicie, ale nie dostaje
-report tools i nie modyfikuje opublikowanego raportu. Wiadomosci maja wlasne
-evidence, activity, feedback i usage. Live POST zwraca `202` z odpowiedzia
+analize. Odpowiedz uzywa prostego jezyka analityka i moze wykonac celowany
+odczyt kodu przez piec read-only tools na pierwotnym commicie. Jawna prosba
+operatora o aktualizacje raportu pozwala uzyc report tools; zwalidowane
+zmiany aktualizuja razem raport i wynik w historii oraz eksporcie. Odpowiedz,
+ktora zmienila raport, zachowuje w swoich referencjach surowa tresc zmienionych
+elementow przed i po; wspolny chat otwiera jeden podglad inline wszystkich
+zmienionych sekcji z malego chipu. Wiadomosci
+maja wlasne evidence, activity, feedback i usage. Live POST zwraca `202` z odpowiedzia
 `IN_PROGRESS`; UI kontynuuje polling do zakonczenia turnu.
 Feature-owned `result` zasila business-first Markdown o kanonicznej strukturze
 dla kazdej aktywnej sekcji; nie posiada osobnego kontraktu ani appendixu

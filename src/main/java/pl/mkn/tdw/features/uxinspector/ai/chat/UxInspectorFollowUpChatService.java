@@ -34,7 +34,8 @@ public class UxInspectorFollowUpChatService {
                                        AnalysisAiToolEvidenceListener evidenceListener,
                                        AnalysisAiActivityListener activityListener) {
         var prompt = promptService.prepare(request);
-        var context = contextFactory.createFollowUp(request.runReference(), request.copilotSessionId(), request.context());
+        var context = contextFactory.createFollowUp(request.runReference(), request.copilotSessionId(),
+                request.context(), request.report());
         var targetTools = targetToolSetFactory.create(context.analysisRunId(), request.context());
         var registered = toolFactory.createToolDefinitions(context, DESCRIPTION_CONTEXT, targetTools.callbacks());
         var policy = UxInspectorCopilotToolAccessPolicy.forFollowUp(registered);
@@ -44,12 +45,12 @@ public class UxInspectorFollowUpChatService {
         var config = new CopilotSessionConfigRequest(
                 context.copilotSessionId(), policy.enabledTools(), policy.availableToolNames(),
                 new CopilotModelSelection(request.initialRequest().model(), request.initialRequest().reasoningEffort()),
-                "Use only scoped UX Inspector read-only research tools.", false
+                "Use only scoped UX Inspector research and report tools.", false
         ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp());
         var run = new CopilotRunRequest(
                 context.analysisRunId(), authMapper.toRunAuth(request.authRef()),
                 CopilotSessionTarget.existing(context.copilotSessionId()), prompt, config, Map.of(), null
-        );
+        ).withInitialReport(request.report());
         var prepared = preparationService.prepare(run);
         if (evidenceListener != null && evidenceListener != AnalysisAiToolEvidenceListener.NO_OP) {
             prepared = prepared.withEvidenceSink(evidenceListener::onToolEvidenceUpdated);

@@ -139,9 +139,9 @@ preparation/execution z `aiplatform`, frontend tools z `agenttools` i
 platformowe report tools. Zapisany raport jest walidowany wobec deterministic
 oraz captured tool evidence i deterministycznie projektowany na
 `UiExplorerResultResponse`; finalna odpowiedz tekstowa nie jest kontraktem
-wyniku. Follow-up `chat` wznawia te sama sesje z read-only raportem i
-repository scope przypietym do initial commita; jego allowlista nie zawiera
-report tools. `features.uiexplorer.job`
+wyniku. Follow-up `chat` wznawia te sama sesje z biezacym raportem i
+repository scope przypietym do initial commita; report tools moga go zmienic
+po jawnej prosbie operatora. `features.uiexplorer.job`
 uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,
 evidence, activity, usage, result i report oraz mapuje kontrolowane stany
 terminalne. `features.uiexplorer.job.localworkspace` posiada feature codec i

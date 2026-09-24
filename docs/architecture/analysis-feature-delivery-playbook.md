@@ -1034,9 +1034,13 @@ Platformowe tools:
 - `report_get_current`,
 - `report_update_header`,
 - `report_upsert_section`,
+- `report_patch_section`,
 - `report_update_meta`.
 
 Report tools zwracaja zwarty manifest zapisanego stanu, nie pelny raport.
+`report_get_current(sectionId)` moze dodatkowo zwrocic pelne body jednej
+dozwolonej sekcji. `report_patch_section` wymaga aktualnego digestu i
+jednoznacznego starego fragmentu.
 Manifest potwierdza sekcje, kolejnosc, rozmiary, metadata i digesty oraz
 sygnalizuje braki strukturalne. Feature musi wykonac kontrole merytoryczna
 przed mutacja; `report_get_current` nie jest drugim odczytem wszystkich body.
@@ -1103,10 +1107,10 @@ Wzorzec:
 - polling tego samego job snapshotu po wyslaniu wiadomosci,
 - brak rownoleglych follow-upow dla jednego runu.
 
-Aktualny stan: initial report jest report-first, ale mutacja reportu przez
-follow-up chat nie jest wdrozona. Incident Analysis follow-up nie przekazuje
-`initialReport`, nie udostepnia report scope i nie aktualizuje publicznego
-reportu. Nie zakladaj mutacji reportu podczas chatu.
+Incident Analysis, Flow Explorer, UI Explorer i UX Inspector rejestruja biezacy
+raport w efemerycznym store follow-up. Mutacja jest dozwolona tylko po jawnej
+prosbie operatora w najnowszej wiadomosci, a feature waliduje i publikuje
+razem report oraz result po turnie.
 Jesli follow-up nie rejestruje aktualnego reportu i hidden report scope, usun
 report tools z `availableTools`; globalnie zarejestrowany callback nie jest
 powodem, by wystawiac dangling tool.
@@ -1587,7 +1591,6 @@ docelowym wzorcem:
 - feature-owned katalogi, selected roots albo bezposrednie katalogi
   pojedynczych skilli w `skillDirectories`,
 - traktowanie inline artifacts jak SDK attachments lub plikow,
-- aktualizacja reportu przez follow-up - obecnie to tylko niewdrozony plan,
 - report tools dopuszczone w follow-up bez aktywnego report store/scope,
 - incidentowa policy dopuszczajaca nieznane tool names przez koncowe
   `return true`,

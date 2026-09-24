@@ -197,12 +197,14 @@ potwierdzone identyfikatory oraz ich znaczenie dla widoku; niewidoczne
 szczegoly backendu pozostaja ograniczeniem widocznosci.
 
 Follow-up wznawia ta sama sesje Copilota i zachowuje pierwotny immutable
-commit oraz hidden repository scope. Ma piec read-only research tools z
-initial runu, ale nie dostaje report tools ani hidden report scope. Raport
-pozostaje w historii sesji jako kontekst tylko do odczytu; prompt zawiera
-jedynie nowa wiadomosc i wskazowke skilla `ui-explorer-follow-up-chat`.
-Prosba o zmiane raportu moze zwrocic
-propozycje tekstu w rozmowie, lecz nie modyfikuje dokumentu.
+commit oraz hidden repository scope. Ma piec read-only research tools oraz
+piec report tools w hidden scope biezacego raportu. Prompt zawiera jedynie
+nowa wiadomosc i wskazowke skilla `ui-explorer-follow-up-chat`. Model moze
+odczytac raport przez `report_get_current`; tylko jawna prosba w najnowszej
+wiadomosci pozwala uzyc `report_update_header`, `report_upsert_section`,
+`report_patch_section` lub `report_update_meta`. Po zmianie mapper ponownie
+waliduje source references i publikuje razem report i result w live jobie
+oraz historii.
 
 Jeden run dopuszcza jeden aktywny turn. Wspolny operation guard chroni przed
 rownoleglym wyslaniem i usunieciem runu. Live endpoint zwraca `202` z
@@ -239,7 +241,10 @@ katalogu i jest czyszczona po zmianie scope. Konfiguracja jest blokowana na
 czas aktywnego runu.
 
 Wspolny aside pokazuje postep, workflow AI, evidence, feedback i follow-up
-chat. Raport dla `COMPLETED` i `PARTIAL` pokazuje header, summary, aktywne
+chat. Wskaznik postepu analizy jest aktywny tylko przed terminalnym statusem
+jobu; polling odpowiedzi follow-up nie uruchamia go ponownie. Przy odpowiedzi,
+ktora zmienila raport, referencje chatu zawieraja chip z podgladem surowej
+tresci przed i po. Raport dla `COMPLETED` i `PARTIAL` pokazuje header, summary, aktywne
 sekcje, confidence, references, visibility limits oraz open questions. Mozna
 go skopiowac lub pobrac jako Markdown. UI rozroznia wynik live, history i
 imported; import jest wyraznie read-only.

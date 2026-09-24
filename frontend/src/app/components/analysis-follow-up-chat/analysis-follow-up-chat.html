@@ -80,23 +80,33 @@
                   <details class="chat-message__evidence">
                     <summary>References</summary>
                     <div class="chat-message__evidence-sections">
-                      @for (section of message.toolEvidenceSections; track section.provider + section.category) {
+                      @if (reportChangeItems(message).length > 0) {
                         <section class="chat-evidence-section">
-                          <h4>{{ evidenceSectionTitle(section) }}</h4>
-                          @for (item of section.items; track item.title + $index) {
-                            <details class="chat-evidence-item">
-                              <summary>{{ item.title }}</summary>
-                              <div class="attribute-list">
-                                @for (attribute of item.attributes; track attribute.name + $index) {
-                                  <div class="attribute-row attribute-row--block">
-                                    <span class="attribute-name">{{ attribute.name | attributeName }}</span>
-                                    <pre class="attribute-block">{{ attribute.value }}</pre>
-                                  </div>
-                                }
-                              </div>
-                            </details>
-                          }
+                          <button class="chat-evidence-section__report-chip" type="button"
+                            aria-label="Pokaż wszystkie zmiany raportu" (click)="openReportChanges(message)">
+                            Pokaż wszystkie zmiany raportu
+                          </button>
                         </section>
+                      }
+                      @for (section of message.toolEvidenceSections; track section.provider + section.category) {
+                        @if (!isReportChangeSection(section)) {
+                          <section class="chat-evidence-section">
+                            <h4>{{ evidenceSectionTitle(section) }}</h4>
+                            @for (item of section.items; track item.title + $index) {
+                              <details class="chat-evidence-item">
+                                <summary>{{ item.title }}</summary>
+                                <div class="attribute-list">
+                                  @for (attribute of item.attributes; track attribute.name + $index) {
+                                    <div class="attribute-row attribute-row--block">
+                                      <span class="attribute-name">{{ attribute.name | attributeName }}</span>
+                                      <pre class="attribute-block">{{ attribute.value }}</pre>
+                                    </div>
+                                  }
+                                </div>
+                              </details>
+                            }
+                          </section>
+                        }
                       }
                     </div>
                   </details>
@@ -168,3 +178,44 @@
     </form>
   </div>
 </details>
+
+<dialog #reportChangeDialog class="report-change-dialog" aria-labelledby="reportChangeTitle"
+  (close)="reportChangeView.set(null)">
+  @if (reportChangeView(); as changes) {
+    <header class="report-change-dialog__header">
+      <div>
+        <p class="section-eyebrow">Zmiana raportu</p>
+        <h2 id="reportChangeTitle">Zmiany raportu</h2>
+        <p>Zmiany w surowej treści raportu.</p>
+      </div>
+      <button class="report-change-dialog__close" type="button" aria-label="Zamknij podgląd zmian raportu"
+        (click)="closeReportChange()">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <div class="report-change-dialog__changes">
+      @for (group of changes; track group.title) {
+        <section class="report-change-dialog__group">
+          <h3>{{ group.title }}</h3>
+          @for (part of group.parts; track $index) {
+            <div class="report-change-dialog__part">
+              @if (part.title) {
+                <h4>{{ part.title }}</h4>
+              }
+              <div class="report-change-dialog__inline" role="list" [attr.aria-label]="'Zmiany w: ' + group.title">
+                @for (line of part.lines; track $index) {
+                  <div class="report-change-dialog__diff-line" [class.is-added]="line.kind === 'added'"
+                    [class.is-removed]="line.kind === 'removed'" role="listitem"
+                    [attr.aria-label]="(line.kind === 'added' ? 'Dodano: ' : line.kind === 'removed' ? 'Usunięto: ' : '') + line.text">
+                    <span class="report-change-dialog__diff-marker" aria-hidden="true">{{ line.kind === 'added' ? '+' : line.kind === 'removed' ? '-' : ' ' }}</span>
+                    <span>{{ line.text || ' ' }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </section>
+      }
+    </div>
+  }
+</dialog>

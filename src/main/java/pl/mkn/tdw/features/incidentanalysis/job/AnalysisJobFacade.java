@@ -28,6 +28,7 @@ import pl.mkn.tdw.features.incidentanalysis.job.validation.AnalysisJobStartValid
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
@@ -41,6 +42,7 @@ public class AnalysisJobFacade {
 
     private final AnalysisOrchestrator analysisOrchestrator;
     private final AnalysisAiChatProvider analysisAiChatProvider;
+    private final IncidentFollowUpReportProjection reportProjection;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final CopilotRunAuthMapper runAuthMapper;
@@ -122,6 +124,8 @@ public class AnalysisJobFacade {
                     new AnalysisJobStateListener(job, () -> persistRunSnapshot(job))
             );
             job.markCompleted(execution);
+            var completed = job.snapshot();
+            job.replaceReport(reportProjection.normalize(completed.result(), completed.report(), completed.analysisId()));
             persistCompletedRunSnapshot(job, execution);
         } catch (AnalysisDataNotFoundException exception) {
             job.markNotFound("ANALYSIS_DATA_NOT_FOUND", exception.getMessage());
@@ -188,12 +192,16 @@ public class AnalysisJobFacade {
                     section -> job.markChatToolEvidenceUpdated(assistantMessageId, section),
                     event -> job.markChatAiActivity(assistantMessageId, event)
             );
+            var current = job.snapshot();
+            var projected = reportProjection.project(current.result(), current.report(), response.report());
+            var reportChange = AnalysisReportChangeEvidence.between(current.report(), response.report());
+            if (reportChange.hasItems()) job.markChatToolEvidenceUpdated(assistantMessageId, reportChange);
             job.markChatCompleted(
                     assistantMessageId,
                     response.content(),
                     response.prompt(),
                     response.copilotSessionId(),
-                    response.usage()
+                    response.usage(), response.report(), projected
             );
         } catch (RuntimeException exception) {
             log.error(

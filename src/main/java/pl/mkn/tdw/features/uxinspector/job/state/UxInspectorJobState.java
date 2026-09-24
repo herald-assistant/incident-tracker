@@ -193,6 +193,12 @@ public final class UxInspectorJobState {
     }
     public synchronized void chatCompleted(String assistantId, String content, String prompt,
                                            AnalysisAiUsage valueUsage, String latestSessionId) {
+        chatCompleted(assistantId, content, prompt, valueUsage, latestSessionId, null);
+    }
+    public synchronized void chatCompleted(String assistantId, String content, String prompt,
+            AnalysisAiUsage valueUsage, String latestSessionId,
+            pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping mapping) {
+        if (mapping != null) { result = mapping.result(); report = mapping.report(); }
         if (latestSessionId != null && !latestSessionId.isBlank()) copilotSessionId = latestSessionId.trim();
         assistantMessage(assistantId).complete(content, prompt, valueUsage); updatedAt = Instant.now();
     }

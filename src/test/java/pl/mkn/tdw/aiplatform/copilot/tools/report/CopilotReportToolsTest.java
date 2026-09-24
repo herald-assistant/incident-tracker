@@ -61,6 +61,28 @@ class CopilotReportToolsTest {
     }
 
     @Test
+    void shouldReadAllowedSectionAndPatchOnlyItsUniqueFragment() {
+        var store = new CopilotReportSessionStore();
+        store.register(new AnalysisReport("report-1", "CRM case", null, "Summary",
+                List.of(new AnalysisReportSection("OVERVIEW", "Overview", 1,
+                        "Customer opens a case. Agent reviews it.", AnalysisReportMeta.empty())),
+                AnalysisReportMeta.empty()));
+        var tools = new CopilotReportTools(store);
+
+        var read = tools.getCurrentReport("OVERVIEW", "Weryfikacja sekcji.", toolContext());
+        var digest = read.manifest().sections().get(0).markdown().sha256();
+        var patched = tools.patchSection("OVERVIEW", digest, "Agent reviews it", "Agent verifies the case",
+                "Korekta na prosbe operatora.", toolContext());
+
+        assertEquals("Customer opens a case. Agent reviews it.", read.section().markdown());
+        assertEquals("ok", patched.status());
+        assertEquals("Customer opens a case. Agent verifies the case.",
+                store.current("report-1").orElseThrow().sections().get(0).markdown());
+        assertEquals("rejected", tools.patchSection("TECHNICAL_HANDOFF", digest, "Agent", "User",
+                "Niedozwolona sekcja.", toolContext()).status());
+    }
+
+    @Test
     void shouldReturnMissingReportWhenHiddenReportIdIsMissing() {
         var tools = new CopilotReportTools(new CopilotReportSessionStore());
 

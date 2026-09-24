@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportSectionIds;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,19 +48,28 @@ public class FlowExplorerCopilotToolSessionContextFactory {
             FlowExplorerPromptPreparation preparation,
             boolean followUp
     ) {
+        return create(runReference, copilotSessionId, request, contextSnapshot, preparation, followUp, null);
+    }
+
+    public CopilotToolSessionContext create(
+            String runReference, String copilotSessionId, FlowExplorerJobStartRequest request,
+            FlowExplorerContextSnapshot contextSnapshot, FlowExplorerPromptPreparation preparation,
+            boolean followUp, AnalysisReport followUpReport
+    ) {
         var normalizedRunReference = normalizeRunReference(runReference);
 
         return new CopilotToolSessionContext(
                 normalizedRunReference,
                 normalizeCopilotSessionId(copilotSessionId, normalizedRunReference),
-                hiddenContext(request, contextSnapshot, followUp)
+                hiddenContext(request, contextSnapshot, followUp, followUpReport)
         );
     }
 
     private Map<String, Object> hiddenContext(
             FlowExplorerJobStartRequest request,
             FlowExplorerContextSnapshot contextSnapshot,
-            boolean followUp
+            boolean followUp,
+            AnalysisReport followUpReport
     ) {
         var context = new LinkedHashMap<String, Object>();
         context.put(FlowExplorerCopilotToolContextKeys.FEATURE, FlowExplorerCopilotToolContextKeys.FEATURE_VALUE);
@@ -92,6 +102,12 @@ public class FlowExplorerCopilotToolSessionContextFactory {
                             request != null ? request.resolvedSectionModes() : null
                     )
             );
+        } else if (followUpReport != null) {
+            context.put(AgentToolContextKeys.REPORT_ID, followUpReport.reportId());
+            context.put(AgentToolContextKeys.REPORT_FEATURE, FlowExplorerCopilotToolContextKeys.FEATURE_VALUE);
+            context.put(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                    FlowExplorerReportSectionIds.activeReportSectionIds(
+                            request != null ? request.resolvedSectionModes() : null));
         }
         return context;
     }

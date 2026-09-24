@@ -298,7 +298,8 @@ public final class FlowExplorerJobState {
                 contextSnapshot,
                 message,
                 copilotSessionId,
-                authRef
+                authRef,
+                report
         );
     }
 
@@ -340,6 +341,15 @@ public final class FlowExplorerJobState {
             String copilotSessionId,
             AnalysisAiUsage usage
     ) {
+        markChatCompleted(assistantMessageId, content, prompt, copilotSessionId, usage, report, result);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId, String content, String prompt, String copilotSessionId,
+            AnalysisAiUsage usage, AnalysisReport updatedReport, FlowExplorerResultResponse updatedResult
+    ) {
+        report = updatedReport;
+        result = updatedResult;
         rememberCopilotSession(copilotSessionId);
         assistantMessage(assistantMessageId).complete(content, prompt, usage);
         touch();
@@ -382,6 +392,11 @@ public final class FlowExplorerJobState {
                 result,
                 report
         );
+    }
+
+    public synchronized void replaceReport(AnalysisReport value) {
+        report = value;
+        touch();
     }
 
     public AnalysisAiAuthRef authRefForChat() {

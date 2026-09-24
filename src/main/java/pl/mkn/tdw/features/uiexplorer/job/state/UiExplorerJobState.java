@@ -344,6 +344,15 @@ public final class UiExplorerJobState {
             String assistantMessageId, String content, String prompt,
             AnalysisAiUsage chatUsage, String latestSessionId
     ) {
+        markChatCompleted(assistantMessageId, content, prompt, chatUsage, latestSessionId, null);
+    }
+
+    public synchronized void markChatCompleted(
+            String assistantMessageId, String content, String prompt,
+            AnalysisAiUsage chatUsage, String latestSessionId,
+            pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportMapping mapping
+    ) {
+        if (mapping != null) { result = mapping.result(); report = mapping.report(); }
         if (latestSessionId != null && !latestSessionId.isBlank()) copilotSessionId = latestSessionId.trim();
         assistantMessage(assistantMessageId).complete(content, prompt, chatUsage);
         updatedAt = Instant.now();

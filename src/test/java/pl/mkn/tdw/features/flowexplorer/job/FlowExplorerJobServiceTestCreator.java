@@ -94,6 +94,7 @@ final class FlowExplorerJobServiceTestCreator {
                 executionGateway,
                 responseParser,
                 reportMapper,
+                new pl.mkn.tdw.features.flowexplorer.job.FlowExplorerFollowUpReportProjection(reportMapper),
                 applicationTaskExecutor,
                 authRefResolver,
                 runAuthMapper,

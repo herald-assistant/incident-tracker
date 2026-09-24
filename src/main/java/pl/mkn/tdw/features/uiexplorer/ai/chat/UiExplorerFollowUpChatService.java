@@ -27,7 +27,7 @@ public class UiExplorerFollowUpChatService {
 
     private static final CopilotToolDescriptionContext DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("ui-explorer");
-    private static final String DENIED = "Use only scoped UI Explorer read-only research tools.";
+    private static final String DENIED = "Use only scoped UI Explorer research and report tools.";
 
     private final UiExplorerFollowUpPromptService promptService;
     private final UiExplorerCopilotToolSessionContextFactory contextFactory;
@@ -43,7 +43,8 @@ public class UiExplorerFollowUpChatService {
     ) {
         var prompt = promptService.prepare(request);
         var toolContext = contextFactory.createFollowUp(
-                request.runReference(), request.copilotSessionId(), request.initialRequest(), request.context());
+                request.runReference(), request.copilotSessionId(), request.initialRequest(), request.context(),
+                request.report());
         var registered = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT);
         var policy = UiExplorerCopilotToolAccessPolicy.forFollowUp(registered);
         if (!policy.fallbackAvailable()) {
@@ -58,7 +59,7 @@ public class UiExplorerFollowUpChatService {
                 toolContext.analysisRunId(), runAuthMapper.toRunAuth(request.authRef()),
                 CopilotSessionTarget.existing(toolContext.copilotSessionId()), prompt,
                 sessionConfig, Map.of(), null
-        );
+        ).withInitialReport(request.report());
         var prepared = preparationService.prepare(runRequest);
         if (evidenceListener != null && evidenceListener != AnalysisAiToolEvidenceListener.NO_OP) {
             prepared = prepared.withEvidenceSink(evidenceListener::onToolEvidenceUpdated);

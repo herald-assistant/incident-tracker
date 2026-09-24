@@ -28,6 +28,7 @@ import pl.mkn.tdw.features.flowexplorer.job.localworkspace.FlowExplorerLocalRunP
 import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
@@ -48,6 +49,7 @@ public class FlowExplorerJobService {
     private final CopilotSdkExecutionGateway executionGateway;
     private final FlowExplorerAiResponseParser responseParser;
     private final FlowExplorerReportMapper reportMapper;
+    private final FlowExplorerFollowUpReportProjection followUpReportProjection;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final CopilotRunAuthMapper runAuthMapper;
@@ -114,6 +116,9 @@ public class FlowExplorerJobService {
                     executionResult.sessionId(),
                     executionResult.report()
             );
+            var completed = job.snapshot();
+            job.replaceReport(followUpReportProjection.normalize(completed.result(), completed.report(),
+                    completed.sectionModes(), completed.jobId()));
             persistRunSnapshot(job, authRef, executionResult.sessionId());
         } catch (RuntimeException exception) {
             log.error(
@@ -188,18 +193,24 @@ public class FlowExplorerJobService {
                     chatRequest.contextSnapshot(),
                     promptPreparation,
                     chatRequest.copilotSessionId(),
-                    chatRequest.authRef()
+                    chatRequest.authRef(),
+                    chatRequest.report()
             );
             var preparedSession = runPreparationService.prepare(runAssembly.runRequest())
                     .withEvidenceSink(section -> job.markChatToolEvidenceUpdated(assistantMessageId, section))
                     .withActivitySink(event -> job.markChatAiActivity(assistantMessageId, event));
             var executionResult = executionGateway.execute(preparedSession);
+            var current = job.snapshot();
+            var projected = followUpReportProjection.project(current.result(), current.report(),
+                    executionResult.report(), current.sectionModes());
+            var reportChange = AnalysisReportChangeEvidence.between(current.report(), executionResult.report());
+            if (reportChange.hasItems()) job.markChatToolEvidenceUpdated(assistantMessageId, reportChange);
             job.markChatCompleted(
                     assistantMessageId,
                     executionResult.content(),
                     promptPreparation.prompt(),
                     executionResult.sessionId(),
-                    executionResult.usage()
+                    executionResult.usage(), executionResult.report(), projected
             );
         } catch (RuntimeException exception) {
             log.error(

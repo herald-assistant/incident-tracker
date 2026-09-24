@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.incidentanalysis.ai.chat;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.util.List;
 
@@ -18,7 +19,8 @@ public record AnalysisAiChatRequest(
         String message,
         String copilotSessionId,
         AnalysisAiOptions options,
-        AnalysisAiAuthRef authRef
+        AnalysisAiAuthRef authRef,
+        AnalysisReport report
 ) {
 
     public AnalysisAiChatRequest {
@@ -27,6 +29,17 @@ public record AnalysisAiChatRequest(
         history = history != null ? List.copyOf(history) : List.of();
         options = options != null ? options : AnalysisAiOptions.DEFAULT;
         authRef = authRef != null ? authRef : AnalysisAiAuthRef.localToken(null);
+    }
+
+    public AnalysisAiChatRequest(String correlationId, String environment, String gitLabBranch,
+                                 String gitLabGroup, List<AnalysisEvidenceSection> evidenceSections,
+                                 List<AnalysisEvidenceSection> toolEvidenceSections,
+                                 AnalysisAiChatAnalysisSnapshot analysisResult, List<AnalysisAiChatTurn> history,
+                                 String message, String copilotSessionId, AnalysisAiOptions options,
+                                 AnalysisAiAuthRef authRef) {
+        this(correlationId, environment, gitLabBranch, gitLabGroup, evidenceSections,
+                toolEvidenceSections, analysisResult, history, message, copilotSessionId, options,
+                authRef, null);
     }
 
     public AnalysisAiChatRequest(
@@ -54,7 +67,8 @@ public record AnalysisAiChatRequest(
                 message,
                 copilotSessionId,
                 options,
-                AnalysisAiAuthRef.localToken(null)
+                AnalysisAiAuthRef.localToken(null),
+                null
         );
     }
 
@@ -83,7 +97,8 @@ public record AnalysisAiChatRequest(
                 message,
                 null,
                 options,
-                authRef
+                authRef,
+                null
         );
     }
 
@@ -111,7 +126,8 @@ public record AnalysisAiChatRequest(
                 message,
                 null,
                 options,
-                AnalysisAiAuthRef.localToken(null)
+                AnalysisAiAuthRef.localToken(null),
+                null
         );
     }
 }

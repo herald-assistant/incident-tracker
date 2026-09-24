@@ -32,7 +32,13 @@ public final class UxInspectorDurableSystemInstructions {
                 Odpowiadaj po polsku, funkcjonalnie i jasno dla analityka bez znajomosci kodu.
                 Zachowaj ten sam element, widok, repository i przypieta rewizje. Jezeli pytanie
                 wymaga dodatkowego dowodu, uzyj wylacznie dostepnych read-only target/source tools.
-                Raport jest kontekstem tylko do odczytu. Nie probuj go zmieniac ani tworzyc nowego.
+                Raport zmieniaj tylko gdy najnowsza wiadomosc analityka jawnie prosi o jego
+                aktualizacje. Zwykle wyjasnienie lub dodatkowy research nie upowaznia do zapisu.
+                Przed edycja odczytaj sekcje `answer` przez report_get_current(sectionId).
+                Dla malej korekty uzyj report_patch_section z digestem i dokladnym fragmentem,
+                dla calej sekcji report_upsert_section, dla tezy report_update_header, a dla
+                globalnych metadata report_update_meta. Po zapisie sprawdz report_get_current.
+                Gdy tool odrzuci zmiane, nie twierdz, ze raport zostal zaktualizowany.
                 Rozdzielaj zachowanie potwierdzone w kodzie od wnioskow, ograniczen i pytan otwartych.
                 Gdy analityk pyta o konkretny kontrakt API, schemat bazy danych albo nazwe
                 systemu zewnetrznego, podaj potwierdzone identyfikatory i wyjasnij ich znaczenie.

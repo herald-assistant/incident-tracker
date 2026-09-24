@@ -84,7 +84,9 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         assertEquals(CopilotSessionTarget.Type.EXISTING, runRequest.sessionTarget().type());
         assertEquals("copilot-session-123", runRequest.sessionTarget().sessionId());
         assertEquals("Co dalej?", runRequest.prompt());
-        assertSame(sessionConfigRequest, runRequest.sessionConfigRequest());
+        assertEquals(sessionConfigRequest.availableToolNames(), runRequest.sessionConfigRequest().availableToolNames());
+        org.assertj.core.api.Assertions.assertThat(runRequest.sessionConfigRequest().durableSystemInstructions())
+                .contains("report_patch_section");
         assertEquals(Map.of(), runRequest.artifactContents());
         verify(sessionConfigRequestFactory).create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options);
     }

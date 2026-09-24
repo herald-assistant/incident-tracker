@@ -31,12 +31,15 @@ public class CopilotReportTools {
             description = """
                     Returns a compact validation manifest of the current structured analysis report for this AI session.
                     The manifest confirms persisted headers, section ids, order, content lengths, SHA-256 digests,
-                    metadata counts and structural completeness without repeating all section bodies.
+                    metadata counts and structural completeness without repeating all section bodies. Pass sectionId
+                    to read the full body and metadata of one allowed section before a targeted follow-up edit.
                     The active report is selected from hidden ToolContext. Do not provide reportId, analysisId,
                     correlationId, environment, gitLabGroup or gitLabBranch.
                     """
     )
     public CopilotReportToolResult getCurrentReport(
+            @ToolParam(required = false, description = "Optional allowed section id whose full current content should be read.")
+            String sectionId,
             @ToolParam(required = false, description = "Short Polish reason why the current report is needed.")
             String reason,
             ToolContext toolContext
@@ -46,9 +49,29 @@ public class CopilotReportTools {
             return missingReport("No active reportId is available in hidden ToolContext.", scope);
         }
 
-        return reportStore.current(scope.reportId())
-                .map(report -> ok("Current report validation manifest returned.", scope, report, List.of()))
-                .orElseGet(() -> missingReport("No active report is registered for this reportId.", scope));
+        var report = reportStore.current(scope.reportId());
+        if (report.isEmpty()) {
+            return missingReport("No active report is registered for this reportId.", scope);
+        }
+        var requestedSectionId = normalize(sectionId);
+        if (!StringUtils.hasText(requestedSectionId)) {
+            return ok("Current report validation manifest returned.", scope, report.get(), List.of());
+        }
+        if (!scope.allowedSectionIds().contains(requestedSectionId)) {
+            return rejected("Report section id is not allowed for this session.", scope, null);
+        }
+        return report.get().sections().stream()
+                .filter(section -> section != null && requestedSectionId.equals(normalize(section.id())))
+                .findFirst()
+                .map(section -> new CopilotReportToolResult(STATUS_OK, "Current report section returned.",
+                        scope.reportId(), scope.reportFeature(),
+                        CopilotReportManifestFactory.create(report.get(), scope.allowedSectionIds()),
+                        List.of(), scope.allowedSectionIds(), section))
+                .orElseGet(() -> rejected("Report section does not exist.", scope, null));
+    }
+
+    public CopilotReportToolResult getCurrentReport(String reason, ToolContext toolContext) {
+        return getCurrentReport(null, reason, toolContext);
     }
 
     @Tool(
@@ -105,6 +128,45 @@ public class CopilotReportTools {
                     )
             );
             return ok("Report section saved.", scope, report, List.of(sectionId));
+        } catch (CopilotReportSessionException exception) {
+            return reportStore.current(scope.reportId()).isEmpty()
+                    ? missingReport(exception.getMessage(), scope)
+                    : rejected(exception.getMessage(), scope, null);
+        }
+    }
+
+    @Tool(
+            name = CopilotReportToolNames.PATCH_SECTION,
+            description = """
+                    Replaces exactly one matching fragment in an existing report section. Read the section with
+                    report_get_current first, then pass its markdown SHA-256 digest and an exact oldText fragment.
+                    The patch is atomic and rejects a stale digest, missing or repeated oldText, or an empty result.
+                    The active report and allowed section ids come from hidden ToolContext; never provide reportId.
+                    """
+    )
+    public CopilotReportToolResult patchSection(
+            @ToolParam(description = "Canonical id of the existing allowed section.") String sectionId,
+            @ToolParam(description = "Current section markdown SHA-256 from report_get_current manifest.")
+            String expectedMarkdownSha256,
+            @ToolParam(description = "Exact unique fragment to replace in the section markdown.") String oldText,
+            @ToolParam(description = "Replacement fragment; may be empty to delete oldText without emptying the section.")
+            String newText,
+            @ToolParam(required = false, description = "Short Polish reason for this targeted correction.")
+            String reason,
+            ToolContext toolContext
+    ) {
+        var scope = ReportToolScope.from(toolContext);
+        if (!StringUtils.hasText(scope.reportId())) {
+            return missingReport("No active reportId is available in hidden ToolContext.", scope);
+        }
+        var normalizedSectionId = normalize(sectionId);
+        if (!scope.allowedSectionIds().contains(normalizedSectionId)) {
+            return rejected("Report section id is not allowed for this session.", scope, null);
+        }
+        try {
+            var report = reportStore.patchSection(scope.reportId(), normalizedSectionId,
+                    expectedMarkdownSha256, oldText, newText);
+            return ok("Report section fragment patched.", scope, report, List.of(normalizedSectionId));
         } catch (CopilotReportSessionException exception) {
             return reportStore.current(scope.reportId()).isEmpty()
                     ? missingReport(exception.getMessage(), scope)

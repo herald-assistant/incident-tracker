@@ -14,6 +14,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredExc
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
+import pl.mkn.tdw.features.flowexplorer.job.FlowExplorerFollowUpReportProjection;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -29,6 +30,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -48,6 +50,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
 
     private final ObjectMapper objectMapper;
     private final FlowExplorerCopilotRunRequestAssembler runRequestAssembler;
+    private final FlowExplorerFollowUpReportProjection reportProjection;
     private final FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService;
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
@@ -131,7 +134,8 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                     snapshot.contextSnapshot(),
                     promptPreparation,
                     continuation.copilotSessionId(),
-                    authRef
+                    authRef,
+                    snapshot.report()
             );
             var preparedSession = runPreparationService.prepare(runAssembly.runRequest())
                     .withEvidenceSink(captured::addToolEvidence)
@@ -259,6 +263,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
             Instant startedAt,
             Instant completedAt
     ) {
+        var projected = reportProjection.project(snapshot.result(), snapshot.report(), response.report(), snapshot.sectionModes());
         var chatMessages = new ArrayList<>(safeList(snapshot.chatMessages()));
         chatMessages.add(new AnalysisChatMessageResponse(
                 userMessageId,
@@ -285,7 +290,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 startedAt,
                 completedAt,
                 completedAt,
-                captured.toolEvidenceSections(),
+                AnalysisReportChangeEvidence.append(captured.toolEvidenceSections(), snapshot.report(), response.report()),
                 captured.aiActivityEvents(),
                 captured.toolFeedback(),
                 assistantPrompt,
@@ -320,8 +325,8 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 safeList(snapshot.toolFeedback()),
                 chatMessages,
                 snapshot.preparedPrompt(),
-                snapshot.result(),
-                snapshot.report()
+                projected,
+                response.report()
         );
     }
 

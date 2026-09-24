@@ -84,7 +84,7 @@ zatwierdzony invariant trafia do architektury.
   goal-driven targeted researchem bez feature'owego limitu liczby wywolan dla
   brakujacych zrodel in-scope, report-first wynikiem zapisywanym przez
   platformowe report tools bez parsowania finalnej odpowiedzi, job,
-  business-first report bez osobnego appendixu zaleznosci, read-only follow-up
+  business-first report bez osobnego appendixu zaleznosci, follow-up
   chat na przypietym commicie, wznowienie z historii po restarcie oraz
   import/export v6 z jawnym odczytem v5.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`

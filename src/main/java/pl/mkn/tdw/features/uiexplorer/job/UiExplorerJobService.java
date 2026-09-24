@@ -23,6 +23,7 @@ import pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunPersi
 import pl.mkn.tdw.features.uiexplorer.job.state.UiExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
@@ -48,6 +49,7 @@ public class UiExplorerJobService {
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final UiExplorerLocalRunPersistence localRunPersistence;
     private final UiExplorerFollowUpChatService followUpChatService;
+    private final UiExplorerFollowUpReportProjection followUpReportProjection;
     private final UiExplorerFollowUpPromptService followUpPromptService;
     private final LocalAnalysisRunOperationGuard operationGuard;
 
@@ -162,7 +164,7 @@ public class UiExplorerJobService {
         }
         var chatRequest = new UiExplorerFollowUpChatRequest(
                 "ui-explorer-follow-up-" + assistantMessageId,
-                job.initialRequest(), context, request.message(), sessionId, authRef
+                job.initialRequest(), context, request.message(), sessionId, authRef, job.currentReport()
         );
         persistSnapshot(job, authRef, context);
         try {
@@ -191,7 +193,16 @@ public class UiExplorerJobService {
                     section -> job.markChatToolEvidenceUpdated(assistantMessageId, section),
                     event -> job.markChatAiActivity(assistantMessageId, event)
             );
-            job.markChatCompleted(assistantMessageId, response.content(), prompt, response.usage(), response.sessionId());
+            var current = job.snapshot();
+            var evidence = new java.util.ArrayList<>(current.toolEvidenceSections());
+            current.chatMessages().forEach(chat -> evidence.addAll(chat.toolEvidenceSections()));
+            var mapping = followUpReportProjection.project(current.report(), response.report(),
+                    request.initialRequest(), context, current.usage(), evidence);
+            var reportChange = AnalysisReportChangeEvidence.between(current.report(),
+                    mapping != null ? mapping.report() : current.report());
+            if (reportChange.hasItems()) job.markChatToolEvidenceUpdated(assistantMessageId, reportChange);
+            job.markChatCompleted(assistantMessageId, response.content(), prompt, response.usage(),
+                    response.sessionId(), mapping);
         } catch (RuntimeException exception) {
             log.error("UI Explorer follow-up failed jobId={} message={}", job.snapshot().jobId(), exception.getMessage(), exception);
             job.markChatFailed(assistantMessageId, "UI_EXPLORER_CHAT_FAILED",

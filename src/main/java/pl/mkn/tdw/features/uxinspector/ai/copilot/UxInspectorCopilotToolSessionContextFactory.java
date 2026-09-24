@@ -7,6 +7,7 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,11 +46,26 @@ public class UxInspectorCopilotToolSessionContextFactory {
             String copilotSessionId,
             UxInspectorTargetContext context
     ) {
+        return createFollowUp(runReference, copilotSessionId, context, null);
+    }
+
+    public CopilotToolSessionContext createFollowUp(
+            String runReference, String copilotSessionId, UxInspectorTargetContext context,
+            AnalysisReport report
+    ) {
         var created = create(runReference, context);
+        var hidden = new LinkedHashMap<>(created.hiddenContext());
+        if (report != null) {
+            hidden.put(AgentToolContextKeys.REPORT_ID, report.reportId());
+        } else {
+            hidden.remove(AgentToolContextKeys.REPORT_ID);
+            hidden.remove(AgentToolContextKeys.REPORT_FEATURE);
+            hidden.remove(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS);
+        }
         return new CopilotToolSessionContext(
                 created.analysisRunId(),
                 StringUtils.hasText(copilotSessionId) ? copilotSessionId.trim() : created.copilotSessionId(),
-                created.hiddenContext()
+                hidden
         );
     }
 }

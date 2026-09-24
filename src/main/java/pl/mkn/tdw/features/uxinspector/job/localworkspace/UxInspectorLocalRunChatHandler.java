@@ -10,11 +10,14 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.uxinspector.ai.chat.*;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorFollowUpReportProjection;
+import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.*;
 import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,6 +33,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
     private final UxInspectorTargetResolver targetResolver;
     private final UxInspectorFollowUpPromptService promptService;
     private final UxInspectorFollowUpChatService chatService;
+    private final UxInspectorFollowUpReportProjection reportProjection;
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
     private final CopilotSessionStateAvailability sessionStateAvailability;
@@ -67,7 +71,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
         var startedAt = Instant.now();
         var request = new UxInspectorFollowUpChatRequest(
                 "ux-inspector-follow-up-" + assistantId, startRequest, context, message,
-                continuation.copilotSessionId(), auth);
+                continuation.copilotSessionId(), auth, snapshot.report());
         var capture = new AnalysisChatAssistantCapture();
         var prompt = promptService.prepare(request);
         final pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult response;
@@ -77,9 +81,11 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
             throw LocalAnalysisRunContinuationException.chatFailed(
                     StringUtils.hasText(exception.getMessage()) ? exception.getMessage() : "Local UX Inspector follow-up failed.", exception);
         }
+        var mapping = reportProjection.project(snapshot.report(), response.report(), startRequest.capture(),
+                context, snapshot.usage());
         var completedAt = Instant.now();
         var updated = appendCompletedChat(snapshot, UUID.randomUUID().toString(), assistantId, message,
-                response.content(), prompt, response.usage(), capture, startedAt, completedAt);
+                response.content(), prompt, response.usage(), capture, startedAt, completedAt, mapping);
         var updatedRecord = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(UxInspectorExportEnvelope.from(updated, completedAt)),
                 continuation.withLatestCopilotSession(response.sessionId()));
@@ -154,23 +160,32 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
 
     private UxInspectorJobStateSnapshot appendCompletedChat(UxInspectorJobStateSnapshot snapshot, String userId,
             String assistantId, String message, String content, String prompt, AnalysisAiUsage usage,
-            AnalysisChatAssistantCapture capture, Instant startedAt, Instant completedAt) {
+            AnalysisChatAssistantCapture capture, Instant startedAt, Instant completedAt,
+            UxInspectorReportMapping mapping) {
         var messages = new ArrayList<>(snapshot.chatMessages());
         messages.add(new AnalysisChatMessageResponse(userId, "USER", "COMPLETED", message.trim(), null, null,
                 startedAt, startedAt, startedAt, List.of(), List.of(), List.of(), null, null));
         messages.add(new AnalysisChatMessageResponse(assistantId, "ASSISTANT", "COMPLETED", content, null, null,
-                startedAt, completedAt, completedAt, capture.toolEvidenceSections(), capture.aiActivityEvents(),
+                startedAt, completedAt, completedAt,
+                AnalysisReportChangeEvidence.append(capture.toolEvidenceSections(), snapshot.report(),
+                        mapping != null ? mapping.report() : snapshot.report()), capture.aiActivityEvents(),
                 capture.toolFeedback(), prompt, usage));
-        return copy(snapshot, completedAt, messages);
+        return copy(snapshot, completedAt, messages, mapping);
     }
 
     private UxInspectorJobStateSnapshot copy(UxInspectorJobStateSnapshot snapshot, Instant updatedAt,
                                                List<AnalysisChatMessageResponse> messages) {
+        return copy(snapshot, updatedAt, messages, null);
+    }
+
+    private UxInspectorJobStateSnapshot copy(UxInspectorJobStateSnapshot snapshot, Instant updatedAt,
+            List<AnalysisChatMessageResponse> messages, UxInspectorReportMapping mapping) {
         return new UxInspectorJobStateSnapshot(snapshot.jobId(), snapshot.request(), snapshot.status(),
                 snapshot.currentStepCode(), snapshot.currentStepLabel(), snapshot.errorCode(), snapshot.errorMessage(),
                 snapshot.createdAt(), updatedAt, snapshot.completedAt(), snapshot.steps(), snapshot.contextSections(),
                 snapshot.toolEvidenceSections(), snapshot.aiActivityEvents(), snapshot.toolFeedback(),
-                snapshot.preparedPrompt(), snapshot.result(), snapshot.report(), snapshot.usage(), snapshot.sourceRevision(),
+                snapshot.preparedPrompt(), mapping != null ? mapping.result() : snapshot.result(),
+                mapping != null ? mapping.report() : snapshot.report(), snapshot.usage(), snapshot.sourceRevision(),
                 snapshot.outputAvailability(), true, messages,
                 new UxInspectorChatAvailability(true, "UX_INSPECTOR_CHAT_AVAILABLE",
                         "Follow-up chat can continue the completed UX Inspector session."));

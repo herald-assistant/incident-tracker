@@ -1262,7 +1262,8 @@ class AnalysisJobFacadeTest {
             return new AnalysisAiChatResponse(
                     "test-chat-provider",
                     "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie profilu klienta CRM.",
-                    "Synthetic follow-up prompt for " + request.correlationId()
+                    "Synthetic follow-up prompt for " + request.correlationId(),
+                    request.copilotSessionId(), null, request.report()
             );
         }
     }
@@ -1293,7 +1294,8 @@ class AnalysisJobFacadeTest {
             return new AnalysisAiChatResponse(
                     "test-chat-provider",
                     "Zapisalem feedback do wyniku toola.",
-                    "Synthetic follow-up prompt for " + request.correlationId()
+                    "Synthetic follow-up prompt for " + request.correlationId(),
+                    request.copilotSessionId(), null, request.report()
             );
         }
 

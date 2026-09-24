@@ -78,7 +78,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                         GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                         GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
                         GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE)
-                .containsAll(CopilotReportToolNames.allToolNames())
+                .containsAll(CopilotReportToolNames.initialToolNames())
                 .doesNotContain("skill", GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                         GitLabToolNames.LIST_REPOSITORY_BRANCHES);
         assertThat(assembly.toolAccessPolicy().sourceToolsAvailable()).isTrue();

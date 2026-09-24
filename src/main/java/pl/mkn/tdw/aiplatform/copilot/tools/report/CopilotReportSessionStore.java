@@ -71,6 +71,49 @@ public class CopilotReportSessionStore {
         });
     }
 
+    public AnalysisReport patchSection(String reportId, String sectionId, String expectedMarkdownSha256,
+                                       String oldText, String newText) {
+        var normalizedReportId = requireReportId(reportId);
+        var normalizedSectionId = normalize(sectionId);
+        if (!StringUtils.hasText(normalizedSectionId) || !StringUtils.hasText(expectedMarkdownSha256)
+                || !StringUtils.hasText(oldText) || newText == null) {
+            throw new CopilotReportSessionException("Section id, markdown digest, oldText and newText are required.");
+        }
+        return reportsById.compute(normalizedReportId, (key, current) -> {
+            if (current == null) {
+                throw noActiveReport(normalizedReportId);
+            }
+            var sections = new ArrayList<>(current.sections());
+            for (var index = 0; index < sections.size(); index++) {
+                var section = sections.get(index);
+                if (section == null || !normalizedSectionId.equals(normalize(section.id()))) {
+                    continue;
+                }
+                var markdown = section.markdown() != null ? section.markdown() : "";
+                if (!CopilotReportManifestFactory.markdownSha256(markdown)
+                        .equalsIgnoreCase(expectedMarkdownSha256.trim())) {
+                    throw new CopilotReportSessionException("Report section changed since it was read.");
+                }
+                var start = markdown.indexOf(oldText);
+                if (start < 0) {
+                    throw new CopilotReportSessionException("oldText was not found in the report section.");
+                }
+                if (markdown.indexOf(oldText, start + 1) >= 0) {
+                    throw new CopilotReportSessionException("oldText occurs more than once in the report section.");
+                }
+                var updated = markdown.substring(0, start) + newText + markdown.substring(start + oldText.length());
+                if (!StringUtils.hasText(updated) || markdown.equals(updated)) {
+                    throw new CopilotReportSessionException("Patch must leave a non-empty changed section.");
+                }
+                sections.set(index, new AnalysisReportSection(section.id(), section.title(), section.order(),
+                        updated, section.meta()));
+                return new AnalysisReport(current.reportId(), current.header(), current.subHeader(),
+                        current.markdownSummary(), sections, current.meta());
+            }
+            throw new CopilotReportSessionException("Report section does not exist.");
+        });
+    }
+
     public AnalysisReport updateMeta(String reportId, AnalysisReportMeta meta) {
         var normalizedReportId = requireReportId(reportId);
         if (meta == null) {

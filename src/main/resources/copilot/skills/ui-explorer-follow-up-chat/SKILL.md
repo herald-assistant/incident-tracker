@@ -1,6 +1,6 @@
 ---
 name: ui-explorer-follow-up-chat
-description: Prowadzi rozmowę po raporcie UI Explorera, wyjaśniając działanie widoku analitykowi i używając read-only research bez zmiany raportu.
+description: Prowadzi rozmowę po raporcie UI Explorera i aktualizuje dokument tylko na jawną prośbę analityka.
 ---
 
 # UI Explorer Follow-up Chat
@@ -30,11 +30,16 @@ dla użytkownika lub procesu. Nie zakładaj znajomości kodu.
    runtime.
 5. Zwróć czytelny Markdown dopasowany do pytania.
 
-## Niezmienność raportu
+## Aktualizacja raportu
 
-Raport jest tylko do odczytu. Nie używaj report tools. Jeżeli użytkownik prosi
-o poprawkę lub dopisanie fragmentu, przygotuj proponowaną treść w odpowiedzi
-i jawnie wskaż, że zapisany raport nie został zmieniony.
+Raport zmieniaj wyłącznie po jawnej prośbie o aktualizację w najnowszej
+wiadomości użytkownika. Dla zwykłego pytania lub researchu nie wykonuj mutacji.
+Odczytaj potrzebną sekcję przez `report_get_current(sectionId)`. Użyj
+`report_patch_section` do jednej dokładnej korekty z aktualnym digestem,
+`report_upsert_section` do przebudowy całej sekcji, `report_update_header` do
+nagłówka lub `report_update_meta` do globalnych metadanych. Zachowaj pozostałą
+treść i potwierdź zapis przez `report_get_current`. Po odrzuceniu zmiany jasno
+powiedz, że raport pozostał bez zmian.
 
 ## Granice
 

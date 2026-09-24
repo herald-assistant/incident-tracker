@@ -34,7 +34,10 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
             GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
-            CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK
+            CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
+            CopilotReportToolNames.GET_CURRENT, CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.PATCH_SECTION, CopilotReportToolNames.UPDATE_HEADER,
+            CopilotReportToolNames.UPDATE_META
     );
     public UxInspectorCopilotToolAccessPolicy {
         enabledTools = enabledTools != null ? List.copyOf(enabledTools) : List.of();
@@ -50,7 +53,7 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
                 .filter(value -> FOLLOW_UP_ALLOWED.contains(value.name())).toList();
         return new UxInspectorCopilotToolAccessPolicy(tools, tools.stream().map(ToolDefinition::name).toList());
     }
-    public boolean reportToolsAvailable() { return availableToolNames.containsAll(CopilotReportToolNames.allToolNames()); }
+    public boolean reportToolsAvailable() { return availableToolNames.containsAll(CopilotReportToolNames.initialToolNames()); }
     public boolean targetToolsAvailable() { return availableToolNames.containsAll(UxInspectorToolNames.ALL); }
     public boolean sourceToolsAvailable() {
         return availableToolNames.containsAll(List.of(

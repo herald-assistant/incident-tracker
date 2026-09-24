@@ -480,12 +480,14 @@ model nie podaje publicznego scope'u analizy, tylko wskazuje target tool/call i
 jawna ocene wyniku dla operatora.
 
 Report tools sa platformowym, session-bound mechanizmem zapisu wyniku:
-`report_get_current`, `report_update_header`, `report_upsert_section` i
-`report_update_meta`. Scope raportu pochodzi z hidden `ToolContext`:
+`report_get_current`, `report_update_header`, `report_upsert_section`,
+`report_patch_section` i `report_update_meta`. Scope raportu pochodzi z hidden `ToolContext`:
 `reportId`, `reportFeature` i `allowedReportSectionIds`. Model nie podaje
 `reportId`, a `report_upsert_section` odrzuca sekcje spoza allowlisty feature'a.
 Kazdy tool zwraca modelowi zwarty manifest aktualnego stanu zamiast pelnej
-kopii raportu. Manifest zawiera identyfikatory i kolejnosc sekcji, fingerprinty
+kopii raportu. `report_get_current(sectionId)` zwraca dodatkowo pelne body
+jednej dozwolonej sekcji, a `report_patch_section` wymaga aktualnego digestu
+oraz jednoznacznego starego fragmentu. Manifest zawiera identyfikatory i kolejnosc sekcji, fingerprinty
 tresci, liczniki metadata oraz strukturalny wynik kompletności. Dzieki temu
 `report_get_current` potwierdza zapis bez uruchamiania large-output fallbacku
 SDK. Pelne body sekcji pozostaja w session-bound store.

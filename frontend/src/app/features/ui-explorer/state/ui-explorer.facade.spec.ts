@@ -409,6 +409,9 @@ describe('UiExplorerFacade', () => {
 
     expect(facade.job()?.status).toBe('COMPLETED');
     expect(facade.chatMessages().at(-1)?.status).toBe('IN_PROGRESS');
+    facade.pollingActive.set(true);
+    expect(facade.workflowIsRunning()).toBe(false);
+    facade.pollingActive.set(false);
     expect(facade.canRetryPolling()).toBe(true);
 
     facade.retryPolling();

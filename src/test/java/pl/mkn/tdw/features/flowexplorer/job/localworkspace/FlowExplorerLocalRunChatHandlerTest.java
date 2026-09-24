@@ -85,6 +85,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         var handler = new FlowExplorerLocalRunChatHandler(
                 objectMapper,
                 assembler,
+                new pl.mkn.tdw.features.flowexplorer.job.FlowExplorerFollowUpReportProjection(new pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportMapper()),
                 new FlowExplorerFollowUpPromptPreparationService(),
                 preparationService,
                 executionGateway,
@@ -101,7 +102,8 @@ class FlowExplorerLocalRunChatHandlerTest {
                 any(),
                 promptCaptor.capture(),
                 eq("initial-session-1"),
-                any(AnalysisAiAuthRef.class)
+                any(AnalysisAiAuthRef.class),
+                any(pl.mkn.tdw.shared.ai.report.AnalysisReport.class)
         )).thenReturn(new FlowExplorerCopilotRunAssembly(
                 runRequest,
                 new CopilotToolSessionContext("follow-up-1", "initial-session-1", Map.of()),
@@ -126,7 +128,7 @@ class FlowExplorerLocalRunChatHandlerTest {
                     Instant.parse("2026-06-20T10:06:00Z"),
                     Map.of("projectName", "crm-service")
             ));
-            return new CopilotExecutionResult("Odpowiedz lokalna.", null, "follow-up-session-1");
+            return new CopilotExecutionResult("Odpowiedz lokalna.", null, "follow-up-session-1", snapshot().report());
         });
 
         var result = handler.continueRun(
@@ -147,7 +149,8 @@ class FlowExplorerLocalRunChatHandlerTest {
                 same(snapshot().contextSnapshot()),
                 any(FlowExplorerPromptPreparation.class),
                 eq("initial-session-1"),
-                any(AnalysisAiAuthRef.class)
+                any(AnalysisAiAuthRef.class),
+                any(pl.mkn.tdw.shared.ai.report.AnalysisReport.class)
         );
 
         var updatedEnvelope = objectMapper.treeToValue(
@@ -175,6 +178,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         var handler = new FlowExplorerLocalRunChatHandler(
                 objectMapper,
                 mock(FlowExplorerCopilotRunRequestAssembler.class),
+                new pl.mkn.tdw.features.flowexplorer.job.FlowExplorerFollowUpReportProjection(new pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportMapper()),
                 new FlowExplorerFollowUpPromptPreparationService(),
                 mock(CopilotRunPreparationService.class),
                 mock(CopilotSdkExecutionGateway.class),
@@ -195,6 +199,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         var handler = new FlowExplorerLocalRunChatHandler(
                 objectMapper,
                 mock(FlowExplorerCopilotRunRequestAssembler.class),
+                new pl.mkn.tdw.features.flowexplorer.job.FlowExplorerFollowUpReportProjection(new pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportMapper()),
                 new FlowExplorerFollowUpPromptPreparationService(),
                 mock(CopilotRunPreparationService.class),
                 mock(CopilotSdkExecutionGateway.class),

@@ -372,7 +372,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 )
         );
 
-        assertEquals(Set.copyOf(CopilotReportToolNames.allToolNames()), Set.copyOf(policy.availableToolNames()));
+        assertEquals(Set.copyOf(CopilotReportToolNames.initialToolNames()), Set.copyOf(policy.availableToolNames()));
         assertTrue(policy.reportToolsEnabled());
     }
 
@@ -511,6 +511,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 tools(
                         CopilotReportToolNames.GET_CURRENT,
                         CopilotReportToolNames.UPSERT_SECTION,
+                        CopilotReportToolNames.PATCH_SECTION,
                         CopilotReportToolNames.UPDATE_HEADER,
                         CopilotReportToolNames.UPDATE_META,
                         "gitlab_find_flow_context",

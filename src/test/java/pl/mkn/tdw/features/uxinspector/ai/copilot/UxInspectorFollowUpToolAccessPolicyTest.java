@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class UxInspectorFollowUpToolAccessPolicyTest {
     @Test
-    void shouldKeepResearchToolsAndRemoveReportMutationTools() {
+    void shouldKeepResearchAndReportTools() {
         var registered = new ArrayList<ToolDefinition>();
         UxInspectorToolNames.ALL.forEach(name -> registered.add(tool(name)));
         registered.add(tool(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE));
@@ -31,7 +31,7 @@ class UxInspectorFollowUpToolAccessPolicyTest {
 
         assertThat(policy.followUpResearchAvailable()).isTrue();
         assertThat(policy.availableToolNames()).containsAll(UxInspectorToolNames.ALL);
-        assertThat(policy.availableToolNames()).doesNotContainAnyElementsOf(CopilotReportToolNames.allToolNames());
+        assertThat(policy.availableToolNames()).containsAll(CopilotReportToolNames.allToolNames());
     }
 
     private static ToolDefinition tool(String name) {

@@ -128,7 +128,7 @@ export class UxInspectorFacade {
     () => Boolean(this.job() && (!this.isJobTerminal() || hasActiveChat(this.job()!)) && this.jobError() && !this.pollingActive())
   );
   readonly workflowIsRunning = computed(
-    () => this.pollingActive() && this.job()?.status !== 'ANALYZING'
+    () => this.pollingActive() && !this.isJobTerminal() && this.job()?.status !== 'ANALYZING'
   );
   readonly aiWorkflowIsRunning = computed(
     () => this.pollingActive() && this.job()?.status === 'ANALYZING'

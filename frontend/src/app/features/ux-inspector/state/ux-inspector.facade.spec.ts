@@ -216,6 +216,14 @@ describe('UxInspectorFacade', () => {
     expect(api.sendChatMessage).toHaveBeenCalledWith('ux-crm-job', 'Co jeszcze blokuje zapis?');
     expect(facade.chatMessages().at(-1)?.content).toContain('Uprawnienie');
   });
+
+  it('does not show analysis progress while polling a completed run for chat', () => {
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.job.set(chatSnapshot());
+    facade.pollingActive.set(true);
+
+    expect(facade.workflowIsRunning()).toBe(false);
+  });
 });
 
 function view(viewId: string, routePattern: string, componentSelectors: string[] = []) {

@@ -12,6 +12,8 @@ import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpChatService;
 import pl.mkn.tdw.features.uiexplorer.ai.chat.UiExplorerFollowUpPromptService;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerChatAvailability;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
+import pl.mkn.tdw.features.uiexplorer.job.UiExplorerFollowUpReportProjection;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportMapping;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatResult;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
@@ -21,6 +23,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
     private final UiExplorerFollowUpPromptService promptService;
     private final UiExplorerFollowUpChatService chatService;
     private final UiExplorerLocalRunSnapshotSanitizer sanitizer;
+    private final UiExplorerFollowUpReportProjection reportProjection;
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
 
@@ -72,15 +76,21 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
                 privateSnapshot.toContext(),
                 message,
                 record.continuation().copilotSessionId(),
-                authRef
+                authRef,
+                snapshot.report()
         );
         var capture = new AnalysisChatAssistantCapture();
         var prompt = promptService.prepare(request);
         var response = execute(request, capture);
+        var evidence = new ArrayList<>(snapshot.toolEvidenceSections());
+        snapshot.chatMessages().forEach(chat -> evidence.addAll(chat.toolEvidenceSections()));
+        evidence.addAll(capture.toolEvidenceSections());
+        var mapping = reportProjection.project(snapshot.report(), response.report(),
+                request.initialRequest(), request.context(), snapshot.usage(), evidence);
         var completedAt = Instant.now();
         var updatedSnapshot = sanitizer.sanitize(appendCompletedChat(
                 snapshot, UUID.randomUUID().toString(), assistantId, message,
-                response.content(), prompt, response.usage(), capture, startedAt, completedAt));
+                response.content(), prompt, response.usage(), capture, startedAt, completedAt, mapping));
         var updatedRecord = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(UiExplorerLocalRunEnvelope.from(updatedSnapshot, completedAt)),
                 record.continuation().withLatestCopilotSession(response.sessionId())
@@ -203,7 +213,8 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
             pl.mkn.tdw.shared.ai.AnalysisAiUsage usage,
             AnalysisChatAssistantCapture capture,
             Instant startedAt,
-            Instant completedAt
+            Instant completedAt,
+            UiExplorerReportMapping mapping
     ) {
         var messages = new ArrayList<>(snapshot.chatMessages());
         messages.add(new AnalysisChatMessageResponse(
@@ -211,14 +222,17 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
                 startedAt, startedAt, startedAt, List.of(), List.of(), List.of(), null, null));
         messages.add(new AnalysisChatMessageResponse(
                 assistantId, "ASSISTANT", "COMPLETED", content, null, null,
-                startedAt, completedAt, completedAt, capture.toolEvidenceSections(),
+                startedAt, completedAt, completedAt,
+                AnalysisReportChangeEvidence.append(capture.toolEvidenceSections(), snapshot.report(),
+                        mapping != null ? mapping.report() : snapshot.report()),
                 capture.aiActivityEvents(), capture.toolFeedback(), prompt, usage));
         return new UiExplorerJobStateSnapshot(
                 snapshot.jobId(), snapshot.request(), snapshot.status(), snapshot.currentStepCode(),
                 snapshot.currentStepLabel(), snapshot.errorCode(), snapshot.errorMessage(), snapshot.createdAt(),
                 completedAt, snapshot.completedAt(), snapshot.steps(), snapshot.contextSections(),
                 snapshot.toolEvidenceSections(), snapshot.aiActivityEvents(), snapshot.toolFeedback(),
-                snapshot.preparedPrompt(), snapshot.result(), snapshot.report(), snapshot.usage(),
+                snapshot.preparedPrompt(), mapping != null ? mapping.result() : snapshot.result(),
+                mapping != null ? mapping.report() : snapshot.report(), snapshot.usage(),
                 snapshot.sourceRevision(), snapshot.outputAvailability(), true, messages,
                 new UiExplorerChatAvailability(true, null, null)
         );

@@ -56,10 +56,14 @@ public final class UiExplorerDurableSystemInstructions {
                 systemu zewnetrznego, podaj potwierdzone identyfikatory i wyjasnij ich znaczenie.
                 Nie dodawaj szczegolow implementacji, o ktore uzytkownik nie pytal.
 
-                Raport zapisany w historii sesji jest read-only. Nie aktualizuj go i nie probuj
-                wywolywac report tools. Gdy uzytkownik prosi o zmiane dokumentu, zaproponuj tresc
-                w rozmowie i jawnie powiedz, ze raport pozostal bez zmian. Dla nowych lub
-                kwestionowanych ustalen uzyj dostepnych scoped GitLab tools. Oddziel fakty,
+                Raport zmieniaj tylko gdy najnowsza wiadomosc analityka jawnie prosi o aktualizacje
+                dokumentu. Zwykle pytanie lub dodatkowy research nie upowaznia do zapisu.
+                Przed edycja odczytaj potrzebna sekcje przez report_get_current(sectionId).
+                Dla malej korekty uzyj report_patch_section z aktualnym digestem i dokladnym
+                fragmentem, dla calej sekcji report_upsert_section, dla naglowka report_update_header,
+                a dla globalnych metadata report_update_meta. Zachowaj reszte raportu i po zapisie
+                sprawdz manifest przez report_get_current. Gdy zapis sie nie powiedzie, nie deklaruj
+                zmiany dokumentu. Dla nowych lub kwestionowanych ustalen uzyj dostepnych scoped GitLab tools. Oddziel fakty,
                 wnioski i ograniczenia widocznosci. Nie uruchamiaj ponownie initial workflow.
                 </ui_explorer_follow_up_contract>
                 """.trim();

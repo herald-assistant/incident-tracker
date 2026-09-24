@@ -328,6 +328,7 @@ class FlowExplorerJobServiceTest {
         var preparedSession = preparedSession(runRequest);
         var followUpRunRequest = followUpRunRequest();
         var followUpPreparedSession = preparedSession(followUpRunRequest);
+        var currentReport = new java.util.concurrent.atomic.AtomicReference<pl.mkn.tdw.shared.ai.report.AnalysisReport>();
         var evidence = new AnalysisEvidenceSection(
                 "gitlab",
                 "follow-up-file-chunk",
@@ -343,7 +344,8 @@ class FlowExplorerJobServiceTest {
                 same(contextSnapshot),
                 any(FlowExplorerPromptPreparation.class),
                 eq("initial-session-1"),
-                any(AnalysisAiAuthRef.class)
+                any(AnalysisAiAuthRef.class),
+                any(pl.mkn.tdw.shared.ai.report.AnalysisReport.class)
         )).thenReturn(new FlowExplorerCopilotRunAssembly(
                 followUpRunRequest,
                 new CopilotToolSessionContext("follow-up-123", "initial-session-1", Map.of()),
@@ -356,10 +358,12 @@ class FlowExplorerJobServiceTest {
                 return new CopilotExecutionResult(aiJson(), usage(), "initial-session-1");
             }
             session.evidenceSink().accept(evidence);
-            return new CopilotExecutionResult("Walidacja jest w CustomerService.validate.", null, "follow-up-session-1");
+            return new CopilotExecutionResult("Walidacja jest w CustomerService.validate.", null,
+                    "follow-up-session-1", currentReport.get());
         });
 
         var started = flowExplorerJobService.startJob(request);
+        currentReport.set(flowExplorerJobService.getJob(started.jobId()).report());
         var afterChatStart = flowExplorerJobService.startChatMessage(
                 started.jobId(),
                 new FlowExplorerChatMessageRequest("Gdzie jest walidacja?")
@@ -384,7 +388,8 @@ class FlowExplorerJobServiceTest {
                 same(contextSnapshot),
                 promptCaptor.capture(),
                 eq("initial-session-1"),
-                any(AnalysisAiAuthRef.class)
+                any(AnalysisAiAuthRef.class),
+                any(pl.mkn.tdw.shared.ai.report.AnalysisReport.class)
         );
         assertEquals(afterChatStart.chatMessages().get(1).prompt(), promptCaptor.getValue().prompt());
         assertTrue(promptCaptor.getValue().artifacts().isEmpty());

@@ -33,7 +33,8 @@ public record UiExplorerCopilotToolAccessPolicy(
     ) {
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
                 .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
-                        || CopilotReportToolNames.isReportTool(tool.name()))
+                        || CopilotReportToolNames.isReportTool(tool.name())
+                        && !CopilotReportToolNames.PATCH_SECTION.equals(tool.name()))
                 .toList();
         var names = enabled.stream().map(ToolDefinition::name).toList();
         var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
@@ -46,7 +47,8 @@ public record UiExplorerCopilotToolAccessPolicy(
 
     public static UiExplorerCopilotToolAccessPolicy forFollowUp(List<ToolDefinition> registeredTools) {
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
-                .filter(tool -> FALLBACK_TOOLS.contains(tool.name()))
+                .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
+                        || CopilotReportToolNames.isReportTool(tool.name()))
                 .toList();
         var names = enabled.stream().map(ToolDefinition::name).toList();
         var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
@@ -58,6 +60,6 @@ public record UiExplorerCopilotToolAccessPolicy(
     }
 
     public boolean reportToolsAvailable() {
-        return availableToolNames.containsAll(CopilotReportToolNames.allToolNames());
+        return availableToolNames.containsAll(CopilotReportToolNames.initialToolNames());
     }
 }

@@ -8,6 +8,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportSectionIds;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,6 +57,13 @@ public class UiExplorerCopilotToolSessionContextFactory {
             UiExplorerJobStartRequest request,
             UiExplorerScreenReachabilityContext context
     ) {
+        return createFollowUp(runReference, copilotSessionId, request, context, null);
+    }
+
+    public CopilotToolSessionContext createFollowUp(
+            String runReference, String copilotSessionId, UiExplorerJobStartRequest request,
+            UiExplorerScreenReachabilityContext context, AnalysisReport report
+    ) {
         if (!StringUtils.hasText(copilotSessionId)) {
             throw new IllegalArgumentException("UI Explorer follow-up requires copilotSessionId.");
         }
@@ -67,6 +75,12 @@ public class UiExplorerCopilotToolSessionContextFactory {
         var hidden = new LinkedHashMap<String, Object>();
         hidden.put(UiExplorerCopilotToolContextKeys.FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
         hidden.put(UiExplorerCopilotToolContextKeys.RUN_KIND, UiExplorerCopilotToolContextKeys.RUN_KIND_FOLLOW_UP);
+        if (report != null) {
+            hidden.put(AgentToolContextKeys.REPORT_ID, report.reportId());
+            hidden.put(AgentToolContextKeys.REPORT_FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
+            hidden.put(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                    UiExplorerReportSectionIds.activeSectionIds(request));
+        }
         hidden.put(AgentToolContextKeys.TOOL_BUDGET_POLICY, AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
         hidden.put(UiExplorerCopilotToolContextKeys.SYSTEM_ID, context.systemId());
         hidden.put(UiExplorerCopilotToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());

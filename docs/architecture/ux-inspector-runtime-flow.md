@@ -263,10 +263,14 @@ jezykiem narracji.
 Po zapisaniu raportu UX Inspector udostepnia follow-up chat. Kolejne pytania
 wznawiaja te sama sesje Copilota, zachowuja jeden przypiety projekt, branch i
 commit oraz moga korzystac z tych samych read-only target/source tools co
-initial research. Report tools nie sa dostepne w follow-up, a raport pozostaje
-kontekstem tylko do odczytu w historii sesji. Prompt follow-up zawiera tylko
-nowa wiadomosc; zasady odpowiedzi sa w durable follow-up contract. Prosba o korekte moze zwrocic propozycje tekstu
-w rozmowie, lecz nie zmienia raportu.
+initial research. Piec report tools pracuje w hidden scope biezacego raportu
+i sekcji `answer`. Prompt follow-up zawiera tylko nowa wiadomosc; durable
+follow-up contract pozwala na zapis tylko po jawnej prosbie o aktualizacje
+raportu w najnowszej wiadomosci. Po zapisie mapper ponownie waliduje raport,
+a live job i historia publikuja razem report i result.
+Polling follow-up po terminalnym jobie nie wlacza wskaznika postepu analizy.
+Przy zapisanej zmianie referencje odpowiedzi udostepniaja podglad surowej
+tresci raportu przed i po.
 Odpowiedz jest funkcjonalna i czytelna dla analityka; na konkretne pytanie o
 API, schemat danych albo system zewnetrzny podaje potwierdzone identyfikatory
 oraz ich znaczenie i zaznacza brakujacy dowod.

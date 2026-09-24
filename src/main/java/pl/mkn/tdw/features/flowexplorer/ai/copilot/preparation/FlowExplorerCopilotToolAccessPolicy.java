@@ -51,9 +51,15 @@ public record FlowExplorerCopilotToolAccessPolicy(
     }
 
     public static FlowExplorerCopilotToolAccessPolicy fromRegisteredTools(List<ToolDefinition> registeredTools) {
+        return fromRegisteredTools(registeredTools, false);
+    }
+
+    public static FlowExplorerCopilotToolAccessPolicy fromRegisteredTools(
+            List<ToolDefinition> registeredTools, boolean followUp) {
         var tools = registeredTools != null ? List.copyOf(registeredTools) : List.<ToolDefinition>of();
         var enabledTools = tools.stream()
-                .filter(tool -> FLOW_EXPLORER_TOOL_ALLOWLIST.contains(tool.name()))
+                .filter(tool -> FLOW_EXPLORER_TOOL_ALLOWLIST.contains(tool.name())
+                        || followUp && CopilotReportToolNames.PATCH_SECTION.equals(tool.name()))
                 .toList();
 
         return new FlowExplorerCopilotToolAccessPolicy(

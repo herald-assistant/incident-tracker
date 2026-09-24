@@ -37,6 +37,7 @@ class UxInspectorLocalRunChatHandlerTest {
         var handler = new UxInspectorLocalRunChatHandler(mapper, mock(pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver.class),
                 mock(pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService.class),
                 mock(pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService.class),
+                new pl.mkn.tdw.features.uxinspector.job.UxInspectorFollowUpReportProjection(new pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper()),
                 mock(pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper.class),
                 mock(pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver.class),
                 new CopilotSessionStateAvailability(properties));
