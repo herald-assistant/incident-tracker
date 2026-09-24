@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -11,6 +11,7 @@ import { UiExplorerResultComponent } from '../../components/ui-explorer-result/u
 import { UiExplorerJobStatus } from '../../models/ui-explorer.models';
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
+import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 
 @Component({
   selector: 'app-ui-explorer-page',
@@ -31,6 +32,10 @@ export class UiExplorerPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly persistStartedRun = effect(() => {
+    const runId = this.facade.startedRunId();
+    if (runId) rememberLocalRunId(this.router, this.route, runId);
+  });
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
   readonly aiCount = computed(() => this.facade.job()?.aiActivityEvents.length ?? 0);
   readonly feedbackCount = computed(() => this.facade.job()?.toolFeedback.length ?? 0);
@@ -64,7 +69,7 @@ export class UiExplorerPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim() ?? '';
-        if (localRunId) {
+        if (localRunId && this.facade.job()?.jobId !== localRunId) {
           this.facade.loadLocalRun(localRunId);
         }
       });

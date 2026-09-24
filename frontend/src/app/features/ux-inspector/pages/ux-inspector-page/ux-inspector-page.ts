@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,6 +10,7 @@ import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-f
 import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
+import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 import { UxInspectorCapture, UxInspectorJobStatus } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
@@ -38,6 +39,10 @@ export class UxInspectorPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly persistStartedRun = effect(() => {
+    const runId = this.facade.startedRunId();
+    if (runId) rememberLocalRunId(this.router, this.route, runId);
+  });
 
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
   readonly aiCount = computed(() => this.facade.job()?.aiActivityEvents.length ?? 0);
@@ -119,7 +124,7 @@ export class UxInspectorPageComponent implements OnInit {
     this.facade.initialize();
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const localRunId = params.get('localRunId')?.trim() ?? '';
-      if (localRunId) this.facade.loadLocalRun(localRunId);
+      if (localRunId && this.facade.job()?.jobId !== localRunId) this.facade.loadLocalRun(localRunId);
     });
   }
 

@@ -65,6 +65,16 @@ describe('UxInspectorPageComponent', () => {
       type: 'TDW_UX_INSPECTOR_RECEIVED', captureId: 'cap_crm_contact_save'
     });
 
+    fixture.componentInstance.facade.startedRunId.set('ux-job-1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: { localRunId: 'ux-job-1' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+
     fixture.componentInstance.facade.viewCatalog.set({
       systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
       sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' }, status: 'READY',

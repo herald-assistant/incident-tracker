@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -32,6 +32,8 @@ describe('ConfigDriftViewerPageComponent', () => {
     importResult: ReturnType<typeof vi.fn>;
   };
   let polling: { poll: ReturnType<typeof vi.fn> };
+  let historyApi: { getRun: ReturnType<typeof vi.fn> };
+  let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let githubAuth: {
     getStatus: ReturnType<typeof vi.fn>;
     connect: ReturnType<typeof vi.fn>;
@@ -48,6 +50,8 @@ describe('ConfigDriftViewerPageComponent', () => {
     polling = {
       poll: vi.fn(() => of(job()))
     };
+    historyApi = { getRun: vi.fn(() => of({ feature: 'config-drift-viewer' })) };
+    routeParams = new BehaviorSubject(convertToParamMap({}));
     githubAuth = {
       getStatus: vi.fn(() => of(localTokenAuthStatus())),
       connect: vi.fn()
@@ -60,13 +64,14 @@ describe('ConfigDriftViewerPageComponent', () => {
         { provide: AiOptionsApiService, useValue: { getOptions: () => of(aiOptions()) } },
         { provide: AnalysisJobPollingService, useValue: polling },
         { provide: GithubAuthService, useValue: githubAuth },
+        { provide: Router, useValue: { navigate: vi.fn(() => Promise.resolve(true)) } },
         {
           provide: AnalysisRunHistoryApiService,
-          useValue: { getRun: () => of({ feature: 'config-drift-viewer' }) }
+          useValue: historyApi
         },
         {
           provide: ActivatedRoute,
-          useValue: { queryParamMap: of(convertToParamMap({})) }
+          useValue: { queryParamMap: routeParams.asObservable() }
         }
       ]
     }).compileComponents();
@@ -132,6 +137,12 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({
       systemIds: ['backend', 'notifications']
     }));
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: { localRunId: 'job-1' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   });
 
   it('should expose DEEP as coming soon without allowing the operator to select it', () => {
@@ -563,6 +574,31 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1 z 3 wybranych');
     expect(fixture.componentInstance.job()?.imported).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Import read-only');
+  });
+
+  it('restores an active local run and resumes polling without importing a terminal result', () => {
+    const active = job({ status: 'QUEUED', result: null });
+    historyApi.getRun.mockReturnValue(of({
+      analysisId: active.jobId,
+      feature: 'config-drift-viewer',
+      name: 'CRM runtime check',
+      exportEnvelope: {
+        schema: 'tdw.config-drift-viewer-export',
+        version: 1,
+        payload: {
+          type: 'config-drift-viewer-analysis',
+          resultContract: 'config-drift-viewer-result-v1',
+          job: active
+        }
+      }
+    }));
+
+    routeParams.next(convertToParamMap({ localRunId: active.jobId }));
+
+    expect(historyApi.getRun).toHaveBeenCalledWith(active.jobId);
+    expect(api.importResult).not.toHaveBeenCalled();
+    expect(polling.poll).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.job()?.jobId).toBe(active.jobId);
   });
 });
 

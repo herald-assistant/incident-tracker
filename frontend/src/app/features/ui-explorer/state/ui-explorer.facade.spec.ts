@@ -181,6 +181,7 @@ describe('UiExplorerFacade', () => {
     });
     expect(polling.poll).toHaveBeenCalledTimes(1);
     expect(api.getJob).toHaveBeenCalledWith('crm-ui-job-1');
+    expect(facade.startedRunId()).toBe('crm-ui-job-1');
     expect(facade.job()?.status).toBe('COMPLETED');
     expect(facade.pollingActive()).toBe(false);
   });

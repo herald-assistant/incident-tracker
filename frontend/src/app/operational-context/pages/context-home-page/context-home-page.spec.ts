@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { MatTooltip } from '@angular/material/tooltip';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 
@@ -79,6 +79,27 @@ describe('ContextHomePageComponent', () => {
       .toBe('Opis CRM: apiToken=fictional-example');
     expect(fixture.nativeElement.querySelector('.assistance-form')).toBeNull();
     expect(assistancePolling.poll).not.toHaveBeenCalled();
+  });
+
+  it('restores a running assistance job as an active view and resumes polling', async () => {
+    const { fixture, historyApi, routeParams, assistancePolling } = await createComponent(emptySummary(), []);
+    const active = queuedAssistanceJob();
+    historyApi.getRun.mockReturnValue(of({
+      analysisId: active.jobId, feature: 'operational-context-assistance',
+      name: 'CRM assistance', status: active.status, createdAt: active.createdAt,
+      updatedAt: active.updatedAt, completedAt: null, continuationEnabled: false,
+      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 2,
+        mode: 'CREATE_AREA', target: null, exportedAt: active.updatedAt, job: active }
+    }));
+
+    routeParams.next(convertToParamMap({ localRunId: active.jobId }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.assistanceHistoryReadOnly()).toBe(false);
+    expect(fixture.componentInstance.assistanceJob()?.jobId).toBe(active.jobId);
+    expect(assistancePolling.poll).toHaveBeenCalledTimes(1);
   });
 
   it('resumes an undecided saved assistance run from Analysis History', async () => {
@@ -398,6 +419,7 @@ describe('ContextHomePageComponent', () => {
 
   it('keeps a pending start request and its job when switching away and back to assistance', async () => {
     const { fixture, assistanceApi, assistancePolling } = await createComponent(emptySummary(), []);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const startResponse = new Subject<OperationalContextAssistanceJob>();
     assistanceApi.start.mockReturnValue(startResponse.asObservable());
     fixture.detectChanges();
@@ -416,6 +438,12 @@ describe('ContextHomePageComponent', () => {
     startResponse.next(queuedAssistanceJob());
     fixture.detectChanges();
     expect(fixture.componentInstance.assistanceJob()?.jobId).toBe('assistance-1');
+    expect(navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: { localRunId: 'assistance-1' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
     expect(assistancePolling.poll).toHaveBeenCalledTimes(1);
 
     fixture.componentInstance.selectTab('assistance');

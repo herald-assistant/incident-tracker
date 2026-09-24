@@ -4,7 +4,7 @@ import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@ang
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, finalize } from 'rxjs';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
@@ -30,6 +30,7 @@ import {
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { buildDeliveryShareDocument } from '../../../../core/utils/analysis-share.utils';
+import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 import {
   readJsonFile,
   sanitizeFileNamePart
@@ -70,6 +71,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly githubAuth = inject(GithubAuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
 
@@ -264,7 +266,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim();
-        if (localRunId) {
+        if (localRunId && this.job()?.jobId !== localRunId) {
           this.loadLocalRun(localRunId);
         }
       });
@@ -293,6 +295,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
       .subscribe({
         next: (job) => {
           this.job.set(job);
+          rememberLocalRunId(this.router, this.route, job.jobId);
           this.startPolling(job.jobId);
         },
         error: (error: HttpErrorResponse) => {

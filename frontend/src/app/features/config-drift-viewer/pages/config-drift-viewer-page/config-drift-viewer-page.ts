@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
@@ -33,12 +33,14 @@ import {
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
+import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 import {
   ConfigDriftViewerDiffRendererComponent
 } from '../../components/config-drift-viewer-diff-renderer/config-drift-viewer-diff-renderer';
 import {
   ConfigDriftViewerDeepPreflight,
   ConfigDriftViewerDeterministicContext,
+  ConfigDriftViewerExportEnvelope,
   ConfigDriftViewerFinding,
   ConfigDriftViewerInputOptions,
   ConfigDriftViewerJobStartRequest,
@@ -78,6 +80,7 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly githubAuth = inject(GithubAuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
   private preflightRequestId = 0;
@@ -312,7 +315,7 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim();
-        if (localRunId) {
+        if (localRunId && this.job()?.jobId !== localRunId) {
           this.loadLocalRun(localRunId);
         }
       });
@@ -338,6 +341,7 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       .subscribe({
         next: (job) => {
           this.applyJobSnapshot(job);
+          rememberLocalRunId(this.router, this.route, job.jobId);
           this.startPolling(job.jobId);
         },
         error: (error: HttpErrorResponse) => {
@@ -692,6 +696,20 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
   private importLocalRun(detail: LocalAnalysisRunDetailResponse): void {
     if (detail.feature !== 'config-drift-viewer') {
       this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Config Drift Viewer.`);
+      return;
+    }
+    const envelope = detail.exportEnvelope as Partial<ConfigDriftViewerExportEnvelope> | null;
+    const savedJob = envelope?.schema === 'tdw.config-drift-viewer-export'
+      && envelope.version === 1
+      && envelope.payload?.type === 'config-drift-viewer-analysis'
+      && envelope.payload.resultContract === 'config-drift-viewer-result-v1'
+      ? envelope.payload.job : null;
+    if (savedJob?.jobId === detail.analysisId && !this.isTerminal(savedJob.status)) {
+      this.applyJobToForm(savedJob);
+      this.applyJobSnapshot(savedJob, true);
+      this.resultOrigin.set('local');
+      this.resultOriginLabel.set(detail.name || detail.analysisId);
+      this.startPolling(savedJob.jobId);
       return;
     }
     this.api

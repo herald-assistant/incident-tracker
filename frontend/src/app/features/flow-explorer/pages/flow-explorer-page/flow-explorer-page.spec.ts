@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import {
@@ -86,6 +86,7 @@ describe('FlowExplorerPageComponent', () => {
         { provide: AiOptionsApiService, useValue: aiOptionsApi },
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         { provide: AppUiConfigService, useValue: appUiConfigService },
+        { provide: Router, useValue: { navigate: vi.fn(() => Promise.resolve(true)) } },
         {
           provide: GitLabSystemBranchesApiService,
           useValue: {
@@ -355,6 +356,12 @@ describe('FlowExplorerPageComponent', () => {
       reasoningEffort: 'high'
     });
     expect(flowExplorerApi.getJob).toHaveBeenCalledWith('flow-job-1');
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: { localRunId: 'flow-job-1' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('COMPLETED');

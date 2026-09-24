@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Observable, delay, of } from 'rxjs';
 
 import {
@@ -65,6 +65,12 @@ describe('DeliveryScopeComplexityPageComponent', () => {
       toDate: '2026-07-31',
       model: 'gpt-5',
       reasoningEffort: 'medium'
+    });
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: { localRunId: 'job-1' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
     expect(fixture.nativeElement.textContent).toContain('8');
     expect(fixture.nativeElement.textContent).toContain('CRM-1');
@@ -581,6 +587,7 @@ async function createComponent(options: {
       { provide: GithubAuthService, useValue: auth },
       { provide: AnalysisRunHistoryApiService, useValue: history },
       { provide: AnalysisJobPollingService, useValue: polling },
+      { provide: Router, useValue: { navigate: vi.fn(() => Promise.resolve(true)) } },
       {
         provide: ActivatedRoute,
         useValue: { queryParamMap: of(convertToParamMap({ localRunId: options.localRunId ?? '' })) }

@@ -76,6 +76,7 @@ describe('UxInspectorFacade', () => {
       capture: captureFixture(), model: 'gpt-crm', reasoningEffort: 'medium'
     });
     expect(ingress.consumeCapture).toHaveBeenCalledTimes(1);
+    expect(facade.startedRunId()).toBe('ux-crm-job');
     expect(polling.poll).toHaveBeenCalledTimes(1);
     expect(facade.job()?.status).toBe('COMPLETED');
     expect(facade.capture()?.captureId).toBe('cap_crm_contact_save');

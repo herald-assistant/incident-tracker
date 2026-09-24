@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
 import {
@@ -57,6 +57,7 @@ import {
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 import { appendOptimisticChatTurn } from '../../../../core/utils/analysis-chat-optimistic.utils';
+import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -205,6 +206,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly uiConfig = inject(AppUiConfigService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
   private inventoryRequestId = 0;
@@ -497,7 +499,7 @@ export class FlowExplorerPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim() ?? '';
-        if (localRunId) {
+        if (localRunId && this.job()?.jobId !== localRunId) {
           this.loadLocalFlowExplorerRun(localRunId);
         }
       });
@@ -868,6 +870,7 @@ export class FlowExplorerPageComponent implements OnInit {
             exportedAt: '',
             fileName: ''
           });
+          rememberLocalRunId(this.router, this.route, snapshot.jobId);
           if (!this.isTerminalJobStatus(snapshot.status) || this.hasActiveChat(snapshot)) {
             this.startPolling(snapshot.jobId);
           }

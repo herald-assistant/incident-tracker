@@ -33,6 +33,7 @@ import { ContextDeleteConfirmationComponent } from '../../components/context-del
 import { ContextAssistancePanelComponent } from '../../components/context-assistance-panel/context-assistance-panel';
 import { WhyPopoverComponent } from '../../components/why-popover/why-popover';
 import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
+import { rememberLocalRunId } from '../../../core/utils/local-run-route.utils';
 import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
 import {
   isOperationalContextWritableType,
@@ -44,7 +45,8 @@ import {
 } from '../../models/operational-context-maintenance.models';
 import {
   OperationalContextAssistanceJob,
-  OperationalContextAssistancePrefill
+  OperationalContextAssistancePrefill,
+  isTerminalAssistanceStatus
 } from '../../models/operational-context-assistance.models';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { OperationalContextAssistanceApiService } from '../../services/operational-context-assistance-api.service';
@@ -838,7 +840,7 @@ export class ContextHomePageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim();
-        if (localRunId) this.loadAssistanceHistoryRun(localRunId);
+        if (localRunId && this.assistanceJob()?.jobId !== localRunId) this.loadAssistanceHistoryRun(localRunId);
       });
     this.localFilterControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -1134,6 +1136,14 @@ export class ContextHomePageComponent {
     this.selectedTab.set('assistance');
   }
 
+  onAssistanceJobChanged(job: OperationalContextAssistanceJob | null): void {
+    const previousRunId = this.assistanceJob()?.jobId;
+    this.assistanceJob.set(job);
+    if (job && job.jobId !== previousRunId && !this.requestedHistoryRunId) {
+      rememberLocalRunId(this.router, this.route, job.jobId);
+    }
+  }
+
   private clearAssistanceHistory(): void {
     this.requestedHistoryRunId = '';
     this.assistanceHistoryReadOnly.set(false);
@@ -1169,7 +1179,7 @@ export class ContextHomePageComponent {
             const restored = restoreAssistanceHistoryRun(detail.exportEnvelope);
             this.assistancePrefill.set(restored.prefill);
             this.assistanceJob.set(restored.job);
-            this.assistanceHistoryReadOnly.set(true);
+            this.assistanceHistoryReadOnly.set(isTerminalAssistanceStatus(restored.job.status));
             this.assistanceMounted.set(true);
             this.selectedTab.set('assistance');
             if (localRunId === restored.job.jobId

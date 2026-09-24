@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
 import {
@@ -25,6 +25,7 @@ import { buildReportShareDocument } from '../../../../core/utils/analysis-share.
 import { ChangeVerificationRuleLedgerComponent } from '../../components/change-verification-rule-ledger/change-verification-rule-ledger';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
+import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 import {
   ChangeVerificationExportState,
   parseImportedChangeVerificationResult
@@ -61,6 +62,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
 
@@ -178,7 +180,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim() ?? '';
-        if (localRunId) {
+        if (localRunId && this.job()?.jobId !== localRunId) {
           this.loadLocalChangeVerificationRun(localRunId);
         }
       });
@@ -232,6 +234,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       .subscribe({
         next: (job) => {
           this.setJob(job);
+          rememberLocalRunId(this.router, this.route, job.jobId);
           this.startPolling(job.jobId);
         },
         error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))

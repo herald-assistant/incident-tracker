@@ -185,6 +185,15 @@ describe('UiExplorerPageComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: { localRunId: 'crm-ui-job-1' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+    queryParamMap.next(convertToParamMap({ localRunId: 'crm-ui-job-1' }));
+    http.expectNone('/api/analysis/runs/crm-ui-job-1');
+
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-analysis-result-header h3')?.textContent?.trim())
       .toBe('/contacts/new');

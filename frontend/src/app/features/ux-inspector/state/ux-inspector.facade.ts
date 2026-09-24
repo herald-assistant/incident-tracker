@@ -55,6 +55,7 @@ export class UxInspectorFacade {
   readonly viewCatalog = signal<UxInspectorViewCatalogResponse | null>(null);
   readonly aiOptions = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly job = signal<UxInspectorJobStateSnapshot | null>(null);
+  readonly startedRunId = signal('');
   readonly isSubmitting = signal(false);
   readonly pollingActive = signal(false);
   readonly jobError = signal('');
@@ -279,6 +280,7 @@ export class UxInspectorFacade {
         this.isSubmitting.set(false);
         this.job.set(snapshot);
         this.resultSource.set({ origin: 'live', fileName: '' });
+        this.startedRunId.set(snapshot.jobId);
         this.ingress.consumeCapture();
         if (!isTerminal(snapshot.status)) this.startPolling(snapshot.jobId);
       },

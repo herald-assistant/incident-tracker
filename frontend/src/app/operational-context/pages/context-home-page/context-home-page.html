@@ -44,7 +44,7 @@
           [initialJob]="assistanceJob()"
           [historyReadOnly]="assistanceHistoryReadOnly()"
           [systemOptions]="referenceOptions()['system'] || []"
-          (jobChanged)="assistanceJob.set($event)"
+          (jobChanged)="onAssistanceJobChanged($event)"
           (catalogChanged)="refreshAfterAssistanceSave($event)"
           (newRunRequested)="startNewAssistance()"
         ></app-context-assistance-panel>

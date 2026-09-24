@@ -58,6 +58,7 @@ export class UiExplorerFacade {
   readonly screenCatalog = signal<UiExplorerScreenCatalogResponse | null>(null);
   readonly aiOptions = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly job = signal<UiExplorerJobStateSnapshot | null>(null);
+  readonly startedRunId = signal('');
   readonly isSubmitting = signal(false);
   readonly pollingActive = signal(false);
   readonly jobError = signal('');
@@ -384,6 +385,7 @@ export class UiExplorerFacade {
             exportedAt: '',
             fileName: ''
           });
+          this.startedRunId.set(snapshot.jobId);
           if (!isTerminalJobStatus(snapshot.status)) {
             this.startPolling(snapshot.jobId);
           }
