@@ -2,19 +2,4 @@
 .analysis-report-editor__header, .analysis-report-editor__actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
 .analysis-report-editor__part { display: grid; gap: .4rem; min-width: 0; }
 .analysis-report-editor__part-title { margin: 0; color: var(--text-muted); font-size: .85rem; font-weight: 600; line-height: 1.3; }
-.analysis-report-editor textarea {
-  // CDK autosize measures the content box with temporarily reduced padding.
-  // Keep its text width fixed so measurement wraps lines exactly like the visible field.
-  box-sizing: content-box;
-  width: calc(100% - 1.5rem - 2px);
-  min-width: 0;
-  padding: .75rem;
-  resize: none;
-  overflow: hidden;
-  font: inherit;
-  line-height: 1.5;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-}
-.analysis-report-editor textarea:focus-visible { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
 .analysis-report-editor__preview { padding: .75rem; border: 1px solid var(--border); border-radius: var(--radius-md); }

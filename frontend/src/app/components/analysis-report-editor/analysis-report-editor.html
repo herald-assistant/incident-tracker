@@ -15,10 +15,9 @@
           <app-markdown-content [content]="content(part)" />
         </div>
       } @else {
-        <label class="analysis-report-editor__part-title" [for]="'report-edit-' + part.id">{{ part.title }}</label>
-        <textarea [id]="'report-edit-' + part.id" [value]="content(part)" (input)="update(part.id, $event)"
-          [disabled]="saving()" spellcheck="false" rows="10"
-          cdkTextareaAutosize [cdkAutosizeMinRows]="10"></textarea>
+        <h4 class="analysis-report-editor__part-title" [id]="'report-edit-title-' + part.id">{{ part.title }}</h4>
+        <app-markdown-source-editor [id]="'report-edit-' + part.id" [labelledBy]="'report-edit-title-' + part.id"
+          [value]="content(part)" [disabled]="saving()" (valueChange)="update(part.id, $event)" />
       }
     </section>
   }

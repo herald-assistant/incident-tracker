@@ -1128,6 +1128,8 @@ dla live joba albo lokalnego runu z waznym `copilotSessionId`, continuation
 metadata i mozliwoscia bezpiecznego odtworzenia scope'u po stronie backendu.
 
 Raport kontynuowalnego runu moze zostac recznie poprawiony przez operatora.
+Wspolny edytor pokazuje czesci raportu kolejno, podswietla skladnie Markdown
+zgodna z GFM i zachowuje osobny podglad przed zapisem.
 Warunkowy zapis przyjmuje tylko Markdown istniejacych sekcji i opcjonalne
 `markdownSummary`, wymaga aktualnego `revisionSha256`, waliduje feature-owned
 projekcje wyniku oraz zapisuje `manualEdit` z numerem rewizji, czasem i lista

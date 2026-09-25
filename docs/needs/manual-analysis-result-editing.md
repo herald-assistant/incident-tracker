@@ -20,7 +20,8 @@ w czacie korzystają z aktualnej wersji.
 ## Miara sukcesu
 
 - Operator może poprawić rezultat we wszystkich analizach oferujących
-  follow-up chat, a podgląd nie zapisuje zmian.
+  follow-up chat, widzi składnię Markdown w trakcie edycji, a podgląd nie
+  zapisuje zmian.
 - Po zapisie poprawiona treść jest widoczna także po odświeżeniu i
   odtworzeniu lokalnej historii oraz w udostępnianym dokumencie.
 - Przy kolejnym pytaniu AI otrzymuje informację o ręcznej zmianie i może

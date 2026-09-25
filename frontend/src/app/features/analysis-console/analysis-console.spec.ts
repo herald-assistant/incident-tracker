@@ -3,6 +3,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { EditorView } from 'codemirror';
 import { Observable, of, Subject, throwError } from 'rxjs';
 
 import {
@@ -457,9 +458,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('[aria-label="Edytuj wynik"]')!.click();
     fixture.detectChanges();
-    const textarea = element.querySelector<HTMLTextAreaElement>('#report-edit-markdownSummary')!;
-    textarea.value = 'Poprawiona sprawa CRM.';
-    textarea.dispatchEvent(new Event('input'));
+    replaceReportMarkdown(element, 'Poprawiona sprawa CRM.');
     fixture.detectChanges();
     Array.from(element.querySelectorAll<HTMLButtonElement>('.analysis-report-editor button'))
       .find(button => button.textContent?.includes('Zapisz zmiany'))!.click();
@@ -488,15 +487,13 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
     element.querySelector<HTMLButtonElement>('[aria-label="Edytuj wynik"]')!.click();
     fixture.detectChanges();
-    const textarea = element.querySelector<HTMLTextAreaElement>('#report-edit-markdownSummary')!;
-    textarea.value = 'Szkic poprawki CRM.';
-    textarea.dispatchEvent(new Event('input'));
+    replaceReportMarkdown(element, 'Szkic poprawki CRM.');
     fixture.detectChanges();
     Array.from(element.querySelectorAll<HTMLButtonElement>('.analysis-report-editor button'))
       .find(button => button.textContent?.includes('Zapisz zmiany'))!.click();
     fixture.detectChanges();
     expect(element.textContent).toContain('Raport zmienił się w czasie edycji');
-    expect(element.querySelector<HTMLTextAreaElement>('#report-edit-markdownSummary')?.value).toBe('Szkic poprawki CRM.');
+    expect(reportEditorMarkdown(element)).toBe('Szkic poprawki CRM.');
     expect(component.job()?.report?.markdownSummary).toBe(incidentReport().markdownSummary);
   });
 
@@ -1073,6 +1070,19 @@ function completedJobWithChat(): AnalysisJobStateSnapshot {
       }
     ]
   };
+}
+
+function reportEditorView(element: HTMLElement): EditorView {
+  return EditorView.findFromDOM(element.querySelector('#report-edit-markdownSummary .cm-editor') as HTMLElement)!;
+}
+
+function replaceReportMarkdown(element: HTMLElement, markdown: string): void {
+  const view = reportEditorView(element);
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: markdown } });
+}
+
+function reportEditorMarkdown(element: HTMLElement): string {
+  return reportEditorView(element).state.doc.toString();
 }
 
 function completedJobWithPendingChat(): AnalysisJobStateSnapshot {

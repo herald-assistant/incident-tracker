@@ -1,6 +1,6 @@
 # Ręczna edycja wyniku analiz z follow-up chatem
 
-Status: completed
+Status: in-progress
 
 Source need: [Ręczna korekta wyniku analizy](../needs/manual-analysis-result-editing.md)
 
@@ -182,3 +182,25 @@ krótkim nagłówkiem. Pola Markdown używają automatycznej wysokości z minimu
 10 wierszy; podgląd pokazuje wszystkie części jednocześnie. Usunięto etykiety
 „Część raportu”, „Treść Markdown” oraz objaśnienie pod formularzem.
 Testy Angulara: 628/628; produkcyjny build Angulara: sukces.
+
+## Podświetlanie źródła Markdown 2026-09-25
+
+Zmiana jest L2, ponieważ dotyka wspólnego edytora czterech feature'ów.
+Baseline: osobne pola `textarea` z CDK autosize, minimum 10 wierszy oraz
+wspólny podgląd, szkic i warunkowy zapis raportu. Kontrakt HTTP, report DTO,
+historia, follow-up i tool policy pozostają bez zmian.
+
+Conformance delta: pola źródła zastępuje CodeMirror z parserem GFM,
+podświetleniem składni, zawijaniem linii i wysokością rosnącą wraz z treścią.
+Minimum 10 wierszy, podgląd renderowany przez `MarkdownContentComponent`,
+anulowanie, zapis i obsługa konfliktu zachowują dotychczasową semantykę.
+Nowe zależności są ograniczone do frontendowego workspace'u. Konsumenci:
+Incident Analysis, Flow Explorer, UI Explorer i UX Inspector w trybie live
+oraz kontynuowalnej historii; import pozostaje tylko do odczytu.
+
+- [x] Krok 5: Wprowadzić wspólny komponent CodeMirror i podmienić pola edycji;
+  testy celowane potwierdzają podświetlenie, synchronizację szkicu, podgląd,
+  zapis i konflikt. Operator zatwierdził zakres poleceniem „ok go”.
+- [ ] Krok 6: Zweryfikować instalację z lockfile, pełne testy Angulara,
+  produkcyjny build, czysty build Maven wymagany po zmianie `package.json`
+  oraz zachowanie długich sekcji w przeglądarce.

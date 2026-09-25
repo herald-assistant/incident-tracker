@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { EditorView } from 'codemirror';
 import { AnalysisReport } from '../../core/models/analysis.models';
 import { AnalysisReportEditorComponent } from './analysis-report-editor';
 
@@ -20,15 +21,15 @@ describe('AnalysisReportEditorComponent', () => {
     const cancel = vi.fn();
     fixture.componentInstance.save.subscribe(save);
     fixture.componentInstance.cancel.subscribe(cancel);
-    const textareas = element.querySelectorAll<HTMLTextAreaElement>('textarea');
-    expect(textareas).toHaveLength(2);
+    const editors = element.querySelectorAll<HTMLElement>('app-markdown-source-editor');
+    expect(editors).toHaveLength(2);
     expect(element.querySelector('select')).toBeNull();
     expect(element.textContent).not.toContain('Treść Markdown');
-    for (const textarea of textareas) expect(textarea.getAttribute('rows')).toBe('10');
-    textareas[0].value = '**Nowa wersja CRM.**';
-    textareas[0].dispatchEvent(new Event('input'));
-    textareas[1].value = '**Zmieniona sekcja CRM.**';
-    textareas[1].dispatchEvent(new Event('input'));
+    for (const editor of editors) {
+      expect(editor.querySelector('.cm-content')?.getAttribute('aria-labelledby')).toContain('report-edit-title-');
+    }
+    replaceMarkdown(editors[0], '**Nowa wersja CRM.**');
+    replaceMarkdown(editors[1], '**Zmieniona sekcja CRM.**');
     fixture.detectChanges();
     const buttons = Array.from(element.querySelectorAll<HTMLButtonElement>('button'));
     buttons[1].click();
@@ -36,6 +37,10 @@ describe('AnalysisReportEditorComponent', () => {
     expect(element.querySelectorAll('.analysis-report-editor__preview')).toHaveLength(2);
     expect(Array.from(element.querySelectorAll('.analysis-report-editor__preview strong')).map(node => node.textContent))
       .toEqual(['Nowa wersja CRM.', 'Zmieniona sekcja CRM.']);
+    buttons[1].click();
+    fixture.detectChanges();
+    expect(EditorView.findFromDOM(element.querySelector('#report-edit-markdownSummary .cm-editor') as HTMLElement)
+      ?.state.doc.toString()).toBe('**Nowa wersja CRM.**');
     buttons[2].click();
     expect(save).toHaveBeenCalledWith({
       expectedRevisionSha256: 'abc123', markdownSummary: '**Nowa wersja CRM.**',
@@ -46,3 +51,8 @@ describe('AnalysisReportEditorComponent', () => {
     expect(report.markdownSummary).toBe('Pierwsza wersja.');
   });
 });
+
+function replaceMarkdown(host: HTMLElement, markdown: string): void {
+  const view = EditorView.findFromDOM(host.querySelector('.cm-editor') as HTMLElement)!;
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: markdown } });
+}

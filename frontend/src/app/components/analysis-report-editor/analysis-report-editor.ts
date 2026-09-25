@@ -1,11 +1,11 @@
 import { Component, computed, input, output, signal } from '@angular/core';
-import { TextFieldModule } from '@angular/cdk/text-field';
 import { AnalysisReport, AnalysisReportEditRequest } from '../../core/models/analysis.models';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
+import { MarkdownSourceEditorComponent } from '../markdown-source-editor/markdown-source-editor';
 
 @Component({
   selector: 'app-analysis-report-editor',
-  imports: [MarkdownContentComponent, TextFieldModule],
+  imports: [MarkdownContentComponent, MarkdownSourceEditorComponent],
   templateUrl: './analysis-report-editor.html',
   styleUrl: './analysis-report-editor.scss'
 })
@@ -32,8 +32,8 @@ export class AnalysisReportEditorComponent {
     return this.drafts()[part.id] ?? part.markdown;
   }
 
-  update(partId: string, event: Event): void {
-    this.drafts.update(drafts => ({ ...drafts, [partId]: (event.target as HTMLTextAreaElement).value }));
+  update(partId: string, value: string): void {
+    this.drafts.update(drafts => ({ ...drafts, [partId]: value }));
   }
 
   submit(): void {
