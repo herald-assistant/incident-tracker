@@ -159,6 +159,11 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         ));
         assertContainsAll(writeReport, List.of(
                 "AnalysisReport",
+                "## OVERVIEW Dla Swagger/OpenAPI",
+                "**Summary:** <jedno zdanie>",
+                "**Description:** <jeden lub dwa krotkie akapity>",
+                "okolo 20 slowach",
+                "zwykle okolo 100 slow",
                 "Persistence Mapping Input",
                 "Integration Boundary Input",
                 "report_get_current",

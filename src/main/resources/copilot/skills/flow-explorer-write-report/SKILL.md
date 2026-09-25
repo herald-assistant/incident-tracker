@@ -120,6 +120,33 @@ Kazde `report_upsert_section` musi miec:
 osobny blok `overview`. Pozostale aktywne sekcje raportu zostana pokazane jako
 `sections`.
 
+## OVERVIEW Dla Swagger/OpenAPI
+
+`OVERVIEW.markdown` ma byc gotowym szkicem dwoch pol dokumentacji biezacego
+endpointu. Zachowaj dokladnie ten uklad, rowniez w fallback JSON:
+
+```markdown
+**Summary:** <jedno zdanie>
+
+**Description:** <jeden lub dwa krotkie akapity>
+```
+
+`Summary` ma w okolo 20 slowach nazwac cel operacji i jej najwazniejsze efekty
+funkcjonalne. `Description` ma zwykle okolo 100 slow. Wyjasnij, kto lub co
+uruchamia operacje, kiedy mozna jej uzyc, jaki stan albo rezultat powstaje,
+jakie materialne reguly, odmowy, efekty uboczne lub opoznione skutki zmieniaja
+jej znaczenie. Gdy zlozony endpoint wymaga wiecej slow do oddania tych zachowan,
+rozwin `Description`; liczba slow jest wskazowka, nie twardym limitem.
+
+Pisz o zaobserwowanym obecnym zachowaniu, nie o propozycji przyszlej zmiany.
+Nie powielaj pelnej listy pol request/response, kodow HTTP ani szczegolowego
+przebiegu z aktywnych sekcji. Nie dodawaj do tych dwoch pol source refs, nazw
+klas i metod, pewnosci ani zastrzezen technicznych. Potwierdzone fakty
+uzasadnij przez `meta.references`, a nierozstrzygniete kwestie umiesc w
+`meta.visibilityLimits`, `meta.openQuestions` albo `meta.gaps`. Istniejacy opis
+OpenAPI traktuj jako wskazowke do sprawdzenia w evidence, nie jako samodzielny
+dowod aktualnego zachowania.
+
 ## Fallback JSON Contract
 
 Jezeli report tools nie sa dostepne albo zapis raportu sie nie powiedzie,
@@ -384,6 +411,8 @@ w sekcji opisuje brak tylko dla tej sekcji.
 Przed zakonczeniem sprawdz:
 
 - raport zawiera `OVERVIEW` i tylko aktywne sekcje z `sectionModes`,
+- `OVERVIEW.markdown` zawiera osobne `Summary` i `Description` oparte na
+  potwierdzonym zachowaniu, z dlugoscia dobrana do zlozonosci endpointu,
 - sekcje `OFF` nie zostaly zapisane ani w raporcie, ani w fallback JSON,
 - aktywne `PERSISTENCE` opiera sie na `PersistenceMappingSummary`, jezeli endpoint czyta albo zmienia dane,
 - aktywne `INTEGRATIONS` opieraja sie na `IntegrationBoundarySummary`, jezeli flow ma zewnetrzne granice,

@@ -31,6 +31,10 @@ oraz pokazac wynik dokumentacyjny dla analityka albo testera.
   wycofanych goals; nie mapuj ich cicho na `DEEP_DISCOVERY`.
 - Domyslny MVP opisuje persistence code-first i nie wlacza DB tools jako
   runtime data diagnostics.
+- `OVERVIEW.markdown` initial result zawiera oddzielne `Summary` (okolo 20
+  slow) i `Description` (zwykle okolo 100 slow, wiecej przy zlozonym
+  zachowaniu) jako szkic do recznego przeniesienia do Swagger/OpenAPI.
+  Source refs, limity widocznosci i pytania pozostaja w meta raportu.
 
 ## Weryfikacja
 

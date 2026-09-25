@@ -47,6 +47,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Ten prompt przekazuje dane biezacego runu"));
         assertTrue(prompt.contains("Zasady pracy, wybor tools, report tools, fallback JSON i format wyniku pochodza z runtime skilli"));
         assertTrue(prompt.contains("`flow-explorer-write-report` jest jedynym wlascicielem finalnego `AnalysisReport`"));
+        assertTrue(prompt.contains("`OVERVIEW.markdown` ma zawierac dwa osobne pola"));
+        assertTrue(prompt.contains("`**Summary:**` (jedno zdanie, okolo 20 slow)"));
+        assertTrue(prompt.contains("`**Description:**` (zwykle okolo 100 slow, wiecej gdy zlozonosc endpointu tego wymaga)"));
         assertFalse(prompt.contains("report_upsert_section"));
         assertFalse(prompt.contains("report_update_meta"));
         assertFalse(prompt.contains("awaryjny poprawny JSON"));

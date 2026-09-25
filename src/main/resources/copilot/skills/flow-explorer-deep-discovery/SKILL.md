@@ -56,8 +56,10 @@ najwazniejsze dla zrozumienia endpointu:
 
 Dla aktywnych sekcji kieruj material tak:
 
-- `OVERVIEW`: pokaz cel endpointu, najwazniejszy przebieg i najwieksza luke
-  widocznosci, jezeli moze zmienic interpretacje.
+- `OVERVIEW`: przygotuj material na krotkie `Summary` i szersze `Description`
+  obecnego zachowania endpointu: cel, wynik, materialne warunki i skutki.
+  Luki widocznosci przekaz osobno; finalny format nalezy do
+  `flow-explorer-write-report`.
 - `FUNCTIONAL_FLOW`: podkresl decyzje, warianty, kalkulacje, statusy, routing i
   skutki dla procesu.
 - `VALIDATIONS`: podkresl warunki dopuszczenia, odrzucenia, edge case'y i

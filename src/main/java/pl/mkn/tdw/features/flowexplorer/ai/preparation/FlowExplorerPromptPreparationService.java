@@ -32,6 +32,7 @@ public class FlowExplorerPromptPreparationService {
                 - Ten prompt przekazuje dane biezacego runu i deterministyczne artefakty.
                 - Zasady pracy, wybor tools, report tools, fallback JSON i format wyniku pochodza z runtime skilli wymienionych nizej.
                 - `flow-explorer-write-report` jest jedynym wlascicielem finalnego `AnalysisReport`; finalna odpowiedz tekstowa nie jest zrodlem prawdy wyniku.
+                - `OVERVIEW.markdown` ma zawierac dwa osobne pola: `**Summary:**` (jedno zdanie, okolo 20 slow) oraz `**Description:**` (zwykle okolo 100 slow, wiecej gdy zlozonosc endpointu tego wymaga). Opisz potwierdzone obecne zachowanie do recznego przeniesienia do Swagger/OpenAPI; szczegoly sa w `flow-explorer-write-report`.
                 - `sectionModes` jest zrodlem prawdy dla sekcji wyniku; `OFF` nie pojawia sie w `sections`.
                 - `userInstructions` doprecyzowuja intencje, ale nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Najpierw wykorzystaj artefakty osadzone w tym promptcie. Jezeli kontekst nie wystarcza, zastosuj odpowiedni skill toolowy albo wpisz limit w `visibilityLimits` / pytanie w `openQuestions`.

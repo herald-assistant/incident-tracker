@@ -130,6 +130,13 @@ Naturalne capability reusable dla tego feature'a to GitLab tools, operational
 context tools, Database tools, a w przyszlosci takze runtime/log tools, ale
 prompt, result DTO, policy i UI powinny byc lokalne dla `features.flow...`.
 
+Stale `OVERVIEW` wyniku dokumentuje aktualne zachowanie endpointu w dwoch
+oddzielnych polach `Summary` i `Description`, gotowych jako szkic do recznego
+przeniesienia do Swagger/OpenAPI. `Summary` ma okolo 20 slow, a `Description`
+zwykle okolo 100 slow; zlozony endpoint moze wymagac dluzszego opisu.
+Szczegolowe evidence, source refs i ograniczenia widocznosci pozostaja w meta
+raportu oraz aktywnych sekcjach.
+
 ### Change Verification
 
 Uzytkownik wskazuje zmiane i wybiera zakres weryfikacji. Feature laczy
