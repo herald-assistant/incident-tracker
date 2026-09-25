@@ -98,7 +98,8 @@ publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
 przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
 readiness gate, hidden GitLab i report scope, default-deny allowliste,
 goal-driven targeted research bez feature'owego limitu liczby wywolan oraz
-cztery platformowe report tools. Przed sesja powstaje scaffold
+cztery platformowe report tools dla initial result. Follow-up udostepnia
+dodatkowo `report_patch_section`. Przed sesja powstaje scaffold
 `AnalysisReport` ograniczony do aktywnych sekcji. Materialny brak child route, komponentu, template,
 formularza, modala, serwisu, state logic albo klienta z zatwierdzonego
 repository scope wymaga proby deterministycznego route albo symbol slice, a
@@ -556,15 +557,15 @@ Na dzisiaj projekt ma:
   tool evidence, activity, usage, source revision, result i report. Surowe
   pliki logical artifacts i wewnetrzny GitLab scope nie sa czescia odpowiedzi.
 - `GET /api/ui-explorer/jobs/{jobId}/export`
-  Zwraca sanitizowany `tdw.ui-explorer-export/v5` dla `COMPLETED/PARTIAL` z
+  Zwraca sanitizowany `tdw.ui-explorer-export/v6` dla `COMPLETED/PARTIAL` z
   resultem i reportem. Potrafi odtworzyc portable payload z lokalnej historii
   po restarcie, ale nie ujawnia wewnetrznej koperty `run.json`.
 - `POST /api/ui-explorer/imports`
-  Waliduje dokladnie aktualny schema/version/payload/result contract, spojny
-  screen i source revision, ponownie sanitizuje niezaufany dokument, sklada
+  Waliduje aktualny v6 lub legacy v5 schema/version/payload/result contract,
+  spojny screen i source revision, ponownie sanitizuje niezaufany dokument, sklada
   report od nowa, usuwa dostarczony `preparedPrompt` i zapisuje wynik pod nowym
   id w Analysis History. Import jest read-only, bez sesji Copilota,
-  continuation, resume i migracji starszych wersji.
+  continuation i resume.
 - `POST /api/analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request jest
   multipart/form-data i niesie `source`, opcjonalny `problemDescription`,

@@ -452,6 +452,13 @@ Model zapisuje wynik przez platformowe report tools:
 Report tools sa session-bound. Model-facing schema nie przyjmuje `reportId`;
 scope pochodzi z hidden `ToolContext`, razem z feature name i lista
 dozwolonych sekcji. Tool odrzuca sekcje spoza `allowedReportSectionIds`.
+`report_get_current(sectionId)` moze odczytac body jednej dozwolonej sekcji.
+Follow-up czterech feature'ow z czatem udostepnia dodatkowo
+`report_patch_section` do celowanej korekty po jawnej prosbie operatora.
+Tool wymaga aktualnego digestu i jednoznacznego fragmentu.
+Nieaktualny digest, brak lub wielokrotne wystapienie fragmentu nie zmienia
+raportu.
+
 Rezultaty mutacji i `report_get_current` nie serializuja ponownie pelnego
 `AnalysisReport`. Zwracaja zwarty manifest z naglowkami, section ids, order,
 rozmiarami i podgladami, licznikami metadata, sumami SHA-256 oraz neutralna

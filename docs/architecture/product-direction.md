@@ -78,6 +78,10 @@ kopiowaniem lub pobraniem Markdown oraz Markdown + Meta. Wspolny renderer
 `AnalysisReport` zachowuje kolejnosc sekcji i oddziela tresc od referencji,
 limitow widocznosci, otwartych pytan, luk i ostrzezen. Feature'y bez
 `AnalysisReport` przygotowuja ten sam kontrakt dokumentu przez adapter.
+Menu ma cztery akcje w stalej kolejnosci: kopiuj Markdown, kopiuj Markdown +
+Meta, pobierz Markdown, pobierz Markdown + Meta. Warianty kopii i pobrania maja
+identyczna tresc; bez wyniku akcje sa niedostepne. Udostepniany dokument nie
+zawiera promptu, tokenow, kosztu ani technicznych danych runu.
 Menu i jego overlay uzywaja globalnych tokenow wizualnych platformy.
 Archiwalny JSON jest dostepny w Analysis History; dedykowany CSV ocen Delivery
 pozostaje formatem danych dla trendow.
