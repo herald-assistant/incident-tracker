@@ -15,6 +15,9 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationExcept
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSectionEdit;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -41,6 +44,40 @@ class AnalysisRunHistoryServiceTest {
             .addModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .build();
+
+    @Test
+    void shouldSaveEditedLocalRunWithUpdatedEnvelope() {
+        var store = new CapturingLocalAnalysisRunStore();
+        var original = record("analysis-1", true);
+        var updated = recordWithPrompt("analysis-1", "Poprawiony raport CRM");
+        store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), original);
+        var handler = new CapturingChatHandler("incident-analysis", updated);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(handler));
+        var edit = new AnalysisReportEditRequest("abc123", null,
+                List.of(new AnalysisReportSectionEdit("OVERVIEW", "Poprawiona sprawa CRM.")));
+
+        var detail = service.editReport(" analysis-1 ", edit);
+
+        assertEquals(edit, handler.editRequest);
+        assertEquals(original, handler.record);
+        assertEquals(updated, store.records.get("analysis-1"));
+        assertEquals(CHAT_UPDATED_AT, detail.updatedAt());
+        assertEquals("Poprawiony raport CRM", detail.exportEnvelope().at("/payload/job/preparedPrompt").asText());
+    }
+
+    @Test
+    void shouldRejectEditingLocalRunWithoutContinuation() {
+        var store = new CapturingLocalAnalysisRunStore();
+        var original = record("analysis-1", false);
+        store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), original);
+        var handler = new CapturingChatHandler("incident-analysis", original);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(handler));
+
+        assertThrows(AnalysisReportEditException.class, () -> service.editReport("analysis-1",
+                new AnalysisReportEditRequest("abc123", null, List.of())));
+        assertNull(handler.editRequest);
+        assertEquals(original, store.records.get("analysis-1"));
+    }
 
     @Test
     void shouldListRunsFromIndexOnly() throws Exception {
@@ -419,6 +456,17 @@ class AnalysisRunHistoryServiceTest {
         private LocalAnalysisRunIndexEntry indexEntry;
         private LocalAnalysisRunRecord record;
         private String message;
+        private AnalysisReportEditRequest editRequest;
+
+        @Override
+        public LocalAnalysisRunChatResult editReport(LocalAnalysisRunIndexEntry indexEntry,
+                                                     LocalAnalysisRunRecord record,
+                                                     AnalysisReportEditRequest request) {
+            this.indexEntry = indexEntry;
+            this.record = record;
+            this.editRequest = request;
+            return new LocalAnalysisRunChatResult(updatedRecord, CHAT_UPDATED_AT);
+        }
 
         private CapturingChatHandler(String feature, LocalAnalysisRunRecord updatedRecord) {
             this.feature = feature;

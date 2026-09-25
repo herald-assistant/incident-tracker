@@ -295,8 +295,13 @@
       @if (job(); as currentJob) {
         <div class="analysis-workspace-grid">
           <div class="analysis-workspace-main">
-            @if (currentJob.result) {
-              <app-analysis-final-result
+              @if (editingReport() && currentJob.report) {
+                <app-analysis-report-editor [report]="currentJob.report" [saving]="reportSaving()" [error]="reportEditError()"
+                  (save)="editReport($event)" (cancel)="editingReport.set(false)" />
+              } @else if (currentJob.result) {
+                <app-analysis-final-result
+                  [editable]="canUseChat() && !!currentJob.report?.revisionSha256"
+                  (editRequested)="reportEditError.set(''); editingReport.set(true)"
                 [result]="currentJob.result"
                 [report]="currentJob.report ?? null"
                 [status]="currentJob.status"

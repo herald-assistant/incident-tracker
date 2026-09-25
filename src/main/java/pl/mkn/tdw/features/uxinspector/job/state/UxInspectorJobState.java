@@ -7,6 +7,10 @@ import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
@@ -208,6 +212,28 @@ public final class UxInspectorJobState {
     public synchronized String copilotSessionId() { return copilotSessionId; }
     public synchronized UxInspectorJobStartRequest initialRequest() { return request; }
     public synchronized AnalysisReport currentReport() { return report; }
+    public synchronized UxInspectorJobStateSnapshot editReport(AnalysisReportEditRequest edit,
+            java.util.function.Function<AnalysisReport, pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping> projector) {
+        if ((status != UxInspectorJobStatus.COMPLETED && status != UxInspectorJobStatus.PARTIAL)
+                || report == null || result == null || !chatAvailability().available()) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Report editing requires a completed, continuable analysis without an active follow-up.");
+        }
+        var candidate = AnalysisReportManualEditor.apply(report, edit);
+        var mapping = projector.apply(candidate);
+        if (mapping == null || mapping.report() == null || mapping.result() == null) {
+            throw new AnalysisReportEditException("REPORT_EDIT_INVALID", UserFacingErrorType.UNPROCESSABLE_ENTITY,
+                    "Edited report failed UX Inspector validation.");
+        }
+        report = mapping.report(); result = mapping.result(); updatedAt = Instant.now();
+        return snapshot();
+    }
+
+    public synchronized void restoreReport(UxInspectorJobStateSnapshot before) {
+        report = before.report();
+        result = before.result();
+        updatedAt = before.updatedAt();
+    }
 
     private boolean hasActiveAssistant() { return chatMessages.stream().anyMatch(AnalysisChatMessageState::activeAssistant); }
     private AnalysisChatMessageState assistantMessage(String id) {

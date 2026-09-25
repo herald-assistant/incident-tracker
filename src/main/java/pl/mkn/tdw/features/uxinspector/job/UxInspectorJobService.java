@@ -20,6 +20,8 @@ import pl.mkn.tdw.features.uxinspector.job.state.UxInspectorJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
@@ -109,6 +111,32 @@ public class UxInspectorJobService {
         if (value == null) throw new UxInspectorJobException("UX_INSPECTOR_JOB_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
                 "UX Inspector job was not found.");
         return value.snapshot();
+    }
+
+    public UxInspectorJobStateSnapshot editReport(String jobId, AnalysisReportEditRequest edit) {
+        var normalized = normalize(jobId);
+        var state = jobs.get(normalized);
+        if (state == null) throw new UxInspectorJobException("UX_INSPECTOR_JOB_NOT_FOUND",
+                UserFacingErrorType.NOT_FOUND, "UX Inspector job was not found.");
+        var context = targetContexts.get(normalized);
+        if (context == null) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Live context is unavailable. Open the result from Analysis History.");
+        }
+        try (var lease = operationGuard.tryAcquire(normalized).orElseThrow(() ->
+                new AnalysisReportEditException("REPORT_EDIT_BUSY", UserFacingErrorType.CONFLICT,
+                        "Another operation is in progress for this analysis."))) {
+            var before = state.snapshot();
+            var updated = state.editReport(edit, candidate -> followUpReportProjection.project(
+                    before.report(), candidate, state.initialRequest().capture(), context, before.usage()));
+            try {
+                localRunPersistence.persistRunSnapshot(updated, authRefs.get(normalized), state.copilotSessionId());
+            } catch (RuntimeException exception) {
+                state.restoreReport(before);
+                throw exception;
+            }
+            return updated;
+        }
     }
 
     public UxInspectorJobStateSnapshot startChatMessage(String jobId, UxInspectorChatMessageRequest request) {

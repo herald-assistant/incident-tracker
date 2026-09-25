@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { finalize, Observable } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Component,
@@ -20,6 +20,7 @@ import {
   ApiErrorResponse,
   AnalysisJobInputOptionsResponse,
   AnalysisJobStateSnapshot,
+  AnalysisReportEditRequest,
   AnalysisLogSource,
   ExportState,
   GitHubAuthStatus,
@@ -55,8 +56,10 @@ import {
   reasoningEffortsForAiModel
 } from '../../core/utils/analysis-ai-model-options.utils';
 import { appendOptimisticChatTurn } from '../../core/utils/analysis-chat-optimistic.utils';
+import { reportEditErrorMessage } from '../../core/utils/report-edit-error.utils';
 import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
+import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
@@ -102,6 +105,7 @@ const DEFAULT_ANALYSIS_INPUT_OPTIONS: AnalysisJobInputOptionsResponse = {
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
     AnalysisFinalResultComponent,
+    AnalysisReportEditorComponent,
     AnalysisFollowUpChatComponent,
     AnalysisStepsPanelComponent
   ],
@@ -136,6 +140,9 @@ export class AnalysisConsoleComponent {
   readonly loadingInputLabel = signal('');
   readonly transportError = signal<TransportErrorState | null>(null);
   readonly job = signal<AnalysisJobStateSnapshot | null>(null);
+  readonly editingReport = signal(false);
+  readonly reportSaving = signal(false);
+  readonly reportEditError = signal('');
   readonly exportState = signal<ExportState | null>(null);
   readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
@@ -259,6 +266,24 @@ export class AnalysisConsoleComponent {
       !hasInProgressChat(currentJob)
     );
   });
+  editReport(request: AnalysisReportEditRequest): void {
+    const currentJob = this.job();
+    const state = this.exportState();
+    if (!currentJob?.report || !state || !this.canUseChat() || this.reportSaving()) return;
+    this.reportSaving.set(true);
+    this.reportEditError.set('');
+    const operation: Observable<AnalysisJobStateSnapshot | LocalAnalysisRunDetailResponse> = state.origin === 'local' && state.localRunId
+      ? this.historyApi.editReport(state.localRunId, request)
+      : this.analysisApi.editReport(currentJob.analysisId, request);
+    operation.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.reportSaving.set(false))).subscribe({
+      next: response => {
+        if ('exportEnvelope' in response) this.applyLocalAnalysisRun(response);
+        else this.applyJob(response, { ...state, origin: 'live' });
+        this.editingReport.set(false);
+      },
+      error: error => this.reportEditError.set(reportEditErrorMessage(error))
+    });
+  }
   readonly workflowIsRunning = computed(() => {
     const currentJob = this.job();
     return Boolean(currentJob && !isTerminalStatus(currentJob.status));

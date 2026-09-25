@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import {
   AnalysisChatMessageRequest,
+  AnalysisReportEditRequest,
   AnalysisJobInputOptionsResponse,
   AnalysisJobStateSnapshot,
   AnalysisStartRequest
@@ -28,6 +29,11 @@ export class AnalysisApiService {
     return this.http.get<AnalysisJobStateSnapshot>(
       `${this.baseUrl}/jobs/${encodeURIComponent(analysisId)}`
     );
+  }
+
+  editReport(analysisId: string, request: AnalysisReportEditRequest): Observable<AnalysisJobStateSnapshot> {
+    return this.http.patch<AnalysisJobStateSnapshot>(
+      `${this.baseUrl}/jobs/${encodeURIComponent(analysisId)}/report`, request);
   }
 
   sendChatMessage(

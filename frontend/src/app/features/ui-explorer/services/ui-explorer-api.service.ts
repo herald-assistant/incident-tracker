@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { AnalysisReportEditRequest } from '../../../core/models/analysis.models';
 
 import {
   UiExplorerInputOptionsResponse,
@@ -40,6 +41,11 @@ export class UiExplorerApiService {
     return this.http.get<UiExplorerJobStateSnapshot>(
       `/api/ui-explorer/jobs/${encodeURIComponent(jobId)}`
     );
+  }
+
+  editReport(jobId: string, request: AnalysisReportEditRequest): Observable<UiExplorerJobStateSnapshot> {
+    return this.http.patch<UiExplorerJobStateSnapshot>(
+      `/api/ui-explorer/jobs/${encodeURIComponent(jobId)}/report`, request);
   }
 
   sendChatMessage(jobId: string, message: string): Observable<UiExplorerJobStateSnapshot> {

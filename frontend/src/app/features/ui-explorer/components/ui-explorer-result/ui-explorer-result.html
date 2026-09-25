@@ -1,5 +1,7 @@
 <section class="analysis-card ui-explorer-result" aria-label="Wynik UI Explorer">
   <app-analysis-result-header
+    [editable]="editable()"
+    (editRequested)="editRequested.emit()"
     [title]="report().header || 'UI Explorer result'"
     [context]="report().subHeader"
     [confidence]="report().meta.confidence"

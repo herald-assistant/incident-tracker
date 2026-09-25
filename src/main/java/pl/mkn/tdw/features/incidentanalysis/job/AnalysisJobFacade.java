@@ -29,6 +29,9 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
@@ -82,6 +85,25 @@ public class AnalysisJobFacade {
 
     public AnalysisJobStateSnapshot getAnalysis(String analysisId) {
         return jobOrThrow(analysisId).snapshot();
+    }
+
+    public AnalysisJobStateSnapshot editReport(String analysisId, AnalysisReportEditRequest edit) {
+        var job = jobOrThrow(analysisId);
+        try (var lease = operationGuard.tryAcquire(analysisId).orElseThrow(() ->
+                new AnalysisReportEditException("REPORT_EDIT_BUSY", UserFacingErrorType.CONFLICT,
+                        "Another operation is in progress for this analysis."))) {
+            var before = job.snapshot();
+            var updated = job.editReport(edit,
+                    candidate -> reportProjection.project(before.result(), before.report(), candidate));
+            try {
+                localRunPersistence.persistRunSnapshot(updated, job.completedAiRequestForEdit(),
+                        job.copilotSessionIdForEdit());
+            } catch (RuntimeException exception) {
+                job.restoreReport(before);
+                throw exception;
+            }
+            return updated;
+        }
     }
 
     public AnalysisJobStateSnapshot startChatMessage(String analysisId, AnalysisChatMessageRequest request) {

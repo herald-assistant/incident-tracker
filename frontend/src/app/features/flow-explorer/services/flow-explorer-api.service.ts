@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { AnalysisReportEditRequest } from '../../../core/models/analysis.models';
 
 import {
   FlowExplorerChatMessageRequest,
@@ -50,6 +51,11 @@ export class FlowExplorerApiService {
     return this.http.get<FlowExplorerJobStateSnapshot>(
       `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}`
     );
+  }
+
+  editReport(jobId: string, request: AnalysisReportEditRequest): Observable<FlowExplorerJobStateSnapshot> {
+    return this.http.patch<FlowExplorerJobStateSnapshot>(
+      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/report`, request);
   }
 
   sendChatMessage(

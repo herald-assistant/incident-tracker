@@ -1,6 +1,8 @@
 @if (display(); as analysisResult) {
   <section class="final-analysis">
     <app-analysis-result-header
+      [editable]="editable()"
+      (editRequested)="editRequested.emit()"
       [title]="status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza'"
       [context]="analysisResult.subTitle"
       [confidence]="analysisResult.confidence"

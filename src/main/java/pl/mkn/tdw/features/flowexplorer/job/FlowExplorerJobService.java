@@ -29,6 +29,9 @@ import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
 import java.util.Map;
@@ -157,6 +160,24 @@ public class FlowExplorerJobService {
 
     public FlowExplorerJobStateSnapshot getJob(String jobId) {
         return jobOrThrow(jobId).snapshot();
+    }
+
+    public FlowExplorerJobStateSnapshot editReport(String jobId, AnalysisReportEditRequest edit) {
+        var job = jobOrThrow(jobId);
+        try (var lease = operationGuard.tryAcquire(jobId).orElseThrow(() ->
+                new AnalysisReportEditException("REPORT_EDIT_BUSY", UserFacingErrorType.CONFLICT,
+                        "Another operation is in progress for this analysis."))) {
+            var before = job.snapshot();
+            var updated = job.editReport(edit, candidate -> followUpReportProjection.project(
+                    before.result(), before.report(), candidate, before.sectionModes()));
+            try {
+                localRunPersistence.persistRunSnapshot(updated, job.authRefForChat(), job.copilotSessionId());
+            } catch (RuntimeException exception) {
+                job.restoreReport(before);
+                throw exception;
+            }
+            return updated;
+        }
     }
 
     public FlowExplorerJobStateSnapshot startChatMessage(String jobId, FlowExplorerChatMessageRequest request) {

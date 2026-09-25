@@ -751,6 +751,29 @@ article.flow-explorer-select-option {
   justify-content: flex-end;
 }
 
+.flow-explorer-result__edit {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.flow-explorer-result__edit:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-alt);
+  color: var(--primary-dark);
+}
+
+.flow-explorer-result__edit:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .flow-explorer-result__copy-button {
   gap: 8px;
   min-height: 34px;

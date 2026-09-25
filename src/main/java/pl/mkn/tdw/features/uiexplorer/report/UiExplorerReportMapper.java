@@ -125,7 +125,8 @@ public class UiExplorerReportMapper {
                 StringUtils.hasText(report.subHeader()) ? report.subHeader().trim() : componentLabel(context),
                 summary,
                 safeSections,
-                safeReportMeta
+                safeReportMeta,
+                report.manualEdit()
         );
         var result = new UiExplorerResultResponse(
                 context != null ? context.screen() : null,

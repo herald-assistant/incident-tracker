@@ -35,7 +35,8 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
             GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
             CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
-            CopilotReportToolNames.GET_CURRENT, CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.GET_CURRENT, CopilotReportToolNames.READ_SECTION_CHUNK,
+            CopilotReportToolNames.UPSERT_SECTION,
             CopilotReportToolNames.PATCH_SECTION, CopilotReportToolNames.UPDATE_HEADER,
             CopilotReportToolNames.UPDATE_META
     );

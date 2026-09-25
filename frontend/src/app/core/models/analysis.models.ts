@@ -223,6 +223,14 @@ export interface AnalysisReport {
   markdownSummary: string;
   sections: AnalysisReportSection[];
   meta: AnalysisReportMeta;
+  revisionSha256?: string;
+  manualEdit?: { revision: number; editedAt: string; changedParts: string[] } | null;
+}
+
+export interface AnalysisReportEditRequest {
+  expectedRevisionSha256: string;
+  markdownSummary: string | null;
+  sections: { sectionId: string; markdown: string }[];
 }
 
 export interface AnalysisJobStepResponse {

@@ -8,6 +8,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditGuidance;
 
 @Component
 @RequiredArgsConstructor
@@ -17,7 +18,9 @@ public class CopilotIncidentFollowUpRunAssembler {
             W follow-up odpowiadaj na biezace pytanie operatora. Zmieniaj zapisany raport tylko wtedy,
             gdy najnowsza wiadomosc operatora jawnie prosi o jego aktualizacje; sama prosba o wyjasnienie,
             dodatkowy dowod albo zmiane odpowiedzi w rozmowie nie upowaznia do mutacji raportu.
-            Przed edycja odczytaj potrzebna sekcje przez report_get_current(sectionId). Dla malej,
+            Przed edycja odczytaj potrzebna sekcje przez report_get_current(sectionId).
+            Gdy tool zwraca tylko manifest duzej sekcji, uzyj report_read_section_chunk od 0
+            do hasMore=false i sprawdz digest kazdego fragmentu. Dla malej,
             jednoznacznej korekty uzyj report_patch_section z digestem i dokladnym starym fragmentem;
             dla przebudowy sekcji report_upsert_section, a dla naglowka lub globalnych metadata
             report_update_header albo report_update_meta. Zachowaj niezmieniane pola i sekcje.
@@ -47,7 +50,8 @@ public class CopilotIncidentFollowUpRunAssembler {
                 toolAccessPolicy,
                 request.options()
         ).withDurableSystemInstructions(FOLLOW_UP_REPORT_GUIDANCE);
-        var prompt = request.message() != null ? request.message().trim() : "";
+        var prompt = (request.message() != null ? request.message().trim() : "")
+                + AnalysisReportManualEditGuidance.forFollowUp(request.report());
 
         return runRequestFactory.create(
                 request.correlationId(),

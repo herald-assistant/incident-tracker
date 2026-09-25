@@ -59,7 +59,7 @@ public class UxInspectorReportMapper {
         var safeSection = new AnalysisReportSection(UxInspectorReportFactory.SECTION_ID, "Odpowiedz", 1,
                 sourceSection.markdown().trim(), canonicalSectionMeta);
         var safeReport = new AnalysisReport(report.reportId(), report.header().trim(), context.view().label(),
-                report.markdownSummary().trim(), List.of(safeSection), canonicalReportMeta);
+                report.markdownSummary().trim(), List.of(safeSection), canonicalReportMeta, report.manualEdit());
         var targetLabel = firstText(capture.target().accessibleName(), capture.target().text(), capture.target().tag());
         var result = new UxInspectorResultResponse(capture.captureId(), targetLabel, context.view(),
                 context.sourceRevision(), context.status(), safeReport.markdownSummary(), safeSection.markdown(),

@@ -1,5 +1,7 @@
 <section class="analysis-card ux-inspector-result" aria-label="Wynik UX Inspectora">
   <app-analysis-result-header
+    [editable]="editable()"
+    (editRequested)="editRequested.emit()"
     [title]="report().header || 'UX Inspector result'"
     [context]="report().subHeader"
     [confidence]="resultMeta().confidence"

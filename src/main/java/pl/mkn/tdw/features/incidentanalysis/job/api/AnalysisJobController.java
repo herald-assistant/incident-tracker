@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import pl.mkn.tdw.features.incidentanalysis.job.AnalysisJobFacade;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
 
 @RestController
 @RequestMapping({
@@ -54,6 +56,12 @@ public class AnalysisJobController {
     @GetMapping("/{analysisId}")
     public AnalysisJobStateSnapshot get(@PathVariable String analysisId) {
         return analysisJobFacade.getAnalysis(analysisId);
+    }
+
+    @PatchMapping("/{analysisId}/report")
+    public AnalysisJobStateSnapshot editReport(@PathVariable String analysisId,
+                                               @RequestBody AnalysisReportEditRequest request) {
+        return analysisJobFacade.editReport(analysisId, request);
     }
 
     @PostMapping("/{analysisId}/chat/messages")

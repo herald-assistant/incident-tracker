@@ -15,6 +15,8 @@ import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisResultResponse;
 import pl.mkn.tdw.features.incidentanalysis.job.AnalysisJobFacade;
 import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobInputException;
 import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSectionEdit;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,6 +40,19 @@ class AnalysisJobControllerTest {
 
     @MockitoBean
     private AnalysisJobFacade analysisJobFacade;
+
+    @Test
+    void shouldRouteConditionalReportEdit() throws Exception {
+        mockMvc.perform(patch("/api/analysis/jobs/job-123/report")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"expectedRevisionSha256":"abc123","sections":[
+                                  {"sectionId":"OVERVIEW","markdown":"Poprawiona sprawa CRM."}]}
+                                """))
+                .andExpect(status().isOk());
+        verify(analysisJobFacade).editReport("job-123", new AnalysisReportEditRequest("abc123", null,
+                List.of(new AnalysisReportSectionEdit("OVERVIEW", "Poprawiona sprawa CRM."))));
+    }
 
     @Test
     void shouldStartAnalysisJob() throws Exception {

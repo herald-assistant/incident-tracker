@@ -19,10 +19,52 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class CopilotReportToolsTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void shouldReadLargeUtf8SectionInBoundedChunks() throws JsonProcessingException {
+        var markdown = "Klient CRM założył zgłoszenie 🧩.\n".repeat(500);
+        var store = new CopilotReportSessionStore();
+        store.register(new AnalysisReport("report-1", "CRM", "Sprawa klienta", "Podsumowanie",
+                List.of(new AnalysisReportSection("OVERVIEW", "Opis", 0, markdown, AnalysisReportMeta.empty())),
+                AnalysisReportMeta.empty()));
+        var tools = new CopilotReportTools(store);
+        var inline = tools.getCurrentReport("OVERVIEW", "Odczyt.", toolContext());
+        assertNull(inline.section());
+        var assembled = new StringBuilder();
+        Integer index = 0;
+        String digest = null;
+        do {
+            var chunk = tools.readSectionChunk("OVERVIEW", index, "Odczyt.", toolContext());
+            assertEquals("ok", chunk.status());
+            assertTrue(objectMapper.writeValueAsBytes(chunk).length < 8_192);
+            if (digest == null) digest = chunk.markdownSha256();
+            assertEquals(digest, chunk.markdownSha256());
+            assembled.append(chunk.markdown());
+            index = chunk.nextChunkIndex();
+        } while (index != null);
+        assertEquals(markdown, assembled.toString());
+        assertEquals("Podsumowanie", tools.readSectionChunk("markdownSummary", 0,
+                "Odczyt podsumowania.", toolContext()).markdown());
+        assertEquals("rejected", tools.readSectionChunk("TECHNICAL_HANDOFF", 0,
+                "Niedozwolone.", toolContext()).status());
+    }
+
+    @Test
+    void shouldKeepEscapedJsonChunkBelowEightKilobytes() throws JsonProcessingException {
+        var store = new CopilotReportSessionStore();
+        store.register(new AnalysisReport("report-1", "CRM", "Sprawa klienta", "Podsumowanie",
+                List.of(new AnalysisReportSection("OVERVIEW", "Opis", 0, "\u0001".repeat(10_000),
+                        AnalysisReportMeta.empty())), AnalysisReportMeta.empty()));
+        var chunk = new CopilotReportTools(store).readSectionChunk("OVERVIEW", 0,
+                "Odczyt.", toolContext());
+        assertEquals("ok", chunk.status());
+        assertTrue(objectMapper.writeValueAsBytes(chunk).length < 8_192);
+    }
 
     @Test
     void shouldRegisterReportToolCallbacksWithoutModelFacingReportId() throws JsonProcessingException {
@@ -215,7 +257,8 @@ class CopilotReportToolsTest {
         assertEquals(sectionIds, result.manifest().validation().presentSectionIds());
         assertEquals(8, result.manifest().sections().size());
         assertEquals(64, result.manifest().sections().get(0).markdown().sha256().length());
-        assertTrue(serialized.length() < 12_000, "Manifest should stay below the SDK large-output threshold");
+        assertTrue(objectMapper.writeValueAsBytes(result).length < 8_192,
+                "Manifest should stay below the SDK large-output threshold");
         assertFalse(serialized.contains("x".repeat(1_000)));
         assertEquals(report, store.current("report-1").orElseThrow());
     }

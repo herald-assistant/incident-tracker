@@ -23,7 +23,10 @@ Obecnie obejmuje:
 - `chat/` jako neutralny stan wiadomosci oraz capture evidence, activity i
   feedback, bez promptu, session id, tool policy i semantyki feature'a,
 - `report/` jako neutralny model raportu analitycznego, bez semantyki
-  konkretnego feature'a ani runtime AI.
+  konkretnego feature'a ani runtime AI. Warunkowa reczna edycja zmienia tylko
+  Markdown istniejących czesci i zachowuje metadata; `manualEdit` oznacza
+  rewizje operatora, a `revisionSha256` chroni przed nadpisaniem nowszego
+  raportu.
 
 ## Zasady
 

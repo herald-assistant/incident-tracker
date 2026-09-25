@@ -1,0 +1,26 @@
+<section class="analysis-card analysis-report-editor" aria-label="Edycja raportu">
+  <div class="analysis-report-editor__header">
+    <div><p class="section-eyebrow">Wynik</p><h3>Edytuj raport</h3></div>
+    <div class="analysis-report-editor__actions">
+      <button type="button" class="secondary-button" (click)="cancel.emit()" [disabled]="saving()">Anuluj</button>
+      <button type="button" class="secondary-button" (click)="preview.set(!preview())">{{ preview() ? 'Edytuj Markdown' : 'Podgląd' }}</button>
+      <button type="button" class="primary-button" (click)="submit()" [disabled]="!canSave() || saving() || !report().revisionSha256">{{ saving() ? 'Zapisywanie…' : 'Zapisz zmiany' }}</button>
+    </div>
+  </div>
+  @for (part of parts(); track part.id) {
+    <section class="analysis-report-editor__part">
+      @if (preview()) {
+        <h4 class="analysis-report-editor__part-title">{{ part.title }}</h4>
+        <div class="analysis-report-editor__preview">
+          <app-markdown-content [content]="content(part)" />
+        </div>
+      } @else {
+        <label class="analysis-report-editor__part-title" [for]="'report-edit-' + part.id">{{ part.title }}</label>
+        <textarea [id]="'report-edit-' + part.id" [value]="content(part)" (input)="update(part.id, $event)"
+          [disabled]="saving()" spellcheck="false" rows="10"
+          cdkTextareaAutosize [cdkAutosizeMinRows]="10"></textarea>
+      }
+    </section>
+  }
+  @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+</section>

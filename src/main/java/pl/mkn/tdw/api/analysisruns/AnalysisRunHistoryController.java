@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,6 +53,12 @@ public class AnalysisRunHistoryController {
             @Valid @RequestBody LocalAnalysisRunChatMessageRequest request
     ) {
         return analysisRunHistoryService.sendChatMessage(analysisId, request);
+    }
+
+    @PatchMapping("/{analysisId}/report")
+    public LocalAnalysisRunDetailResponse editReport(@PathVariable String analysisId,
+                                                      @RequestBody AnalysisReportEditRequest request) {
+        return analysisRunHistoryService.editReport(analysisId, request);
     }
 
     @DeleteMapping("/{analysisId}")

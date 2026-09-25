@@ -34,5 +34,10 @@
     @if (shareDocument(); as document) {
       <app-analysis-share-menu [document]="document" />
     }
+    @if (editable()) {
+      <button type="button" class="analysis-result-header__edit" (click)="editRequested.emit()" aria-label="Edytuj wynik" title="Edytuj wynik">
+        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+      </button>
+    }
   </div>
 </div>

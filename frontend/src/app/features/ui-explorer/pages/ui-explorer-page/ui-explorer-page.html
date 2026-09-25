@@ -100,8 +100,13 @@
         </section>
       }
 
-      @if (snapshot.report && (snapshot.status === 'COMPLETED' || snapshot.status === 'PARTIAL')) {
-        <app-ui-explorer-result
+        @if (facade.editingReport() && snapshot.report) {
+          <app-analysis-report-editor [report]="snapshot.report" [saving]="facade.reportSaving()" [error]="facade.reportEditError()"
+            (save)="facade.editReport($event)" (cancel)="facade.editingReport.set(false)" />
+        } @else if (snapshot.report && (snapshot.status === 'COMPLETED' || snapshot.status === 'PARTIAL')) {
+          <app-ui-explorer-result
+            [editable]="facade.canUseChat() && !chatActive() && !!snapshot.report.revisionSha256"
+            (editRequested)="facade.reportEditError.set(''); facade.editingReport.set(true)"
           [report]="snapshot.report"
           [result]="snapshot.result"
           [status]="snapshot.status"

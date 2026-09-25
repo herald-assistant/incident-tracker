@@ -8,6 +8,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSectionEdit;
 
 import java.time.Instant;
 import java.util.List;
@@ -36,6 +38,24 @@ class AnalysisRunHistoryControllerTest {
 
     @MockitoBean
     private AnalysisRunHistoryService analysisRunHistoryService;
+
+    @Test
+    void shouldPatchContinuableLocalReport() throws Exception {
+        var request = new AnalysisReportEditRequest("abc123", null,
+                List.of(new AnalysisReportSectionEdit("OVERVIEW", "Poprawiona sprawa CRM.")));
+        when(analysisRunHistoryService.editReport("analysis-1", request))
+                .thenReturn(detail("analysis-1", "Sprawa CRM", true));
+
+        mockMvc.perform(patch("/api/analysis/runs/analysis-1/report")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"expectedRevisionSha256":"abc123","sections":[
+                                  {"sectionId":"OVERVIEW","markdown":"Poprawiona sprawa CRM."}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.continuationEnabled").value(true));
+        verify(analysisRunHistoryService).editReport("analysis-1", request);
+    }
 
     @Test
     void shouldListRuns() throws Exception {

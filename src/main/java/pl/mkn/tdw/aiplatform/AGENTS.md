@@ -88,7 +88,9 @@ Obecnie obejmuje:
 - `copilot/tools/report/`
   platformowe report tools i session-bound store generycznego raportu
   analitycznego; trzyma tylko ostatni snapshot per `reportId` i nie zawiera
-  semantyki konkretnego feature'a ani promptu.
+  semantyki konkretnego feature'a ani promptu. Duze sekcje sa czytane przez
+  `report_read_section_chunk` w fragmentach UTF-8 ponizej progu fallbacku
+  SDK; identyfikator raportu i allowlista sekcji pochodza z hidden context.
 
 Nie obejmuje:
 

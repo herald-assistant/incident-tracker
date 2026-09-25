@@ -10,6 +10,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.uxinspector.ai.chat.*;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
+import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.job.UxInspectorFollowUpReportProjection;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
@@ -18,6 +19,10 @@ import pl.mkn.tdw.localworkspace.analysisruns.*;
 import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,6 +44,34 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
     private final CopilotSessionStateAvailability sessionStateAvailability;
 
     @Override public String feature() { return FEATURE; }
+
+    @Override
+    public LocalAnalysisRunChatResult editReport(LocalAnalysisRunIndexEntry indexEntry,
+                                                 LocalAnalysisRunRecord record,
+                                                 AnalysisReportEditRequest edit) {
+        var snapshot = snapshot(indexEntry, record);
+        if (!eligible(snapshot) || !canContinue(indexEntry, record)
+                || snapshot.chatMessages().stream().anyMatch(message ->
+                        "ASSISTANT".equals(message.role()) && "IN_PROGRESS".equals(message.status()))) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Report editing requires a completed, continuable run without an active follow-up.");
+        }
+        var start = toStartRequest(snapshot.request());
+        // Manual text editing needs the saved projection context, not a new repository lookup.
+        var context = new UxInspectorTargetContext(
+                snapshot.request().systemId(), snapshot.request().systemLabel(), null,
+                snapshot.result().view(), snapshot.result().sourceRevision(),
+                snapshot.result().resolutionStatus(), List.of(), null, "",
+                snapshot.result().visibilityLimits(), null);
+        var candidate = AnalysisReportManualEditor.apply(snapshot.report(), edit);
+        var mapping = reportProjection.project(snapshot.report(), candidate, start.capture(),
+                context, snapshot.usage());
+        if (mapping == null || mapping.report() == null || mapping.result() == null) {
+            throw new AnalysisReportEditException("REPORT_EDIT_INVALID", UserFacingErrorType.UNPROCESSABLE_ENTITY,
+                    "Edited report failed UX Inspector validation.");
+        }
+        return LocalAnalysisRunReportEdit.update(record, objectMapper, mapping.report(), mapping.result());
+    }
 
     @Override
     public boolean canContinue(LocalAnalysisRunIndexEntry indexEntry, LocalAnalysisRunRecord record) {

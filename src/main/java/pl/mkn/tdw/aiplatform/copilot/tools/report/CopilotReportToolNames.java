@@ -6,6 +6,7 @@ public final class CopilotReportToolNames {
 
     public static final String PREFIX = "report_";
     public static final String GET_CURRENT = "report_get_current";
+    public static final String READ_SECTION_CHUNK = "report_read_section_chunk";
     public static final String UPSERT_SECTION = "report_upsert_section";
     public static final String PATCH_SECTION = "report_patch_section";
     public static final String UPDATE_HEADER = "report_update_header";
@@ -15,7 +16,7 @@ public final class CopilotReportToolNames {
     }
 
     public static List<String> allToolNames() {
-        return List.of(GET_CURRENT, UPSERT_SECTION, PATCH_SECTION, UPDATE_HEADER, UPDATE_META);
+        return List.of(GET_CURRENT, READ_SECTION_CHUNK, UPSERT_SECTION, PATCH_SECTION, UPDATE_HEADER, UPDATE_META);
     }
 
     public static List<String> initialToolNames() {

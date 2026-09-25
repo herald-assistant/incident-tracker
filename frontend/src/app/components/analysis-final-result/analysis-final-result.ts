@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 
 import {
   AnalysisReport,
@@ -55,6 +55,8 @@ const EMPTY_REPORT_META: AnalysisReportMeta = {
   styleUrl: './analysis-final-result.scss'
 })
 export class AnalysisFinalResultComponent {
+  readonly editable = input(false);
+  readonly editRequested = output<void>();
   readonly result = input<AnalysisResultResponse | null>(null);
   readonly report = input<AnalysisReport | null>(null);
   readonly status = input('');

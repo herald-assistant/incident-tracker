@@ -3,6 +3,27 @@ import { TestBed } from '@angular/core/testing';
 import { AnalysisResultHeaderComponent } from './analysis-result-header';
 
 describe('AnalysisResultHeaderComponent', () => {
+  it('offers an accessible icon-only edit action next to share', async () => {
+    await TestBed.configureTestingModule({ imports: [AnalysisResultHeaderComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(AnalysisResultHeaderComponent);
+    fixture.componentRef.setInput('editable', true);
+    fixture.componentRef.setInput('shareDocument', {
+      fileName: 'crm.md', markdown: '# CRM', markdownWithMeta: '# CRM'
+    });
+    const requested = vi.fn();
+    fixture.componentInstance.editRequested.subscribe(requested);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    const editButton = element.querySelector<HTMLButtonElement>('[aria-label="Edytuj wynik"]')!;
+    expect(editButton.getAttribute('title')).toBe('Edytuj wynik');
+    expect(editButton.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('edit');
+    expect(editButton.children).toHaveLength(1);
+    expect(element.textContent).not.toContain('Zmieniono ręcznie');
+    editButton.click();
+    expect(requested).toHaveBeenCalledOnce();
+  });
+
   it('renders the result heading, confidence and shared share action', async () => {
     await TestBed.configureTestingModule({ imports: [AnalysisResultHeaderComponent] }).compileComponents();
 

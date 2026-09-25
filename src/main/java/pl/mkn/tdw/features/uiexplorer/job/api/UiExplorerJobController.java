@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.tdw.features.uiexplorer.job.UiExplorerJobService;
 import pl.mkn.tdw.features.uiexplorer.job.export.UiExplorerExportEnvelope;
 import pl.mkn.tdw.features.uiexplorer.job.export.UiExplorerExportService;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
 
 @RestController
 @RequestMapping("/api/ui-explorer/jobs")
@@ -31,6 +33,12 @@ public class UiExplorerJobController {
     @GetMapping("/{jobId}")
     public UiExplorerJobStateSnapshot get(@PathVariable String jobId) {
         return uiExplorerJobService.getJob(jobId);
+    }
+
+    @PatchMapping("/{jobId}/report")
+    public UiExplorerJobStateSnapshot editReport(@PathVariable String jobId,
+                                                 @RequestBody AnalysisReportEditRequest request) {
+        return uiExplorerJobService.editReport(jobId, request);
     }
 
     @PostMapping("/{jobId}/chat/messages")

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 
 import {
   AnalysisReport,
@@ -23,6 +23,8 @@ import { UxInspectorJobStatus, UxInspectorResultResponse } from '../../models/ux
   styleUrl: './ux-inspector-result.scss'
 })
 export class UxInspectorResultComponent {
+  readonly editable = input(false);
+  readonly editRequested = output<void>();
   readonly report = input.required<AnalysisReport>();
   readonly result = input<UxInspectorResultResponse | null>(null);
   readonly status = input<UxInspectorJobStatus>('COMPLETED');

@@ -27,10 +27,13 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunReportEdit;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -60,6 +63,17 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
     @Override
     public String feature() {
         return FEATURE;
+    }
+
+    @Override
+    public LocalAnalysisRunChatResult editReport(LocalAnalysisRunIndexEntry indexEntry,
+                                                 LocalAnalysisRunRecord record,
+                                                 AnalysisReportEditRequest edit) {
+        var snapshot = validatedSnapshot(indexEntry, record.continuation(), exportEnvelope(record));
+        var candidate = AnalysisReportManualEditor.apply(snapshot.report(), edit);
+        var result = reportProjection.project(snapshot.result(), snapshot.report(), candidate,
+                snapshot.sectionModes());
+        return LocalAnalysisRunReportEdit.update(record, objectMapper, candidate, result);
     }
 
     @Override

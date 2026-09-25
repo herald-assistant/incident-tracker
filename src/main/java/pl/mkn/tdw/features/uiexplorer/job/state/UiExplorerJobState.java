@@ -19,6 +19,10 @@ import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
 import pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobChatUnavailableException;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
@@ -366,6 +370,31 @@ public final class UiExplorerJobState {
     public synchronized String copilotSessionId() { return copilotSessionId; }
     public synchronized UiExplorerJobStartRequest initialRequest() { return request; }
     public synchronized AnalysisReport currentReport() { return report; }
+
+    public synchronized UiExplorerJobStateSnapshot editReport(AnalysisReportEditRequest edit,
+            java.util.function.Function<AnalysisReport, pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportMapping> projector) {
+        if ((status != UiExplorerJobStatus.COMPLETED && status != UiExplorerJobStatus.PARTIAL)
+                || report == null || result == null || !chatAvailability().available()) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Report editing requires a completed, continuable analysis without an active follow-up.");
+        }
+        var candidate = AnalysisReportManualEditor.apply(report, edit);
+        var mapping = projector.apply(candidate);
+        if (mapping == null || mapping.report() == null || mapping.result() == null) {
+            throw new AnalysisReportEditException("REPORT_EDIT_INVALID", UserFacingErrorType.UNPROCESSABLE_ENTITY,
+                    "Edited report failed UI Explorer validation.");
+        }
+        report = mapping.report();
+        result = mapping.result();
+        updatedAt = Instant.now();
+        return snapshot();
+    }
+
+    public synchronized void restoreReport(UiExplorerJobStateSnapshot before) {
+        report = before.report();
+        result = before.result();
+        updatedAt = before.updatedAt();
+    }
 
     private boolean hasActiveAssistant() {
         return chatMessages.stream().anyMatch(AnalysisChatMessageState::activeAssistant);

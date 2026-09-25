@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import {
   AnalysisChatMessageRequest,
+  AnalysisReportEditRequest,
   LocalAnalysisRunDetailResponse,
   LocalAnalysisRunListResponse,
   RenameLocalAnalysisRunRequest
@@ -48,6 +49,11 @@ export class AnalysisRunHistoryApiService {
       `${this.baseUrl}/${encodeURIComponent(analysisId)}/chat/messages`,
       request
     );
+  }
+
+  editReport(analysisId: string, request: AnalysisReportEditRequest): Observable<LocalAnalysisRunDetailResponse> {
+    return this.http.patch<LocalAnalysisRunDetailResponse>(
+      `${this.baseUrl}/${encodeURIComponent(analysisId)}/report`, request);
   }
 
   deleteRun(analysisId: string): Observable<void> {

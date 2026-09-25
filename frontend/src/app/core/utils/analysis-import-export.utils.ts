@@ -147,7 +147,15 @@ export function normalizeAnalysisReport(report: unknown): AnalysisReport {
     sections: Array.isArray(reportObject?.['sections'])
       ? reportObject['sections'].map(normalizeAnalysisReportSection)
       : [],
-    meta: normalizeAnalysisReportMeta(reportObject?.['meta'])
+    meta: normalizeAnalysisReportMeta(reportObject?.['meta']),
+    revisionSha256: normalizeString(reportObject?.['revisionSha256']),
+    manualEdit: asObject(reportObject?.['manualEdit']) ? {
+      revision: normalizeNullableNumber(asObject(reportObject?.['manualEdit'])?.['revision']) ?? 0,
+      editedAt: normalizeString(asObject(reportObject?.['manualEdit'])?.['editedAt']),
+      changedParts: Array.isArray(asObject(reportObject?.['manualEdit'])?.['changedParts'])
+        ? (asObject(reportObject?.['manualEdit'])?.['changedParts'] as unknown[]).map(normalizeString)
+        : []
+    } : null
   };
 }
 

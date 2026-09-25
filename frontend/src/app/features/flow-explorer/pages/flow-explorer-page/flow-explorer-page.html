@@ -798,7 +798,10 @@
         @if (job(); as snapshot) {
           <div class="flow-explorer-analysis-grid">
             <div class="flow-explorer-analysis-main">
-        @if (displayResult(); as result) {
+        @if (editingReport() && job()?.report) {
+          <app-analysis-report-editor [report]="job()!.report!" [saving]="reportSaving()" [error]="reportEditError()"
+            (save)="editReport($event)" (cancel)="editingReport.set(false)" />
+        } @else if (displayResult(); as result) {
             <section
               class="analysis-card flow-explorer-result"
               aria-label="Flow Explorer result"
@@ -820,6 +823,12 @@
                 </span>
                 @if (shareDocument(); as document) {
                   <app-analysis-share-menu [document]="document" />
+                }
+                @if (isChatAvailable() && !isJobActive() && job()?.report?.revisionSha256) {
+                  <button type="button" class="flow-explorer-result__edit" aria-label="Edytuj wynik" title="Edytuj wynik"
+                    (click)="$event.stopPropagation(); reportEditError.set(''); editingReport.set(true)">
+                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                  </button>
                 }
               </div>
             </summary>

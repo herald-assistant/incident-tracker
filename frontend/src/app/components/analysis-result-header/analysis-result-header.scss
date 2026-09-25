@@ -53,6 +53,20 @@
   outline: none;
 }
 
+.analysis-result-header__edit {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-main);
+  cursor: pointer;
+}
+.analysis-result-header__edit:hover { border-color: var(--border-strong); background: var(--surface-alt); color: var(--primary-dark); }
+.analysis-result-header__edit:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
 @media (max-width: 860px) {
   .analysis-result-header__actions {
     flex-wrap: wrap;

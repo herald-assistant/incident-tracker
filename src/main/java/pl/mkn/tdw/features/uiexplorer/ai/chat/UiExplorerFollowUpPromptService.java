@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.uiexplorer.ai.chat;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditGuidance;
 
 @Service
 public class UiExplorerFollowUpPromptService {
@@ -11,6 +12,7 @@ public class UiExplorerFollowUpPromptService {
             throw new IllegalArgumentException("UI Explorer follow-up message is required.");
         }
         return "Uzyj skilla `ui-explorer-follow-up-chat` przed odpowiedzia.\n\n"
-                + request.message().trim();
+                + request.message().trim()
+                + AnalysisReportManualEditGuidance.forFollowUp(request.report());
     }
 }

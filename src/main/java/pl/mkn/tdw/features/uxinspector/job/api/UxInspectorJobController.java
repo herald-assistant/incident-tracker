@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.mkn.tdw.features.uxinspector.job.UxInspectorJobService;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportService;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
 
 @RestController
 @RequestMapping("/api/ux-inspector/jobs")
@@ -18,6 +19,11 @@ public class UxInspectorJobController {
     public UxInspectorJobStateSnapshot start(@Valid @RequestBody UxInspectorJobStartRequest request) { return jobService.startJob(request); }
     @GetMapping("/{jobId}")
     public UxInspectorJobStateSnapshot get(@PathVariable String jobId) { return jobService.getJob(jobId); }
+    @PatchMapping("/{jobId}/report")
+    public UxInspectorJobStateSnapshot editReport(@PathVariable String jobId,
+                                                   @RequestBody AnalysisReportEditRequest request) {
+        return jobService.editReport(jobId, request);
+    }
     @PostMapping("/{jobId}/chat/messages")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public UxInspectorJobStateSnapshot chat(@PathVariable String jobId,

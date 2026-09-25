@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { hasMeaningfulValue } from '../../core/utils/analysis-display.utils';
@@ -17,6 +17,8 @@ export class AnalysisResultHeaderComponent {
   readonly confidence = input('');
   readonly partialNotice = input('');
   readonly shareDocument = input<AnalysisShareDocument | null>(null);
+  readonly editable = input(false);
+  readonly editRequested = output<void>();
 
   protected readonly hasMeaningfulValue = hasMeaningfulValue;
 }

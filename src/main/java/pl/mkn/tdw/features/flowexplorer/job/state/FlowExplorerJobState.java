@@ -22,6 +22,10 @@ import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
@@ -397,6 +401,27 @@ public final class FlowExplorerJobState {
     public synchronized void replaceReport(AnalysisReport value) {
         report = value;
         touch();
+    }
+
+    public synchronized FlowExplorerJobStateSnapshot editReport(AnalysisReportEditRequest edit,
+            java.util.function.Function<AnalysisReport, FlowExplorerResultResponse> projector) {
+        if (!STATUS_COMPLETED.equals(status) || report == null || result == null
+                || !StringUtils.hasText(copilotSessionId) || hasActiveAssistantMessage()) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Report editing requires a completed, continuable analysis without an active follow-up.");
+        }
+        var candidate = AnalysisReportManualEditor.apply(report, edit);
+        var projected = projector.apply(candidate);
+        report = candidate;
+        result = projected;
+        touch();
+        return snapshot();
+    }
+
+    public synchronized void restoreReport(FlowExplorerJobStateSnapshot before) {
+        report = before.report();
+        result = before.result();
+        updatedAt = before.updatedAt();
     }
 
     public AnalysisAiAuthRef authRefForChat() {

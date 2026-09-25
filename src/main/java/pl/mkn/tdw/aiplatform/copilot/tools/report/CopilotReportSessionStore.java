@@ -66,7 +66,7 @@ public class CopilotReportSessionStore {
                     current.subHeader(),
                     current.markdownSummary(),
                     sections,
-                    current.meta()
+                    current.meta(), current.manualEdit()
             );
         });
     }
@@ -108,7 +108,7 @@ public class CopilotReportSessionStore {
                 sections.set(index, new AnalysisReportSection(section.id(), section.title(), section.order(),
                         updated, section.meta()));
                 return new AnalysisReport(current.reportId(), current.header(), current.subHeader(),
-                        current.markdownSummary(), sections, current.meta());
+                        current.markdownSummary(), sections, current.meta(), current.manualEdit());
             }
             throw new CopilotReportSessionException("Report section does not exist.");
         });
@@ -130,7 +130,7 @@ public class CopilotReportSessionStore {
                     current.subHeader(),
                     current.markdownSummary(),
                     current.sections(),
-                    meta
+                    meta, current.manualEdit()
             );
         });
     }
@@ -157,7 +157,7 @@ public class CopilotReportSessionStore {
                     keepCurrentWhenBlank(subHeader, current.subHeader()),
                     keepCurrentWhenBlank(markdownSummary, current.markdownSummary()),
                     current.sections(),
-                    current.meta()
+                    current.meta(), current.manualEdit()
             );
         });
     }

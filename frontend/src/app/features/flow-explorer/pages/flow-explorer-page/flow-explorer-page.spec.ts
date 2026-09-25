@@ -533,7 +533,14 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).not.toContain('The endpoint reads the requested customer');
   });
 
-  it('shows the shared action without a JSON export button', () => {
+  it('shows icon-only share and edit actions without a manual edit pill or JSON export button', () => {
+    vi.mocked(flowExplorerApi.getJob).mockReturnValueOnce(of(jobSnapshot({
+      status: 'COMPLETED',
+      currentStepCode: 'COMPLETED',
+      currentStepLabel: 'AI result ready',
+      result: flowExplorerResult(),
+      report: { ...flowExplorerReport(), revisionSha256: 'digest-1', manualEdit: { revision: 1, editedAt: '2026-05-02T10:06:00Z', changedParts: ['OVERVIEW'] } }
+    })));
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
@@ -542,8 +549,14 @@ describe('FlowExplorerPageComponent', () => {
 
     clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Export JSON');
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    const editButton = element.querySelector<HTMLButtonElement>('.flow-explorer-result__edit');
+    expect(editButton?.getAttribute('aria-label')).toBe('Edytuj wynik');
+    expect(editButton?.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('edit');
+    expect(editButton?.children).toHaveLength(1);
+    expect(element.textContent).not.toContain('Zmieniono ręcznie');
+    expect(element.textContent).not.toContain('Export JSON');
   });
 
   it('should import a completed Flow Explorer export as a read-only result', async () => {

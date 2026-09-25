@@ -40,6 +40,10 @@ natural-language data diagnostics.
 - Glowny result contract pozostaje feature-specific, ale drobniejsze elementy
   prezentacji wyniku powinny byc modelowane tak, zeby frontend mogl reuse'owac
   wspolne komponenty i znane wzorce UX.
+- Feature z reczna edycja `AnalysisReport` musi po walidacji ponownie
+  projektowac publiczny result, zapisac oba obrazy razem i przekazac znacznik
+  korekty do nastepnego follow-up. Edycja nie moze zmieniac metadata ani
+  evidence, a import bez continuation pozostaje read-only.
 - URL-e publiczne moga nadal uzywac product-facing nazwy `analysis`, nawet gdy
   implementacja Javy mieszka pod `features.incidentanalysis`.
 

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 
 import { AnalysisReport, AnalysisReportSection } from '../../../../core/models/analysis.models';
 import { buildReportShareDocument } from '../../../../core/utils/analysis-share.utils';
@@ -27,6 +27,8 @@ import { buildUiExplorerReportFileName } from '../../utils/ui-explorer-report.ut
   styleUrl: './ui-explorer-result.scss'
 })
 export class UiExplorerResultComponent {
+  readonly editable = input(false);
+  readonly editRequested = output<void>();
   readonly report = input.required<AnalysisReport>();
   readonly result = input<UiExplorerResultResponse | null>(null);
   readonly status = input<UiExplorerJobStatus>('COMPLETED');

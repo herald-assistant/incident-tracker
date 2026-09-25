@@ -1,5 +1,7 @@
 package pl.mkn.tdw.localworkspace.analysisruns;
 
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+
 public interface LocalAnalysisRunChatHandler {
 
     String feature();
@@ -13,4 +15,10 @@ public interface LocalAnalysisRunChatHandler {
             LocalAnalysisRunRecord record,
             String message
     );
+
+    default LocalAnalysisRunChatResult editReport(LocalAnalysisRunIndexEntry indexEntry,
+                                                  LocalAnalysisRunRecord record,
+                                                  AnalysisReportEditRequest request) {
+        throw LocalAnalysisRunContinuationException.unavailable("This run does not support report editing.");
+    }
 }

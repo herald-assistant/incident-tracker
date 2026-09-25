@@ -12,6 +12,7 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,9 @@ public class CopilotReportTools {
     private static final String STATUS_OK = "ok";
     private static final String STATUS_REJECTED = "rejected";
     private static final String STATUS_MISSING_REPORT = "missing_report";
+    private static final int MAX_INLINE_SECTION_BYTES = 2_048;
+    // JSON can expand a control character to six ASCII bytes (\\u00XX).
+    private static final int CHUNK_BYTES = 1_024;
 
     private final CopilotReportSessionStore reportStore;
 
@@ -32,7 +36,7 @@ public class CopilotReportTools {
                     Returns a compact validation manifest of the current structured analysis report for this AI session.
                     The manifest confirms persisted headers, section ids, order, content lengths, SHA-256 digests,
                     metadata counts and structural completeness without repeating all section bodies. Pass sectionId
-                    to read the full body and metadata of one allowed section before a targeted follow-up edit.
+                    to read a small section body and metadata. For a large body, use report_read_section_chunk.
                     The active report is selected from hidden ToolContext. Do not provide reportId, analysisId,
                     correlationId, environment, gitLabGroup or gitLabBranch.
                     """
@@ -63,11 +67,91 @@ public class CopilotReportTools {
         return report.get().sections().stream()
                 .filter(section -> section != null && requestedSectionId.equals(normalize(section.id())))
                 .findFirst()
-                .map(section -> new CopilotReportToolResult(STATUS_OK, "Current report section returned.",
+                .map(section -> new CopilotReportToolResult(STATUS_OK,
+                        inlineSection(section) ? "Current report section returned."
+                                : "Section exceeds inline tool output. Read it with report_read_section_chunk.",
                         scope.reportId(), scope.reportFeature(),
                         CopilotReportManifestFactory.create(report.get(), scope.allowedSectionIds()),
-                        List.of(), scope.allowedSectionIds(), section))
+                        List.of(), scope.allowedSectionIds(), inlineSection(section) ? section : null))
                 .orElseGet(() -> rejected("Report section does not exist.", scope, null));
+    }
+
+    @Tool(
+            name = CopilotReportToolNames.READ_SECTION_CHUNK,
+            description = """
+                    Reads one bounded UTF-8 chunk of an allowed section or markdownSummary in the current report.
+                    Start at chunkIndex 0 and follow nextChunkIndex until hasMore is false.
+                    Use the SHA-256 digest to ensure all chunks came from the same revision.
+                    Report identity and allowed section ids come from hidden ToolContext.
+                    """
+    )
+    public CopilotReportSectionChunk readSectionChunk(
+            @ToolParam(description = "Allowed report section id, or markdownSummary.") String sectionId,
+            @ToolParam(description = "Zero-based chunk index; start at 0.") Integer chunkIndex,
+            @ToolParam(required = false, description = "Short Polish reason for reading this section.") String reason,
+            ToolContext toolContext
+    ) {
+        var scope = ReportToolScope.from(toolContext);
+        var id = normalize(sectionId);
+        if (!StringUtils.hasText(scope.reportId()) || reportStore.current(scope.reportId()).isEmpty()) {
+            return new CopilotReportSectionChunk(STATUS_MISSING_REPORT, "No active report is registered.",
+                    id, null, chunkIndex, null, false, null);
+        }
+        if (id == null || (!scope.allowedSectionIds().contains(id) && !"markdownSummary".equals(id))
+                || chunkIndex == null || chunkIndex < 0) {
+            return new CopilotReportSectionChunk(STATUS_REJECTED, "Section id or chunk index is not allowed.",
+                    id, null, chunkIndex, null, false, null);
+        }
+        var report = reportStore.current(scope.reportId()).orElseThrow();
+        if ("markdownSummary".equals(id)) {
+            return chunkOf(id, report.markdownSummary(), chunkIndex);
+        }
+        var section = report.sections().stream()
+                .filter(candidate -> candidate != null && id.equals(candidate.id()))
+                .findFirst().orElse(null);
+        if (section == null) {
+            return new CopilotReportSectionChunk(STATUS_REJECTED, "Report section does not exist.",
+                    id, null, chunkIndex, null, false, null);
+        }
+        return chunkOf(id, section.markdown(), chunkIndex);
+    }
+
+    private CopilotReportSectionChunk chunkOf(String id, String markdown, int chunkIndex) {
+        var chunks = splitUtf8(markdown != null ? markdown : "");
+        if (chunkIndex >= chunks.size()) {
+            return new CopilotReportSectionChunk(STATUS_REJECTED, "Chunk index is outside this section.",
+                    id, CopilotReportManifestFactory.markdownSha256(markdown), chunkIndex, null, false, null);
+        }
+        var more = chunkIndex + 1 < chunks.size();
+        return new CopilotReportSectionChunk(STATUS_OK, "Report section chunk returned.", id,
+                CopilotReportManifestFactory.markdownSha256(markdown), chunkIndex,
+                more ? chunkIndex + 1 : null, more, chunks.get(chunkIndex));
+    }
+
+    private boolean inlineSection(AnalysisReportSection section) {
+        return section.markdown() == null
+                || section.markdown().getBytes(StandardCharsets.UTF_8).length <= MAX_INLINE_SECTION_BYTES;
+    }
+
+    private List<String> splitUtf8(String markdown) {
+        var chunks = new java.util.ArrayList<String>();
+        var current = new StringBuilder();
+        var bytes = 0;
+        for (var offset = 0; offset < markdown.length();) {
+            var point = markdown.codePointAt(offset);
+            var value = new String(Character.toChars(point));
+            var size = value.getBytes(StandardCharsets.UTF_8).length;
+            if (bytes + size > CHUNK_BYTES && !current.isEmpty()) {
+                chunks.add(current.toString());
+                current.setLength(0);
+                bytes = 0;
+            }
+            current.append(value);
+            bytes += size;
+            offset += Character.charCount(point);
+        }
+        chunks.add(current.toString());
+        return chunks;
     }
 
     public CopilotReportToolResult getCurrentReport(String reason, ToolContext toolContext) {

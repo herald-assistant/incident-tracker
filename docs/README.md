@@ -62,6 +62,9 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- `needs/manual-analysis-result-editing.md` oraz
+  `plans/manual-analysis-result-editing.md` opisuja potrzebe recznej korekty
+  wyniku i proponowany, niezatwierdzony zakres dla analiz z follow-up chatem.
 - UI Explorer oraz UX Inspector nie utrzymuja zakonczonych potrzeb i planow
   jako archiwum. Ich aktualne kontrakty, runtime, follow-up chat, historia,
   import/export i granice bezpieczenstwa opisuja odpowiednio

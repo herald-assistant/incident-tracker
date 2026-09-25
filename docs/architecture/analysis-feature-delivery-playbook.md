@@ -1032,14 +1032,19 @@ Neutralne kontrakty:
 Platformowe tools:
 
 - `report_get_current`,
+- `report_read_section_chunk`,
 - `report_update_header`,
 - `report_upsert_section`,
 - `report_patch_section`,
 - `report_update_meta`.
 
 Report tools zwracaja zwarty manifest zapisanego stanu, nie pelny raport.
-`report_get_current(sectionId)` moze dodatkowo zwrocic pelne body jednej
-dozwolonej sekcji. `report_patch_section` wymaga aktualnego digestu i
+`report_get_current(sectionId)` moze dodatkowo zwrocic body malej dozwolonej
+sekcji. Dla wiekszej sekcji zwraca tylko manifest i wskazowke odczytu przez
+`report_read_section_chunk(sectionId, chunkIndex)`. Odczytuj fragmenty od 0,
+kontynuuj przez `nextChunkIndex` do `hasMore=false` i sprawdzaj wspolny digest.
+Dotyczy to rowniez `markdownSummary` jako wirtualnej czesci raportu.
+`report_patch_section` wymaga aktualnego digestu i
 jednoznacznego starego fragmentu.
 Manifest potwierdza sekcje, kolejnosc, rozmiary, metadata i digesty oraz
 sygnalizuje braki strukturalne. Feature musi wykonac kontrole merytoryczna
@@ -1121,6 +1126,14 @@ wyniku, persistence, blokade wspolbieznosci i testy.
 Importowany publiczny JSON pozostaje read-only. Kontynuacja jest mozliwa tylko
 dla live joba albo lokalnego runu z waznym `copilotSessionId`, continuation
 metadata i mozliwoscia bezpiecznego odtworzenia scope'u po stronie backendu.
+
+Raport kontynuowalnego runu moze zostac recznie poprawiony przez operatora.
+Warunkowy zapis przyjmuje tylko Markdown istniejacych sekcji i opcjonalne
+`markdownSummary`, wymaga aktualnego `revisionSha256`, waliduje feature-owned
+projekcje wyniku oraz zapisuje `manualEdit` z numerem rewizji, czasem i lista
+zmienionych czesci. Przed kolejnym follow-up feature przekazuje modelowi
+informacje o korekcie i poleca odczyt biezacego raportu przez tools. Nie
+traktuj korekty operatora jako evidence ani weryfikacji AI.
 
 ## Local workspace, historia i import/export
 

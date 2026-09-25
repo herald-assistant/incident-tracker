@@ -13,6 +13,10 @@ import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProviderDescriptor;
@@ -191,6 +195,27 @@ public final class AnalysisJobState {
         touch();
     }
 
+    public synchronized AnalysisJobStateSnapshot editReport(AnalysisReportEditRequest edit,
+            java.util.function.Function<AnalysisReport, AnalysisResultResponse> projector) {
+        if (status != AnalysisJobStatus.COMPLETED || report == null || result == null
+                || !StringUtils.hasText(latestCopilotSessionId) || hasActiveAssistantMessage()) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Report editing requires a completed, continuable analysis without an active follow-up.");
+        }
+        var candidate = AnalysisReportManualEditor.apply(report, edit);
+        var projected = projector.apply(candidate);
+        report = candidate;
+        result = projected;
+        touch();
+        return snapshot();
+    }
+
+    public synchronized void restoreReport(AnalysisJobStateSnapshot before) {
+        report = before.report();
+        result = before.result();
+        updatedAt = before.updatedAt();
+    }
+
     public synchronized AnalysisAiChatRequest startChatMessage(
             String userMessageId,
             String assistantMessageId,
@@ -275,6 +300,14 @@ public final class AnalysisJobState {
             String copilotSessionId
     ) {
         markChatCompleted(assistantMessageId, content, prompt, copilotSessionId, null);
+    }
+
+    public synchronized InitialAnalysisRequest completedAiRequestForEdit() {
+        return completedAiRequest;
+    }
+
+    public synchronized String copilotSessionIdForEdit() {
+        return latestCopilotSessionId;
     }
 
     public synchronized void markChatCompleted(

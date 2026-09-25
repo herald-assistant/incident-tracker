@@ -440,6 +440,66 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu profilu klienta CRM.');
   });
 
+  it('should save edited Markdown without a separate manual edit pill on a live result', async () => {
+    const original = completedJob();
+    const edited = {
+      ...original,
+      report: { ...original.report!, markdownSummary: 'Poprawiona sprawa CRM.', revisionSha256: 'digest-2',
+        manualEdit: { revision: 1, editedAt: '2026-05-02T10:06:00Z', changedParts: ['markdownSummary'] } }
+    };
+    const { fixture, analysisApi } = await createComponent(connectedStatus(), of(modelOptions()), {
+      analysisId: 'analysis-1', liveJob: original
+    });
+    analysisApi.editReport.mockReturnValueOnce(of(edited));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('[aria-label="Edytuj wynik"]')!.click();
+    fixture.detectChanges();
+    const textarea = element.querySelector<HTMLTextAreaElement>('#report-edit-markdownSummary')!;
+    textarea.value = 'Poprawiona sprawa CRM.';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    Array.from(element.querySelectorAll<HTMLButtonElement>('.analysis-report-editor button'))
+      .find(button => button.textContent?.includes('Zapisz zmiany'))!.click();
+    fixture.detectChanges();
+    expect(analysisApi.editReport).toHaveBeenCalledWith('analysis-1', {
+      expectedRevisionSha256: 'digest-1', markdownSummary: 'Poprawiona sprawa CRM.', sections: []
+    });
+    expect(element.textContent).not.toContain('Zmieniono ręcznie');
+    expect(fixture.componentInstance.job()?.report?.markdownSummary).toBe('Poprawiona sprawa CRM.');
+    expect(fixture.componentInstance.job()?.report?.manualEdit?.revision).toBe(1);
+  });
+
+  it('should keep imported results read-only and preserve the draft on a revision conflict', async () => {
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    component.job.set(completedJob());
+    component.exportState.set({ origin: 'imported', exportedAt: '', fileName: 'crm.json', job: completedJob() });
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[aria-label="Edytuj wynik"]')).toBeNull();
+
+    component.exportState.set({ origin: 'live', exportedAt: '', fileName: '', job: completedJob() });
+    analysisApi.editReport.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
+      status: 409, error: { code: 'REPORT_EDIT_STALE' }
+    })));
+    fixture.detectChanges();
+    element.querySelector<HTMLButtonElement>('[aria-label="Edytuj wynik"]')!.click();
+    fixture.detectChanges();
+    const textarea = element.querySelector<HTMLTextAreaElement>('#report-edit-markdownSummary')!;
+    textarea.value = 'Szkic poprawki CRM.';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    Array.from(element.querySelectorAll<HTMLButtonElement>('.analysis-report-editor button'))
+      .find(button => button.textContent?.includes('Zapisz zmiany'))!.click();
+    fixture.detectChanges();
+    expect(element.textContent).toContain('Raport zmienił się w czasie edycji');
+    expect(element.querySelector<HTMLTextAreaElement>('#report-edit-markdownSummary')?.value).toBe('Szkic poprawki CRM.');
+    expect(component.job()?.report?.markdownSummary).toBe(incidentReport().markdownSummary);
+  });
+
   it('should continue a local run through the analysis history API', async () => {
     const updatedDetail = localRunDetail(completedJobWithChat());
     const { fixture, analysisApi, historyApi } = await createComponent(
@@ -674,7 +734,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
       getInputOptions: vi.fn(() => routeOptions.inputOptions$ ?? of(inputOptions())),
       startAnalysis: vi.fn(() => of(queuedJob())),
       getAnalysis: vi.fn(() => of(routeOptions.liveJob ?? queuedJob())),
-      sendChatMessage: vi.fn(() => of(queuedJob()))
+      sendChatMessage: vi.fn(() => of(queuedJob())),
+      editReport: vi.fn(() => of(completedJob()))
     };
     const aiOptionsApi = {
       getOptions: vi.fn(() => aiModelOptions$)
@@ -886,6 +947,7 @@ function completedJob(): AnalysisJobStateSnapshot {
 function incidentReport(): AnalysisReport {
   return {
     reportId: 'incident-report-1',
+    revisionSha256: 'digest-1',
     header: 'DOWNSTREAM_TIMEOUT',
     subHeader: 'CRM / CRM Customer Context',
     markdownSummary: 'Timeout downstream blokuje odczyt profilu klienta CRM.',

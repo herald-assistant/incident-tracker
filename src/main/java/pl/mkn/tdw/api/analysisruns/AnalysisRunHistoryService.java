@@ -15,6 +15,9 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.util.List;
 
@@ -96,6 +99,27 @@ public class AnalysisRunHistoryService {
             var updatedEntry = indexEntry.withUpdatedAt(result.updatedAt());
             localAnalysisRunStore.save(updatedEntry, result.record());
             return toDetail(updatedEntry, result.record());
+        } catch (LocalAnalysisRunContinuationException exception) {
+            throw mapContinuationException(normalized, exception);
+        }
+    }
+
+    public LocalAnalysisRunDetailResponse editReport(String analysisId, AnalysisReportEditRequest request) {
+        var normalized = requireAnalysisId(analysisId);
+        try (var lease = operationGuard.tryAcquire(normalized).orElseThrow(() ->
+                new AnalysisReportEditException("REPORT_EDIT_BUSY", UserFacingErrorType.CONFLICT,
+                        "Another operation is already in progress for this local run."))) {
+            var indexEntry = indexEntryOrThrow(normalized);
+            var record = recordOrThrow(indexEntry.analysisId());
+            var handler = chatHandler(indexEntry.feature());
+            if (!handler.canContinue(indexEntry, record)) {
+                throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                        "This local run is read-only or cannot be continued.");
+            }
+            var edited = handler.editReport(indexEntry, record, request);
+            var updatedEntry = indexEntry.withUpdatedAt(edited.updatedAt());
+            localAnalysisRunStore.save(updatedEntry, edited.record());
+            return toDetail(updatedEntry, edited.record());
         } catch (LocalAnalysisRunContinuationException exception) {
             throw mapContinuationException(normalized, exception);
         }

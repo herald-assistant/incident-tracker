@@ -355,7 +355,8 @@ public record CopilotIncidentToolAccessPolicy(
         if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
             return true;
         }
-        if (CopilotReportToolNames.PATCH_SECTION.equals(toolName)) {
+        if (CopilotReportToolNames.PATCH_SECTION.equals(toolName)
+                || CopilotReportToolNames.READ_SECTION_CHUNK.equals(toolName)) {
             return false;
         }
         if (CopilotReportToolNames.isReportTool(toolName)) {

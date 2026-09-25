@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { AnalysisReportEditRequest } from '../../../core/models/analysis.models';
 
 import {
   UxInspectorExportEnvelope,
@@ -38,6 +39,11 @@ export class UxInspectorApiService {
     return this.http.get<UxInspectorJobStateSnapshot>(
       `/api/ux-inspector/jobs/${encodeURIComponent(jobId)}`
     );
+  }
+
+  editReport(jobId: string, request: AnalysisReportEditRequest): Observable<UxInspectorJobStateSnapshot> {
+    return this.http.patch<UxInspectorJobStateSnapshot>(
+      `/api/ux-inspector/jobs/${encodeURIComponent(jobId)}/report`, request);
   }
 
   sendChatMessage(jobId: string, message: string): Observable<UxInspectorJobStateSnapshot> {

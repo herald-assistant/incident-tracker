@@ -59,7 +59,8 @@ public record FlowExplorerCopilotToolAccessPolicy(
         var tools = registeredTools != null ? List.copyOf(registeredTools) : List.<ToolDefinition>of();
         var enabledTools = tools.stream()
                 .filter(tool -> FLOW_EXPLORER_TOOL_ALLOWLIST.contains(tool.name())
-                        || followUp && CopilotReportToolNames.PATCH_SECTION.equals(tool.name()))
+                        || followUp && (CopilotReportToolNames.PATCH_SECTION.equals(tool.name())
+                                || CopilotReportToolNames.READ_SECTION_CHUNK.equals(tool.name())))
                 .toList();
 
         return new FlowExplorerCopilotToolAccessPolicy(

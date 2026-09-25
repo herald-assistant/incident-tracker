@@ -20,10 +20,15 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunReportEdit;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -48,6 +53,30 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
     @Override
     public String feature() {
         return FEATURE;
+    }
+
+    @Override
+    public LocalAnalysisRunChatResult editReport(LocalAnalysisRunIndexEntry indexEntry,
+                                                 LocalAnalysisRunRecord record,
+                                                 AnalysisReportEditRequest edit) {
+        var snapshot = validatedSnapshot(indexEntry, record.continuation(), envelope(record));
+        var privateSnapshot = continuationSnapshotStore.findById(indexEntry.analysisId())
+                .orElseThrow(() -> LocalAnalysisRunContinuationException.corrupted(
+                        "UI Explorer continuation context is missing.", null));
+        if (!privateSnapshot.matches(snapshot)) {
+            throw LocalAnalysisRunContinuationException.corrupted(
+                    "UI Explorer continuation context does not match the saved report.", null);
+        }
+        var candidate = AnalysisReportManualEditor.apply(snapshot.report(), edit);
+        var evidence = new ArrayList<>(snapshot.toolEvidenceSections());
+        snapshot.chatMessages().forEach(chat -> evidence.addAll(chat.toolEvidenceSections()));
+        var mapping = reportProjection.project(snapshot.report(), candidate,
+                privateSnapshot.toStartRequest(), privateSnapshot.toContext(), snapshot.usage(), evidence);
+        if (mapping == null || mapping.report() == null || mapping.result() == null) {
+            throw new AnalysisReportEditException("REPORT_EDIT_INVALID", UserFacingErrorType.UNPROCESSABLE_ENTITY,
+                    "Edited report failed UI Explorer validation.");
+        }
+        return LocalAnalysisRunReportEdit.update(record, objectMapper, mapping.report(), mapping.result());
     }
 
     @Override

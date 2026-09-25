@@ -7,6 +7,7 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisRunStateComponent } from '../../../../components/analysis-run-state/analysis-run-state';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
+import { AnalysisReportEditorComponent } from '../../../../components/analysis-report-editor/analysis-report-editor';
 import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
@@ -25,6 +26,7 @@ type OpenMenu = 'system' | 'view' | 'model' | 'reasoning' | null;
     AnalysisStepsPanelComponent,
     AnalysisRunStateComponent,
     AnalysisFollowUpChatComponent,
+    AnalysisReportEditorComponent,
     BrowserToolsSetupModalComponent,
     GitLabBranchSelectComponent,
     MatTooltipModule,

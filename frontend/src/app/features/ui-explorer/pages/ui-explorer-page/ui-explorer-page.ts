@@ -6,6 +6,7 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisRunStateComponent } from '../../../../components/analysis-run-state/analysis-run-state';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
+import { AnalysisReportEditorComponent } from '../../../../components/analysis-report-editor/analysis-report-editor';
 import { UiExplorerConfigurationComponent } from '../../components/ui-explorer-configuration/ui-explorer-configuration';
 import { UiExplorerResultComponent } from '../../components/ui-explorer-result/ui-explorer-result';
 import { UiExplorerJobStatus } from '../../models/ui-explorer.models';
@@ -20,6 +21,7 @@ import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils
     AnalysisStepsPanelComponent,
     AnalysisRunStateComponent,
     AnalysisFollowUpChatComponent,
+    AnalysisReportEditorComponent,
     UiExplorerConfigurationComponent,
     UiExplorerResultComponent
   ],

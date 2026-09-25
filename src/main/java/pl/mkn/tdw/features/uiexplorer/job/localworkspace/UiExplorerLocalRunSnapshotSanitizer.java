@@ -188,7 +188,8 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 result != null && result.screen() != null ? result.screen().label() : report.subHeader(),
                 report.markdownSummary(),
                 report.sections().stream().map(section -> sanitize(section, allowedPaths)).toList(),
-                sanitize(report.meta(), allowedPaths)
+                sanitize(report.meta(), allowedPaths),
+                report.manualEdit()
         );
     }
 

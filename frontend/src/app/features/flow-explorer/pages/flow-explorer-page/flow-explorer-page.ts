@@ -3,12 +3,13 @@ import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize, Subscription } from 'rxjs';
+import { finalize, Observable, Subscription } from 'rxjs';
 
 import {
   AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
   AnalysisReport,
+  AnalysisReportEditRequest,
   AnalysisReportMeta,
   AnalysisReportReference,
   AnalysisReportSection,
@@ -44,6 +45,7 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
+import { AnalysisReportEditorComponent } from '../../../../components/analysis-report-editor/analysis-report-editor';
 import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
 import { buildReportShareDocument } from '../../../../core/utils/analysis-share.utils';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
@@ -57,6 +59,7 @@ import {
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 import { appendOptimisticChatTurn } from '../../../../core/utils/analysis-chat-optimistic.utils';
+import { reportEditErrorMessage } from '../../../../core/utils/report-edit-error.utils';
 import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
@@ -192,6 +195,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     AnalysisFollowUpChatComponent,
     AnalysisReportMetaComponent,
     AnalysisReportSectionContentComponent,
+    AnalysisReportEditorComponent,
     AnalysisShareMenuComponent,
     AnalysisStepsPanelComponent,
     GitLabBranchSelectComponent,
@@ -239,6 +243,9 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly selectedReasoningEffort = signal('');
   readonly userInstructions = signal('');
   readonly job = signal<FlowExplorerJobStateSnapshot | null>(null);
+  readonly editingReport = signal(false);
+  readonly reportSaving = signal(false);
+  readonly reportEditError = signal('');
   readonly exportState = signal<FlowExplorerExportState | null>(null);
   readonly jobError = signal('');
   readonly isSubmitting = signal(false);
@@ -323,6 +330,24 @@ export class FlowExplorerPageComponent implements OnInit {
         (exportState?.origin === 'local' && Boolean(exportState.continuationEnabled)))
     );
   });
+  editReport(request: AnalysisReportEditRequest): void {
+    const currentJob = this.job();
+    const state = this.exportState();
+    if (!currentJob?.report || !state || !this.isChatAvailable() || this.isJobActive() || this.reportSaving()) return;
+    this.reportSaving.set(true);
+    this.reportEditError.set('');
+    const operation: Observable<FlowExplorerJobStateSnapshot | LocalAnalysisRunDetailResponse> = state.origin === 'local' && state.localRunId
+      ? this.historyApi.editReport(state.localRunId, request)
+      : this.flowExplorerApi.editReport(currentJob.jobId, request);
+    operation.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.reportSaving.set(false))).subscribe({
+      next: response => {
+        if ('exportEnvelope' in response) this.applyLocalFlowExplorerRun(response);
+        else this.applyJobSnapshot(response, { ...state, origin: 'live' });
+        this.editingReport.set(false);
+      },
+      error: error => this.reportEditError.set(reportEditErrorMessage(error))
+    });
+  }
   readonly focusAreas = computed<FlowExplorerFocusArea[]>(() =>
     this.sectionModes()
       .filter((sectionMode) => sectionMode.mode === 'DEEP')

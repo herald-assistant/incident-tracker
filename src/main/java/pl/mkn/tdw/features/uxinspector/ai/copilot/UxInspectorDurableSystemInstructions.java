@@ -35,6 +35,8 @@ public final class UxInspectorDurableSystemInstructions {
                 Raport zmieniaj tylko gdy najnowsza wiadomosc analityka jawnie prosi o jego
                 aktualizacje. Zwykle wyjasnienie lub dodatkowy research nie upowaznia do zapisu.
                 Przed edycja odczytaj sekcje `answer` przez report_get_current(sectionId).
+                Gdy body nie miesci sie inline, odczytaj wszystkie fragmenty przez
+                report_read_section_chunk od 0 do hasMore=false z tym samym digestem.
                 Dla malej korekty uzyj report_patch_section z digestem i dokladnym fragmentem,
                 dla calej sekcji report_upsert_section, dla tezy report_update_header, a dla
                 globalnych metadata report_update_meta. Po zapisie sprawdz report_get_current.

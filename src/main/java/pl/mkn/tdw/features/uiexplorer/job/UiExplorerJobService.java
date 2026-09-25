@@ -24,6 +24,9 @@ import pl.mkn.tdw.features.uiexplorer.job.state.UiExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportEditException;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 
@@ -137,6 +140,33 @@ public class UiExplorerJobService {
 
     public UiExplorerJobStateSnapshot getJob(String jobId) {
         return jobOrThrow(jobId).snapshot();
+    }
+
+    public UiExplorerJobStateSnapshot editReport(String jobId, AnalysisReportEditRequest edit) {
+        var normalized = normalize(jobId);
+        var job = jobOrThrow(normalized);
+        var context = reachabilityContexts.get(normalized);
+        var authRef = authRefs.get(normalized);
+        if (context == null || authRef == null) {
+            throw new AnalysisReportEditException("REPORT_EDIT_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "Live context is unavailable. Open the result from Analysis History.");
+        }
+        try (var lease = operationGuard.tryAcquire(normalized).orElseThrow(() ->
+                new AnalysisReportEditException("REPORT_EDIT_BUSY", UserFacingErrorType.CONFLICT,
+                        "Another operation is in progress for this analysis."))) {
+            var before = job.snapshot();
+            var evidence = new java.util.ArrayList<>(before.toolEvidenceSections());
+            before.chatMessages().forEach(chat -> evidence.addAll(chat.toolEvidenceSections()));
+            var updated = job.editReport(edit, candidate -> followUpReportProjection.project(
+                    before.report(), candidate, job.initialRequest(), context, before.usage(), evidence));
+            try {
+                localRunPersistence.persistRunSnapshot(updated, authRef, job.copilotSessionId(), context);
+            } catch (RuntimeException exception) {
+                job.restoreReport(before);
+                throw exception;
+            }
+            return updated;
+        }
     }
 
     public UiExplorerJobStateSnapshot startChatMessage(String jobId, UiExplorerChatMessageRequest request) {

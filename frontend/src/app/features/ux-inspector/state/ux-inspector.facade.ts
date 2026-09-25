@@ -5,6 +5,7 @@ import { Observable, Subscription, finalize } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
+  AnalysisReportEditRequest,
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../core/models/analysis.models';
@@ -12,6 +13,7 @@ import { AiOptionsApiService } from '../../../core/services/ai-options-api.servi
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { appendOptimisticChatTurn } from '../../../core/utils/analysis-chat-optimistic.utils';
+import { reportEditErrorMessage } from '../../../core/utils/report-edit-error.utils';
 import {
   EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
   defaultReasoningEffortForAiModel,
@@ -65,6 +67,9 @@ export class UxInspectorFacade {
   readonly portabilityError = signal('');
   readonly chatSubmitting = signal(false);
   readonly chatError = signal('');
+  readonly editingReport = signal(false);
+  readonly reportSaving = signal(false);
+  readonly reportEditError = signal('');
   readonly chatAuthStartUrl = signal('');
 
   readonly selectedSystemId = signal('');
@@ -356,6 +361,26 @@ export class UxInspectorFacade {
         this.chatError.set(readApiError(error, 'Nie udało się wysłać pytania do UX Inspectora.'));
         this.chatAuthStartUrl.set(typeof payload?.authStartUrl === 'string' ? payload.authStartUrl.trim() : '');
       }
+    });
+  }
+
+  editReport(request: AnalysisReportEditRequest): void {
+    const snapshot = this.job();
+    const source = this.resultSource();
+    if (!snapshot?.report || !this.canUseChat() || this.reportSaving() || hasActiveChat(snapshot)) return;
+    this.reportSaving.set(true);
+    this.reportEditError.set('');
+    const operation: Observable<UxInspectorJobStateSnapshot | LocalAnalysisRunDetailResponse> =
+      source?.origin === 'history' && source.localRunId
+        ? this.historyApi.editReport(source.localRunId, request)
+        : this.api.editReport(snapshot.jobId, request);
+    operation.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.reportSaving.set(false))).subscribe({
+      next: response => {
+        if ('exportEnvelope' in response) this.applyLocalRun(response);
+        else this.job.set(response);
+        this.editingReport.set(false);
+      },
+      error: error => this.reportEditError.set(reportEditErrorMessage(error))
     });
   }
 

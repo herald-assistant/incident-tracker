@@ -365,6 +365,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 request("dev3", List.of(sufficientElasticSection())),
                 tools(
                         CopilotReportToolNames.GET_CURRENT,
+                        CopilotReportToolNames.READ_SECTION_CHUNK,
                         CopilotReportToolNames.UPSERT_SECTION,
                         CopilotReportToolNames.UPDATE_HEADER,
                         CopilotReportToolNames.UPDATE_META,
@@ -510,6 +511,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 chatRequest(null, null, null),
                 tools(
                         CopilotReportToolNames.GET_CURRENT,
+                        CopilotReportToolNames.READ_SECTION_CHUNK,
                         CopilotReportToolNames.UPSERT_SECTION,
                         CopilotReportToolNames.PATCH_SECTION,
                         CopilotReportToolNames.UPDATE_HEADER,

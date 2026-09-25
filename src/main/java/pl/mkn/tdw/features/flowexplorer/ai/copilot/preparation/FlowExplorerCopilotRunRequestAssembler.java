@@ -14,6 +14,7 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditGuidance;
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +24,8 @@ public class FlowExplorerCopilotRunRequestAssembler {
             W follow-up zmieniaj AnalysisReport tylko po jawnej prosbie operatora w najnowszej
             wiadomosci. Zwykle pytanie, prosba o wyjasnienie albo dodatkowy research nie zmienia
             raportu. Przed korekta odczytaj biezaca sekcje przez report_get_current(sectionId).
+            Dla duzej sekcji odczytaj wszystkie fragmenty przez report_read_section_chunk,
+            od 0 do hasMore=false, sprawdzajac wspolny digest.
             Uzyj report_patch_section dla jednego jednoznacznego fragmentu z aktualnym digestem,
             report_upsert_section dla calej sekcji, report_update_header dla naglowka i
             report_update_meta dla globalnych metadata. Zachowaj niezmieniane tresci i potwierdz
@@ -143,7 +146,8 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 followUp
                         ? CopilotSessionTarget.existing(toolSessionContext.copilotSessionId())
                         : CopilotSessionTarget.newSession(),
-                preparation != null ? preparation.prompt() : "",
+                (preparation != null ? preparation.prompt() : "")
+                        + (followUp ? AnalysisReportManualEditGuidance.forFollowUp(followUpReport) : ""),
                 sessionConfigRequest,
                 preparation != null ? preparation.artifactContents() : null,
                 null

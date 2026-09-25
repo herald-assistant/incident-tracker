@@ -59,6 +59,8 @@ public final class UiExplorerDurableSystemInstructions {
                 Raport zmieniaj tylko gdy najnowsza wiadomosc analityka jawnie prosi o aktualizacje
                 dokumentu. Zwykle pytanie lub dodatkowy research nie upowaznia do zapisu.
                 Przed edycja odczytaj potrzebna sekcje przez report_get_current(sectionId).
+                Gdy body nie miesci sie inline, odczytaj wszystkie fragmenty przez
+                report_read_section_chunk od 0 do hasMore=false z tym samym digestem.
                 Dla malej korekty uzyj report_patch_section z aktualnym digestem i dokladnym
                 fragmentem, dla calej sekcji report_upsert_section, dla naglowka report_update_header,
                 a dla globalnych metadata report_update_meta. Zachowaj reszte raportu i po zapisie
