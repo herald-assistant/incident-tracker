@@ -442,17 +442,21 @@ Backend tworzy `reportId` przy skladaniu runu, przekazuje scaffold raportu do
 `CopilotRunRequest.initialReport`, a runtime rejestruje go w
 `CopilotReportSessionStore` na czas pojedynczego `sendAndWait`.
 
-Model zapisuje wynik przez platformowe report tools:
+Model pracuje na wyniku przez platformowe report tools:
 
 - `report_update_header`,
 - `report_upsert_section`,
 - `report_update_meta`,
-- `report_get_current`.
+- `report_get_current`,
+- `report_read_section_chunk`.
 
 Report tools sa session-bound. Model-facing schema nie przyjmuje `reportId`;
 scope pochodzi z hidden `ToolContext`, razem z feature name i lista
 dozwolonych sekcji. Tool odrzuca sekcje spoza `allowedReportSectionIds`.
-`report_get_current(sectionId)` moze odczytac body jednej dozwolonej sekcji.
+`report_get_current(sectionId)` moze odczytac body jednej malej dozwolonej
+sekcji. Wieksza sekcje model czyta przez
+`report_read_section_chunk(sectionId, chunkIndex)` po kolejnych fragmentach
+UTF-8 z kontrola digestu, bez odnosnika do niedostepnego pliku.
 Follow-up czterech feature'ow z czatem udostepnia dodatkowo
 `report_patch_section` do celowanej korekty po jawnej prosbie operatora.
 Tool wymaga aktualnego digestu i jednoznacznego fragmentu.
@@ -493,9 +497,13 @@ diagnostyczny, ale nie jest on mechanizmem platformowego report runtime.
 
 `AnalysisReport` jest neutralny i nie zna semantyki incydentu, Flow Explorera
 ani UI Explorera. Feature decyduje o dozwolonych sekcjach, required sections,
-promptach, skillach i mapowaniu raportu na publiczny response. W MVP nie
-wersjonujemy raportu; job state, local workspace i export trzymaja ostatni
-snapshot raportu obok feature-specific `result`.
+promptach, skillach i mapowaniu raportu na publiczny response. Nie przechowujemy
+pelnej historii wersji raportu; job state, local workspace i export trzymaja
+ostatni snapshot obok feature-specific `result`. Reczna korekta operatora
+zapisuje w nim `manualEdit` z numerem rewizji, czasem i zmienionymi czesciami.
+Zapis wymaga aktualnego `revisionSha256`, ponownego mapowania na wynik feature'a
+i braku aktywnego follow-up; kolejny turn AI dostaje informacje o korekcie i
+mozliwosc odczytu zmienionych sekcji.
 
 `functionalAnalysis` nadal jest pisane dla analityka biznesowo-systemowego i
 musi uzywac operational context do osadzenia incydentu w systemie, procesie,

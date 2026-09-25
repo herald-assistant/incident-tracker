@@ -62,9 +62,6 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- `needs/manual-analysis-result-editing.md` oraz
-  `plans/manual-analysis-result-editing.md` opisuja potrzebe recznej korekty
-  wyniku i proponowany, niezatwierdzony zakres dla analiz z follow-up chatem.
 - UI Explorer oraz UX Inspector nie utrzymuja zakonczonych potrzeb i planow
   jako archiwum. Ich aktualne kontrakty, runtime, follow-up chat, historia,
   import/export i granice bezpieczenstwa opisuja odpowiednio
@@ -80,6 +77,10 @@ Complexity i Delivery Complexity Trends jest opisany w odpowiednich dokumentach
 `architecture/*-runtime-flow.md`. Kolejny inkrement L1-L3 wymaga nowego albo
 zaktualizowanego dokumentu potrzeby oraz zatwierdzonego planu; historie
 zakonczonych prac zachowuje Git.
+
+Aktualny kontrakt recznej edycji wyniku i odczytu dlugich sekcji raportu
+opisuje `architecture/analysis-feature-delivery-playbook.md` oraz
+`architecture/key-decisions.md`.
 
 Dla nowego feature'a albo kolejnego inkrementu L1-L3 utworz lub zaktualizuj
 konkretny dokument w `needs/` oraz zatwierdzony plan w `plans/`, zamiast

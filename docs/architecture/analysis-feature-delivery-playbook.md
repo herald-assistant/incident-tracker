@@ -1128,14 +1128,20 @@ dla live joba albo lokalnego runu z waznym `copilotSessionId`, continuation
 metadata i mozliwoscia bezpiecznego odtworzenia scope'u po stronie backendu.
 
 Raport kontynuowalnego runu moze zostac recznie poprawiony przez operatora.
-Wspolny edytor pokazuje czesci raportu kolejno, podswietla skladnie Markdown
-zgodna z GFM i zachowuje osobny podglad przed zapisem.
+Ikona edycji obok Share jest dostepna dla zakonczonego, edytowalnego wyniku;
+importowany run pozostaje tylko do odczytu. Wspolny edytor
+pokazuje czesci raportu kolejno, kazda pod krotkim naglowkiem, z polem
+Markdown rosnacym wraz z trescia od minimum 10 wierszy. Podswietla skladnie
+zgodna z GFM kolorami motywu i zachowuje osobny podglad bez zapisu szkicu.
 Warunkowy zapis przyjmuje tylko Markdown istniejacych sekcji i opcjonalne
 `markdownSummary`, wymaga aktualnego `revisionSha256`, waliduje feature-owned
-projekcje wyniku oraz zapisuje `manualEdit` z numerem rewizji, czasem i lista
-zmienionych czesci. Przed kolejnym follow-up feature przekazuje modelowi
-informacje o korekcie i poleca odczyt biezacego raportu przez tools. Nie
-traktuj korekty operatora jako evidence ani weryfikacji AI.
+projekcje wyniku oraz odrzuca zapis podczas aktywnego follow-up. Aktualizuje
+spojnie raport, wynik i lokalny snapshot; zapisuje tez `manualEdit` z numerem
+rewizji, czasem i lista zmienionych czesci. Znacznik trwa w historii i
+eksporcie, ale nie tworzy osobnego pill w naglowku. Przed kolejnym follow-up
+feature przekazuje modelowi informacje o korekcie i poleca odczyt biezacego
+raportu przez tools. Nie traktuj korekty operatora jako evidence ani
+weryfikacji AI.
 
 ## Local workspace, historia i import/export
 
