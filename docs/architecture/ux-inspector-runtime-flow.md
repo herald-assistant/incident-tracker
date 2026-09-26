@@ -198,6 +198,11 @@ Osobny logical artifact zawiera kompletny, posortowany spis nazw sciezek z
 pierwszych czterech poziomow wybranego repozytorium na pinned commit. Drzewo
 jest mapa nawigacyjna, nie dowodem tresci. Brak kompletnego drzewa blokuje
 przygotowanie zamiast dostarczyc modelowi cichy, obciety wynik.
+Initial prompt pokazuje te nazwy jako hierarchiczne drzewo z `├──`, `└──` i
+`│`, z katalogami oznaczonymi koncowym `/`. Metadata repository, branch,
+commit, depth i complete pozostaja obok diagramu. Wspolny neutralny renderer
+formatuje juz pobrane sciezki; feature nadal posiada pobranie i wymaganie
+kompletnosci. Format wynikow GitLab navigation tools pozostaje osobny.
 
 Z tego samego drzewa preparation wykrywa repository-wide
 `.github/copilot-instructions.md` oraz project skills zapisane zgodnie z

@@ -166,10 +166,13 @@ class OperationalContextAssistancePromptPreparationServiceTest {
         assertThat(material.path("visibilityLimits")).isEmpty();
         assertThat(material.path("selectedSource").path("files").get(0).path("content").asText())
                 .isEqualTo("Obsługuje profil klienta.\npassword=fictional-example\nKontakt: crm@example.com");
-        assertThat(preparation.prompt()).contains("### Metadane wybranego projektu i drzewo",
+        assertThat(preparation.prompt()).contains("### Metadane wybranego projektu",
+                "### Drzewo wybranego repozytorium",
                 "### Pliki GitLab odczytane wstępnie (`selectedSource.files`)",
                 "Obsługuje profil klienta.");
-        assertThat(preparation.prompt().indexOf("### Metadane wybranego projektu i drzewo"))
+        assertThat(preparation.prompt().indexOf("### Metadane wybranego projektu"))
+                .isLessThan(preparation.prompt().indexOf("### Drzewo wybranego repozytorium"));
+        assertThat(preparation.prompt().indexOf("### Drzewo wybranego repozytorium"))
                 .isLessThan(preparation.prompt().indexOf("### Pliki GitLab odczytane wstępnie"));
     }
 
@@ -286,8 +289,18 @@ class OperationalContextAssistancePromptPreparationServiceTest {
         assertThat(material.path("selectedSource").path("tree").path("continuations").get(0)
                 .path("cursor").asText()).isEqualTo("nextCursor");
         assertThat(preparation.prompt()).contains("gitlab_list_repository_branches", "gitlab_list_repository_tree",
-                "gitlab_read_repository_file",
-                "Backend/crm-customer-api/src", "nextCursor", "\"requestedRef\" : \"master\"");
+                "gitlab_read_repository_file", "\"requestedRef\" : \"master\"",
+                "\"truncated\" : true", "nextCursor", """
+                ```text
+                crm-customer-api/
+                └── Backend/
+                    └── crm-customer-api/
+                        └── src/
+                ```""");
+        var metadataSection = preparation.prompt().substring(
+                preparation.prompt().indexOf("### Metadane wybranego projektu"),
+                preparation.prompt().indexOf("### Drzewo wybranego repozytorium"));
+        assertThat(metadataSection).doesNotContain("\"entries\"").contains("\"continuations\"");
         assertThat(preparation.allowedSourceRefs()).containsExactly("operator:description");
     }
 

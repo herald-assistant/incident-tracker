@@ -43,11 +43,12 @@ class UxInspectorPromptAndSkillsTest {
                 depth: 4
                 content: PATH_NAMES_ONLY
                 complete: true
-                paths:
-                - [dir] .github
-                - [file] .github/copilot-instructions.md
-                - [file] README.md
-                - [dir] src
+                tree:
+                crm-ui/
+                ├── .github/
+                │   └── copilot-instructions.md
+                ├── src/
+                └── README.md
                 """.formatted(REVISION), java.util.List.of(
                 ".github/copilot-instructions.md", ".github/skills/crm-architecture/SKILL.md", "README.md")));
         when(repositoryGuidanceArtifactService.render(any(), any())).thenReturn("""
@@ -132,6 +133,7 @@ class UxInspectorPromptAndSkillsTest {
                 .doesNotContain("INDEX_ONLY")
                 .contains("formSnapshot", "zamrozona obserwacja runtime")
                 .contains("README", "AGENTS.md", ".github/copilot-instructions.md", "complete: true")
+                .contains("```text\nrepository: CRM/crm-ui", "crm-ui/\n├── .github/")
                 .contains("Search shared CRM guards before concluding.", "crm-architecture",
                         "Explains cross-cutting CRM architecture.")
                 .contains("MUSISZ odczytac", "gitlab_read_repository_file", "mechanizmy",

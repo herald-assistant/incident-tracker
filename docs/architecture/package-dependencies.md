@@ -46,6 +46,10 @@ Mala `common.PlatformSourceCodeProperties` posiada wymagany
 `platform.source-code.default-branch`. Feature'y oraz shared/operator UI config
 moga ja konsumowac bez importowania siebie nawzajem; nie powstaje
 feature-specific wlasciciel wspolnego defaultu.
+`common.RepositoryPathTreeRenderer` formatuje juz pobrane typowane sciezki
+repozytorium jako neutralny diagram, uzywany przez initial prompty UX Inspectora
+i Operational Context Assistance. Nie pobiera danych ani nie importuje GitLaba,
+platformy AI lub feature'ow.
 
 ## Docelowe warstwy backendu
 
@@ -168,7 +172,8 @@ swoj publiczny kontrakt przez adapter, a UX Inspector korzysta z niego bez
 importowania UI Explorera.
 
 `features.uxinspector` posiada capture v1, target resolution, source binding,
-kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek,
+kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek
+oraz jego neutralne formatowanie przez `common`,
 session-bound `uxi_*` target tools oraz policy dla neutralnych GitLab
 navigation/search/read tools nad calym wybranym repozytorium. Posiada report z
 jedna sekcja, job i scisly import/export. Nie posiada runtime skilli ani

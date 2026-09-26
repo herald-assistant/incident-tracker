@@ -495,6 +495,11 @@ duzy, material pokazuje niepelnosc i kontynuacje; tool moze odczytac kolejne
 cztery poziomy od wybranej bezpiecznej sciezki lub strony. Tree/list/search
 zwracaja sciezki bez tresci, a dopiero pelny zweryfikowany read
 udostepnia cytowalny `gitlab:` source ref zawierajacy projekt i commit.
+Initial prompt pokazuje pobrane sciezki jako hierarchiczne drzewo z `├──`,
+`└──` i `│`; nie dopowiada katalogow, ktorych nie ma w pobranym fragmencie.
+Metadata `depth`, `truncated` i `continuations` z cursorami pozostaja obok
+diagramu, a typowany `selectedSource.tree` pozostaje w logical artifact.
+Format odpowiedzi navigation tools nie zmienia sie.
 W tej sesji pelny odczyt nie ma limitu rozmiaru pliku i odrzuca pliki
 nietekstowe lub niepelne, bez blokowania nazw plikow, rozszerzen i tresci
 wygladajacych na wrazliwe.
@@ -542,7 +547,7 @@ Sesja AI dostaje niezmieniony opis, pelne decoded mapy dziewieciu aktywnych
 YAML z jednego digesta i 11 aktualnych instrukcji
 `operational-context-maintenance/` z pakietu aplikacji. Prompt przedstawia
 te instrukcje w osobnej sekcji reguł, przed danymi zadania i wybranego GitLaba.
-Metadane projektu i drzewo są oddzielone od odczytanych treści. Projekty GitLab
+Metadane projektu i diagram drzewa są oddzielone od odczytanych treści. Projekty GitLab
 zapisane w repo-map.yml sa dodatkowo wyswietlane jako podpowiedzi, nie pelny
 spis dostepnych projektow, a kazdy
 aktywny dokument katalogu jest pokazany jako osobny JSON z refem

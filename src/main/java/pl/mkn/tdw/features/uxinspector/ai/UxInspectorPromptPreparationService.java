@@ -76,7 +76,9 @@ public class UxInspectorPromptPreparationService {
 
                 ## Selected repository tree
                 `%s`
+                ```text
                 %s
+                ```
                 To komplet nazw sciezek z pierwszych czterech poziomow przypietego commita, bez tresci plikow.
                 Uzywaj go jako mapy nawigacyjnej. Sama obecnosc sciezki nie jest dowodem tresci i nie moze byc cytowana.
 

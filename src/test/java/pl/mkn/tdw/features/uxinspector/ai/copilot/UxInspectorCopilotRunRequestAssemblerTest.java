@@ -45,7 +45,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         );
         var treeArtifactService = mock(UxInspectorRepositoryTreeArtifactService.class);
         when(treeArtifactService.prepare(any())).thenReturn(new UxInspectorRepositoryTreeArtifact(
-                "complete: true\npaths:\n- [file] README.md", List.of("README.md")));
+                "complete: true\ntree:\ncrm-ui/\n└── README.md", List.of("README.md")));
         var guidanceArtifactService = mock(UxInspectorRepositoryGuidanceArtifactService.class);
         when(guidanceArtifactService.render(any(), anyList())).thenReturn("""
                 {"copilotInstructions":{"present":false},"projectSkills":[]}

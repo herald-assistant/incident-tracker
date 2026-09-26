@@ -43,20 +43,24 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
 
         var artifact = service.prepare(targetContext());
 
-        assertThat(artifact.markdown()).contains(
-                "repository: CRM/crm-ui",
-                "branch: main",
-                "commit: " + REVISION,
-                "depth: 4",
-                "content: PATH_NAMES_ONLY",
-                "complete: true",
-                "- [dir] .github",
-                "- [file] .github/copilot-instructions.md",
-                "- [file] README.md",
-                "- [file] pom.xml",
-                "- [file] src/app/pages/login.ts",
-                "- [dir] src/app/pages/private"
-        );
+        assertThat(artifact.markdown()).isEqualTo("""
+                repository: CRM/crm-ui
+                branch: main
+                commit: %s
+                depth: 4
+                content: PATH_NAMES_ONLY
+                complete: true
+                tree:
+                crm-ui/
+                ├── .github/
+                │   └── copilot-instructions.md
+                ├── src/
+                │   └── app/
+                │       └── pages/
+                │           ├── private/
+                │           └── login.ts
+                ├── README.md
+                └── pom.xml""".formatted(REVISION));
         assertThat(artifact.filePaths()).containsExactly(
                 ".github/copilot-instructions.md", "README.md", "pom.xml", "src/app/pages/login.ts");
         verify(repositoryPort, never()).listRepositoryTreeChildrenPage(

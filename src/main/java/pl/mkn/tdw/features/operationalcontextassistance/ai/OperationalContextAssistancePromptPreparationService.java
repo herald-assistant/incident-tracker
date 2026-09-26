@@ -8,11 +8,13 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
+import pl.mkn.tdw.common.RepositoryPathTreeRenderer;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceFile;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
 import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -76,6 +78,7 @@ public class OperationalContextAssistancePromptPreparationService {
         var materialJson = json(material);
         var operatorSelection = operatorSelection(material);
         var sourceMetadata = sourceMetadata(material.path("selectedSource"));
+        var sourceTree = repositoryTree(material.path("selectedSource"));
         var sourceFiles = material.path("selectedSource").isObject()
                 ? material.path("selectedSource").path("files") : objectMapper.createArrayNode();
         var catalog = material.path("catalogContext");
@@ -94,7 +97,7 @@ public class OperationalContextAssistancePromptPreparationService {
                 gdy jest potrzebny do sprawdzenia integracji lub zależności. Ustal jego
                 gałąź przez `gitlab_list_repository_branches` zamiast zgadywać; jej rewizja
                 zostanie przypięta do commita osobno. Nie traktuj katalogowej listy projektów
-                jako pełnego spisu GitLaba. `selectedSource.tree` pokazuje wyłącznie nazwy i ścieżki,
+                jako pełnego spisu GitLaba. Diagram drzewa poniżej pokazuje wyłącznie nazwy i ścieżki,
                 nie treść. Gdy zadanie wymaga wnioskowania z implementacji, najpierw przejdź
                 od tego drzewa do odpowiednich katalogów przez `gitlab_list_repository_tree`,
                 potem przeczytaj istotny plik przez `gitlab_read_repository_file`. Brak plików
@@ -203,10 +206,18 @@ public class OperationalContextAssistancePromptPreparationService {
                 %s
                 ```
 
-                ### Metadane wybranego projektu i drzewo
+                ### Metadane wybranego projektu
                 ```json
                 %s
                 ```
+
+                ### Drzewo wybranego repozytorium
+                ```text
+                %s
+                ```
+                Diagram pokazuje tylko pobrane wpisy. Gdy `selectedSource.tree.truncated` jest
+                `true`, użyj `continuations` z metadanych do doczytania brakujących katalogów.
+                Sama nazwa ścieżki nie potwierdza treści pliku.
 
                 ### Projekty GitLab zapisane w Operational Context
                 To tylko podpowiedzi z katalogu. Jeśli włączono odczyt GitLab,
@@ -227,7 +238,7 @@ public class OperationalContextAssistancePromptPreparationService {
                 %s
                 """.formatted(
                 effectiveSkill(), maintenanceRules(input.maintenanceGuidance()),
-                prettyJson(operatorSelection), prettyJson(sourceMetadata), prettyJson(knownProjects),
+                prettyJson(operatorSelection), prettyJson(sourceMetadata), sourceTree, prettyJson(knownProjects),
                 prettyJson(sourceFiles),
                 catalogDocuments(catalog)
         ).trim();
@@ -269,8 +280,29 @@ public class OperationalContextAssistancePromptPreparationService {
         }
         var metadata = ((ObjectNode) source).deepCopy();
         metadata.remove("files");
+        if (metadata.path("tree") instanceof ObjectNode tree) {
+            tree.remove("entries");
+        }
         result.set("selectedSource", metadata);
         return result;
+    }
+
+    private String repositoryTree(JsonNode source) {
+        if (!source.isObject()) {
+            return "Nie wybrano źródła kodu GitLab.";
+        }
+        var project = source.path("project").asText("");
+        if (project.isBlank()) {
+            return "Nie potwierdzono nazwy wybranego projektu GitLab.";
+        }
+        var entries = new ArrayList<RepositoryPathTreeRenderer.Entry>();
+        for (var entry : source.path("tree").path("entries")) {
+            entries.add(new RepositoryPathTreeRenderer.Entry(
+                    entry.path("path").asText(), "tree".equals(entry.path("type").asText())));
+        }
+        var diagram = RepositoryPathTreeRenderer.render(project, entries);
+        return entries.isEmpty() ? diagram + "\nBrak wpisów w pobranym fragmencie; sprawdź visibilityLimits."
+                : diagram;
     }
 
     private ArrayNode knownGitLabProjects(JsonNode catalog) {

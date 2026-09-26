@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.uxinspector.ai;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.common.RepositoryPathTreeRenderer;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
@@ -54,15 +55,9 @@ public class UxInspectorRepositoryTreeArtifactService {
         builder.append("depth: ").append(DEPTH).append('\n');
         builder.append("content: PATH_NAMES_ONLY\n");
         builder.append("complete: true\n");
-        builder.append("paths:");
-        if (entries.isEmpty()) {
-            builder.append(" []");
-        } else {
-            for (var entry : entries) {
-                builder.append("\n- [").append("tree".equals(entry.type()) ? "dir" : "file")
-                        .append("] ").append(entry.path());
-            }
-        }
+        builder.append("tree:\n").append(RepositoryPathTreeRenderer.render(project, entries.stream()
+                .map(entry -> new RepositoryPathTreeRenderer.Entry(entry.path(), "tree".equals(entry.type())))
+                .toList()));
         return new UxInspectorRepositoryTreeArtifact(
                 builder.toString(),
                 entries.stream().filter(entry -> "blob".equals(entry.type())).map(TreeEntry::path).toList()
