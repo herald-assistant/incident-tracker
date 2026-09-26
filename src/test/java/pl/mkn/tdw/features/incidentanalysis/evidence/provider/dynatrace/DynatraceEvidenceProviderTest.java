@@ -1,8 +1,8 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentEvidence;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentPort;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentEvidence;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
@@ -32,6 +32,7 @@ class DynatraceEvidenceProviderTest {
     @Test
     void shouldSkipDynatraceLookupForDevEnvironment() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
+        when(dynatracePort.isConfigured()).thenReturn(true);
         var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
         var context = contextFrom(new TestElasticLogPort(), "timeout-123");
 
@@ -47,8 +48,21 @@ class DynatraceEvidenceProviderTest {
     }
 
     @Test
+    void shouldReportDisabledWhenDynatraceIsNotConfigured() {
+        var dynatracePort = mock(DynatraceIncidentPort.class);
+        var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
+        var context = contextFrom(uatElasticLogPort(), "uat-incident-123");
+
+        var section = provider.collect(context);
+
+        assertEquals("DISABLED", attributeValue(section.items().get(0), "collectionStatus"));
+        verify(dynatracePort, never()).loadIncidentEvidence(any());
+    }
+
+    @Test
     void shouldCollectDynatraceEvidenceForUatEnvironment() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
+        when(dynatracePort.isConfigured()).thenReturn(true);
         var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
         var context = contextFrom(uatElasticLogPort(), "uat-incident-123");
 
@@ -221,6 +235,7 @@ class DynatraceEvidenceProviderTest {
     @Test
     void shouldExposeUnavailableStatusWhenDynatraceCallFails() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
+        when(dynatracePort.isConfigured()).thenReturn(true);
         var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
         var context = contextFrom(uatElasticLogPort(), "uat-incident-502");
 

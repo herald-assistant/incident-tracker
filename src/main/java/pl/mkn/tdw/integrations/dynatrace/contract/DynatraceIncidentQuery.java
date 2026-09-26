@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.dynatrace;
+package pl.mkn.tdw.integrations.dynatrace.contract;
 
 import org.springframework.util.StringUtils;
 

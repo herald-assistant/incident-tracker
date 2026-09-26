@@ -168,10 +168,16 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   celowanych, testy celowane po `clean`, pelne `mvn -q clean test` i ponowiony
   test adaptera oraz granicy pakietu przeszly. Brak pozostalego driftu
   Confluence.
-- [ ] Krok 2 — Dynatrace: pozostawic `DynatraceIncidentPort` w root, przeniesc
+- [x] Krok 2 — Dynatrace: pozostawic `DynatraceIncidentPort` w root, przeniesc
   query/evidence do `contract`, REST do `adapter.rest`, properties/fabryke do
   `config`; przelaczyc incident evidence i settings. Dowod: test adaptera,
   `DynatraceEvidenceProviderTest`, guard i protokol; root ma jeden port.
+  Wynik: root zawiera tylko `DynatraceIncidentPort`; query i evidence sa w
+  `contract`, adapter w `adapter.rest`, konfiguracja w `config`. Port udostepnia
+  `isConfigured()`, dzieki czemu provider nie importuje properties; jedyny
+  zewnetrzny odczyt konfiguracji ma Workspace Settings. Baseline, testy
+  celowane po `clean`, pelne `mvn -q clean test` i `git diff --check` przeszly.
+  Brak pozostalego driftu Dynatrace.
 - [ ] Krok 3 — Jira: zachowac trzy oddzielne porty w root, przeniesc publiczne
   modele do `contract`, oba adaptery do `adapter.rest`, properties/fabryke do
   `config`; przelaczyc API, Change Verification, Delivery Complexity i Delivery

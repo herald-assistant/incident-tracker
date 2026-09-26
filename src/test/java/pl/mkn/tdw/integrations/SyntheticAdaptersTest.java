@@ -1,7 +1,7 @@
 package pl.mkn.tdw.integrations;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentQuery;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.tdw.integrations.gitlab.TestGitLabRepositoryPort;
@@ -57,7 +57,7 @@ class SyntheticAdaptersTest {
         assertEquals(1, incidentEvidence.problems().size());
         assertEquals(2, incidentEvidence.metrics().size());
         assertEquals("SERVICE-TIMEOUT", incidentEvidence.serviceMatches().get(0).entityId());
-        assertEquals("P-26042756", incidentEvidence.problems().get(0).displayId());
+        assertEquals("P-CRM-101", incidentEvidence.problems().get(0).displayId());
         assertEquals("service.response.time.p95", incidentEvidence.metrics().get(0).metricLabel());
 
         assertEquals(1, fileCandidates.size());

@@ -1,9 +1,17 @@
 package pl.mkn.tdw.integrations.dynatrace;
 
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentEvidence;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
+
 import java.time.Instant;
 import java.util.List;
 
 public class TestDynatraceIncidentPort implements DynatraceIncidentPort {
+
+    @Override
+    public boolean isConfigured() {
+        return true;
+    }
 
     @Override
     public DynatraceIncidentEvidence loadIncidentEvidence(DynatraceIncidentQuery query) {
@@ -23,8 +31,8 @@ public class TestDynatraceIncidentPort implements DynatraceIncidentPort {
                             query.serviceNames()
                     )),
                     List.of(new DynatraceIncidentEvidence.ProblemSummary(
-                            "-7738361456728905949_1775948280000V2",
-                            "P-26042756",
+                            "CRM-PROBLEM-101",
+                            "P-CRM-101",
                             "timeout",
                             "SERVICES",
                             "ERROR",
@@ -113,8 +121,8 @@ public class TestDynatraceIncidentPort implements DynatraceIncidentPort {
                             query.serviceNames()
                     )),
                     List.of(new DynatraceIncidentEvidence.ProblemSummary(
-                            "-1860977652372487379_1775945100000V2",
-                            "P-26042703",
+                            "CRM-PROBLEM-102",
+                            "P-CRM-102",
                             "db lock",
                             "SERVICES",
                             "ERROR",

@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.dynatrace;
+package pl.mkn.tdw.integrations.dynatrace.adapter.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +7,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
+import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentPort;
+import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
+import pl.mkn.tdw.integrations.dynatrace.config.DynatraceRestClientFactory;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentEvidence;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +47,11 @@ public class DynatraceRestIncidentAdapter implements DynatraceIncidentPort {
 
     private final DynatraceProperties properties;
     private final DynatraceRestClientFactory restClientFactory;
+
+    @Override
+    public boolean isConfigured() {
+        return properties.isConfigured();
+    }
 
     @Override
     public DynatraceIncidentEvidence loadIncidentEvidence(DynatraceIncidentQuery query) {

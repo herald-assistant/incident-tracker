@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.dynatrace;
+package pl.mkn.tdw.integrations.dynatrace.adapter.rest;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -6,6 +6,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
+import pl.mkn.tdw.integrations.dynatrace.config.DynatraceRestClientFactory;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.time.Instant;
@@ -59,8 +62,8 @@ class DynatraceRestIncidentAdapterTest {
                   "pageSize": 10,
                   "problems": [
                     {
-                      "problemId": "-7738361456728905949_1775948280000V2",
-                      "displayId": "P-26042756",
+                      "problemId": "CRM-PROBLEM-101",
+                      "displayId": "P-CRM-101",
                       "title": "Multiple service problems",
                       "impactLevel": "SERVICES",
                       "severityLevel": "ERROR",
@@ -224,7 +227,7 @@ class DynatraceRestIncidentAdapterTest {
         assertEquals(1, evidence.serviceMatches().size());
         assertEquals("SERVICE-BACKEND", evidence.serviceMatches().get(0).entityId());
         assertEquals(1, evidence.problems().size());
-        assertEquals("P-26042756", evidence.problems().get(0).displayId());
+        assertEquals("P-CRM-101", evidence.problems().get(0).displayId());
         assertEquals(3, evidence.metrics().size());
         assertEquals("service.response.time.p95", evidence.metrics().get(0).metricLabel());
         assertEquals("ms", evidence.metrics().get(0).unit());

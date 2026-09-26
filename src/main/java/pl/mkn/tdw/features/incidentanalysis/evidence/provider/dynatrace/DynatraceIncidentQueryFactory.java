@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentQuery;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.time.Instant;

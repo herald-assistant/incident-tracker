@@ -50,6 +50,11 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   korzystaja z portu i kontraktu; jedynym wyjatkiem jest
   `api.workspacesettings.WorkspaceSettingsService`, ktory aktualizuje
   `ConfluenceProperties` podczas pracy aplikacji.
+- W `dynatrace/` bezposrednio w pakiecie znajduje sie tylko
+  `DynatraceIncidentPort`. Query i evidence sa w `contract`, adapter w
+  `adapter.rest`, a properties i fabryka klienta w `config`. Provider evidence
+  sprawdza dostepnosc przez port; tylko
+  `api.workspacesettings.WorkspaceSettingsService` aktualizuje properties.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
@@ -72,6 +77,6 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 
 - `PackageDependencyGuardTest` pilnuje, zeby `integrations.*` nie zaczelo
   importowac warstw aplikacyjnych.
-- `IntegrationPackageBoundaryTest` pilnuje struktury pakietu Confluence i
-  importow jego konsumentow.
+- `IntegrationPackageBoundaryTest` pilnuje struktury pakietow Confluence i
+  Dynatrace oraz importow ich konsumentow.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.

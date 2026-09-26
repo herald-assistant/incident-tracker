@@ -16,7 +16,9 @@ class IntegrationPackageBoundaryTest {
 
     private static final Path MAIN_JAVA = Path.of("src/main/java");
     private static final String CONFLUENCE_PACKAGE = "pl.mkn.tdw.integrations.confluence";
+    private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
     private static final Path CONFLUENCE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/confluence");
+    private static final Path DYNATRACE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/dynatrace");
     private static final Path SETTINGS_SERVICE = MAIN_JAVA.resolve(
             "pl/mkn/tdw/api/workspacesettings/WorkspaceSettingsService.java");
     private static final Pattern PUBLIC_PORT = Pattern.compile("\\bpublic\\s+interface\\s+\\w+Port\\b");
@@ -25,10 +27,19 @@ class IntegrationPackageBoundaryTest {
 
     @Test
     void confluenceRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(CONFLUENCE_ROOT, CONFLUENCE_PACKAGE, "ConfluencePagePort.java");
+    }
+
+    @Test
+    void dynatraceRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(DYNATRACE_ROOT, DYNATRACE_PACKAGE, "DynatraceIncidentPort.java");
+    }
+
+    private void assertRootContainsOnlyPublicPorts(Path root, String integrationPackage, String expectedPort) throws IOException {
         var violations = new ArrayList<String>();
-        try (var files = Files.list(CONFLUENCE_ROOT)) {
+        try (var files = Files.list(root)) {
             var rootTypes = files.filter(path -> path.toString().endsWith(".java")).toList();
-            assertEquals(List.of("ConfluencePagePort.java"), rootTypes.stream()
+            assertEquals(List.of(expectedPort), rootTypes.stream()
                     .map(path -> path.getFileName().toString()).toList());
             for (var file : rootTypes) {
                 var content = Files.readString(file);
@@ -40,17 +51,32 @@ class IntegrationPackageBoundaryTest {
                     var imported = IMPORT.matcher(line);
                     if (imported.matches()
                             && !imported.group(1).startsWith("java.")
-                            && !imported.group(1).startsWith(CONFLUENCE_PACKAGE + ".contract.")) {
+                            && !imported.group(1).startsWith(integrationPackage + ".contract.")) {
                         violations.add(file + " imports " + imported.group(1));
                     }
                 }
             }
         }
-        assertTrue(violations.isEmpty(), () -> "Confluence root contains non-port types: " + violations);
+        assertTrue(violations.isEmpty(), () -> "Integration root contains non-port types: " + violations);
     }
 
     @Test
     void confluenceConsumersDependOnlyOnPortAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(CONFLUENCE_PACKAGE,
+                "ConfluencePagePort", "ConfluenceProperties");
+    }
+
+    @Test
+    void dynatraceConsumersDependOnlyOnPortAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(DYNATRACE_PACKAGE,
+                "DynatraceIncidentPort", "DynatraceProperties");
+    }
+
+    private void assertConsumersDependOnlyOnPortAndContract(
+            String integrationPackage,
+            String portName,
+            String settingsPropertiesName
+    ) throws IOException {
         var violations = new ArrayList<String>();
         try (var files = Files.walk(MAIN_JAVA)) {
             for (var file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
@@ -61,26 +87,26 @@ class IntegrationPackageBoundaryTest {
                         .map(matcher -> matcher.group(1))
                         .findFirst()
                         .orElse("");
-                if (sourcePackage.equals(CONFLUENCE_PACKAGE)
-                        || sourcePackage.startsWith(CONFLUENCE_PACKAGE + ".")) {
+                if (sourcePackage.equals(integrationPackage)
+                        || sourcePackage.startsWith(integrationPackage + ".")) {
                     continue;
                 }
                 for (var line : lines) {
                     var imported = IMPORT.matcher(line);
-                    if (!imported.matches() || !imported.group(1).startsWith(CONFLUENCE_PACKAGE + ".")) {
+                    if (!imported.matches() || !imported.group(1).startsWith(integrationPackage + ".")) {
                         continue;
                     }
                     var type = imported.group(1);
-                    var allowed = type.equals(CONFLUENCE_PACKAGE + ".ConfluencePagePort")
-                            || type.startsWith(CONFLUENCE_PACKAGE + ".contract.")
+                    var allowed = type.equals(integrationPackage + "." + portName)
+                            || type.startsWith(integrationPackage + ".contract.")
                             || (file.equals(SETTINGS_SERVICE)
-                                    && type.equals(CONFLUENCE_PACKAGE + ".config.ConfluenceProperties"));
+                                    && type.equals(integrationPackage + ".config." + settingsPropertiesName));
                     if (!allowed) {
                         violations.add(MAIN_JAVA.relativize(file) + " imports " + type);
                     }
                 }
             }
         }
-        assertTrue(violations.isEmpty(), () -> "Confluence consumers import implementation details: " + violations);
+        assertTrue(violations.isEmpty(), () -> "Integration consumers import implementation details: " + violations);
     }
 }

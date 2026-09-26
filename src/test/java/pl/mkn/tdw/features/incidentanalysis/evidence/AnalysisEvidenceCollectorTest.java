@@ -382,8 +382,8 @@ class AnalysisEvidenceCollectorTest {
         private final CountDownLatch release = new CountDownLatch(1);
 
         @Override
-        public pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentEvidence loadIncidentEvidence(
-                pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentQuery query
+        public pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentEvidence loadIncidentEvidence(
+                pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery query
         ) {
             started.countDown();
             awaitRelease();

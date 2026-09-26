@@ -154,7 +154,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("<<<BEGIN ARTIFACT: 02-elasticsearch-logs.md | mimeType=text/markdown>>>"));
             assertTrue(prompt.contains("\"deliveryMode\" : \"embedded-prompt\""));
             assertTrue(prompt.contains("Read timed out while calling crm-customer-profile-service"));
-            assertTrue(prompt.contains("Problem `P-26042756` `Gateway timeout on backend`."));
+            assertTrue(prompt.contains("Problem `P-CRM-101` `Gateway timeout on backend`."));
             assertTrue(prompt.contains("GitLab resolved code references"));
             assertTrue(prompt.contains("Available capability groups:"));
             assertTrue(prompt.contains("GitLab code: inspect class references/imports, method slices, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
@@ -277,7 +277,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(dynatraceContent.contains("## itemId: dynatrace-runtime-signals-001"));
             assertTrue(dynatraceContent.contains("- collection status: COLLECTED"));
             assertTrue(dynatraceContent.contains("component `case-evaluation-service`: MATCHED, SIGNALS_PRESENT."));
-            assertTrue(dynatraceContent.contains("Problem `P-26042756` `Gateway timeout on backend`."));
+            assertTrue(dynatraceContent.contains("Problem `P-CRM-101` `Gateway timeout on backend`."));
             assertFalse(dynatraceContent.contains("\"metricLabel\""));
 
             var gitLabContent = prepared.session().artifactContents().get("04-gitlab-resolved-code.md");
@@ -629,7 +629,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                                                 new AnalysisEvidenceAttribute("componentName", "case-evaluation-service"),
                                                 new AnalysisEvidenceAttribute("correlationStatus", "MATCHED"),
                                                 new AnalysisEvidenceAttribute("componentSignalStatus", "SIGNALS_PRESENT"),
-                                                new AnalysisEvidenceAttribute("problemDisplayId", "P-26042756"),
+                                                new AnalysisEvidenceAttribute("problemDisplayId", "P-CRM-101"),
                                                 new AnalysisEvidenceAttribute("problemTitle", "Gateway timeout on backend"),
                                                 new AnalysisEvidenceAttribute("signalCategories", "latency, failure-rate"),
                                                 new AnalysisEvidenceAttribute(

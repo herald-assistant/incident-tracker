@@ -7,10 +7,9 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentEvidence;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentPort;
-import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentQuery;
-import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentEvidence;
+import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
@@ -50,7 +49,6 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
     private static final Pattern HTTP_STATUS_PATTERN = Pattern.compile("\\bstatus\\s+(\\d{3})\\b");
 
     private final DynatraceIncidentPort dynatraceIncidentPort;
-    private final DynatraceProperties dynatraceProperties;
     private final DeploymentContextResolver deploymentContextResolver;
 
     @Override
@@ -60,7 +58,7 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
             return emptySection();
         }
 
-        if (!dynatraceProperties.isConfigured()) {
+        if (!dynatraceIncidentPort.isConfigured()) {
             return statusOnlySection(
                     buildCollectionStatusItem(
                             null,

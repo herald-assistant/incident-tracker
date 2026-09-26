@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.dynatrace;
+package pl.mkn.tdw.integrations.dynatrace.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;

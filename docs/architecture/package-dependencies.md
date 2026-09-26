@@ -69,6 +69,14 @@ zaleza od portu i kontraktu. `api.workspacesettings.WorkspaceSettingsService`
 jest waskim wyjatkiem: aktualizuje `ConfluenceProperties` w runtime.
 `IntegrationPackageBoundaryTest` egzekwuje te granice dla Confluence.
 
+W `integrations.dynatrace` pakiet glowny zawiera tylko publiczny
+`DynatraceIncidentPort`. Zapytanie i wynik evidence leza w `contract`, adapter
+REST w `adapter.rest`, a properties i fabryka klienta w `config`. Port udostepnia
+status skonfigurowania, wiec incident evidence provider nie importuje
+konfiguracji. `api.workspacesettings.WorkspaceSettingsService` pozostaje waskim
+wyjatkiem, poniewaz aktualizuje properties w runtime. Test granic pakietow
+egzekwuje te regule rowniez dla Dynatrace.
+
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez
