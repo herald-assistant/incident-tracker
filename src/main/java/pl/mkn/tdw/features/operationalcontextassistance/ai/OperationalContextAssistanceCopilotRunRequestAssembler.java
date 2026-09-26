@@ -10,7 +10,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
-import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotSessionHardToolBudget;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
@@ -77,23 +76,15 @@ public class OperationalContextAssistanceCopilotRunRequestAssembler {
         );
         var sessionId = "operational-context-assistance-" + UUID.randomUUID();
         var sourceScope = selectedScope(source);
-        var budgets = new LinkedHashMap<String, Integer>();
-        budgets.put(VALIDATE_DRAFT, 2);
-        if (sourceScope != null) {
-            budgets.put(LIST_REPOSITORY_BRANCHES, 3);
-            budgets.put(LIST_REPOSITORY_TREE, 6);
-            budgets.put(LIST_REPOSITORY_FILES, 6);
-            budgets.put(SEARCH_REPOSITORY_FILES, 6);
-            budgets.put(READ_REPOSITORY_FILE, 4);
-        }
-        var hardBudget = new CopilotSessionHardToolBudget(sourceScope != null ? 20 : 2, budgets);
         var hiddenContext = new LinkedHashMap<String, Object>();
-        hiddenContext.put(AgentToolContextKeys.TOOL_HARD_BUDGET, hardBudget);
+        hiddenContext.put(AgentToolContextKeys.TOOL_BUDGET_POLICY,
+                AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
         hiddenContext.put(OperationalContextAssistanceDraftValidationTools.CONTEXT_KEY,
                 new OperationalContextAssistanceDraftValidationTools.ValidationSession(
                         validationSession.catalogDigest(), validationSession.initialScope(), sourceScope));
         if (sourceScope != null) {
             hiddenContext.put(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, sourceScope);
+            hiddenContext.put(AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ, true);
         }
         var validationCallbacks = MethodToolCallbackProvider.builder().toolObjects(validationTools)
                 .build().getToolCallbacks();

@@ -70,7 +70,6 @@ import static pl.mkn.tdw.features.operationalcontextassistance.draft.Operational
 @RequiredArgsConstructor
 public class OperationalContextAssistanceJobService {
 
-    private static final int MAX_SELECTED_SCOPES_BYTES = 32_000;
     private static final int MAX_EDITED_VALUE_BYTES = 16_384;
     private static final int MAX_EDITED_VALUES_BYTES = 65_536;
 
@@ -236,6 +235,9 @@ public class OperationalContextAssistanceJobService {
             var available = proposal.changes().stream()
                     .collect(java.util.stream.Collectors.toMap(
                             OperationalContextAssistanceDraft.FieldChange::path, change -> change));
+            if (frontendRepositorySupplementAvailable(current, index)) {
+                available.put("repositoryType", frontendRepositorySupplement());
+            }
             var selected = new LinkedHashSet<>(selection.selectedPaths());
             var confirmed = new LinkedHashSet<>(selection.confirmedPaths());
             if (selected.size() != selection.selectedPaths().size() || selected.contains(null)
@@ -253,6 +255,10 @@ public class OperationalContextAssistanceJobService {
                 if ("repository".equals(proposal.entityType()) && "git".equals(path)
                         || "code-search-scope".equals(proposal.entityType()) && "repositories".equals(path)
                         || value == null || value.isNull()
+                        || "repositoryType".equals(path) && !proposal.changes().stream()
+                                .anyMatch(change -> "repositoryType".equals(change.path()))
+                                && (!frontendRepositorySupplementAvailable(current, index)
+                                    || !value.isTextual() || !"frontend".equals(value.asText()))
                         || !sameEditableValueKind(available.get(path).after(), value)) {
                     throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
                             "Poprawka robocza ma niedozwolone pole lub niezgodny typ.");
@@ -313,7 +319,7 @@ public class OperationalContextAssistanceJobService {
                 continue;
             }
             var proposal = current.draft().proposals().get(index);
-            var selected = selectedChanges(proposal, choice);
+            var selected = selectedChanges(current, request, index);
             if (proposal.operation() == Operation.CREATE && "repository".equals(proposal.entityType())) {
                 selectedRepositoryCreate = true;
             }
@@ -345,9 +351,12 @@ public class OperationalContextAssistanceJobService {
     }
 
     private List<OperationalContextAssistanceDraft.FieldChange> selectedChanges(
-            OperationalContextAssistanceDraft.Proposal proposal,
-            OperationalContextAssistanceProposalDecisionRequest request
+            OperationalContextAssistanceJobSnapshot current,
+            OperationalContextAssistanceBatchReviewRequest batch,
+            int proposalIndex
     ) {
+        var proposal = current.draft().proposals().get(proposalIndex);
+        var request = batch.decisions().get(proposalIndex);
         var paths = request.selectedPaths();
         var unique = new LinkedHashSet<>(paths);
         if (paths.isEmpty() || unique.size() != paths.size() || unique.contains(null)) {
@@ -360,7 +369,10 @@ public class OperationalContextAssistanceJobService {
                     "Potwierdzenia muszą dotyczyć tylko wybranych pól.");
         }
         var selected = proposal.changes().stream().filter(change -> unique.contains(change.path())).toList();
-        if (selected.size() != unique.size()) {
+        var supplemented = unique.contains("repositoryType")
+                && proposal.changes().stream().noneMatch(change -> "repositoryType".equals(change.path()));
+        if (selected.size() + (supplemented ? 1 : 0) != unique.size()
+                || supplemented && !frontendRepositorySupplementAvailable(current, proposalIndex)) {
             throw decisionError("OPCTX_ASSISTANCE_INVALID_SELECTION", UserFacingErrorType.BAD_REQUEST,
                     "Wybór zawiera pole spoza propozycji AI.");
         }
@@ -409,7 +421,97 @@ public class OperationalContextAssistanceJobService {
                     change.path(), change.before(), after, change.reason(), change.basis(),
                     change.sourceRefs(), change.confidence(), change.requiresConfirmation()));
         }
+        if (supplemented) {
+            var value = edits.get("repositoryType");
+            if (value == null || !value.isTextual() || !"frontend".equals(value.asText())
+                    || !confirmed.contains("repositoryType")
+                    || !selectedFrontendRepositoryLink(current, batch, proposal.entityId())) {
+                throw decisionError("OPCTX_ASSISTANCE_FRONTEND_REPOSITORY_REQUIRED", UserFacingErrorType.UNPROCESSABLE_ENTITY,
+                        "Potwierdź repositoryType frontend wraz z systemSubtype frontend i powiązanym głównym zakresem kodu w tym samym zestawie.");
+            }
+            corrected.add(frontendRepositorySupplement());
+        }
         return corrected;
+    }
+
+    private OperationalContextAssistanceDraft.FieldChange frontendRepositorySupplement() {
+        return new OperationalContextAssistanceDraft.FieldChange(
+                "repositoryType", null, "frontend", "Jawna klasyfikacja operatora w przeglądzie.",
+                OperationalContextAssistanceDraft.Basis.USER_STATEMENT, List.of("operator:review"),
+                OperationalContextAssistanceDraft.Confidence.HIGH, true);
+    }
+
+    private boolean frontendRepositorySupplementAvailable(OperationalContextAssistanceJobSnapshot current, int index) {
+        var proposal = current.draft().proposals().get(index);
+        if (proposal.operation() != Operation.CREATE || !"repository".equals(proposal.entityType())
+                || proposal.changes().stream().anyMatch(change -> "repositoryType".equals(change.path()))) {
+            return false;
+        }
+        return current.draft().proposals().stream().anyMatch(system ->
+                system.operation() == Operation.CREATE && "system".equals(system.entityType())
+                        && system.changes().stream().anyMatch(change -> "systemSubtype".equals(change.path()))
+                        && hasPrimaryScopeLink(current, system.entityId(), proposal.entityId()));
+    }
+
+    private boolean hasPrimaryScopeLink(
+            OperationalContextAssistanceJobSnapshot current, String systemId, String repositoryId
+    ) {
+        return current.draft().proposals().stream().anyMatch(scope ->
+                scope.operation() == Operation.CREATE && "code-search-scope".equals(scope.entityType())
+                        && scopeReferencesPrimary(scope, systemId, repositoryId));
+    }
+
+    private boolean selectedFrontendRepositoryLink(
+            OperationalContextAssistanceJobSnapshot current,
+            OperationalContextAssistanceBatchReviewRequest batch,
+            String repositoryId
+    ) {
+        var proposals = current.draft().proposals();
+        for (var systemIndex = 0; systemIndex < proposals.size(); systemIndex++) {
+            var system = proposals.get(systemIndex);
+            var systemChoice = batch.decisions().get(systemIndex);
+            if (system.operation() != Operation.CREATE || !"system".equals(system.entityType())
+                    || systemChoice.action() != OperationalContextAssistanceProposalDecisionRequest.Action.APPLY
+                    || !systemChoice.selectedPaths().contains("systemSubtype")
+                    || !systemChoice.confirmedPaths().contains("systemSubtype")
+                    || !hasPrimaryScopeLink(current, system.entityId(), repositoryId)) {
+                continue;
+            }
+            var subtype = systemChoice.editedValues().get("systemSubtype");
+            if (subtype == null) {
+                var original = system.changes().stream().filter(change -> "systemSubtype".equals(change.path()))
+                        .findFirst().orElse(null);
+                if (original == null || !"frontend".equals(original.after())) continue;
+            } else if (!subtype.isTextual() || !"frontend".equals(subtype.asText())) {
+                continue;
+            }
+            for (var scopeIndex = 0; scopeIndex < proposals.size(); scopeIndex++) {
+                var scope = proposals.get(scopeIndex);
+                var scopeChoice = batch.decisions().get(scopeIndex);
+                if (scope.operation() == Operation.CREATE && "code-search-scope".equals(scope.entityType())
+                        && scopeChoice.action() == OperationalContextAssistanceProposalDecisionRequest.Action.APPLY
+                        && scopeChoice.selectedPaths().contains("target")
+                        && scopeChoice.selectedPaths().contains("repositories")
+                        && scopeReferencesPrimary(scope, system.entityId(), repositoryId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean scopeReferencesPrimary(
+            OperationalContextAssistanceDraft.Proposal scope, String systemId, String repositoryId
+    ) {
+        var target = scope.changes().stream().filter(change -> "target".equals(change.path()))
+                .map(OperationalContextAssistanceDraft.FieldChange::after).findFirst().orElse(null);
+        var repositories = scope.changes().stream().filter(change -> "repositories".equals(change.path()))
+                .map(OperationalContextAssistanceDraft.FieldChange::after).findFirst().orElse(null);
+        return target instanceof Map<?, ?> targetMap
+                && "system".equals(targetMap.get("type")) && systemId.equals(targetMap.get("id"))
+                && repositories instanceof List<?> entries && entries.stream().anyMatch(entry ->
+                        entry instanceof Map<?, ?> repository && repositoryId.equals(repository.get("repoId"))
+                                && "primary".equals(repository.get("role")));
     }
 
     private boolean sameEditableValueKind(Object original, JsonNode edited) {
@@ -595,7 +697,6 @@ public class OperationalContextAssistanceJobService {
         }
         var selectedScopes = context.putArray("selectedSystemScopes");
         var authorizedScopeIds = new LinkedHashSet<String>();
-        int contextBytes = 0;
         for (var systemId : facts.systemIds()) {
             var system = catalog.systems().stream()
                     .filter(candidate -> systemId.equals(candidate.id()))
@@ -630,14 +731,8 @@ public class OperationalContextAssistanceJobService {
             entry.put("scopeId", scope.id());
             entry.set("target", objectMapper.valueToTree(scope.target()));
             entry.set("beforeRepositories", objectMapper.valueToTree(repositories));
-            int entryBytes = entry.toString().getBytes(StandardCharsets.UTF_8).length;
-            if (contextBytes + entryBytes > MAX_SELECTED_SCOPES_BYTES) {
-                throw new BlockedRun("Zakres wyszukiwania kodu systemu " + systemId
-                        + " przekracza limit kontekstu AI; nie można bezpiecznie podłączyć repozytorium.");
-            }
             selectedScopes.add(entry);
             authorizedScopeIds.add(scope.id());
-            contextBytes += entryBytes;
         }
         return Set.copyOf(authorizedScopeIds);
     }

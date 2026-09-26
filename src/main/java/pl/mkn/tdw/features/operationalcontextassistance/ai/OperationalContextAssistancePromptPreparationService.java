@@ -13,7 +13,6 @@ import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContex
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
 import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
 
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,13 +26,6 @@ public class OperationalContextAssistancePromptPreparationService {
     static final String INPUT_ARTIFACT = "operational-context-assistance/input.json";
     public static final String REPOSITORY_FACTS_SOURCE_REF = "operator:repository-facts";
 
-    private static final int MAX_CONTEXT_BYTES = 3 * 1024 * 1024;
-    private static final int MAX_SOURCE_FILE_BYTES = 16 * 1024;
-    private static final int MAX_INSTRUCTION_FILE_BYTES = 32 * 1024;
-    private static final int MAX_SOURCE_TOTAL_BYTES = 96 * 1024;
-    private static final int MAX_SOURCE_FILES = 7;
-    private static final int MAX_TREE_ENTRIES = 120;
-    private static final int MAX_TREE_CONTINUATIONS = 12;
     private static final Set<String> ALLOWED_SOURCE_PATHS = Set.of(
             "AGENTS.md", ".github/copilot-instructions.md",
             "README.md", "pom.xml", "package.json", "build.gradle", "settings.gradle"
@@ -43,8 +35,8 @@ public class OperationalContextAssistancePromptPreparationService {
             "gitlab:[A-Za-z0-9._/-]+@[a-fA-F0-9]{40,64}:"
                     + "(?:AGENTS\\.md|\\.github/copilot-instructions\\.md|README\\.md|pom\\.xml|package\\.json|build\\.gradle|settings\\.gradle)"
     );
-    private static final String SOURCE_LIMIT =
-            "Część wybranego źródła przekraczała limit asysty i została pominięta.";
+    private static final String INVALID_SOURCE =
+            "Pominięto plik źródłowy z niespójną ścieżką lub referencją commita.";
 
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
     private final ObjectMapper objectMapper;
@@ -75,8 +67,8 @@ public class OperationalContextAssistancePromptPreparationService {
         material.put("mode", input.mode().name());
         material.put("description", input.description());
         material.set("operatorFacts", operatorFacts(input.repositoryFacts(), allowedSourceRefs));
-        material.set("catalogContext", boundedContext(input.catalogContext(), "catalogContext"));
-        material.set("targetContext", boundedContext(input.targetContext(), "targetContext"));
+        material.set("catalogContext", input.catalogContext() != null ? input.catalogContext() : objectMapper.nullNode());
+        material.set("targetContext", input.targetContext() != null ? input.targetContext() : objectMapper.nullNode());
         material.set("selectedSource", selectedSource(input.gitLabSource(), limits, allowedSourceRefs));
         material.set("allowedSourceRefs", strings(allowedSourceRefs));
         material.set("visibilityLimits", strings(limits));
@@ -187,6 +179,12 @@ public class OperationalContextAssistancePromptPreparationService {
                 nigdy nie dowodzi, że odczytano repozytorium. Bez poprawnego
                 `selectedSource` i refa faktycznie przeczytanego pliku GitLab
                 nie proponuj nowego `repository` ani nowego `code-search-scope`.
+                Jeśli `operatorFacts.systemSubtype` jest konkretny, użyj go dla
+                nowego systemu `internal-service`. Dla `frontend` zaproponuj
+                jednocześnie `systemSubtype: frontend` i `repositoryType: frontend`
+                głównego repozytorium, oba z `basis: USER_STATEMENT`,
+                `sourceRefs: ["operator:repository-facts"]` i ręcznym potwierdzeniem.
+                Bez takiego oświadczenia nie wywodź `frontend` z kodu ani nazwy.
 
                 ## Reguły utrzymania Operational Context
                 Poniższe reguły pochodzą z pakietu aplikacji `operational-context-maintenance/`.
@@ -238,20 +236,6 @@ public class OperationalContextAssistancePromptPreparationService {
                 Map.of(INPUT_ARTIFACT, materialJson),
                 Set.copyOf(allowedSourceRefs)
         );
-    }
-
-    private JsonNode boundedContext(JsonNode node, String label) {
-        if (node == null) {
-            return objectMapper.nullNode();
-        }
-        if (json(node).getBytes(StandardCharsets.UTF_8).length > MAX_CONTEXT_BYTES) {
-            if ("catalogContext".equals(label)) {
-                throw new OperationalContextAssistanceMaterialException(
-                        "Pełny katalog Operational Context przekracza limit materiału AI po przygotowaniu JSON.");
-            }
-            throw new IllegalArgumentException(label + " exceeds the AI context limit.");
-        }
-        return node;
     }
 
     private String maintenanceRules(Map<String, String> guidance) {
@@ -356,10 +340,13 @@ public class OperationalContextAssistancePromptPreparationService {
         if (facts.runtimeServiceName() != null) {
             result.put("runtimeServiceName", facts.runtimeServiceName());
         }
+        if (facts.systemSubtype() != null) {
+            result.put("systemSubtype", facts.systemSubtype());
+        }
         ArrayNode systemIds = result.putArray("systemIds");
         facts.systemIds().forEach(systemIds::add);
         allowedSourceRefs.add(REPOSITORY_FACTS_SOURCE_REF);
-        return boundedContext(result, "operatorFacts");
+        return result;
     }
 
     private JsonNode selectedSource(
@@ -393,29 +380,14 @@ public class OperationalContextAssistancePromptPreparationService {
         result.put("commitId", source.commitId());
         result.set("tree", tree(source.tree()));
         ArrayNode files = result.putArray("files");
-        var totalBytes = 0;
-        var fileCount = 0;
         for (OperationalContextGitLabSourceFile file : source.files()) {
-            if (fileCount >= MAX_SOURCE_FILES) {
-                limits.add(SOURCE_LIMIT);
-                break;
-            }
             if (file == null || !ALLOWED_SOURCE_PATHS.contains(file.path())
                     || file.sourceRef() == null || !SOURCE_REF.matcher(file.sourceRef()).matches()
                     || !file.sourceRef().endsWith("@" + source.commitId() + ":" + file.path())) {
-                limits.add(SOURCE_LIMIT);
+                limits.add(INVALID_SOURCE);
                 continue;
             }
             var content = file.content() != null ? file.content() : "";
-            var bytes = content.getBytes(StandardCharsets.UTF_8).length;
-            int fileLimit = isInstructionPath(file.path())
-                    ? MAX_INSTRUCTION_FILE_BYTES : MAX_SOURCE_FILE_BYTES;
-            if (bytes > fileLimit || totalBytes + bytes > MAX_SOURCE_TOTAL_BYTES) {
-                limits.add(SOURCE_LIMIT);
-                continue;
-            }
-            totalBytes += bytes;
-            fileCount++;
             ObjectNode entry = files.addObject();
             entry.put("path", file.path());
             entry.put("sourceRef", file.sourceRef());
@@ -425,17 +397,13 @@ public class OperationalContextAssistancePromptPreparationService {
         return result;
     }
 
-    private boolean isInstructionPath(String path) {
-        return "AGENTS.md".equals(path) || ".github/copilot-instructions.md".equals(path);
-    }
-
     private JsonNode tree(GitLabRepositoryTreeSlice tree) {
         ObjectNode result = objectMapper.createObjectNode();
         result.put("path", tree.path());
         result.put("depth", tree.depth());
         result.put("truncated", tree.truncated());
         ArrayNode entries = result.putArray("entries");
-        for (var entry : tree.entries().stream().limit(MAX_TREE_ENTRIES).toList()) {
+        for (var entry : tree.entries()) {
             if (entry.path() == null || entry.path().length() > 512
                     || !GitLabVerifiedRepositoryFileReader.isSafePath(entry.path(), false)
                     || !("tree".equals(entry.type()) || "blob".equals(entry.type()))) {
@@ -446,7 +414,7 @@ public class OperationalContextAssistancePromptPreparationService {
             item.put("type", entry.type());
         }
         ArrayNode continuations = result.putArray("continuations");
-        for (var continuation : tree.continuations().stream().limit(MAX_TREE_CONTINUATIONS).toList()) {
+        for (var continuation : tree.continuations()) {
             if (continuation.path() == null || continuation.path().length() > 512
                     || !GitLabVerifiedRepositoryFileReader.isSafePath(continuation.path(), true)) {
                 continue;
@@ -470,10 +438,7 @@ public class OperationalContextAssistancePromptPreparationService {
     private void addLimits(Iterable<String> rawLimits, Set<String> limits) {
         for (String raw : rawLimits) {
             if (raw != null && !raw.isBlank()) {
-                limits.add(raw.length() > 500 ? raw.substring(0, 500) : raw);
-            }
-            if (limits.size() >= 24) {
-                break;
+                limits.add(raw);
             }
         }
     }

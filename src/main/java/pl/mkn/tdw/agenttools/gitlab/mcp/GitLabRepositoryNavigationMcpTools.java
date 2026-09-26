@@ -142,10 +142,13 @@ public class GitLabRepositoryNavigationMcpTools {
             throw new IllegalArgumentException("Search query must contain 2-120 printable characters.");
         }
         var target = target(projectName, branchRef, toolContext);
+        var completeRead = toolContext != null && toolContext.getContext() != null
+                && Boolean.TRUE.equals(toolContext.getContext().get(
+                        AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ));
         var prefix = safePath(pathPrefix, true);
         var cursor = safeCursor(afterPath);
         if (!cursor.isEmpty()) {
-            return scanPinnedFiles(target, prefix, cursor, query);
+            return scanPinnedFiles(target, prefix, cursor, query, completeRead);
         }
         // GitLab's blob search accepts a branch/tag ref, not a commit. Verify every hit
         // against the session-pinned commit before exposing the path to the model.
@@ -156,7 +159,8 @@ public class GitLabRepositoryNavigationMcpTools {
                     .filter(candidate -> matches(candidate, target) && withinPrefix(candidate.filePath(), prefix)
                             && GitLabVerifiedRepositoryFileReader.isSafePath(candidate.filePath(), false))
                     .map(GitLabRepositoryFileCandidate::filePath).distinct().limit(MAX_SEARCH_RESULTS).toList();
-            var verifiedPaths = paths.stream().filter(path -> matchesPinnedContent(target, path, query)).toList();
+            var verifiedPaths = paths.stream()
+                    .filter(path -> matchesPinnedContent(target, path, query, completeRead)).toList();
             if (!verifiedPaths.isEmpty()) {
                 return new FilePathsResult(target.projectPath(), target.branch(), target.commitId(), verifiedPaths,
                         candidates.size() >= MAX_SEARCH_RESULTS, null);
@@ -164,7 +168,7 @@ public class GitLabRepositoryNavigationMcpTools {
         } catch (RuntimeException ignored) {
             // Some GitLab installations do not provide blob search; use a bounded pinned scan.
         }
-        return scanPinnedFiles(target, prefix, "", query);
+        return scanPinnedFiles(target, prefix, "", query, completeRead);
     }
 
     private GitLabRepositoryToolScope.Target target(String projectName, String branchRef, ToolContext context) {
@@ -235,11 +239,16 @@ public class GitLabRepositoryNavigationMcpTools {
                 && target.projectName().equals(file.projectName()) && target.branch().equals(file.branch());
     }
 
-    private boolean matchesPinnedContent(GitLabRepositoryToolScope.Target target, String path, String query) {
+    private boolean matchesPinnedContent(
+            GitLabRepositoryToolScope.Target target, String path, String query, boolean completeRead
+    ) {
         try {
-            var file = GitLabVerifiedRepositoryFileReader.read(
-                    repositoryPort, target.group(), target.projectName(), target.commitId(), path,
-                    GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES);
+            var file = completeRead
+                    ? GitLabVerifiedRepositoryFileReader.readComplete(
+                            repositoryPort, target.group(), target.projectName(), target.commitId(), path)
+                    : GitLabVerifiedRepositoryFileReader.read(
+                            repositoryPort, target.group(), target.projectName(), target.commitId(), path,
+                            GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES);
             return file.content().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT));
         } catch (RuntimeException exception) {
             return false;
@@ -247,7 +256,8 @@ public class GitLabRepositoryNavigationMcpTools {
     }
 
     private FilePathsResult scanPinnedFiles(
-            GitLabRepositoryToolScope.Target target, String prefix, String cursor, String query
+            GitLabRepositoryToolScope.Target target, String prefix, String cursor, String query,
+            boolean completeRead
     ) {
         var page = repositoryPort.listRepositoryFilesPage(target.group(), target.projectName(),
                 target.commitId(), prefix, cursor, MAX_SEARCH_SCAN_FILES);
@@ -255,7 +265,7 @@ public class GitLabRepositoryNavigationMcpTools {
                 .filter(file -> matches(file, target) && withinPrefix(file.filePath(), prefix)
                         && GitLabVerifiedRepositoryFileReader.isSafePath(file.filePath(), false))
                 .map(GitLabRepositoryFile::filePath).distinct()
-                .filter(path -> matchesPinnedContent(target, path, query)).toList();
+                .filter(path -> matchesPinnedContent(target, path, query, completeRead)).toList();
         return new FilePathsResult(target.projectPath(), target.branch(), target.commitId(), paths,
                 page.nextCursor() != null, page.nextCursor());
     }

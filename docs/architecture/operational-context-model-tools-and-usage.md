@@ -396,6 +396,9 @@ jest immutable, a delete stosuje `RESTRICT` bez cascade. Field errors uzywaja
 JSON Pointer. API nie wystawia `revision`, ETag ani `If-Match`; zwraca m.in.
 `409` dla konfliktu encji lub referencji, `422` dla walidacji oraz `503` dla
 niedostepnej lokalnej kopii.
+Naruszenie reguly katalogu zawiera komunikat oraz typ, ID i sciezke pola
+powiazanej encji. Reczny edytor pokazuje je i pozwala otworzyc wskazana
+encje; niepoprawny kandydat nie jest publikowany.
 
 Asysta AI korzysta z tej samej neutralnej walidacji katalogu. Batch preview
 buduje w pamieci wynikowy katalog dla wybranych zmian i waliduje go bez
@@ -474,8 +477,8 @@ Przy niepelnym lub niedostepnym drzewie moze sprobowac tych sciezek bez
 raportowania niepotwierdzonego braku jako ograniczenia. Brak opcjonalnego
 pliku w katalogu glownym nie jest ograniczeniem widocznosci; rzeczywisty
 problem z odczytem widocznego pliku pozostaje jawny. Collector sprawdza
-rozmiar przed odczytem, limituje rzeczywisty HTTP body do 32 KiB na plik
-instrukcji, 16 KiB na inny plik i 96 KiB lacznie. Nie filtruje tresci wedlug
+metadane rozmiaru, odczytuje caly plik i porownuje rzeczywista liczbe bajtow
+oraz hash z metadanymi, bez progu rozmiaru asysty. Nie filtruje tresci wedlug
 slow kluczowych ani formatow sekretow. Nie wymaga istniejacego code-search
 scope. Sesja AI moze pozniej doczytac istotne pliki
 przez wspolny neutralny zestaw `gitlab_list_repository_branches`,
@@ -492,15 +495,18 @@ duzy, material pokazuje niepelnosc i kontynuacje; tool moze odczytac kolejne
 cztery poziomy od wybranej bezpiecznej sciezki lub strony. Tree/list/search
 zwracaja sciezki bez tresci, a dopiero pelny zweryfikowany read
 udostepnia cytowalny `gitlab:` source ref zawierajacy projekt i commit.
-Odczyt ma limit 256 KiB na plik i odrzuca pliki nietekstowe lub niepelne,
-bez blokowania nazw plikow, rozszerzen i tresci wygladajacych na wrazliwe.
+W tej sesji pelny odczyt nie ma limitu rozmiaru pliku i odrzuca pliki
+nietekstowe lub niepelne, bez blokowania nazw plikow, rozszerzen i tresci
+wygladajacych na wrazliwe.
 Braki zrodel staja sie jawnymi ograniczeniami widocznosci.
 
 Przy `CREATE_AREA` z GitLabem formularz przesyla opcjonalne, typowane
 `repositoryFacts` obok wolnego opisu. `usage` rozroznia `UNKNOWN`,
 `DEPLOYED_SYSTEM`, `SHARED_LIBRARY` i `EXISTING_SYSTEM`. Dla nowego wdrazanego
-systemu operator moze podac `systemName` i jawny `runtimeServiceName` (sygnal
-`system.matchSignals.exact.serviceNames`); dla niewdrazanej biblioteki wskazuje
+systemu operator moze podac `systemName`, jawny `runtimeServiceName` (sygnal
+`system.matchSignals.exact.serviceNames`) oraz `systemSubtype`. Wybor
+`unknown` zachowuje niepewnosc; konkretny subtype jest deklaracja operatora,
+a nie wnioskiem z technologii projektu. Dla niewdrazanej biblioteki wskazuje
 0-5 znanych systemow korzystajacych z niej, a dla kodu istniejacego systemu
 dokladnie jedno ID. Backend sprawdza ID w aktualnym katalogu, a odpowiedzi
 przekazuje do AI jako osobne `operatorFacts` z refem
@@ -523,7 +529,7 @@ systemowe scope'y jawnie wybranych systemow, wraz z aktualna lista
 `beforeRepositories`. Dopuszczalny `UPDATE code-search-scope` dodaje jedno
 repozytorium na koncu listy z nizszym priorytetem, zachowujac primary i
 granice wyszukiwania. Brak dokladnie jednego scope'u dla wskazanego systemu,
-niedostepna lista repozytoriow albo zbyt duzy kontekst blokuje asyste przed AI.
+niedostepna lista repozytoriow blokuje asyste przed AI.
 Parser pilnuje wybranego scopeId, a maintenance porownuje `before` z biezacym
 stanem katalogu przed zapisem. Zalezna propozycja nie moze uzyc ID z
 pominiętego `CREATE`; powiazanie z nowym repo wymaga tez wybrania jego pola
@@ -543,7 +549,8 @@ aktywny dokument katalogu jest pokazany jako osobny JSON z refem
 `opctx:<plik>`. Opis operatora, pliki GitLab i wpisy katalogu sa materialem
 do analizy, a nie instrukcjami zmieniajacymi zasady asysty. Reguly sa sprawdzone wobec biezacego
 schematu zapisu; schemat/validator ma pierwszenstwo przed przykladami.
-Przekroczenie jawnego limitu materialu blokuje job bez cichego obciecia.
+Asysta nie obcina katalogu, reguł ani odczytanych plikow na podstawie rozmiaru.
+Zewnetrzne limity modelu, GitLaba lub pamieci procesu moga nadal zakonczyc run bledem.
 Feature wymaga `LONG_CONTEXT_REQUIRED`; brak aktywnego dlugiego kontekstu
 wybranego modelu blokuje run przed pierwszym promptem. Domyslne model i
 reasoning ustawiaja `analysis.operational-context-assistance.ai.*`, a request
@@ -559,14 +566,18 @@ najwyzej cztery poziomy, 12 zadan HTTP i 120 wpisow na wywolanie;
 `search_repository_files` wykorzystuje wyszukiwanie GitLab na galezi jako
 zrodlo kandydatow, po czym kazda znaleziona sciezke weryfikuje na przypietym
 commicie. Wyniki nawigacji nie sa dowodem
-tresci. Odczyt ogranicza sie do 256 KiB i sprawdza wzgledna sciezke, tekstowy
-format, kompletnosc oraz zgodnosc z przypietym commitem. Nie filtruje tresci
-ani nazw wedlug heurystyk wrazliwosci. Dla tych tools obowiazuje twardy limit
-wywolan w sesji, niezalezny od globalnego trybu SOFT.
+tresci. W tej sesji odczyt nie ma progu bajtow i sprawdza wzgledna sciezke,
+tekstowy format, kompletnosc oraz zgodnosc z przypietym commitem. Nie filtruje
+tresci ani nazw wedlug heurystyk wrazliwosci. Sesja uzywa polityki
+`GOAL_DRIVEN` bez twardego lub globalnego budzetu wywolan; wyniki nawigacji
+pozostaja stronicowane z mozliwoscia kontynuacji.
 Parser traktuje wynik jako niezaufany, typowany draft: odrzuca nieznane pola,
 niekanoniczne sciezki i typy, nieautoryzowane source refs oraz
-ownership albo klasyfikacje `frontend` bez `USER_STATEMENT`, refa
-`operator:description` i wymaganego recznego przegladu zmiany. Draft ma
+ownership albo klasyfikacje `frontend` bez `USER_STATEMENT`, jawnego refa
+`operator:description` lub `operator:repository-facts` i wymaganego recznego
+przegladu zmiany. Wybrany typ nowego systemu musi byc zgodny z
+`repositoryFacts.systemSubtype`; dla `frontend` parser wymaga rowniez
+`repositoryType: frontend` i powiazanego scope'u z rola `primary`. Draft ma
 uporzadkowane propozycje `CREATE` lub `UPDATE` ze zmianami pol `before/after`,
 uzasadnieniem, podstawa (`USER_STATEMENT`, `SOURCE_OBSERVATION`,
 `AI_INTERPRETATION`), zrodlami, pewnoscia i limitami widocznosci. Pola
@@ -588,7 +599,7 @@ Sesja Copilota asysty udostepnia tylko temu feature'owi read-only tool
 `operational_context_assistance_validate_draft`. Model przekazuje kompletny
 JSON propozycji, a tool sprawdza go tym samym parserem i neutralnym batch
 preview z przypietym digestem oraz source refs odczytanych w sesji plikow.
-Tool dziala tez bez GitLaba, ma limit dwoch wywolan i zwraca ograniczona
+Tool dziala tez bez GitLaba, nie ma limitu wywolan i zwraca ograniczona
 liste wskaznikow bledow. Callback jest dolaczany do jednej sesji Copilota i
 nie jest publikowany jako globalny MCP tool. Nie zapisuje YAML-i. Backend zawsze ponawia
 walidacje po koncowej odpowiedzi modelu; wybrany i ewentualnie poprawiony
@@ -614,7 +625,13 @@ poprawic ich `after` przed zapisem i jawnie potwierdza wymagane fakty oraz
 kazda korekte. Korekta jest oznaczona jako wartosc operatora; uzasadnienie i
 source refs AI dotycza oryginalnej propozycji. `repository.git` i
 `code-search-scope.repositories` nie przyjmuja override w review, poniewaz
-sa zwiazane z weryfikowanym zrodlem i scope'em. Jeden batch preview pokazuje
+sa zwiazane z weryfikowanym zrodlem i scope'em.
+Starszy draft bez `repositoryType` mozna naprawic w review, gdy operator
+zmieni `systemSubtype` na `frontend`: UI pokazuje przy powiazanym glownym
+repozytorium osobne pole `repositoryType: frontend` z potwierdzeniem. Backend
+dopuszcza je tylko dla relacji system–scope–repozytorium wybranej w tym samym
+batchu i zapisuje jako poprawke operatora, bez modyfikowania draftu AI.
+Jeden batch preview pokazuje
 wynikowy zestaw, candidate digest oraz wyniki walidacji; jeden batch decision
 publikuje wybrane zmiany. Po uruchomieniu podgladu UI wskazuje bledy
 strukturalne `batch/preview` na liscie i przy polach: mapuje indeks mutacji na

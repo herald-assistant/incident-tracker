@@ -15,6 +15,18 @@
   }
 
   @if (!readonly() && error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+  @if (!readonly() && fieldErrors().length) {
+    <div class="form-error" role="alert">
+      @for (issue of fieldErrors(); track $index) {
+        <p>{{ issue.message }}</p>
+        @if (relatedEntityForError(issue.field); as related) {
+          <button type="button" (click)="openRelatedEntity.emit(related)">
+            Otwórz {{ related.type }}/{{ related.id }}{{ related.field ? ' · ' + related.field : '' }}
+          </button>
+        }
+      }
+    </div>
+  }
   @if (!readonly() && structuredError()) { <p class="form-error" role="alert">{{ structuredError() }}</p> }
 
   <form [formGroup]="form" (ngSubmit)="submit()">

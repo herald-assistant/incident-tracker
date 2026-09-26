@@ -28,6 +28,10 @@ final class AngularBootstrapSourceParser {
             "(?s)\\bexport\\s*\\*\\s*from\\s*(['\"])([^'\"]+)\\1"
     );
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
+    private static final Pattern CLASS_DECLARATION = Pattern.compile(
+            "\\b(?:export\\s+)?class\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\b"
+    );
+    private static final Pattern MODULE_IMPORTS = Pattern.compile("\\bimports\\s*:\\s*\\[");
 
     ParsedSource parse(String sourcePath, String source) {
         var safeSource = source != null ? source : "";
@@ -37,15 +41,24 @@ final class AngularBootstrapSourceParser {
         var reExports = reExports(commentMasked);
         var constants = constants(sourcePath, commentMasked, codeMasked);
         var bootstrapNames = importedLocalNames(imports, "@angular/platform-browser", "bootstrapApplication");
+        var moduleFactoryNames = importedLocalNames(imports,
+                "@angular/platform-browser-dynamic", "platformBrowserDynamic");
         var routerProviderNames = importedLocalNames(imports, "@angular/router", "provideRouter");
-        var bootstrapCalls = calls(sourcePath, commentMasked, codeMasked, bootstrapNames, CallKind.BOOTSTRAP);
-        var routerProviderCalls = calls(
+        var routerModuleNames = importedLocalNames(imports, "@angular/router", "RouterModule");
+        var ngModuleNames = importedLocalNames(imports, "@angular/core", "NgModule");
+        var bootstrapCalls = new ArrayList<>(calls(
+                sourcePath, commentMasked, codeMasked, bootstrapNames, CallKind.BOOTSTRAP));
+        bootstrapCalls.addAll(moduleBootstrapCalls(sourcePath, commentMasked, codeMasked, moduleFactoryNames));
+        bootstrapCalls.sort(java.util.Comparator.comparingInt(CallExpression::start));
+        var routerProviderCalls = new ArrayList<>(calls(
                 sourcePath,
                 commentMasked,
                 codeMasked,
                 routerProviderNames,
                 CallKind.ROUTER_PROVIDER
-        );
+        ));
+        routerProviderCalls.addAll(routerModuleCalls(sourcePath, commentMasked, codeMasked, routerModuleNames));
+        routerProviderCalls.sort(java.util.Comparator.comparingInt(CallExpression::start));
         return new ParsedSource(
                 sourcePath,
                 safeSource,
@@ -53,8 +66,85 @@ final class AngularBootstrapSourceParser {
                 List.copyOf(reExports),
                 List.copyOf(constants),
                 List.copyOf(bootstrapCalls),
-                List.copyOf(routerProviderCalls)
+                List.copyOf(routerProviderCalls),
+                moduleDeclarations(sourcePath, commentMasked, codeMasked, ngModuleNames)
         );
+    }
+
+    private List<CallExpression> moduleBootstrapCalls(
+            String sourcePath, String source, String codeMasked, List<String> factoryNames
+    ) {
+        var result = new ArrayList<CallExpression>();
+        for (var factoryName : factoryNames) {
+            var matcher = Pattern.compile("(?<![A-Za-z0-9_$])" + Pattern.quote(factoryName)
+                    + "\\s*\\([^)]*\\)\\s*\\.\\s*bootstrapModule\\s*\\(").matcher(codeMasked);
+            while (matcher.find()) {
+                var open = matcher.end() - 1;
+                var close = matchingDelimiter(codeMasked, open, '(', ')');
+                if (close >= 0) {
+                    result.add(new CallExpression(CallKind.MODULE_BOOTSTRAP, "bootstrapModule",
+                            arguments(source, codeMasked, open + 1, close), matcher.start(), close + 1,
+                            reference(sourcePath, "bootstrapModule", source, matcher.start())));
+                }
+            }
+        }
+        return result;
+    }
+
+    private List<CallExpression> routerModuleCalls(
+            String sourcePath, String source, String codeMasked, List<String> moduleNames
+    ) {
+        var result = new ArrayList<CallExpression>();
+        for (var moduleName : moduleNames) {
+            var matcher = Pattern.compile("(?<![A-Za-z0-9_$])" + Pattern.quote(moduleName)
+                    + "\\s*\\.\\s*forRoot\\s*\\(").matcher(codeMasked);
+            while (matcher.find()) {
+                var open = matcher.end() - 1;
+                var close = matchingDelimiter(codeMasked, open, '(', ')');
+                if (close >= 0) {
+                    result.add(new CallExpression(CallKind.ROUTER_MODULE_ROOT, "RouterModule.forRoot",
+                            arguments(source, codeMasked, open + 1, close), matcher.start(), close + 1,
+                            reference(sourcePath, "RouterModule.forRoot", source, matcher.start())));
+                }
+            }
+        }
+        return result;
+    }
+
+    private List<ModuleDeclaration> moduleDeclarations(
+            String sourcePath, String source, String codeMasked, List<String> decoratorNames
+    ) {
+        var result = new ArrayList<ModuleDeclaration>();
+        for (var decoratorName : decoratorNames) {
+            var matcher = Pattern.compile("@\\s*" + Pattern.quote(decoratorName) + "\\s*\\(")
+                    .matcher(codeMasked);
+            while (matcher.find()) {
+                var open = matcher.end() - 1;
+                var close = matchingDelimiter(codeMasked, open, '(', ')');
+                if (close < 0) continue;
+                var nextDecorator = codeMasked.indexOf('@', close + 1);
+                var classSearchEnd = nextDecorator >= 0 ? nextDecorator : codeMasked.length();
+                var classMatcher = CLASS_DECLARATION.matcher(codeMasked);
+                classMatcher.region(close + 1, classSearchEnd);
+                if (!classMatcher.find()) continue;
+                var imports = new ArrayList<String>();
+                var importsMatcher = MODULE_IMPORTS.matcher(codeMasked);
+                importsMatcher.region(open + 1, close);
+                if (importsMatcher.find()) {
+                    var arrayOpen = importsMatcher.end() - 1;
+                    var arrayClose = matchingDelimiter(codeMasked, arrayOpen, '[', ']');
+                    if (arrayClose > arrayOpen && arrayClose < close) {
+                        for (var expression : arguments(source, codeMasked, arrayOpen + 1, arrayClose)) {
+                            if (expression.identifier() != null) imports.add(expression.identifier());
+                        }
+                    }
+                }
+                result.add(new ModuleDeclaration(classMatcher.group(1), List.copyOf(imports),
+                        open + 1, close,
+                        reference(sourcePath, classMatcher.group(1), source, matcher.start())));
+            }
+        }
+        return List.copyOf(result);
     }
 
     private List<ReExportBinding> reExports(String source) {
@@ -346,7 +436,8 @@ final class AngularBootstrapSourceParser {
             List<ReExportBinding> reExports,
             List<ConstDeclaration> constants,
             List<CallExpression> bootstrapCalls,
-            List<CallExpression> routerProviderCalls
+            List<CallExpression> routerProviderCalls,
+            List<ModuleDeclaration> moduleDeclarations
     ) {
 
         ImportBinding imported(String localName) {
@@ -359,7 +450,19 @@ final class AngularBootstrapSourceParser {
 
         List<CallExpression> routerCallsWithin(int start, int end) {
             return routerProviderCalls.stream()
+                    .filter(call -> call.kind() == CallKind.ROUTER_PROVIDER)
                     .filter(call -> call.start() >= start && call.end() <= end)
+                    .toList();
+        }
+
+        ModuleDeclaration module(String name) {
+            return moduleDeclarations.stream().filter(module -> module.name().equals(name))
+                    .findFirst().orElse(null);
+        }
+
+        List<CallExpression> routerModuleCalls() {
+            return routerProviderCalls.stream()
+                    .filter(call -> call.kind() == CallKind.ROUTER_MODULE_ROOT)
                     .toList();
         }
 
@@ -396,6 +499,12 @@ final class AngularBootstrapSourceParser {
     ) {
     }
 
+    record ModuleDeclaration(
+            String name, List<String> imports, int metadataStart, int metadataEnd,
+            GitLabFrontendSourceReference source
+    ) {
+    }
+
     record CallExpression(
             CallKind kind,
             String localName,
@@ -416,7 +525,9 @@ final class AngularBootstrapSourceParser {
 
     enum CallKind {
         BOOTSTRAP,
-        ROUTER_PROVIDER
+        ROUTER_PROVIDER,
+        MODULE_BOOTSTRAP,
+        ROUTER_MODULE_ROOT
     }
 
     private enum LexicalState {

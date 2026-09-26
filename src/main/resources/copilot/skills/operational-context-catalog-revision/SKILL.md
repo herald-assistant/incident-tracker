@@ -167,6 +167,11 @@ określił frontendową rolę, możesz ją zaproponować z takim samym oznaczeni
 źródła i przeglądu; w innym przypadku pozostaw subtype `unknown` i opisz
 granicę wiedzy w `visibilityLimits`. Nie umieszczaj referencji do repozytorium na
 systemie; droga system → kod prowadzi przez system-targeted code-search scope.
+Jeśli `operatorFacts.systemSubtype` wskazuje `frontend`, zaproponuj razem
+`systemSubtype: frontend` nowego systemu i `repositoryType: frontend` jego
+głównego repozytorium. Dla obu pól użyj `basis: USER_STATEMENT`, refa
+`operator:repository-facts` oraz `requiresConfirmation: true` na zmianie
+i propozycji. Nie pozostawiaj tylko jednej strony tej klasyfikacji.
 `selectedSource` samo nie potwierdza, że repozytorium jest wdrażane,
 frontendowe albo należy do wskazanego zespołu.
 

@@ -216,6 +216,49 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
     }
 
     @Test
+    void shouldBuildCrmScreensFromBootstrappedNgModuleRoutes() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/main.ts", """
+                import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+                import { CrmAppModule } from './app/crm-app.module';
+                platformBrowserDynamic().bootstrapModule(CrmAppModule);
+                """);
+        files.put("apps/crm-agent/src/app/crm-app.module.ts", """
+                import { NgModule } from '@angular/core';
+                import { CrmRoutingModule } from './crm-routing.module';
+                @NgModule({ imports: [CrmRoutingModule] })
+                export class CrmAppModule {}
+                """);
+        files.put("apps/crm-agent/src/app/crm-routing.module.ts", """
+                import { NgModule } from '@angular/core';
+                import { RouterModule, Routes } from '@angular/router';
+                import { CrmContactComponent } from './crm-contact.component';
+                const crmRoutes: Routes = [
+                  { path: 'contacts', component: CrmContactComponent },
+                  { path: '', redirectTo: 'contacts', pathMatch: 'full' }
+                ];
+                @NgModule({ imports: [RouterModule.forRoot(crmRoutes)], exports: [RouterModule] })
+                export class CrmRoutingModule {}
+                """);
+        files.put("apps/crm-agent/src/app/crm-contact.component.ts", """
+                @Component({ selector: 'crm-contact', template: '' })
+                export class CrmContactComponent {}
+                """);
+        stubRepository(files);
+        when(repositoryPort.searchRepositoryFilesByContent(
+                anyString(), anyString(), anyString(), anyList(), anyInt()
+        )).thenReturn(List.of(candidate("apps/crm-agent/src/main.ts")));
+
+        var graph = service.discover(scope(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(graph.coverage().status()).isEqualTo(GitLabFrontendCoverageStatus.READY);
+        assertThat(graph.bootstrapRoot().bootstrapSymbol()).isEqualTo("bootstrapModule");
+        assertThat(graph.nodes()).filteredOn(node -> node.screen() != null)
+                .extracting(GitLabFrontendRouteNode::routePattern)
+                .containsExactly("/contacts");
+    }
+
+    @Test
     void shouldReturnBlockedGraphWhenNoCrmBootstrapRootCanBeProven() {
         when(repositoryPort.searchRepositoryFilesByContent(
                 anyString(), anyString(), anyString(), anyList(), anyInt()

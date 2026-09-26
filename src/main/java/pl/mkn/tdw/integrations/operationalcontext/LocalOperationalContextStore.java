@@ -132,10 +132,23 @@ final class LocalOperationalContextStore {
                 candidateSnapshot.readSnapshot().catalog(),
                 current.validationFindings()
         );
+        var findingsByFingerprint = decision.report().fingerprintedFindings().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        OperationalContextCatalogValidationService.FingerprintedFinding::fingerprint,
+                        OperationalContextCatalogValidationService.FingerprintedFinding::finding,
+                        (first, ignored) -> first));
         var violations = decision.violations().stream()
-                .map(violation -> new OperationalContextCatalogPreviewViolation(
-                        violation.code(), violation.fingerprint(), violation.ruleCode(), violation.severity()
-                ))
+                .map(violation -> {
+                    var finding = findingsByFingerprint.get(violation.fingerprint());
+                    var reference = finding != null && !finding.sourceRefs().isEmpty()
+                            ? finding.sourceRefs().get(0) : null;
+                    return new OperationalContextCatalogPreviewViolation(
+                            violation.code(), violation.fingerprint(), violation.ruleCode(), violation.severity(),
+                            finding != null ? finding.message() : violation.ruleCode(),
+                            reference != null ? reference.entityType() : null,
+                            reference != null ? reference.entityId() : null,
+                            reference != null ? reference.fieldPath() : null);
+                })
                 .toList();
         return new CandidateDecision(
                 changed, candidateSnapshot,

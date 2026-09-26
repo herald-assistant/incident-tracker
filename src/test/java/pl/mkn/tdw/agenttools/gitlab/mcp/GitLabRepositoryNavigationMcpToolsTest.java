@@ -214,4 +214,54 @@ class GitLabRepositoryNavigationMcpToolsTest {
     private ToolContext context() {
         return new ToolContext(Map.of(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, scope));
     }
+
+    @Test
+    void completeSearchCanVerifyLargePinnedFileOnlyWhenSessionRequestsIt() {
+        var content = "CRM customer lookup\n".repeat(20_000);
+        when(port.searchRepositoryFilesByContent("CRM", "PROCESSES/customer-profile", "main",
+                List.of("customer lookup"), 20)).thenReturn(List.of(
+                new GitLabRepositoryFileCandidate("CRM", "PROCESSES/customer-profile", "main",
+                        "README.md", "match", 1)));
+        when(port.readFileMetadata("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "PROCESSES/customer-profile",
+                        SELECTED_COMMIT, "README.md", null, SELECTED_COMMIT, null, null, null,
+                        (long) content.length()));
+        when(port.readFileComplete("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "PROCESSES/customer-profile",
+                        SELECTED_COMMIT, "README.md", content, false));
+
+        var completeContext = new ToolContext(Map.of(
+                AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, scope,
+                AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ, true));
+        assertThat(tools.searchRepositoryFiles("PROCESSES/customer-profile", "main",
+                "customer lookup", "", "", "Sprawdzam duży plik CRM.", completeContext).paths())
+                .containsExactly("README.md");
+        verify(port).readFileComplete("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md");
+    }
+
+    @Test
+    void scopedCompleteReadReturnsLargeFileWhileDefaultRemainsBounded() {
+        var content = "CRM customer lookup\n".repeat(20_000);
+        when(port.readFileMetadata("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "PROCESSES/customer-profile",
+                        SELECTED_COMMIT, "README.md", null, SELECTED_COMMIT, null, null, null,
+                        (long) content.length()));
+        when(port.readFileComplete("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "PROCESSES/customer-profile",
+                        SELECTED_COMMIT, "README.md", content, false));
+        var gitlab = GitLabMcpToolsTestCreator.create(port);
+        var completeContext = new ToolContext(Map.of(
+                AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, scope,
+                AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ, true));
+
+        var response = gitlab.readRepositoryFile("PROCESSES/customer-profile", "main", List.of(),
+                "README.md", null, "Czytam pełny plik CRM.", completeContext);
+
+        assertThat(response.content()).isEqualTo(content);
+        assertThat(response.sourceRef()).endsWith("@" + SELECTED_COMMIT + ":README.md");
+        verify(port).readFileComplete("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md");
+        assertThatThrownBy(() -> gitlab.readRepositoryFile("PROCESSES/customer-profile", "main", List.of(),
+                "README.md", null, "Sprawdzam zwykły limit.", context()))
+                .isInstanceOf(IllegalStateException.class);
+    }
 }

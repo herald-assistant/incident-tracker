@@ -1,7 +1,5 @@
 package pl.mkn.tdw.features.operationalcontextassistance.ai;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -18,9 +16,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class OperationalContextAssistanceCatalogMaterialService {
 
-    static final int MAX_CATALOG_BYTES = 1024 * 1024;
-    static final int MAX_GUIDANCE_BYTES = 512 * 1024;
-
     private static final String RESOURCE_ROOT = "operational-context-maintenance/";
     static final List<String> DOCUMENT_NAMES = List.of(
             "systems.yml", "repo-map.yml", "code-search-scopes.yml", "processes.yml",
@@ -36,7 +31,6 @@ public class OperationalContextAssistanceCatalogMaterialService {
     );
 
     private final OperationalContextPort operationalContextPort;
-    private final ObjectMapper objectMapper;
 
     public OperationalContextAssistanceCatalogMaterial capture() {
         var snapshot = operationalContextPort.currentDocumentSnapshot();
@@ -45,35 +39,15 @@ public class OperationalContextAssistanceCatalogMaterialService {
                     "Nie można odczytać kompletu dziewięciu dokumentów aktywnego Operational Context."
             );
         }
-        if (catalogBytes(snapshot.documents()) > MAX_CATALOG_BYTES) {
-            throw new OperationalContextAssistanceMaterialException(
-                    "Aktywny katalog Operational Context przekracza limit 1 MiB materiału AI; asysta wymaga pełnego katalogu."
-            );
-        }
         var guidance = new LinkedHashMap<String, String>();
-        int guidanceBytes = 0;
         for (var name : GUIDANCE_NAMES) {
             var content = readGuidance(name);
-            guidanceBytes += content.getBytes(StandardCharsets.UTF_8).length;
-            if (guidanceBytes > MAX_GUIDANCE_BYTES) {
-                throw new OperationalContextAssistanceMaterialException(
-                        "Reguły utrzymania Operational Context przekraczają limit 512 KiB materiału AI."
-                );
-            }
             guidance.put(name, content);
         }
         return new OperationalContextAssistanceCatalogMaterial(
                 snapshot.contentDigest(), snapshot.catalog(), snapshot.documents(),
                 Collections.unmodifiableMap(guidance)
         );
-    }
-
-    private int catalogBytes(Object documents) {
-        try {
-            return objectMapper.writeValueAsBytes(documents).length;
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Operational Context documents cannot be serialized for AI.", exception);
-        }
     }
 
     private String readGuidance(String name) {

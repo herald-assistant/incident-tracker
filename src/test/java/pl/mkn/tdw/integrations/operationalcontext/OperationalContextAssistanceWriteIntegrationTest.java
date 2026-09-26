@@ -353,7 +353,7 @@ class OperationalContextAssistanceWriteIntegrationTest {
                 "main", "1111111111111111111111111111111111111111", List.of(), List.of()));
 
         var job = new OperationalContextAssistanceJobService(
-                port, new OperationalContextAssistanceCatalogMaterialService(port, mapper),
+                port, new OperationalContextAssistanceCatalogMaterialService(port),
                 maintenance, validation, collector,
                 prompt, copilot, parser,
                 new OperationalContextAssistanceDraftPreflight(parser, maintenance, port),

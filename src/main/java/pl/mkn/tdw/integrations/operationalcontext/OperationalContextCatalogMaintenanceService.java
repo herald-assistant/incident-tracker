@@ -215,8 +215,7 @@ public class OperationalContextCatalogMaintenanceService {
             throw OperationalContextCatalogMaintenanceException.validation(
                     "Accepted batch violates catalog validation rules",
                     stage.assessment().violations().stream()
-                            .map(violation -> new OperationalContextCatalogFieldError(
-                                    "/catalog", "Catalog validation: " + violation.code()))
+                            .map(this::catalogViolationFieldError)
                             .toList()
             );
         }
@@ -513,7 +512,7 @@ public class OperationalContextCatalogMaintenanceService {
         }
         entities.remove(index);
         var candidate = candidateDocuments(stored, type, entities);
-        return snapshotStore.publishCandidate(candidate);
+        return publishValidatedCandidate(candidate);
     }
 
     private OperationalContextCatalogEntityType validateEnvelope(OperationalContextCatalogMutationCommand command) {
@@ -1669,11 +1668,34 @@ public class OperationalContextCatalogMaintenanceService {
             String entityId
     ) {
         var candidate = candidateDocuments(stored, type, entities);
-        snapshotStore.publishCandidate(candidate);
+        publishValidatedCandidate(candidate);
         var published = snapshotStore.currentStoredSnapshot();
         return new OperationalContextCatalogMutationResult(
                 editableEntity(published, type, entityId), published.readSnapshot().contentDigest()
         );
+    }
+
+    private OperationalContextSnapshot publishValidatedCandidate(Map<String, String> candidate) {
+        var assessment = snapshotStore.assessCandidate(candidate);
+        if (!assessment.valid()) {
+            throw OperationalContextCatalogMaintenanceException.validation(
+                    "Operational Context contains conflicting catalog fields",
+                    assessment.violations().stream().map(this::catalogViolationFieldError).toList());
+        }
+        return snapshotStore.publishCandidate(candidate);
+    }
+
+    private OperationalContextCatalogFieldError catalogViolationFieldError(
+            OperationalContextCatalogPreviewViolation violation
+    ) {
+        var pointer = "/catalog";
+        if (violation.entityType() != null && violation.entityId() != null) {
+            pointer += "/" + violation.entityType() + "/" + violation.entityId();
+            if (violation.fieldPath() != null && violation.fieldPath().contains(".")) {
+                pointer += "/" + violation.fieldPath().substring(violation.fieldPath().lastIndexOf('.') + 1);
+            }
+        }
+        return new OperationalContextCatalogFieldError(pointer, violation.message());
     }
 
     private Map<String, String> candidateDocuments(

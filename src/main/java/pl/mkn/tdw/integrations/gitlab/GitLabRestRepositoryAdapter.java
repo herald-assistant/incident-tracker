@@ -314,6 +314,28 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         }
     }
 
+    @Override
+    public GitLabRepositoryFileContent readFileComplete(
+            String group, String projectName, String revision, String filePath
+    ) {
+        try {
+            var content = restClient().get()
+                    .uri(rawFileUri(group, projectName, revision, filePath))
+                    .accept(MediaType.TEXT_PLAIN)
+                    .exchange((request, response) -> {
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            throw new IllegalStateException("GitLab complete file read returned HTTP "
+                                    + response.getStatusCode().value() + ".");
+                        }
+                        return decodeTextFile(response.getBody().readAllBytes(), filePath);
+                    });
+            return new GitLabRepositoryFileContent(group, projectName, revision, filePath, content, false);
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("GitLab complete file read failed for "
+                    + group + "/" + projectName + "@" + revision + " :: " + filePath, exception);
+        }
+    }
+
     private String decodeTextFile(byte[] bytes, String filePath) {
         try {
             var content = StandardCharsets.UTF_8.newDecoder()

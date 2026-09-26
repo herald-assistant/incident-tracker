@@ -33,7 +33,13 @@ export class ContextEntityEditorDrawerComponent {
   readonly focusFieldPath = input<string | null>(null);
   readonly saveEntity = output<OperationalContextPayload>();
   readonly cancelEditor = output<void>();
+  readonly openRelatedEntity = output<{ type: string; id: string; field: string | null }>();
   readonly dirtyChange = output<boolean>();
+
+  relatedEntityForError(field: string): { type: string; id: string; field: string | null } | null {
+    const match = /^\/catalog\/([a-z-]+)\/([a-z0-9-]+)(?:\/([a-zA-Z0-9]+))?$/.exec(field);
+    return match ? { type: match[1], id: match[2], field: match[3] ?? null } : null;
+  }
 
   readonly adapter = new OperationalContextFormAdapter();
   readonly structuredError = signal('');

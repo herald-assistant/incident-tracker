@@ -115,6 +115,23 @@ class OperationalContextAssistancePromptPreparationServiceTest {
     }
 
     @Test
+    void preparesCatalogAboveFormerJsonContextLimitInFull() {
+        effectiveSkill();
+        var largeSummary = "CRM customer context ".repeat(170_000);
+        var catalog = objectMapper.createObjectNode();
+        catalog.putObject("documents").putObject("systems.yml").put("summary", largeSummary);
+
+        var preparation = service.prepare(new OperationalContextAssistanceAiInput(
+                OperationalContextAssistanceMode.CREATE_AREA, "Uściślij system CRM.",
+                catalog, guidance(), null, null, null, List.of()));
+
+        assertThat(preparation.prompt()).contains(largeSummary);
+        assertThat(preparation.artifacts().get(
+                OperationalContextAssistancePromptPreparationService.INPUT_ARTIFACT))
+                .contains(largeSummary);
+    }
+
+    @Test
     void preservesSourceAndOperatorContentAndOnlyAllowsRefsFromIncludedSourceFiles() throws Exception {
         effectiveSkill();
         var source = new OperationalContextGitLabSourceSnapshot(
@@ -287,7 +304,7 @@ class OperationalContextAssistancePromptPreparationServiceTest {
         );
         var facts = new OperationalContextAssistanceRepositoryFacts(
                 OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
-                "Customer Profile Process", "customer-profile-runtime", List.of()
+                "Customer Profile Process", "customer-profile-runtime", List.of(), "frontend"
         );
 
         var preparation = service.prepare(new OperationalContextAssistanceAiInput(
@@ -302,9 +319,11 @@ class OperationalContextAssistancePromptPreparationServiceTest {
         assertThat(material.path("operatorFacts").path("systemName").asText()).isEqualTo("Customer Profile Process");
         assertThat(material.path("operatorFacts").path("runtimeServiceName").asText())
                 .isEqualTo("customer-profile-runtime");
+        assertThat(material.path("operatorFacts").path("systemSubtype").asText()).isEqualTo("frontend");
         assertThat(preparation.allowedSourceRefs())
                 .contains("operator:description", "operator:repository-facts");
         assertThat(preparation.prompt()).contains("nie dowodzi, że odczytano repozytorium");
+        assertThat(preparation.prompt()).contains("repositoryType: frontend");
     }
 
     @Test
@@ -334,13 +353,15 @@ class OperationalContextAssistancePromptPreparationServiceTest {
     }
 
     @Test
-    void omitsOversizeSourceFileBeforeAddingItsRef() throws Exception {
+    void includesLargeVerifiedSourceFileWithoutTruncatingIt() throws Exception {
         effectiveSkill();
+        var sourceRef = "gitlab:CRM/crm-contact-api@1111111111111111111111111111111111111111:README.md";
+        var largeContent = "CRM customer lookup\n".repeat(60_000);
         var source = new OperationalContextGitLabSourceSnapshot(
                 "crm-contact-api", new OperationalContextGitLabSourceSnapshot.RepositoryGit(
                         "gitlab", "CRM", "crm-contact-api", "CRM/crm-contact-api", null
                 ), "main", "1111111111111111111111111111111111111111",
-                List.of(new OperationalContextGitLabSourceFile("README.md", "x".repeat(16 * 1024 + 1), "oversize")),
+                List.of(new OperationalContextGitLabSourceFile("README.md", largeContent, sourceRef)),
                 List.of()
         );
         var preparation = service.prepare(new OperationalContextAssistanceAiInput(
@@ -348,11 +369,11 @@ class OperationalContextAssistancePromptPreparationServiceTest {
                 "CRM Contact Intake", objectMapper.createObjectNode(), guidance(), null, source, null, List.of()
         ));
 
-        assertThat(preparation.allowedSourceRefs()).doesNotContain("oversize");
+        assertThat(preparation.allowedSourceRefs()).contains(sourceRef);
         var material = objectMapper.readTree(preparation.artifacts().get(
                 OperationalContextAssistancePromptPreparationService.INPUT_ARTIFACT));
-        assertThat(material.path("selectedSource").path("files").size()).isZero();
-        assertThat(material.path("visibilityLimits").toString()).contains("przekraczała limit");
+        assertThat(material.path("selectedSource").path("files").get(0).path("content").asText())
+                .isEqualTo(largeContent);
     }
 
     @Test

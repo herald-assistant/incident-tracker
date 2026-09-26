@@ -107,6 +107,68 @@ class GitLabFrontendBootstrapDiscoveryServiceTest {
     }
 
     @Test
+    void shouldFollowBootstrappedCrmNgModuleToItsImportedRouterModule() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/main.ts", """
+                import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+                import { CrmAppModule } from './app/crm-app.module';
+                platformBrowserDynamic().bootstrapModule(CrmAppModule);
+                """);
+        files.put("apps/crm-agent/src/app/crm-app.module.ts", """
+                import { NgModule } from '@angular/core';
+                import { CrmRoutingModule } from './crm-routing.module';
+                @NgModule({ imports: [CrmRoutingModule] })
+                export class CrmAppModule {}
+                """);
+        files.put("apps/crm-agent/src/app/crm-routing.module.ts", """
+                import { NgModule } from '@angular/core';
+                import { RouterModule, Routes } from '@angular/router';
+                const crmRoutes: Routes = [{ path: 'contacts', component: CrmContactComponent }];
+                @NgModule({ imports: [RouterModule.forRoot(crmRoutes)], exports: [RouterModule] })
+                export class CrmRoutingModule {}
+                """);
+        stubRepository(files);
+
+        var result = service.discover(scope(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.status()).isEqualTo(GitLabFrontendCoverageStatus.READY);
+        assertThat(result.root().bootstrapSymbol()).isEqualTo("bootstrapModule");
+        assertThat(result.root().applicationConfigSource().symbol()).isEqualTo("CrmRoutingModule");
+        assertThat(result.root().routerProviderSource().path())
+                .isEqualTo("apps/crm-agent/src/app/crm-routing.module.ts");
+        assertThat(result.root().routeCollectionSymbol()).isEqualTo("crmRoutes");
+    }
+
+    @Test
+    void shouldNotTreatUnimportedCrmRouterModuleAsAnApplicationRoot() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/main.ts", """
+                import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+                import { CrmAppModule } from './app/crm-app.module';
+                platformBrowserDynamic().bootstrapModule(CrmAppModule);
+                """);
+        files.put("apps/crm-agent/src/app/crm-app.module.ts", """
+                import { NgModule } from '@angular/core';
+                @NgModule({ imports: [] })
+                export class CrmAppModule {}
+                """);
+        files.put("apps/crm-agent/src/app/unused-routing.module.ts", """
+                import { NgModule } from '@angular/core';
+                import { RouterModule } from '@angular/router';
+                @NgModule({ imports: [RouterModule.forRoot([{ path: 'unused' }])] })
+                export class UnusedRoutingModule {}
+                """);
+        stubRepository(files);
+
+        var result = service.discover(scope(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.status()).isEqualTo(GitLabFrontendCoverageStatus.BLOCKED);
+        assertThat(result.root()).isNull();
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .contains(GitLabFrontendGraphDiagnosticCode.ROUTER_PROVIDER_NOT_FOUND);
+    }
+
+    @Test
     void shouldBlockCommentAndStringFalsePositivesWithoutGuessingARoot() {
         var files = Map.of(
                 "apps/crm-agent/src/main.ts", """
@@ -211,7 +273,7 @@ class GitLabFrontendBootstrapDiscoveryServiceTest {
                 "crm-platform",
                 "crm-agent-frontend",
                 revision,
-                List.of("bootstrapApplication", "provideRouter"),
+                List.of("bootstrapApplication", "provideRouter", "bootstrapModule"),
                 GitLabFrontendGraphLimits.defaults().maxRootCandidates() + 1
         )).thenReturn(List.of());
 
@@ -250,7 +312,7 @@ class GitLabFrontendBootstrapDiscoveryServiceTest {
                 "crm-platform",
                 "crm-agent-frontend",
                 "main",
-                List.of("bootstrapApplication", "provideRouter"),
+                List.of("bootstrapApplication", "provideRouter", "bootstrapModule"),
                 limits.maxRootCandidates() + 1
         )).thenReturn(candidates);
         lenient().when(repositoryPort.readFile(

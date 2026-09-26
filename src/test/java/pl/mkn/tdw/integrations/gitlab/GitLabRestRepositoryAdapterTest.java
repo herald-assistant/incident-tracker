@@ -668,6 +668,29 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldReadCompleteRawFileAboveBoundedTransportLimit() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(
+                properties, new GitLabRestClientFactory(properties, restClientBuilder)
+        );
+        var content = "CRM customer lookup\n".repeat(60_000);
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcustomer-api/repository/files/README.md/raw?ref=1234567890abcdef1234567890abcdef12345678"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(content, MediaType.TEXT_PLAIN));
+
+        var file = adapter.readFileComplete(
+                "CRM/runtime", "customer-api", "1234567890abcdef1234567890abcdef12345678", "README.md"
+        );
+
+        assertEquals(content, file.content());
+        assertFalse(file.truncated());
+        server.verify();
+    }
+
+    @Test
     void shouldRejectRawFileWhenBodyExceedsLimitEvenWithoutDeclaredLength() {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();

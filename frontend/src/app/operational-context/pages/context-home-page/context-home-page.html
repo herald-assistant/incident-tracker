@@ -489,6 +489,7 @@
         [focusFieldPath]="editorFocusPath()"
         (dirtyChange)="editorDirty.set($event)"
         (saveEntity)="maintenance.save($event)"
+        (openRelatedEntity)="editSource($event.type, $event.id, $event.field)"
         (cancelEditor)="cancelEditor()"
       ></app-context-entity-editor-drawer>
     }

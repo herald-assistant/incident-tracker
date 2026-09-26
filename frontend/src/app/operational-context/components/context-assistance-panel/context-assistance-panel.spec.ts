@@ -350,7 +350,7 @@ describe('ContextAssistancePanelComponent', () => {
     panel.runtimeServiceNameControl.setValue('customer-profile-service');
     panel.start();
     expect(api.start).toHaveBeenCalledWith(expect.objectContaining({ repositoryFacts: {
-      usage: 'DEPLOYED_SYSTEM', systemName: 'Obsługa profili klientów', runtimeServiceName: 'customer-profile-service'
+      usage: 'DEPLOYED_SYSTEM', systemName: 'Obsługa profili klientów', systemSubtype: 'unknown', runtimeServiceName: 'customer-profile-service'
     } }));
 
     panel.repositoryUsageControl.setValue('UNKNOWN');
@@ -949,6 +949,57 @@ describe('ContextAssistancePanelComponent', () => {
     expect(panel.batchPreview()).toBeNull();
     expect(panel.canSave()).toBe(false);
     expect(panel.decisionError()).toContain('Katalog lub zestaw propozycji zmieniły się');
+  });
+
+  it('guides an old frontend draft through the linked repository correction and restores the choice', async () => {
+    const original = job('COMPLETED');
+    const base = original.draft!.proposals[0];
+    const system = { ...base, entityId: 'crm-portal', changes: [
+      { ...base.changes[0], after: 'CRM Portal' },
+      { ...base.changes[0], path: 'systemSubtype', after: 'unknown' }
+    ] };
+    const repository = { ...base, entityType: 'repository' as const, entityId: 'crm-portal-repo', changes: [
+      { ...base.changes[0], after: 'CRM Portal repository' }
+    ] };
+    const scope = { ...base, entityType: 'code-search-scope' as const, entityId: 'crm-portal-code', changes: [
+      { ...base.changes[0], path: 'target', after: { type: 'system', id: 'crm-portal' } },
+      { ...base.changes[0], path: 'repositories', after: [{ repoId: 'crm-portal-repo', role: 'primary' }] }
+    ] };
+    original.draft!.proposals = [system, repository, scope];
+    const api = { start: vi.fn(), get: vi.fn(), previewBatch: vi.fn(() => of({
+      expectedDigest: 'old', candidateDigest: 'candidate', valid: true, violations: [], mutations: []
+    })) };
+    const fixture = await batchFixture(original, api);
+    const panel = fixture.componentInstance;
+    panel.beginFieldEdit(0, system, system.changes[1]);
+    panel.editValueControl.setValue('frontend');
+    panel.saveFieldEdit(0, system, system.changes[1]);
+    panel.setConfirmed(0, 'systemSubtype', true);
+    expect(panel.frontendRepositorySupplementAvailable(1, repository)).toBe(true);
+    panel.selectProposal(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('To pole nie było w propozycji AI');
+    panel.setFrontendRepositorySelected(1, repository, true);
+    expect(panel.canSave()).toBe(false);
+    panel.setConfirmed(1, 'repositoryType', true);
+    expect(panel.reviewDecisions()[1]).toEqual({
+      action: 'APPLY', selectedPaths: ['name', 'repositoryType'],
+      confirmedPaths: ['repositoryType'], editedValues: { repositoryType: 'frontend' }
+    });
+    const savedReview = { selections: original.draft!.proposals.map((proposal, index) => ({
+      selectedPaths: panel.selectedPaths(index, proposal),
+      confirmedPaths: panel.confirmationsByProposal()[index] ?? [],
+      editedValues: panel.editedValuesByProposal()[index] ?? {}
+    })) };
+    fixture.destroy();
+
+    const reopened = TestBed.createComponent(ContextAssistancePanelComponent);
+    reopened.componentRef.setInput('prefill', { mode: 'CREATE_AREA' });
+    reopened.componentRef.setInput('initialJob', { ...original, reviewDraft: savedReview });
+    reopened.detectChanges();
+    expect(reopened.componentInstance.isSelected(1, repository, 'repositoryType')).toBe(true);
+    expect(reopened.componentInstance.isConfirmed(1, 'repositoryType')).toBe(true);
+    expect(reopened.componentInstance.reviewDecisions()[1].editedValues).toEqual({ repositoryType: 'frontend' });
   });
 });
 

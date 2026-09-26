@@ -73,6 +73,13 @@ public interface GitLabRepositoryPort {
         throw new UnsupportedOperationException("Bounded GitLab file read is not implemented by this port.");
     }
 
+    /** Reads an entire text file without an application byte budget; callers verify revision and content. */
+    default GitLabRepositoryFileContent readFileComplete(
+            String group, String projectName, String revision, String filePath
+    ) {
+        throw new UnsupportedOperationException("Complete GitLab file read is not implemented by this port.");
+    }
+
     default GitLabRepositoryFileMetadata readFileMetadata(
             String group,
             String projectName,

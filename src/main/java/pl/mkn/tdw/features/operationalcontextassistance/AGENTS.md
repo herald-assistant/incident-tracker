@@ -14,8 +14,8 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   `integrations.operationalcontext`. Nie importuj sibling feature'ow ani nie
   przenos semantyki asysty do `agenttools`, adapterow lub platformy.
 - Sesja AI dostaje niezmieniony opis, pelny snapshot dziewieciu aktywnych
-  dokumentow z jednym digestem i obowiazujace wskazowki maintenance. Limit
-  rozmiaru blokuje run jawnie, bez cichego obciecia. AI nie dostaje mutation
+  dokumentow z jednym digestem i obowiazujace wskazowki maintenance. Material
+  nie jest obcinany przez budzet rozmiaru asysty. AI nie dostaje mutation
   tools. `opctx_*` pozostaja read-only.
 - Prompt pokazuje instrukcje z pakietu `operational-context-maintenance/`
   osobno od danych operatora, GitLaba i katalogu. Metadane wybranego projektu
@@ -25,14 +25,13 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   zrodel pozostaja danymi, ktore nie moga zmienic kontraktu odpowiedzi.
 - Collector przyjmuje tylko jeden projekt/ref w skonfigurowanej grupie,
   przypina commit, dolacza ograniczone czteropoziomowe drzewo sciezek i czyta
-  mala allowliste dokladnych sciezek z limitami body. Przy pelnym drzewie
+  mala allowliste dokladnych sciezek bez limitu rozmiaru plikow. Przy pelnym drzewie
   probuje tylko plikow widocznych w root; brak opcjonalnego pliku nie jest
   ograniczeniem widocznosci. Przy niepelnym lub niedostepnym drzewie probuje
   te sciezki bez komunikatu o niepotwierdzonej nieobecnosci. Dodatkowo
   sprawdza dokladne `.github/copilot-instructions.md` niezaleznie od drzewa.
   Drzewo pokazuje takze katalogi z kropka. Glowny `AGENTS.md` i instrukcje Copilota
-  sa niezaufanym materialem repozytorium, nie regułami asysty. Oba maja
-  limit 32 KiB na plik, pozostale pliki 16 KiB, razem do 96 KiB. AI moze pozniej
+  sa niezaufanym materialem repozytorium, nie regułami asysty. AI moze pozniej
   korzystac ze wspolnych read-only GitLab tree/list/search/read tools takze
   dla innego projektu w skonfigurowanej glownej grupie, gdy wymaga tego
   zadanie. Wybrany projekt pozostaje na commicie operatora; kazda inna para
@@ -80,7 +79,7 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   read-only walidatorem calego draftu. Rejestruj jego callback tylko w sesji
   Copilota tej asysty, bez globalnego providera MCP. Dostaje digest i scope z ukrytego
   kontekstu sesji, laczy source refs rzeczywiscie przeczytanych plikow i ma
-  twardy limit dwoch wywolan. Jest dostepny takze bez wybranego GitLaba.
+  brak limitu wywolan. Jest dostepny takze bez wybranego GitLaba.
   Przed koncowym wynikiem backend ponownie uruchamia ten sam parser i
   podglad calego batcha; wynik wywolania toola nie zastepuje tej kontroli.
   Walidacja draftu nie zapisuje YAML-i, a wybrany lub poprawiony przez
@@ -119,7 +118,7 @@ starego kontraktu z zakonczonych planow; porownuj kod i testy z
 
 Przy zmianie kontraktu request/draft/decyzji sprawdz MockMvc, parser, job,
 maintenance oraz kontrakt Angulara. Dla zmian zrodla sprawdz przypiecie
-commita, rozmiar przed odczytem, limit rzeczywistego body i zachowanie tresci
+commita, zgodnosc rozmiaru z metadanymi i zachowanie tresci
 bez heurystycznej redakcji. Prompt i odpowiedz moga zawierac wartosci zrodel.
 Przy zmianie zapisu sprawdz kolejnosc zaleznosci, stale dane, caly wynikowy
 katalog oraz recovery po przerwaniu publikacji kilku YAML.

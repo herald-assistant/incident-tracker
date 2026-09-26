@@ -115,8 +115,10 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     change("systemSubtype", null, "frontend")
             ));
 
-            assertThrows(OperationalContextStoreException.class,
+            var error = assertThrows(OperationalContextCatalogMaintenanceException.class,
                     () -> harness.service().applyAcceptedChanges(proposal));
+            assertTrue(error.fieldErrors().stream().anyMatch(field ->
+                    field.message().contains("requires") && field.pointer().startsWith("/catalog/")));
             assertEquals(original, Files.readString(document));
             assertEquals(digest, harness.digest());
         }
@@ -204,9 +206,51 @@ class OperationalContextCatalogMaintenanceServiceTest {
 
             assertFalse(preview.valid());
             assertFalse(preview.violations().isEmpty());
+            assertTrue(preview.violations().stream().anyMatch(violation ->
+                    violation.message() != null && violation.entityType() != null));
             assertEquals(original, Files.readString(document));
             assertEquals(digest, harness.digest());
-            assertThrows(OperationalContextStoreException.class, () -> harness.service().create(command));
+            assertThrows(OperationalContextCatalogMaintenanceException.class, () -> harness.service().create(command));
+        }
+    }
+
+    @Test
+    void shouldPointManualFrontendValidationAtThePrimaryRepositoryType() throws Exception {
+        var documents = new LinkedHashMap<>(crmDocuments());
+        documents.put("code-search-scopes.yml", """
+                schemaVersion: 1
+                catalogKind: operational-context-code-search-scopes
+                codeSearchScopes:
+                  - id: crm-source-code
+                    name: CRM Source Code
+                    scopeType: system
+                    target:
+                      type: system
+                      id: crm-source-system
+                    repositories:
+                      - repoId: crm-source-repository
+                        role: primary
+                        priority: 1
+                        searchMode: whole-repository
+                """);
+        try (var harness = harness("manual-frontend-validation", documents)) {
+            var payload = new LinkedHashMap<>(harness.service()
+                    .entity("system", "crm-source-system").payload());
+            payload.put("systemSubtype", "frontend");
+            var command = new OperationalContextCatalogMutationCommand(
+                    "system", "crm-source-system", payload);
+            var preview = harness.service().previewUpdate(command);
+
+            assertTrue(preview.violations().stream().anyMatch(violation ->
+                    "FRONTEND_PRIMARY_REPOSITORY_TYPE_MISMATCH".equals(violation.ruleCode())
+                            && "repository".equals(violation.entityType())
+                            && "crm-source-repository".equals(violation.entityId())
+                            && violation.fieldPath().endsWith("repositoryType")));
+            var error = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().update(command));
+            assertTrue(error.fieldErrors().stream().anyMatch(field ->
+                    "/catalog/repository/crm-source-repository/repositoryType".equals(field.pointer())
+                            && field.message().contains("repositoryType frontend")));
         }
     }
 

@@ -9,8 +9,10 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -18,7 +20,8 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class GitLabFrontendBootstrapDiscoveryService {
 
-    private static final List<String> SEARCH_TERMS = List.of("bootstrapApplication", "provideRouter");
+    private static final List<String> SEARCH_TERMS = List.of(
+            "bootstrapApplication", "provideRouter", "bootstrapModule");
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final AngularBootstrapSourceParser parser = new AngularBootstrapSourceParser();
 
@@ -61,7 +64,7 @@ public class GitLabFrontendBootstrapDiscoveryService {
             return blocked(scope, candidates.size(), parsedSources.size(), false, diagnostics);
         }
 
-        var roots = resolveRoots(scope, parsedSources, diagnostics);
+        var roots = resolveRoots(scope, parsedSources, effectiveLimits, diagnostics);
         if (roots.size() == 1) {
             return new GitLabFrontendBootstrapDiscoveryResult(
                     scope,
@@ -82,13 +85,13 @@ public class GitLabFrontendBootstrapDiscoveryService {
         } else if (parsedSources.stream().anyMatch(source -> !source.bootstrapCalls().isEmpty())) {
             diagnostics.add(diagnostic(
                     GitLabFrontendGraphDiagnosticCode.ROUTER_PROVIDER_NOT_FOUND,
-                    "No unique provideRouter call is reachable from the production bootstrap configuration.",
+                    "No unique router root is reachable from the production bootstrap configuration.",
                     null
             ));
         } else {
             diagnostics.add(diagnostic(
                     GitLabFrontendGraphDiagnosticCode.BOOTSTRAP_ROOT_NOT_FOUND,
-                    "No production bootstrapApplication root was confirmed.",
+                    "No production Angular bootstrap root was confirmed.",
                     null
             ));
         }
@@ -173,11 +176,16 @@ public class GitLabFrontendBootstrapDiscoveryService {
     private List<GitLabFrontendBootstrapRoot> resolveRoots(
             GitLabFrontendRepositoryScope scope,
             List<AngularBootstrapSourceParser.ParsedSource> sources,
+            GitLabFrontendGraphLimits limits,
             List<GitLabFrontendGraphDiagnostic> diagnostics
     ) {
         var roots = new LinkedHashMap<String, GitLabFrontendBootstrapRoot>();
         for (var bootstrapSource : sources) {
             for (var bootstrapCall : bootstrapSource.bootstrapCalls()) {
+                if (bootstrapCall.kind() == AngularBootstrapSourceParser.CallKind.MODULE_BOOTSTRAP) {
+                    resolveModuleRoots(scope, bootstrapSource, bootstrapCall, limits, roots, diagnostics);
+                    continue;
+                }
                 if (bootstrapCall.arguments().size() < 2) {
                     continue;
                 }
@@ -223,6 +231,80 @@ public class GitLabFrontendBootstrapDiscoveryService {
             }
         }
         return List.copyOf(roots.values());
+    }
+
+    private void resolveModuleRoots(
+            GitLabFrontendRepositoryScope scope,
+            AngularBootstrapSourceParser.ParsedSource bootstrapSource,
+            AngularBootstrapSourceParser.CallExpression bootstrapCall,
+            GitLabFrontendGraphLimits limits,
+            LinkedHashMap<String, GitLabFrontendBootstrapRoot> roots,
+            List<GitLabFrontendGraphDiagnostic> diagnostics
+    ) {
+        var moduleName = bootstrapCall.arguments().isEmpty()
+                ? null : bootstrapCall.arguments().get(0).identifier();
+        if (moduleName == null) return;
+        var session = new GitLabFrontendTargetedSourceSession(gitLabRepositoryPort, scope, limits);
+        var imports = new GitLabFrontendTargetedImportResolver(session, bootstrapSource.sourcePath());
+        var queue = new ArrayDeque<ModuleTarget>();
+        enqueueModule(bootstrapSource, moduleName, 0, imports, queue);
+        var visited = new LinkedHashSet<String>();
+        while (!queue.isEmpty()) {
+            var target = queue.removeFirst();
+            if (!session.withinImportDepth(target.depth(), target.sourcePath())
+                    || !visited.add(target.sourcePath() + "#" + target.symbol())) continue;
+            var source = target.sourcePath().equals(bootstrapSource.sourcePath())
+                    ? bootstrapSource
+                    : parseModuleSource(session, target.sourcePath());
+            if (source == null) continue;
+            var module = source.module(target.symbol());
+            if (module == null) continue;
+            for (var routerCall : source.routerModuleCalls()) {
+                if (routerCall.start() < module.metadataStart()
+                        || routerCall.end() > module.metadataEnd()) continue;
+                var routeSymbol = routerCall.arguments().isEmpty()
+                        ? null : routerCall.arguments().get(0).identifier();
+                var identity = bootstrapSource.sourcePath() + "|" + target.sourcePath()
+                        + "|" + module.name() + "|" + routerCall.start();
+                roots.putIfAbsent(identity, new GitLabFrontendBootstrapRoot(
+                        "bootstrap-" + shortHash(scope.projectName() + "|" + identity),
+                        "bootstrapModule", bootstrapCall.source(), module.source(),
+                        "RouterModule.forRoot", routerCall.source(), routeSymbol
+                ));
+            }
+            for (var importedModule : module.imports()) {
+                enqueueModule(source, importedModule, target.depth() + 1, imports, queue);
+            }
+        }
+        diagnostics.addAll(session.diagnostics());
+    }
+
+    private AngularBootstrapSourceParser.ParsedSource parseModuleSource(
+            GitLabFrontendTargetedSourceSession session, String sourcePath
+    ) {
+        var content = session.readRequired(sourcePath);
+        return content != null ? parser.parse(sourcePath, content) : null;
+    }
+
+    private void enqueueModule(
+            AngularBootstrapSourceParser.ParsedSource owner,
+            String moduleName,
+            int depth,
+            GitLabFrontendTargetedImportResolver imports,
+            ArrayDeque<ModuleTarget> queue
+    ) {
+        if (owner.module(moduleName) != null) {
+            queue.add(new ModuleTarget(owner.sourcePath(), moduleName, depth));
+            return;
+        }
+        var binding = owner.imported(moduleName);
+        if (binding == null || binding.moduleSpecifier().startsWith("@angular/")
+                || !binding.moduleSpecifier().startsWith(".")
+                && !binding.moduleSpecifier().contains("/")) return;
+        var paths = imports.resolve(owner.sourcePath(), binding.moduleSpecifier());
+        if (paths.size() == 1) {
+            queue.add(new ModuleTarget(paths.get(0), binding.exportedName(), depth));
+        }
     }
 
     private ResolvedConfiguration resolveConfiguration(
@@ -377,5 +459,8 @@ public class GitLabFrontendBootstrapDiscoveryService {
             int end,
             GitLabFrontendSourceReference reference
     ) {
+    }
+
+    private record ModuleTarget(String sourcePath, String symbol, int depth) {
     }
 }

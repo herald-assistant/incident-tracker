@@ -139,14 +139,21 @@ class OperationalContextMaintenanceControllerTest {
         when(maintenanceService.create(any())).thenThrow(new OperationalContextCatalogMaintenanceException(
                 OperationalContextCatalogMaintenanceException.Code.VALIDATION_FAILED,
                 "Anonymous CRM payload is invalid",
-                List.of(new OperationalContextCatalogFieldError("/payload/name", "Name is required"))
+                List.of(new OperationalContextCatalogFieldError("/payload/name", "Name is required"),
+                        new OperationalContextCatalogFieldError(
+                                "/catalog/repository/crm-portal-repo/repositoryType",
+                                "Primary repository must declare repositoryType frontend"))
         ));
         mockMvc.perform(post("/api/operational-context/catalog/entities/team")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(writeBody("team", "crm-anonymous-team")))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("/payload/name"));
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("/payload/name"))
+                .andExpect(jsonPath("$.fieldErrors[1].field")
+                        .value("/catalog/repository/crm-portal-repo/repositoryType"))
+                .andExpect(jsonPath("$.fieldErrors[1].message")
+                        .value("Primary repository must declare repositoryType frontend"));
 
         when(maintenanceService.entity(eq("team"), eq("crm-operations-team"))).thenThrow(new OperationalContextStoreException(
                 OperationalContextStoreException.Code.CORRUPT_STORE,

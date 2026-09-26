@@ -465,7 +465,7 @@ class OperationalContextAssistanceJobServiceTest {
     }
 
     @Test
-    void blocksSelectedSystemWhenItsScopeExceedsAiContextLimit() {
+    void includesLargeSelectedSystemScopeInAiContext() {
         var facts = new OperationalContextAssistanceRepositoryFacts(
                 OperationalContextAssistanceRepositoryFacts.Usage.EXISTING_SYSTEM,
                 null, null, List.of("system-a")
@@ -476,6 +476,16 @@ class OperationalContextAssistanceJobServiceTest {
                 "digest-1", catalog, Map.of(), Map.of()));
         when(maintenanceService.writablePayloadForUpdate("code-search-scope", "scope-a"))
                 .thenReturn(Map.of("repositories", List.of(Map.of("reason", "x".repeat(33_000)))));
+        when(sourceCollector.collect("library", "main")).thenReturn(new OperationalContextGitLabSourceSnapshot(
+                "library", new OperationalContextGitLabSourceSnapshot.RepositoryGit(
+                        "gitlab", "CRM", "library", "CRM/library", null
+                ), "main", "a".repeat(40), List.of(), List.of()
+        ));
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new OperationalContextAssistanceCopilotResult(
+                        new CopilotExecutionResult("{\"proposals\":[]}", null), Set.of()));
+        when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
+                List.of(), List.of()));
 
         var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
                 OperationalContextAssistanceMode.CREATE_AREA, "Kod systemu", null,
@@ -483,9 +493,14 @@ class OperationalContextAssistanceJobServiceTest {
                 facts, null, null
         ));
 
-        assertThat(service.getJob(accepted.jobId()).status()).isEqualTo(OperationalContextAssistanceJobStatus.BLOCKED);
-        assertThat(service.getJob(accepted.jobId()).errorMessage()).contains("system-a", "limit kontekstu AI");
-        verify(promptService, never()).prepare(any());
+        var input = ArgumentCaptor.forClass(OperationalContextAssistanceAiInput.class);
+        verify(promptService).prepare(input.capture());
+        assertThat(input.getValue().catalogContext().path("selectedSystemScopes").get(0)
+                .path("beforeRepositories").get(0).path("reason").asText())
+                .isEqualTo("x".repeat(33_000));
+        assertThat(service.getJob(accepted.jobId()).status())
+                .isEqualTo(OperationalContextAssistanceJobStatus.BLOCKED);
+        assertThat(service.getJob(accepted.jobId()).errorMessage()).doesNotContain("limit kontekstu AI");
     }
 
     @Test
@@ -748,6 +763,88 @@ class OperationalContextAssistanceJobServiceTest {
                 .isInstanceOf(OperationalContextAssistanceDecisionException.class)
                 .hasMessageContaining("zachować typ");
         verify(maintenanceService, never()).applyAcceptedBatch(any());
+    }
+
+    @Test
+    void repairsLegacyFrontendProposalOnlyWithConfirmedPrimaryRepositoryAndScope() {
+        var jobId = completedCreateJob(legacyFrontendProposals());
+        var system = new OperationalContextAssistanceProposalDecisionRequest(
+                OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                List.of("name", "systemSubtype"), List.of("systemSubtype"),
+                Map.of("systemSubtype", objectMapper.valueToTree("frontend")));
+        var repository = new OperationalContextAssistanceProposalDecisionRequest(
+                OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                List.of("name", "repositoryType"), List.of("repositoryType"),
+                Map.of("repositoryType", objectMapper.valueToTree("frontend")));
+        var scope = new OperationalContextAssistanceProposalDecisionRequest(
+                OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                List.of("target", "repositories"), List.of());
+        var decisions = List.of(system, repository, scope);
+        var review = new OperationalContextAssistanceReviewDraft(List.of(
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        system.selectedPaths(), system.confirmedPaths(), system.editedValues()),
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        repository.selectedPaths(), repository.confirmedPaths(), repository.editedValues()),
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        scope.selectedPaths(), scope.confirmedPaths(), scope.editedValues())));
+        assertThat(service.saveReview(jobId, review).reviewDraft()).isEqualTo(review);
+        when(maintenanceService.previewAcceptedBatch(any())).thenReturn(
+                new OperationalContextCatalogBatchMutationPreview(List.of(), "digest-1", "frontend-digest", List.of()));
+
+        assertThat(service.previewBatch(jobId, new OperationalContextAssistanceBatchReviewRequest(decisions, null))
+                .valid()).isTrue();
+        var command = ArgumentCaptor.forClass(OperationalContextCatalogConditionalBatchCommand.class);
+        verify(maintenanceService).previewAcceptedBatch(command.capture());
+        assertThat(command.getValue().mutations().get(1).changes()).anySatisfy(change -> {
+            assertThat(change.path()).isEqualTo("repositoryType");
+            assertThat(change.after()).isEqualTo("frontend");
+        });
+
+        var withoutScope = List.of(system, repository,
+                new OperationalContextAssistanceProposalDecisionRequest(
+                        OperationalContextAssistanceProposalDecisionRequest.Action.SKIP, List.of(), List.of()));
+        assertThatThrownBy(() -> service.previewBatch(jobId,
+                new OperationalContextAssistanceBatchReviewRequest(withoutScope, null)))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class)
+                .hasMessageContaining("głównym zakresem kodu");
+        var unconfirmed = List.of(system,
+                new OperationalContextAssistanceProposalDecisionRequest(
+                        OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                        repository.selectedPaths(), List.of(), repository.editedValues()), scope);
+        assertThatThrownBy(() -> service.previewBatch(jobId,
+                new OperationalContextAssistanceBatchReviewRequest(unconfirmed, null)))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class)
+                .hasMessageContaining("Potwierdź repositoryType frontend");
+    }
+
+    private List<OperationalContextAssistanceDraft.Proposal> legacyFrontendProposals() {
+        var basis = OperationalContextAssistanceDraft.Basis.USER_STATEMENT;
+        var confidence = OperationalContextAssistanceDraft.Confidence.MEDIUM;
+        var system = new OperationalContextAssistanceDraft.Proposal(
+                OperationalContextAssistanceDraft.Operation.CREATE, "system", "crm-portal",
+                List.of(new OperationalContextAssistanceDraft.FieldChange(
+                                "name", null, "CRM Portal", "Nazwa podana przez operatora.", basis,
+                                List.of("operator:description"), confidence, false),
+                        new OperationalContextAssistanceDraft.FieldChange(
+                                "systemSubtype", null, "unknown", "Rola nie została określona.", basis,
+                                List.of("operator:description"), confidence, false)),
+                confidence, false, List.of());
+        var repository = new OperationalContextAssistanceDraft.Proposal(
+                OperationalContextAssistanceDraft.Operation.CREATE, "repository", "crm-portal-repo",
+                List.of(new OperationalContextAssistanceDraft.FieldChange(
+                        "name", null, "CRM Portal repository", "Wybrany projekt.", basis,
+                        List.of("operator:description"), confidence, false)), confidence, false, List.of());
+        var scope = new OperationalContextAssistanceDraft.Proposal(
+                OperationalContextAssistanceDraft.Operation.CREATE, "code-search-scope", "crm-portal-code",
+                List.of(new OperationalContextAssistanceDraft.FieldChange(
+                                "target", null, Map.of("type", "system", "id", "crm-portal"),
+                                "Wybrany system.", basis, List.of("operator:description"), confidence, false),
+                        new OperationalContextAssistanceDraft.FieldChange(
+                                "repositories", null,
+                                List.of(Map.of("repoId", "crm-portal-repo", "role", "primary", "priority", 1)),
+                                "Główne repozytorium.", basis, List.of("operator:description"), confidence, false)),
+                confidence, false, List.of());
+        return List.of(system, repository, scope);
     }
 
     @Test

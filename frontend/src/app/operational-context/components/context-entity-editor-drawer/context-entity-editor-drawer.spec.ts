@@ -3,6 +3,28 @@ import { TestBed } from '@angular/core/testing';
 import { ContextEntityEditorDrawerComponent } from './context-entity-editor-drawer';
 
 describe('ContextEntityEditorDrawerComponent', () => {
+  it('points a catalog validation error at the related repository field', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: { type: 'system', id: 'crm-portal', sourceFile: 'systems.yml',
+        payload: { id: 'crm-portal', name: 'CRM Portal' } }
+    });
+    fixture.componentRef.setInput('fieldErrors', [{
+      field: '/catalog/repository/crm-portal-repo/repositoryType',
+      message: 'Primary repository crm-portal-repo for frontend system crm-portal must declare repositoryType frontend.'
+    }]);
+    const opened = vi.fn();
+    fixture.componentInstance.openRelatedEntity.subscribe(opened);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.form-error button') as HTMLButtonElement;
+    expect(link).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('must declare repositoryType frontend');
+    link.click();
+    expect(opened).toHaveBeenCalledWith({ type: 'repository', id: 'crm-portal-repo', field: 'repositoryType' });
+  });
+
   it('starts with basic fields, expands optional sections and preserves hidden values when saving', async () => {
     await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);

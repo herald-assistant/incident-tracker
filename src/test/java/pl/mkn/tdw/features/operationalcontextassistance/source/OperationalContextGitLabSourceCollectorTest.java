@@ -44,7 +44,7 @@ class OperationalContextGitLabSourceCollectorTest {
         when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(metadata("README.md", README));
-        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024))
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(content("README.md", README));
 
         var snapshot = collector.collect(PROJECT, REF);
@@ -91,11 +91,11 @@ class OperationalContextGitLabSourceCollectorTest {
                         List.of(new GitLabRepositoryTreeSlice.Entry("AGENTS.md", "blob")), List.of(), false));
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "AGENTS.md"))
                 .thenReturn(metadata("AGENTS.md", agents));
-        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "AGENTS.md", 32 * 1024))
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, "AGENTS.md"))
                 .thenReturn(content("AGENTS.md", agents));
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS))
                 .thenReturn(metadata(COPILOT_INSTRUCTIONS, copilot));
-        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS, 32 * 1024))
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS))
                 .thenReturn(content(COPILOT_INSTRUCTIONS, copilot));
 
         var snapshot = collector.collect(PROJECT, REF);
@@ -109,22 +109,21 @@ class OperationalContextGitLabSourceCollectorTest {
     }
 
     @Test
-    void skipsInstructionLargerThanItsDedicatedLimitBeforeReadingBody() {
+    void readsInstructionLargerThanFormerLimit() {
+        var agents = "# CRM guidance\n".repeat(3_000);
         when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
         when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", ""))
                 .thenReturn(new GitLabRepositoryTreeSlice("", 4,
                         List.of(new GitLabRepositoryTreeSlice.Entry("AGENTS.md", "blob")), List.of(), false));
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "AGENTS.md"))
-                .thenReturn(new GitLabRepositoryFileMetadata(
-                        GROUP, PROJECT, COMMIT, "AGENTS.md", null, COMMIT,
-                        null, null, null, 32_769L));
+                .thenReturn(metadata("AGENTS.md", agents));
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, "AGENTS.md"))
+                .thenReturn(content("AGENTS.md", agents));
 
         var snapshot = collector.collect(PROJECT, REF);
 
-        assertTrue(snapshot.files().isEmpty());
-        assertTrue(snapshot.visibilityLimits().stream().anyMatch(limit -> limit.contains("AGENTS.md")
-                && limit.contains("limit")));
-        verify(repositoryPort, never()).readFileBounded(GROUP, PROJECT, COMMIT, "AGENTS.md", 32 * 1024);
+        assertEquals(agents, snapshot.files().get(0).content());
+        assertTrue(snapshot.visibilityLimits().isEmpty());
     }
 
     @Test
@@ -149,7 +148,7 @@ class OperationalContextGitLabSourceCollectorTest {
                 .thenReturn(new GitLabRepositoryTreeSlice("", 4, List.of(), List.of(), true));
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(metadata("README.md", README));
-        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024))
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(content("README.md", README));
 
         var snapshot = collector.collect(PROJECT, REF);
@@ -288,20 +287,19 @@ class OperationalContextGitLabSourceCollectorTest {
     }
 
     @Test
-    void shouldSkipOversizeFileBeforeAnyBodyRead() {
+    void shouldReadFileLargerThanFormerTransportLimit() {
+        var largeReadme = "CRM customer lookup\n".repeat(60_000);
         when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
         when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
-                .thenReturn(new GitLabRepositoryFileMetadata(
-                        GROUP, PROJECT, COMMIT, "README.md", null, COMMIT, null, null, null, 16_385L
-                ));
+                .thenReturn(metadata("README.md", largeReadme));
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, "README.md"))
+                .thenReturn(content("README.md", largeReadme));
 
         var snapshot = collector.collect(PROJECT, REF);
 
-        assertTrue(snapshot.files().isEmpty());
-        assertTrue(snapshot.visibilityLimits().stream().anyMatch(limit -> limit.contains("README.md")
-                && limit.contains("limit")));
-        verify(repositoryPort, never()).readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024);
+        assertEquals(largeReadme, snapshot.files().get(0).content());
+        assertTrue(snapshot.visibilityLimits().isEmpty());
     }
 
     @Test
@@ -311,7 +309,7 @@ class OperationalContextGitLabSourceCollectorTest {
         when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(metadata("README.md", content));
-        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024))
+        when(repositoryPort.readFileComplete(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(content("README.md", content));
 
         var snapshot = collector.collect(PROJECT, REF);

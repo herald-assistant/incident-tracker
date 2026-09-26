@@ -855,10 +855,13 @@ public class GitLabMcpTools {
                 throw new IllegalArgumentException("A short reason is required.");
             }
             var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
-            var verified = GitLabVerifiedRepositoryFileReader.read(
-                    gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(),
-                    filePath, GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES
-            );
+            var verified = Boolean.TRUE.equals(toolContext.getContext().get(
+                    AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ))
+                    ? GitLabVerifiedRepositoryFileReader.readComplete(
+                            gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(), filePath)
+                    : GitLabVerifiedRepositoryFileReader.read(
+                            gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(),
+                            filePath, GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES);
             return new GitLabReadRepositoryFileToolResponse(
                     target.group(), target.projectName(), target.commitId(), verified.path(),
                     verified.content(), false, repositoryScope.recordRead(target, verified.path())

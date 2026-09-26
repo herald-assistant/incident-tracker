@@ -58,10 +58,13 @@ repository i kontrolowanym code-search scope. Brak lub konflikt rejestracji
 jest jawnym bledem konfiguracji; feature nie zgaduje repository.
 
 Neutralny `frontendcatalog` i `integrations.gitlab.frontend` buduja katalog
-Angular/Nx graph-first. Discovery zaczyna od produkcyjnego bootstrapu i routera,
-przechodzi tylko po osiagalnych importach, `children` i lazy routes, a ref
-rozwiazuje bezposrednio do immutable commit id. Nie tworzy repository
-inventory i nie wykonuje TypeScriptu.
+Angular/Nx graph-first. Discovery zaczyna od produkcyjnego bootstrapu
+`bootstrapApplication` z `provideRouter` albo
+`platformBrowserDynamic().bootstrapModule` z osiagalnym przez statyczne importy
+modulow `RouterModule.forRoot`. Przechodzi tylko po osiagalnych importach,
+`children` i lazy routes, a ref rozwiazuje bezposrednio do immutable commit id.
+Niejednoznaczny root lub nierozstrzygniety import pozostaje diagnostyka.
+Discovery nie tworzy repository inventory i nie wykonuje TypeScriptu.
 
 Obslugiwane statyczne wzorce obejmuja m.in. standalone/module routes,
 `loadComponent`, `loadChildren`, local lazy factories, re-exporty, literalne

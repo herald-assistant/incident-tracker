@@ -76,7 +76,9 @@ Nie obejmuje:
   zwracaja sciezki, nie `sourceRef`; pelny odczyt i odczyt fragmentu z
   przypietego commita rejestruja ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie
   wzorcow danych wrazliwych; pozostaja walidacja sciezki, rozmiaru i tekstu.
-  Feature wybiera allowliste i budzet z tego wspolnego katalogu.
+  Feature wybiera allowliste i polityke budzetu z tego wspolnego katalogu.
+  Hidden flag pelnego zweryfikowanego odczytu wlacza brak progu rozmiaru tylko
+  dla sesji, ktora jawnie jej wymaga; inne sesje zachowuja bounded read.
 - `gitlab_read_openapi_endpoint_slice` jest neutralnym semantycznym odczytem
   jednej operacji OpenAPI 3.x albo Swagger 2.0 z pliku JSON/YAML/YML. Przyjmuje
   `filePath` oraz `httpMethod + endpointPath` albo dokladny `operationId`,

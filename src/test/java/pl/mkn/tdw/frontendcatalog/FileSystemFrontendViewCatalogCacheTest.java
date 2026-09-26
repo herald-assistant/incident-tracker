@@ -43,7 +43,7 @@ class FileSystemFrontendViewCatalogCacheTest {
         }
         var mapper = new ObjectMapper().findAndRegisterModules();
         var entry = (ObjectNode) mapper.readTree(cacheFile.toFile());
-        entry.put("version", 2);
+        entry.put("version", 3);
         mapper.writeValue(cacheFile.toFile(), entry);
 
         assertThat(cache().find(review)).isEmpty();

@@ -7,15 +7,24 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.Set;
 
 /** Explicit operator statements about the selected repository, not observations from its source files. */
 public record OperationalContextAssistanceRepositoryFacts(
         @NotNull Usage usage,
         @Size(max = 160) String systemName,
         @Size(max = 160) String runtimeServiceName,
-        @Size(max = 5) List<@NotBlank @Size(max = 120) String> systemIds
+        @Size(max = 5) List<@NotBlank @Size(max = 120) String> systemIds,
+        String systemSubtype
 ) {
     public enum Usage { UNKNOWN, DEPLOYED_SYSTEM, SHARED_LIBRARY, EXISTING_SYSTEM }
+    private static final Set<String> SYSTEM_SUBTYPES = Set.of("unknown", "frontend", "backend", "worker", "mixed");
+
+    public OperationalContextAssistanceRepositoryFacts(
+            Usage usage, String systemName, String runtimeServiceName, List<String> systemIds
+    ) {
+        this(usage, systemName, runtimeServiceName, systemIds, null);
+    }
 
     public OperationalContextAssistanceRepositoryFacts {
         systemIds = systemIds == null ? List.of() : List.copyOf(systemIds);
@@ -27,11 +36,15 @@ public record OperationalContextAssistanceRepositoryFacts(
             return false;
         }
         return switch (usage) {
-            case UNKNOWN -> systemName == null && runtimeServiceName == null && systemIds.isEmpty();
-            case DEPLOYED_SYSTEM -> systemIds.isEmpty();
+            case UNKNOWN -> systemName == null && runtimeServiceName == null && systemIds.isEmpty()
+                    && systemSubtype == null;
+            case DEPLOYED_SYSTEM -> systemIds.isEmpty()
+                    && (systemSubtype == null || SYSTEM_SUBTYPES.contains(systemSubtype));
             case SHARED_LIBRARY -> systemName == null && runtimeServiceName == null
-                    && systemIds.size() <= 5 && systemIds.stream().distinct().count() == systemIds.size();
-            case EXISTING_SYSTEM -> systemName == null && runtimeServiceName == null && systemIds.size() == 1;
+                    && systemSubtype == null && systemIds.size() <= 5
+                    && systemIds.stream().distinct().count() == systemIds.size();
+            case EXISTING_SYSTEM -> systemName == null && runtimeServiceName == null
+                    && systemSubtype == null && systemIds.size() == 1;
         };
     }
 

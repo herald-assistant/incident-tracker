@@ -34,7 +34,6 @@ import static pl.mkn.tdw.features.operationalcontextassistance.draft.Operational
 @RequiredArgsConstructor
 public class OperationalContextAssistanceDraftParser {
 
-    private static final int MAX_RESPONSE_LENGTH = 262_144;
     private static final int MAX_PROPOSALS = 12;
     private static final int MAX_CHANGES = 24;
     private static final int MAX_LIST = 24;
@@ -58,8 +57,8 @@ public class OperationalContextAssistanceDraftParser {
     private final OperationalContextCatalogMaintenanceService maintenanceService;
 
     public OperationalContextAssistanceDraft parse(String content, OperationalContextAssistanceDraftScope scope) {
-        if (content == null || content.isBlank() || content.length() > MAX_RESPONSE_LENGTH) {
-            throw invalid("Response is empty or exceeds the draft limit");
+        if (content == null || content.isBlank()) {
+            throw invalid("Response is empty");
         }
         if (scope == null) {
             throw invalid("Draft scope is required");
@@ -93,6 +92,7 @@ public class OperationalContextAssistanceDraftParser {
         for (var proposal : proposals) {
             validateSelectedRepositoryIdentity(proposal, scope);
         }
+        validateOperatorSystemSubtype(proposals, scope);
         if (scope.mode() == OperationalContextAssistanceMode.CREATE_AREA) {
             if (scope.repositoryFacts() != null
                     && scope.repositoryFacts().usage() != OperationalContextAssistanceRepositoryFacts.Usage.UNKNOWN) {
@@ -109,6 +109,70 @@ public class OperationalContextAssistanceDraftParser {
             throw invalid(scope.mode() + " must update the selected entity when it proposes changes");
         }
         validateCatalogRevision(proposals, scope);
+    }
+
+    private void validateOperatorSystemSubtype(List<Proposal> proposals, OperationalContextAssistanceDraftScope scope) {
+        var facts = scope.repositoryFacts();
+        var selectedSubtype = facts != null ? facts.systemSubtype() : null;
+        for (var proposal : proposals) {
+            for (var change : proposal.changes()) {
+                if (requiresDirectOperatorReview(proposal.entityType(), change.path(), change.after())
+                        && change.sourceRefs().contains("operator:repository-facts")
+                        && !"frontend".equals(selectedSubtype)) {
+                    throw invalid("Frontend classification is not declared in operator repository facts");
+                }
+            }
+        }
+        if (facts == null || facts.usage() != OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM
+                || selectedSubtype == null) {
+            return;
+        }
+        var system = proposals.stream().filter(proposal -> proposal.operation() == Operation.CREATE
+                && "system".equals(proposal.entityType())).findFirst().orElse(null);
+        if (system == null) {
+            return;
+        }
+        var subtype = system.changes().stream()
+                .filter(change -> "systemSubtype".equals(change.path())).findFirst().orElse(null);
+        if (subtype == null || !selectedSubtype.equals(subtype.after())) {
+            throw invalid("New system subtype must match the operator's selected subtype");
+        }
+        if (!"unknown".equals(selectedSubtype)
+                && (subtype.basis() != Basis.USER_STATEMENT
+                || !subtype.sourceRefs().contains("operator:repository-facts")
+                || !subtype.requiresConfirmation() || !system.requiresConfirmation())) {
+            throw invalid("Selected system subtype requires operator provenance and confirmation");
+        }
+        if (!"frontend".equals(selectedSubtype)) {
+            return;
+        }
+        var repository = proposals.stream().filter(proposal -> proposal.operation() == Operation.CREATE
+                && "repository".equals(proposal.entityType())).findFirst().orElse(null);
+        var repositoryType = repository == null ? null : repository.changes().stream()
+                .filter(change -> "repositoryType".equals(change.path())).findFirst().orElse(null);
+        if (repositoryType == null || !"frontend".equals(repositoryType.after())
+                || repositoryType.basis() != Basis.USER_STATEMENT
+                || !repositoryType.sourceRefs().contains("operator:repository-facts")
+                || !repositoryType.requiresConfirmation() || !repository.requiresConfirmation()) {
+            throw invalid("Frontend system requires a confirmed frontend primary repository proposal");
+        }
+        var linkedPrimaryScope = proposals.stream().filter(proposal ->
+                proposal.operation() == Operation.CREATE && "code-search-scope".equals(proposal.entityType()))
+                .anyMatch(proposal -> {
+                    var target = proposal.changes().stream().filter(change -> "target".equals(change.path()))
+                            .map(FieldChange::after).findFirst().orElse(null);
+                    var repositories = proposal.changes().stream().filter(change -> "repositories".equals(change.path()))
+                            .map(FieldChange::after).findFirst().orElse(null);
+                    return target instanceof Map<?, ?> targetMap
+                            && "system".equals(targetMap.get("type")) && system.entityId().equals(targetMap.get("id"))
+                            && repositories instanceof List<?> entries && entries.stream().anyMatch(entry ->
+                                    entry instanceof Map<?, ?> repositoryEntry
+                                            && repository.entityId().equals(repositoryEntry.get("repoId"))
+                                            && "primary".equals(repositoryEntry.get("role")));
+                });
+        if (!linkedPrimaryScope) {
+            throw invalid("Frontend system requires a primary code-search scope linked to its frontend repository");
+        }
     }
 
     private void validateCatalogRevision(List<Proposal> proposals, OperationalContextAssistanceDraftScope scope) {
@@ -429,9 +493,11 @@ public class OperationalContextAssistanceDraftParser {
         }
         var requiresConfirmation = booleanValue(node, "requiresConfirmation", location);
         if (requiresDirectOperatorReview(entityType, path, after)
-                && (basis != Basis.USER_STATEMENT || !sourceRefs.contains("operator:description")
+                && (basis != Basis.USER_STATEMENT
+                || !(sourceRefs.contains("operator:description")
+                        || !"ownership".equals(path) && sourceRefs.contains("operator:repository-facts"))
                 || !requiresConfirmation)) {
-            throw invalid(location + " requires an explicit operator description and manual review");
+            throw invalid(location + " requires an explicit operator statement and manual review");
         }
         return new FieldChange(
                 path,

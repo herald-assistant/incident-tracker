@@ -20,6 +20,7 @@ import {
   OperationalContextAssistanceRequest,
   OperationalContextAssistanceReviewDraft,
   OperationalContextAssistanceSourceOptions,
+  OperationalContextCatalogViolation,
   OperationalContextRepositoryUsage,
   isTerminalAssistanceStatus
 } from '../../models/operational-context-assistance.models';
@@ -72,6 +73,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   readonly includeGitLabControl = new FormControl(false, { nonNullable: true });
   readonly repositoryUsageControl = new FormControl<OperationalContextRepositoryUsage>('UNKNOWN', { nonNullable: true });
   readonly systemNameControl = new FormControl('', { nonNullable: true });
+  readonly systemSubtypeControl = new FormControl<'unknown' | 'frontend' | 'backend' | 'worker' | 'mixed'>('unknown', { nonNullable: true });
   readonly runtimeServiceNameControl = new FormControl('', { nonNullable: true });
   readonly existingSystemControl = new FormControl('', { nonNullable: true });
   readonly editValueControl = new FormControl('', { nonNullable: true });
@@ -121,7 +123,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
           `${proposal.operation} · ${proposal.entityType}/${proposal.entityId}`,
           ...proposal.changes.filter((change) => selected.has(change.path)).map((change) =>
             `- **${change.path}:** ${this.valueText(this.effectiveAfter(index, change))}${change.reason ? ` — ${change.reason}` : ''}`
-          )
+          ),
+          ...(selected.has('repositoryType') && this.frontendRepositorySupplementAvailable(index, proposal)
+            ? ['- **repositoryType:** frontend — potwierdzona poprawka operatora w przeglądzie'] : [])
         ].join('\n\n');
       })
     ].join('\n\n');
@@ -320,6 +324,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     snapshot.draft.proposals.forEach((proposal, index) => {
       const entry = draft!.selections[index];
       const allowed = new Set(proposal.changes.map((change) => change.path));
+      if (this.frontendRepositorySupplementPotential(index, snapshot.draft!.proposals)) allowed.add('repositoryType');
       const paths = Array.isArray(entry?.selectedPaths) ? entry.selectedPaths.filter((path) => allowed.has(path)) : [];
       selected[index] = paths;
       confirmed[index] = Array.isArray(entry?.confirmedPaths)
@@ -406,6 +411,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
           }
           if (systemName) facts.systemName = systemName;
           if (runtimeServiceName) facts.runtimeServiceName = runtimeServiceName;
+          facts.systemSubtype = this.systemSubtypeControl.value;
         } else if (usage === 'EXISTING_SYSTEM') {
           const systemId = this.existingSystemControl.value.trim();
           if (!systemId || !this.systemOptions().some((option) => option.id === systemId)) {
@@ -524,6 +530,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
 
   private clearConditionalRepositoryFacts(): void {
     this.systemNameControl.setValue('');
+    this.systemSubtypeControl.setValue('unknown');
     this.runtimeServiceNameControl.setValue('');
     this.existingSystemControl.setValue('');
     this.librarySystemIds.set([]);
@@ -600,7 +607,8 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       canonicalReferences: 'Powiązania', useFor: 'Kiedy używać', references: 'Powiązania',
       relatedTerms: 'Powiązane terminy',
       description: 'Opis', summary: 'Podsumowanie', repositories: 'Repozytoria',
-      git: 'Projekt GitLab', ownership: 'Właściciel', participants: 'Uczestnicy'
+      git: 'Projekt GitLab', ownership: 'Właściciel', participants: 'Uczestnicy',
+      repositoryType: 'Typ repozytorium'
     };
     return labels[path] ?? path.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
@@ -608,6 +616,10 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   selectedFieldCount(): number {
     return (this.job()?.draft?.proposals ?? []).reduce((count, proposal, index) =>
       count + this.selectedPaths(index, proposal).length, 0);
+  }
+
+  proposalFieldCount(index: number, proposal: OperationalContextAssistanceProposal): number {
+    return proposal.changes.length + (this.frontendRepositorySupplementAvailable(index, proposal) ? 1 : 0);
   }
 
   selectedProposalCount(): number {
@@ -618,7 +630,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   editedFieldCount(): number {
     return (this.job()?.draft?.proposals ?? []).reduce((count, proposal, index) =>
       count + proposal.changes.filter((change) => this.isSelected(index, proposal, change.path)
-        && this.isEdited(index, change.path)).length, 0);
+        && this.isEdited(index, change.path)).length
+        + (this.isSelected(index, proposal, 'repositoryType')
+          && this.frontendRepositorySupplementAvailable(index, proposal) ? 1 : 0), 0);
   }
 
   canEditField(proposal: OperationalContextAssistanceProposal, change: OperationalContextAssistanceFieldChange): boolean {
@@ -702,7 +716,58 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   selectedPaths(proposalIndex: number, proposal: OperationalContextAssistanceProposal): string[] {
     const recorded = this.job()?.proposalDecisions?.find((decision) => decision.proposalIndex === proposalIndex);
     if (recorded) return recorded.selectedPaths;
-    return this.selectionByProposal()[proposalIndex] ?? proposal.changes.map((change) => change.path);
+    const selected = this.selectionByProposal()[proposalIndex] ?? proposal.changes.map((change) => change.path);
+    return this.frontendRepositorySupplementAvailable(proposalIndex, proposal)
+      ? selected : selected.filter((path) => path !== 'repositoryType' || proposal.changes.some((change) => change.path === path));
+  }
+
+  private frontendRepositorySupplementPotential(index: number, proposals: OperationalContextAssistanceProposal[]): boolean {
+    const repository = proposals[index];
+    if (repository?.operation !== 'CREATE' || repository.entityType !== 'repository'
+      || repository.changes.some((change) => change.path === 'repositoryType')) return false;
+    return proposals.some((system) => system.operation === 'CREATE' && system.entityType === 'system'
+      && system.changes.some((change) => change.path === 'systemSubtype')
+      && proposals.some((scope) => {
+        if (scope.operation !== 'CREATE' || scope.entityType !== 'code-search-scope') return false;
+        const target = scope.changes.find((change) => change.path === 'target')?.after as { type?: string; id?: string } | undefined;
+        const repositories = scope.changes.find((change) => change.path === 'repositories')?.after;
+        return target?.type === 'system' && target.id === system.entityId && Array.isArray(repositories)
+          && repositories.some((entry: { repoId?: string; role?: string }) =>
+            entry?.repoId === repository.entityId && entry.role === 'primary');
+      }));
+  }
+
+  frontendRepositorySupplementAvailable(index: number, proposal: OperationalContextAssistanceProposal): boolean {
+    const proposals = this.job()?.draft?.proposals ?? [];
+    if (!this.frontendRepositorySupplementPotential(index, proposals) || proposal !== proposals[index]) return false;
+    return proposals.some((system, systemIndex) => system.operation === 'CREATE' && system.entityType === 'system'
+      && this.isSelected(systemIndex, system, 'systemSubtype')
+      && system.changes.some((change) => change.path === 'systemSubtype'
+        && this.effectiveAfter(systemIndex, change) === 'frontend')
+      && proposals.some((scope) => scope.operation === 'CREATE' && scope.entityType === 'code-search-scope'
+        && (scope.changes.find((change) => change.path === 'target')?.after as { id?: string } | undefined)?.id === system.entityId
+        && Array.isArray(scope.changes.find((change) => change.path === 'repositories')?.after)
+        && (scope.changes.find((change) => change.path === 'repositories')!.after as { repoId?: string; role?: string }[])
+          .some((entry) => entry.repoId === proposal.entityId && entry.role === 'primary')));
+  }
+
+  setFrontendRepositorySelected(index: number, proposal: OperationalContextAssistanceProposal, selected: boolean): void {
+    if (this.historyReadOnly() || this.reviewComplete() || this.decisionBusy() || this.pendingDecisionCheck()
+      || !this.frontendRepositorySupplementAvailable(index, proposal)) return;
+    const paths = new Set(this.selectedPaths(index, proposal));
+    if (selected) paths.add('repositoryType');
+    else paths.delete('repositoryType');
+    this.selectionByProposal.update((all) => ({ ...all, [index]: [...paths] }));
+    if (!selected) this.confirmationsByProposal.update((all) => ({
+      ...all, [index]: (all[index] ?? []).filter((path) => path !== 'repositoryType')
+    }));
+    const edited = { ...(this.editedValuesByProposal()[index] ?? {}) };
+    if (selected) edited['repositoryType'] = 'frontend';
+    else delete edited['repositoryType'];
+    this.editedValuesByProposal.update((all) => ({ ...all, [index]: edited }));
+    this.persistReviewDraft();
+    this.invalidateBatchPreview();
+    this.decisionError.set('');
   }
 
   isSelected(proposalIndex: number, proposal: OperationalContextAssistanceProposal, path: string): boolean {
@@ -726,7 +791,11 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   setProposalSelected(proposalIndex: number, proposal: OperationalContextAssistanceProposal, selected: boolean): void {
     if (this.historyReadOnly() || this.reviewComplete() || this.decisionBusy() || this.pendingDecisionCheck()) return;
     this.selectionByProposal.update((current) => ({
-      ...current, [proposalIndex]: selected ? proposal.changes.map((change) => change.path) : []
+      ...current, [proposalIndex]: selected
+        ? [...proposal.changes.map((change) => change.path),
+          ...(this.isSelected(proposalIndex, proposal, 'repositoryType')
+            && this.frontendRepositorySupplementAvailable(proposalIndex, proposal) ? ['repositoryType'] : [])]
+        : []
     }));
     if (!selected) this.confirmationsByProposal.update((current) => ({ ...current, [proposalIndex]: [] }));
     this.persistReviewDraft();
@@ -737,7 +806,10 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   missingConfirmationCount(proposalIndex: number, proposal: OperationalContextAssistanceProposal): number {
     return proposal.changes.filter((change) => this.isSelected(proposalIndex, proposal, change.path)
       && this.requiresConfirmation(proposalIndex, proposal, change)
-      && !this.isConfirmed(proposalIndex, change.path)).length;
+      && !this.isConfirmed(proposalIndex, change.path)).length
+      + (this.frontendRepositorySupplementAvailable(proposalIndex, proposal)
+        && this.isSelected(proposalIndex, proposal, 'repositoryType')
+        && !this.isConfirmed(proposalIndex, 'repositoryType') ? 1 : 0);
   }
 
   omittedFieldCount(proposalIndex: number, proposal: OperationalContextAssistanceProposal): number {
@@ -809,6 +881,17 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     return `${location}${issue.valueLabel ? `: ${issue.valueLabel}` : ''} — ${detail}`;
   }
 
+  selectProposalByViolation(violation: OperationalContextCatalogViolation): void {
+    const index = this.job()?.draft?.proposals.findIndex((proposal) =>
+      proposal.entityType === violation.entityType && proposal.entityId === violation.entityId) ?? -1;
+    if (index >= 0) this.selectProposal(index);
+  }
+
+  hasProposalForViolation(violation: OperationalContextCatalogViolation): boolean {
+    return Boolean(this.job()?.draft?.proposals.some((proposal) =>
+      proposal.entityType === violation.entityType && proposal.entityId === violation.entityId));
+  }
+
   hasBulkApprovableChanges(proposalIndex: number, proposal: OperationalContextAssistanceProposal): boolean {
     const selected = this.selectedPaths(proposalIndex, proposal);
     return proposal.changes.some((change) => !selected.includes(change.path)
@@ -830,7 +913,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   approveProposalChanges(proposalIndex: number, proposal: OperationalContextAssistanceProposal): void {
     if (this.historyReadOnly() || this.reviewComplete() || this.previewBusy() || this.decisionBusy()
       || this.pendingDecisionCheck() || !this.hasBulkApprovableChanges(proposalIndex, proposal)) return;
-    const paths = proposal.changes.map((change) => change.path);
+    const paths = [...proposal.changes.map((change) => change.path),
+      ...(this.isSelected(proposalIndex, proposal, 'repositoryType')
+        && this.frontendRepositorySupplementAvailable(proposalIndex, proposal) ? ['repositoryType'] : [])];
     const confirmed = new Set(this.confirmationsByProposal()[proposalIndex] ?? []);
     for (const change of proposal.changes) {
       if (this.requiresConfirmation(proposalIndex, proposal, change) && !this.isEdited(proposalIndex, change.path)) {
@@ -867,7 +952,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   reviewDecisions(): OperationalContextAssistanceProposalDecisionRequest[] {
     return (this.job()?.draft?.proposals ?? []).map((proposal, index) => {
       const selected = this.selectedPaths(index, proposal);
-      const selectedPaths = proposal.changes.map((change) => change.path).filter((path) => selected.includes(path));
+      const selectedPaths = [...proposal.changes.map((change) => change.path).filter((path) => selected.includes(path)),
+        ...(selected.includes('repositoryType') && this.frontendRepositorySupplementAvailable(index, proposal)
+          ? ['repositoryType'] : [])];
       if (!selectedPaths.length) return { action: 'SKIP', selectedPaths: [], confirmedPaths: [] };
       const edits = this.editedValuesByProposal()[index] ?? {};
       const editedValues = Object.fromEntries(selectedPaths.filter((path) => Object.prototype.hasOwnProperty.call(edits, path))
@@ -881,10 +968,14 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   }
 
   selectedDiff(): { entity: string; path: string; before: unknown; after: unknown }[] {
-    return (this.job()?.draft?.proposals ?? []).flatMap((proposal, index) =>
-      proposal.changes.filter((change) => this.isSelected(index, proposal, change.path))
+    return (this.job()?.draft?.proposals ?? []).flatMap((proposal, index) => [
+      ...proposal.changes.filter((change) => this.isSelected(index, proposal, change.path))
         .map((change) => ({ entity: `${proposal.entityType}/${proposal.entityId}`, path: change.path,
-          before: change.before, after: this.effectiveAfter(index, change) })));
+          before: change.before, after: this.effectiveAfter(index, change) })),
+      ...(this.frontendRepositorySupplementAvailable(index, proposal)
+        && this.isSelected(index, proposal, 'repositoryType')
+        ? [{ entity: `${proposal.entityType}/${proposal.entityId}`, path: 'repositoryType',
+          before: undefined, after: 'frontend' }] : [])]);
   }
 
   canPreview(): boolean {
@@ -903,7 +994,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     return snapshot.draft!.proposals.every((proposal, index) => {
       const selected = this.selectedPaths(index, proposal);
       return proposal.changes.every((change) => !selected.includes(change.path)
-        || !this.requiresConfirmation(index, proposal, change) || this.isConfirmed(index, change.path));
+        || !this.requiresConfirmation(index, proposal, change) || this.isConfirmed(index, change.path))
+        && (!selected.includes('repositoryType') || !this.frontendRepositorySupplementAvailable(index, proposal)
+          || this.isConfirmed(index, 'repositoryType'));
     });
   }
 

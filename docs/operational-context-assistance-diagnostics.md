@@ -18,8 +18,8 @@ plany nie są źródłem aktualnego zachowania.
 2. Sprawdź, czy prompt zawiera osobno 11 reguł maintenance, dane operatora
    i dziewięć aktywnych dokumentów katalogu z jednego digesta. Jeśli wybrano
    GitLab, sprawdź także metadane projektu i drzewo. Brak pełnego materiału
-   lub przekroczenie limitu zatrzymuje run jawnie; asysta nie powinna pracować
-   na niejawnie obciętym katalogu. Źródłem jest efektywna kopia w
+   zatrzymuje run jawnie; asysta nie powinna pracować na niejawnie obciętym
+   katalogu. Źródłem jest efektywna kopia w
    `${tdw.workspace.directory}/operational-context`, nie seed z JAR-a.
 3. Przy GitLabie porównaj wybrany projekt i gałąź z przypiętym commitem.
    `source-options` podpowiada projekty zapisane w katalogu, nie wszystkie
@@ -31,22 +31,35 @@ plany nie są źródłem aktualnego zachowania.
    Brak opcjonalnego pliku w root nie jest awarią. Brak odczytu pliku
    potrzebnego do wniosku musi pozostać ograniczeniem widoczności.
 
+Sesja asysty nie ma budżetu liczby wywołań tools ani limitu rozmiaru katalogu,
+reguł i odczytanych plików. `gitlab_read_repository_file` zwraca kompletny,
+zweryfikowany plik z przypiętego commita; nieudany odczyt pozostaje jawną luką.
+Stronicowane wyniki drzewa, listy i wyszukiwania mają kursory kontynuacji.
+
 `AGENTS.md` i `.github/copilot-instructions.md` z analizowanego repozytorium
 są materiałem o tym repozytorium, nie instrukcjami sesji asysty. Wnioski o
 implementacji trzeba potwierdzić w odpowiednim kodzie. Odczyt nie filtruje
 nazw ani treści według wzorców danych wrażliwych; nadal obowiązują granice
-grupy, ścieżki, formatu tekstowego, rozmiaru i przypiętego commita.
+grupy, ścieżki, formatu tekstowego, kompletności i przypiętego commita.
 
 ## Jak rozpoznać miejsce błędu
 
 - **Run zatrzymał się przed odpowiedzią AI.** Sprawdź krok zbierania katalogu
-  i `PREPARE_AI`: komplet dziewięciu YAML, 11 reguł, limit materiału,
+  i `PREPARE_AI`: komplet dziewięciu YAML, 11 reguł,
   dostępność długiego kontekstu i wybraną gałąź.
 - **AI nie zaproponowało zmiany.** Sprawdź prompt, faktycznie przeczytane
   `gitlab:` refs i `visibilityLimits`. Sam wybór projektu ani nazwy plików
   nie potwierdzają roli repozytorium. `BLOCKED` oznacza brak zestawu gotowego
   do review albo blokadę przygotowania; `PARTIAL` wskazuje ograniczenia przy
   istniejących propozycjach.
+- **Frontend nie przechodzi walidacji.** Sprawdź jawny wybór
+  `repositoryFacts.systemSubtype` operatora. Dla `frontend` draft musi zawierać
+  `systemSubtype: frontend`, `repositoryType: frontend` oraz scope tego systemu
+  z jednym repozytorium `primary`. Same artefakty Angulara nie klasyfikują
+  systemu. W starszym draftcie bez typu repozytorium wybierz frontend w polu
+  systemu, następnie dodaj i potwierdź `repositoryType: frontend` przy
+  powiązanym repozytorium w tym samym zestawie. Pominięcie scope'u zablokuje
+  podgląd. `unknown` pozostaje prawidłową odpowiedzią, gdy rola nie jest znana.
 - **Odpowiedź AI jest odrzucona.** Sprawdź log błędu parsera, kontrakt
   ścisłego JSON, dozwolone pola i source refs. Tool
   `operational_context_assistance_validate_draft` jest tylko wstępną,
@@ -57,6 +70,12 @@ grupy, ścieżki, formatu tekstowego, rozmiaru i przypiętego commita.
   w tym samym wybranym zestawie może wskazywać późniejszą mutację;
   referencja do pominiętej propozycji jest błędem. Po korekcie lub zmianie
   wyboru wykonaj nowy podgląd.
+- **Ręczny edytor odrzuca zmianę systemu.** Odczytaj komunikat walidatora oraz
+  wskazany typ, ID i pole powiązanej encji. Przy
+  `FRONTEND_PRIMARY_REPOSITORY_TYPE_MISMATCH` otwórz wskazane główne
+  repozytorium i sprawdź jego `repositoryType`. Zmiana systemu i repozytorium
+  przez osobne ręczne zapisy może wymagać kolejności zgodnej z regułami
+  katalogu; asysta pozwala przygotować obie zmiany w jednym batchu.
 - **Po powrocie z historii brakuje poprawek.** Sprawdź
   `PUT /jobs/{jobId}/review`, zapis runu w `runs/{jobId}/run.json` oraz
   odtworzenie nierozstrzygniętego joba. Lokalny stan przeglądarki chroni

@@ -33,6 +33,7 @@ export interface OperationalContextAssistanceRepositoryFacts {
   systemName?: string;
   runtimeServiceName?: string;
   systemIds?: string[];
+  systemSubtype?: 'unknown' | 'frontend' | 'backend' | 'worker' | 'mixed';
 }
 
 export interface OperationalContextAssistancePrefill {
@@ -78,7 +79,7 @@ export interface OperationalContextAssistancePreview {
   valid: boolean;
   validationStatus: 'VALID' | 'INVALID' | 'DEFERRED';
   candidatePayload: Record<string, unknown> | null;
-  violations: { code: string; fingerprint: string; ruleCode: string; severity: string }[];
+  violations: OperationalContextCatalogViolation[];
   fieldErrors: { pointer: string; message: string }[];
 }
 
@@ -121,7 +122,18 @@ export interface OperationalContextAssistanceBatchPreview {
     sourceFile: string;
     payload: Record<string, unknown>;
   }[];
-  violations: { code: string; fingerprint: string; ruleCode: string; severity: string }[];
+  violations: OperationalContextCatalogViolation[];
+}
+
+export interface OperationalContextCatalogViolation {
+  code: string;
+  fingerprint: string;
+  ruleCode: string;
+  severity: string;
+  message?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  fieldPath?: string | null;
 }
 
 export interface OperationalContextAssistanceJob {

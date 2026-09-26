@@ -101,6 +101,18 @@
                   @case ('DEPLOYED_SYSTEM') {
                     <label class="field-label" for="assistance-system-name">Nazwa nowego systemu (jeśli znana)</label>
                     <input class="text-input" id="assistance-system-name" type="text" [formControl]="systemNameControl" maxlength="160" placeholder="np. Obsługa profili klientów" />
+                    <label class="field-label" for="assistance-system-subtype">Jaka jest rola systemu?</label>
+                    <div class="assistance-form__select">
+                      <select class="select-input" id="assistance-system-subtype" [formControl]="systemSubtypeControl">
+                        <option value="unknown">Nie wiem</option>
+                        <option value="frontend">Interfejs użytkownika (frontend)</option>
+                        <option value="backend">Zaplecze (backend)</option>
+                        <option value="worker">Proces w tle (worker)</option>
+                        <option value="mixed">Połączone role (mixed)</option>
+                      </select>
+                      <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                    </div>
+                    <small>To Twoja klasyfikacja katalogowa. Asysta nie ustala jej na podstawie frameworka.</small>
                     <details>
                       <summary>Dodaj nazwę usługi widoczną w logach (opcjonalnie)</summary>
                       <label class="field-label" for="assistance-runtime-service">Nazwa usługi w logach</label>
@@ -238,7 +250,7 @@
                     [attr.aria-current]="activeProposalIndex() === proposalIndex ? 'true' : null"
                     [attr.data-selected]="selectedPaths(proposalIndex, proposal).length > 0"
                     (click)="selectProposal(proposalIndex)">
-                    <span class="assistance-review__item-top"><strong>{{ proposalTitle(proposalIndex, proposal) }}</strong><small>{{ selectedPaths(proposalIndex, proposal).length }}/{{ proposal.changes.length }} pól</small></span>
+                    <span class="assistance-review__item-top"><strong>{{ proposalTitle(proposalIndex, proposal) }}</strong><small>{{ selectedPaths(proposalIndex, proposal).length }}/{{ proposalFieldCount(proposalIndex, proposal) }} pól</small></span>
                     <span>{{ operationLabel(proposal.operation) }} · {{ entityLabel(proposal.entityType) }}</span>
                     <small>{{ decisionLabel(proposalIndex) }} @if (proposal.requiresConfirmation) { · wymaga potwierdzenia }</small>
                   </button>
@@ -360,6 +372,31 @@
                     }
                   </div>
                 }
+                @if (frontendRepositorySupplementAvailable(activeProposalIndex(), proposal)) {
+                  <div class="assistance-change" [id]="'assistance-change-' + activeProposalIndex() + '-repositoryType'"
+                    [attr.data-selected]="isSelected(activeProposalIndex(), proposal, 'repositoryType')">
+                    <div class="assistance-change__heading">
+                      @if (!reviewComplete() && !historyReadOnly()) {
+                        <input type="checkbox" aria-label="Wybierz typ repozytorium frontend"
+                          [checked]="isSelected(activeProposalIndex(), proposal, 'repositoryType')"
+                          [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                          (change)="setFrontendRepositorySelected(activeProposalIndex(), proposal, $any($event.target).checked)" />
+                      }
+                      <div><strong>Typ repozytorium</strong><code>repositoryType</code></div>
+                      <span class="assistance-change__edited">Dodane przez operatora</span>
+                    </div>
+                    <p>Wybrano <code>systemSubtype: frontend</code>. Główne repozytorium tego systemu musi mieć <code>repositoryType: frontend</code>. To pole nie było w propozycji AI.</p>
+                    <div class="assistance-change__after"><small>Wartość operatora</small><span>frontend</span></div>
+                    @if (!reviewComplete() && !historyReadOnly() && isSelected(activeProposalIndex(), proposal, 'repositoryType')) {
+                      <label class="assistance-change__confirmation">
+                        <input type="checkbox" [checked]="isConfirmed(activeProposalIndex(), 'repositoryType')"
+                          [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                          (change)="setConfirmed(activeProposalIndex(), 'repositoryType', $any($event.target).checked)" />
+                        Potwierdzam klasyfikację głównego repozytorium jako frontend
+                      </label>
+                    }
+                  </div>
+                }
                 @if (proposal.visibilityLimits.length) {
                   <details class="assistance-proposal__more"><summary>Ograniczenia tej propozycji</summary>
                     @if (proposal.visibilityLimits.length) { <div class="assistance-proposal__issues"><strong>Ograniczenia</strong><ul>@for (limit of proposal.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div> }
@@ -414,7 +451,13 @@
               @if (preview.violations.length) {
                 <div class="assistance-proposal__issues"><strong>Walidacja całego katalogu</strong><ul>
                   @for (violation of preview.violations; track $index) {
-                    <li>{{ violation.severity }}: {{ violation.ruleCode || violation.code }} ({{ violation.fingerprint }})</li>
+                    <li>{{ violation.severity }}: {{ violation.message || violation.ruleCode || violation.code }}
+                      @if (hasProposalForViolation(violation)) {
+                        <button type="button" class="assistance-form__switch" (click)="selectProposalByViolation(violation)">
+                          Otwórz {{ violation.entityType }}/{{ violation.entityId }}
+                        </button>
+                      }
+                    </li>
                   }
                 </ul></div>
               }

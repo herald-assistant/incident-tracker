@@ -7,7 +7,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotSessionHardToolBudget;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftScope;
@@ -80,12 +79,11 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
         verify(toolFactory).createToolDefinitions(hidden.capture(), any(), argThat(callbacks ->
                 callbacks.size() == 1 && callbacks.get(0).getToolDefinition().name()
                         .equals(OperationalContextAssistanceDraftValidationTools.NAME)));
-        var budget = (CopilotSessionHardToolBudget) hidden.getValue().hiddenContext()
-                .get(AgentToolContextKeys.TOOL_HARD_BUDGET);
-        assertThat(budget.acquireOrDenial(OperationalContextAssistanceDraftValidationTools.NAME)).isNull();
-        assertThat(budget.acquireOrDenial(OperationalContextAssistanceDraftValidationTools.NAME)).isNull();
-        assertThat(budget.acquireOrDenial(OperationalContextAssistanceDraftValidationTools.NAME))
-                .contains("budget exceeded");
+        assertThat(hidden.getValue().hiddenContext())
+                .containsEntry(AgentToolContextKeys.TOOL_BUDGET_POLICY,
+                        AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN)
+                .doesNotContainKey(AgentToolContextKeys.TOOL_HARD_BUDGET)
+                .doesNotContainKey(AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ);
     }
 
     @Test
@@ -143,8 +141,11 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
         assertThat(context.getValue().hiddenContext().values()).contains(assembly.sourceScope());
         assertThat(context.getValue().hiddenContext().get(OperationalContextAssistanceDraftValidationTools.CONTEXT_KEY))
                 .isInstanceOf(OperationalContextAssistanceDraftValidationTools.ValidationSession.class);
-        assertThat(context.getValue().hiddenContext().get(AgentToolContextKeys.TOOL_HARD_BUDGET))
-                .isInstanceOf(CopilotSessionHardToolBudget.class);
+        assertThat(context.getValue().hiddenContext())
+                .containsEntry(AgentToolContextKeys.TOOL_BUDGET_POLICY,
+                        AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN)
+                .containsEntry(AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ, true)
+                .doesNotContainKey(AgentToolContextKeys.TOOL_HARD_BUDGET);
     }
 
     private ToolDefinition tool(String name) {

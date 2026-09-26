@@ -1,6 +1,5 @@
 package pl.mkn.tdw.features.operationalcontextassistance.ai;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDocumentSnapshot;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -31,7 +30,7 @@ class OperationalContextAssistanceCatalogMaterialServiceTest {
                 "runtime-digest", "tdw-data/operational-context", catalog, documents
         ));
 
-        var material = new OperationalContextAssistanceCatalogMaterialService(port, new ObjectMapper()).capture();
+        var material = new OperationalContextAssistanceCatalogMaterialService(port).capture();
 
         assertEquals("runtime-digest", material.contentDigest());
         assertSame(catalog, material.catalog());
@@ -44,21 +43,17 @@ class OperationalContextAssistanceCatalogMaterialServiceTest {
     }
 
     @Test
-    void blocksOversizedCatalogInsteadOfSilentlyTruncatingIt() {
+    void capturesLargeCatalogWithoutTruncatingIt() {
         var port = mock(OperationalContextPort.class);
         var documents = documents();
-        documents.put("systems.yml", Map.of("systems", "x".repeat(
-                OperationalContextAssistanceCatalogMaterialService.MAX_CATALOG_BYTES
-        )));
+        var largeContent = "x".repeat(1_100_000);
+        documents.put("systems.yml", Map.of("systems", largeContent));
         when(port.currentDocumentSnapshot()).thenReturn(new OperationalContextDocumentSnapshot(
                 "large-digest", "tdw-data/operational-context", OperationalContextCatalog.empty(), documents
         ));
 
-        var exception = assertThrows(OperationalContextAssistanceMaterialException.class,
-                () -> new OperationalContextAssistanceCatalogMaterialService(port, new ObjectMapper()).capture());
-
-        assertEquals("OPCTX_ASSISTANCE_MATERIAL_UNAVAILABLE", exception.code());
-        assertTrue(exception.getMessage().contains("pełnego katalogu"));
+        var material = new OperationalContextAssistanceCatalogMaterialService(port).capture();
+        assertEquals(largeContent, material.documents().get("systems.yml").get("systems"));
     }
 
     @Test
@@ -70,7 +65,7 @@ class OperationalContextAssistanceCatalogMaterialServiceTest {
         ));
 
         assertThrows(OperationalContextAssistanceMaterialException.class,
-                () -> new OperationalContextAssistanceCatalogMaterialService(port, new ObjectMapper()).capture());
+                () -> new OperationalContextAssistanceCatalogMaterialService(port).capture());
     }
 
     private static Map<String, Map<String, Object>> documents() {

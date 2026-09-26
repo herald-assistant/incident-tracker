@@ -25,6 +25,22 @@ class GitLabVerifiedRepositoryFileReaderTest {
     }
 
     @Test
+    void completeReadAcceptsLargeFileAndVerifiesItsMetadata() {
+        var content = "CRM customer lookup\n".repeat(20_000);
+        when(port.readFileMetadata("CRM", "lib", COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "lib", COMMIT, "README.md",
+                        null, COMMIT, null, null, null, (long) content.length()));
+        when(port.readFileComplete("CRM", "lib", COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "lib", COMMIT, "README.md", content, false));
+
+        assertThat(GitLabVerifiedRepositoryFileReader.readComplete(
+                port, "CRM", "lib", COMMIT, "README.md").content()).isEqualTo(content);
+        assertThatThrownBy(() -> GitLabVerifiedRepositoryFileReader.read(
+                port, "CRM", "lib", COMMIT, "README.md", GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void includesTextRegardlessOfPathOrContentKeywords() {
         var content = "apiToken = fictional-example";
         stub(".env", content, COMMIT, (long) content.length());

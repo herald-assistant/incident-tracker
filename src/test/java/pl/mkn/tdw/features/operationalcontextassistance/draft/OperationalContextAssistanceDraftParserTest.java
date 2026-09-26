@@ -195,7 +195,45 @@ class OperationalContextAssistanceDraftParserTest {
         var inferred = direct.replace("\"basis\": \"USER_STATEMENT\"", "\"basis\": \"AI_INTERPRETATION\"");
         assertThatThrownBy(() -> parser.parse(inferred, createScope()))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
-                .hasMessageContaining("explicit operator description");
+                .hasMessageContaining("explicit operator statement");
+    }
+
+    @Test
+    void explicitFrontendFactRequiresMatchingSystemRepositoryAndPrimaryScope() {
+        var sourceRef = "gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md";
+        var scope = new OperationalContextAssistanceDraftScope(
+                OperationalContextAssistanceMode.CREATE_AREA, null, null,
+                Set.of("operator:description", "operator:repository-facts", sourceRef),
+                selectedRepositoryGit(),
+                new OperationalContextAssistanceRepositoryFacts(
+                        OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
+                        "Customer Profile Service", null, List.of(), "frontend"), Set.of());
+        var system = systemProposal("customer-profile-service", "Customer Profile Service")
+                .replace(change("name", "\"Customer Profile Service\""),
+                        change("name", "\"Customer Profile Service\"")
+                                + "," + change("systemSubtype", "\"frontend\""));
+        var repositoryWithoutType = repositoryProposal("customer-profile-repo", false, "customer-profile-service");
+        var repository = repositoryWithoutType.replace("\"changes\":[",
+                "\"changes\":[" + change("repositoryType", "\"frontend\"") + ",");
+        var codeScope = "{\"operation\":\"CREATE\",\"entityType\":\"code-search-scope\","
+                + "\"entityId\":\"customer-profile-code\",\"changes\":["
+                + change("target", "{\"type\":\"system\",\"id\":\"customer-profile-service\"}") + ","
+                + change("repositories", "[{\"repoId\":\"customer-profile-repo\",\"role\":\"primary\","
+                        + "\"priority\":1,\"searchMode\":\"whole-repository\"}]")
+                + "],\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"visibilityLimits\":[]}";
+
+        assertThat(parser.parse(draft(system, repository, codeScope), scope).proposals()).hasSize(3);
+        assertThatThrownBy(() -> parser.parse(draft(system, repository), scope))
+                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                .hasMessageContaining("primary code-search scope");
+        assertThatThrownBy(() -> parser.parse(draft(system, repositoryWithoutType, codeScope), scope))
+                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                .hasMessageContaining("frontend primary repository");
+        assertThatThrownBy(() -> parser.parse(draft(
+                system.replace(change("systemSubtype", "\"frontend\""), change("systemSubtype", "\"unknown\"")),
+                repository, codeScope), scope))
+                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                .hasMessageContaining("must match the operator's selected subtype");
     }
 
     private String ownershipUpdate(String basis, String sourceRefs, boolean changeReview, boolean proposalReview) {

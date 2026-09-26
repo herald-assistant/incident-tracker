@@ -27,9 +27,6 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class OperationalContextGitLabSourceCollector {
 
-    private static final int MAX_FILE_BYTES = 16 * 1024;
-    private static final int MAX_INSTRUCTION_FILE_BYTES = 32 * 1024;
-    private static final int MAX_TOTAL_BYTES = 96 * 1024;
     private static final String COPILOT_INSTRUCTIONS = ".github/copilot-instructions.md";
     private static final List<String> ALLOWED_FILES = List.of(
             "AGENTS.md", COPILOT_INSTRUCTIONS,
@@ -117,7 +114,6 @@ public class OperationalContextGitLabSourceCollector {
         }
 
         var files = new ArrayList<OperationalContextGitLabSourceFile>();
-        var totalBytes = 0;
         Set<String> visibleRootFiles = tree.entries().stream()
                 .filter(entry -> "blob".equals(entry.type()))
                 .map(GitLabRepositoryTreeSlice.Entry::path)
@@ -144,20 +140,11 @@ public class OperationalContextGitLabSourceCollector {
                 limits.add("Pominięto " + path + ": brak wiarygodnych metadanych rozmiaru.");
                 continue;
             }
-            int fileLimit = isInstructionPath(path) ? MAX_INSTRUCTION_FILE_BYTES : MAX_FILE_BYTES;
-            if (metadata.sizeBytes() > fileLimit || metadata.sizeBytes() > MAX_TOTAL_BYTES - totalBytes) {
-                limits.add("Pominięto " + path + ": plik przekracza limit odczytu.");
-                continue;
-            }
-
             GitLabRepositoryFileContent file;
             try {
-                file = repositoryPort.readFileBounded(
-                        group, normalizedProject, revision.commitId(), path,
-                        Math.min(fileLimit, MAX_TOTAL_BYTES - totalBytes)
-                );
+                file = repositoryPort.readFileComplete(group, normalizedProject, revision.commitId(), path);
             } catch (RuntimeException exception) {
-                limits.add("Pominięto " + path + ": nie udało się bezpiecznie odczytać pliku w limicie.");
+                limits.add("Pominięto " + path + ": nie udało się odczytać całego pliku.");
                 continue;
             }
             if (!matchesFile(file, group, normalizedProject, revision.commitId(), path)) {
@@ -166,13 +153,11 @@ public class OperationalContextGitLabSourceCollector {
             }
             var content = file.content();
             var actualBytes = content.getBytes(StandardCharsets.UTF_8).length;
-            if (actualBytes > fileLimit || actualBytes > MAX_TOTAL_BYTES - totalBytes
-                    || actualBytes != metadata.sizeBytes()
+            if (actualBytes != metadata.sizeBytes()
                     || !matchesContentHash(content, metadata.contentSha256())) {
-                limits.add("Pominięto " + path + ": treść nie zgadza się z metadanymi lub limitem.");
+                limits.add("Pominięto " + path + ": treść nie zgadza się z metadanymi.");
                 continue;
             }
-            totalBytes += actualBytes;
             files.add(new OperationalContextGitLabSourceFile(
                     path,
                     content,
@@ -181,10 +166,6 @@ public class OperationalContextGitLabSourceCollector {
         }
         return new OperationalContextGitLabSourceSnapshot(
                 normalizedProject, repositoryGit, normalizedRef, revision.commitId(), files, tree, limits);
-    }
-
-    private boolean isInstructionPath(String path) {
-        return "AGENTS.md".equals(path) || COPILOT_INSTRUCTIONS.equals(path);
     }
 
     private OperationalContextGitLabSourceSnapshot snapshot(

@@ -108,6 +108,7 @@ class OperationalContextAssistanceJobControllerTest {
         for (String facts : List.of(
                 "{\"usage\":\"UNKNOWN\"}",
                 "{\"usage\":\"DEPLOYED_SYSTEM\",\"systemName\":\"Customer Profile Process\",\"runtimeServiceName\":\"customer-profile-runtime\"}",
+                "{\"usage\":\"DEPLOYED_SYSTEM\",\"systemName\":\"CRM Portal\",\"systemSubtype\":\"frontend\"}",
                 "{\"usage\":\"SHARED_LIBRARY\",\"systemIds\":[\"consumer-a\",\"consumer-b\"]}",
                 "{\"usage\":\"EXISTING_SYSTEM\",\"systemIds\":[\"consumer-a\"]}"
         )) {
@@ -127,6 +128,8 @@ class OperationalContextAssistanceJobControllerTest {
         for (String payload : List.of(
                 "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"repositoryFacts\":{\"usage\":\"UNKNOWN\"}}",
                 "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"gitLabSource\":{\"project\":\"demo-app\",\"ref\":\"main\"}, \"repositoryFacts\":{\"usage\":\"UNKNOWN\",\"systemName\":\"Invented\"}}",
+                "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"gitLabSource\":{\"project\":\"demo-app\",\"ref\":\"main\"}, \"repositoryFacts\":{\"usage\":\"UNKNOWN\",\"systemSubtype\":\"frontend\"}}",
+                "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"gitLabSource\":{\"project\":\"demo-app\",\"ref\":\"main\"}, \"repositoryFacts\":{\"usage\":\"DEPLOYED_SYSTEM\",\"systemSubtype\":\"invented\"}}",
                 "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"gitLabSource\":{\"project\":\"demo-app\",\"ref\":\"main\"}, \"repositoryFacts\":{\"usage\":\"EXISTING_SYSTEM\",\"systemIds\":[]}}",
                 "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"gitLabSource\":{\"project\":\"demo-app\",\"ref\":\"main\"}, \"repositoryFacts\":{\"usage\":\"SHARED_LIBRARY\",\"systemIds\":[\"a\",\"a\"]}}",
                 "{\"mode\":\"CREATE_AREA\",\"description\":\"Repo\", \"gitLabSource\":{\"project\":\"demo-app\",\"ref\":\"main\"}, \"repositoryFacts\":{\"usage\":\"SHARED_LIBRARY\",\"legacy\":true}}",
