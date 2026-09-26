@@ -47,6 +47,9 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
+- Nowe integracje REST, ktore maja podlegac wspolnej polityce weryfikacji TLS,
+  buduj przez `integrations.http.IntegrationRestClientBuilderFactory`. Uzywa
+  ona `integrations.http.ignore-ssl-errors` bez zmiany globalnych ustawien JVM.
 - Nie dodawaj tu `AnalysisEvidenceProvider`, klas `@Tool`, promptow, skilli ani
   heurystyk incidentowych.
 - Dla Database capability nie wprowadzaj globalnego `spring.datasource`, nie

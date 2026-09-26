@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import pl.mkn.tdw.integrations.confluence.ConfluencePageContent;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +27,7 @@ class JiraRestIssueAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = new JiraRestIssueAdapter(
                 properties,
-                new JiraRestClientFactory(properties, restClientBuilder),
+                new JiraRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)),
                 pageUrl -> Optional.empty()
         );
 
@@ -79,7 +80,7 @@ class JiraRestIssueAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = new JiraRestIssueAdapter(
                 properties,
-                new JiraRestClientFactory(properties, restClientBuilder),
+                new JiraRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)),
                 pageUrl -> Optional.empty()
         );
 
@@ -132,7 +133,7 @@ class JiraRestIssueAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = new JiraRestIssueAdapter(
                 properties,
-                new JiraRestClientFactory(properties, restClientBuilder),
+                new JiraRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)),
                 pageUrl -> Optional.of(new ConfluencePageContent(
                         "123",
                         "Functional design",
@@ -258,7 +259,7 @@ class JiraRestIssueAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = new JiraRestIssueAdapter(
                 properties,
-                new JiraRestClientFactory(properties, restClientBuilder),
+                new JiraRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)),
                 pageUrl -> Optional.empty()
         );
 

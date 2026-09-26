@@ -6,16 +6,17 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.integrations.http.IntegrationRestClientBuilderFactory;
 
 @Component
 @RequiredArgsConstructor
 public class JiraRestClientFactory {
 
     private final JiraProperties properties;
-    private final RestClient.Builder restClientBuilder;
+    private final IntegrationRestClientBuilderFactory restClientBuilderFactory;
 
     public RestClient create() {
-        var builder = restClientBuilder.clone()
+        var builder = restClientBuilderFactory.newBuilder()
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
 
         if (StringUtils.hasText(properties.getToken())) {

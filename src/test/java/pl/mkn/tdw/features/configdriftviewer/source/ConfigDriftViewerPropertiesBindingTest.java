@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
+import pl.mkn.tdw.integrations.http.IntegrationHttpProperties;
 
 import java.util.Map;
 
@@ -20,7 +21,7 @@ class ConfigDriftViewerPropertiesBindingTest {
                 "https://config-one.example.com",
                 "integrations.gitlab.named.connections.config-one.token",
                 "token-one",
-                "integrations.gitlab.named.connections.config-one.ignore-ssl-errors",
+                "integrations.http.ignore-ssl-errors",
                 "true",
                 "integrations.gitlab.named.connections.config-two.base-url",
                 "https://config-two.example.com",
@@ -29,7 +30,7 @@ class ConfigDriftViewerPropertiesBindingTest {
                 "features.config-drift-viewer.repositories.runtime-config.connection-id",
                 "config-one",
                 "features.config-drift-viewer.repositories.runtime-config.project-path",
-                "platform/runtime-config",
+                "CRM/runtime-config",
                 "features.config-drift-viewer.branches[0]",
                 "dev",
                 "features.config-drift-viewer.branches[1]",
@@ -39,9 +40,11 @@ class ConfigDriftViewerPropertiesBindingTest {
         ));
         var binder = new Binder(source);
         var namedConnections = new GitLabNamedConnectionsProperties();
+        var httpProperties = new IntegrationHttpProperties();
         var repositories = new ConfigDriftViewerRepositoryProperties();
 
         binder.bind("integrations.gitlab.named", Bindable.ofInstance(namedConnections));
+        binder.bind("integrations.http", Bindable.ofInstance(httpProperties));
         binder.bind(
                 "features.config-drift-viewer",
                 Bindable.ofInstance(repositories)
@@ -52,13 +55,13 @@ class ConfigDriftViewerPropertiesBindingTest {
                 "token-one",
                 namedConnections.getConnections().get("config-one").getToken()
         );
-        assertTrue(namedConnections.getConnections().get("config-one").isIgnoreSslErrors());
+        assertTrue(httpProperties.isIgnoreSslErrors());
         assertEquals(
                 "config-one",
                 repositories.getRepositories().get("runtime-config").getConnectionId()
         );
         assertEquals(
-                "platform/runtime-config",
+                "CRM/runtime-config",
                 repositories.getRepositories().get("runtime-config").getProjectPath()
         );
         assertEquals(java.util.List.of("dev", "uat2"), repositories.getBranches());

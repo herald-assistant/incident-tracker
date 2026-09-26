@@ -5,6 +5,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -21,7 +22,7 @@ class ConfluenceRestPageAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = new ConfluenceRestPageAdapter(
                 properties,
-                new ConfluenceRestClientFactory(properties, restClientBuilder)
+                new ConfluenceRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder))
         );
 
         server.expect(requestTo("https://confluence.example.com:9999/rest/api/content/686722831?expand=body.storage,version"))
@@ -58,7 +59,7 @@ class ConfluenceRestPageAdapterTest {
         var properties = confluenceProperties();
         var adapter = new ConfluenceRestPageAdapter(
                 properties,
-                new ConfluenceRestClientFactory(properties, RestClient.builder())
+                new ConfluenceRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()))
         );
 
         assertThat(adapter.getPageContent("https://other.example.com/pages/viewpage.action?pageId=1")).isEmpty();

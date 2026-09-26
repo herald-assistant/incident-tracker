@@ -28,8 +28,7 @@ public class GitLabNamedConnectionRegistry {
         return new GitLabConnectionDetails(
                 normalizedId,
                 baseUrl,
-                configured.getToken(),
-                configured.isIgnoreSslErrors()
+                configured.getToken()
         );
     }
 

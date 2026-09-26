@@ -14,7 +14,6 @@ public class GitLabProperties {
     private String baseUrl;
     private String group;
     private String token;
-    private boolean ignoreSslErrors;
     private int searchResultsPerTerm = 20;
     private int maxCandidateCount = 10;
     private int maxMergeRequests = 10;

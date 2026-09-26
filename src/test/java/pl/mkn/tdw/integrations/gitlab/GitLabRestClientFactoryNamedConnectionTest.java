@@ -3,6 +3,7 @@ package pl.mkn.tdw.integrations.gitlab;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -14,31 +15,31 @@ import static org.mockito.Mockito.when;
 class GitLabRestClientFactoryNamedConnectionTest {
 
     @Test
-    void shouldApplySslPolicyPerNamedConnection() {
+    void shouldApplySharedSslPolicyToDefaultAndNamedConnections() {
         var rootBuilder = mock(RestClient.Builder.class);
-        var secureBuilder = mock(RestClient.Builder.class);
-        var insecureBuilder = mock(RestClient.Builder.class);
-        when(rootBuilder.clone()).thenReturn(secureBuilder, insecureBuilder);
-        stub(secureBuilder);
-        stub(insecureBuilder);
+        var defaultBuilder = mock(RestClient.Builder.class);
+        var namedBuilder = mock(RestClient.Builder.class);
+        when(rootBuilder.clone()).thenReturn(defaultBuilder, namedBuilder);
+        stub(defaultBuilder);
+        stub(namedBuilder);
 
-        var factory = new GitLabRestClientFactory(new GitLabProperties(), rootBuilder);
+        var properties = new GitLabProperties();
+        properties.setToken("default-token");
+        var factory = new GitLabRestClientFactory(
+                properties,
+                IntegrationRestClientBuilderFactoryTestCreator.create(rootBuilder, true)
+        );
 
-        factory.create(new GitLabConnectionDetails(
-                "secure",
-                "https://secure.example.com",
-                "secure-token",
-                false
-        ));
+        factory.create();
         factory.create(new GitLabConnectionDetails(
                 "internal",
                 "https://internal.example.com",
-                "internal-token",
-                true
+                "internal-token"
         ));
 
-        verify(secureBuilder, never()).requestFactory(any(ClientHttpRequestFactory.class));
-        verify(insecureBuilder).requestFactory(any(ClientHttpRequestFactory.class));
+        verify(defaultBuilder).requestFactory(any(ClientHttpRequestFactory.class));
+        verify(namedBuilder).requestFactory(any(ClientHttpRequestFactory.class));
+        verify(rootBuilder, never()).requestFactory(any(ClientHttpRequestFactory.class));
     }
 
     private static void stub(RestClient.Builder builder) {

@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.ResourceAccessException;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.util.LinkedHashMap;
 
@@ -29,26 +30,26 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(5);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/backend%2Fapplication.yml.kv/raw?ref=dev1"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/files/backend%2Fapplication.yml.kv/raw?ref=dev1"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("PRIVATE-TOKEN", "token-one"))
                 .andRespond(withSuccess("abcdefghij", MediaType.TEXT_PLAIN));
         fixture.server.expect(requestTo(
-                        "https://config-two.example.com/api/v4/projects/team%2Fother-config/repository/files/global.var/raw?ref=test2"))
+                        "https://config-two.example.com/api/v4/projects/CRM%2Fother-config/repository/files/global.var/raw?ref=test2"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("PRIVATE-TOKEN", "token-two"))
                 .andRespond(withSuccess("xyz", MediaType.TEXT_PLAIN));
 
         var first = fixture.adapter.readFile(
                 "config-one",
-                "platform/runtime-config",
+                "CRM/runtime-config",
                 "dev1",
                 "backend/application.yml.kv",
                 20
         );
         var second = fixture.adapter.readFile(
                 "config-two",
-                "team/other-config",
+                "CRM/other-config",
                 "test2",
                 "global.var",
                 20
@@ -67,7 +68,7 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(100);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/backend%2Flocal.var?ref=test2"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/files/backend%2Flocal.var?ref=test2"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
@@ -80,7 +81,7 @@ class GitLabNamedExactRepositoryAdapterTest {
                         }
                         """, MediaType.APPLICATION_JSON));
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/commits/commit-1?stats=false"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/commits/commit-1?stats=false"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
@@ -91,7 +92,7 @@ class GitLabNamedExactRepositoryAdapterTest {
 
         var metadata = fixture.adapter.readFileMetadata(
                 "config-one",
-                "platform/runtime-config",
+                "CRM/runtime-config",
                 "test2",
                 "backend/local.var"
         );
@@ -110,11 +111,11 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(100);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/branches/dev9"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/branches/dev9"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertFalse(fixture.adapter.branchExists("config-one", "platform/runtime-config", "dev9"));
+        assertFalse(fixture.adapter.branchExists("config-one", "CRM/runtime-config", "dev9"));
         fixture.server.verify();
     }
 
@@ -123,14 +124,14 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(100);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
         var exception = assertThrows(
                 GitLabExactReadException.class,
                 () -> fixture.adapter.readFile(
                         "config-one",
-                        "platform/runtime-config",
+                        "CRM/runtime-config",
                         "dev1",
                         "global.var",
                         100
@@ -148,14 +149,14 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(100);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
         var exception = assertThrows(
                 GitLabExactReadException.class,
                 () -> fixture.adapter.readFile(
                         "config-one",
-                        "platform/runtime-config",
+                        "CRM/runtime-config",
                         "dev1",
                         "global.var",
                         100
@@ -173,7 +174,7 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(100);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
                 .andRespond(request -> {
                     throw new ResourceAccessException("timeout while using token-one");
                 });
@@ -182,7 +183,7 @@ class GitLabNamedExactRepositoryAdapterTest {
                 GitLabExactReadException.class,
                 () -> fixture.adapter.readFile(
                         "config-one",
-                        "platform/runtime-config",
+                        "CRM/runtime-config",
                         "dev1",
                         "global.var",
                         100
@@ -204,7 +205,7 @@ class GitLabNamedExactRepositoryAdapterTest {
                 GitLabExactReadException.class,
                 () -> fixture.adapter.readFile(
                         "config-one",
-                        "platform/runtime-config",
+                        "CRM/runtime-config",
                         "dev1",
                         "../global.var",
                         100
@@ -219,27 +220,25 @@ class GitLabNamedExactRepositoryAdapterTest {
         var namedProperties = new GitLabNamedConnectionsProperties();
         namedProperties.setMaxFileCharacters(maxFileCharacters);
         var connections = new LinkedHashMap<String, GitLabNamedConnectionsProperties.Connection>();
-        connections.put("config-one", connection("https://config-one.example.com/", "token-one", false));
-        connections.put("config-two", connection("https://config-two.example.com", "token-two", false));
+        connections.put("config-one", connection("https://config-one.example.com/", "token-one"));
+        connections.put("config-two", connection("https://config-two.example.com", "token-two"));
         namedProperties.setConnections(connections);
 
         var registry = new GitLabNamedConnectionRegistry(namedProperties);
         var legacyProperties = new GitLabProperties();
         var builder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var factory = new GitLabRestClientFactory(legacyProperties, builder);
+        var factory = new GitLabRestClientFactory(legacyProperties, IntegrationRestClientBuilderFactoryTestCreator.create(builder));
         return new Fixture(new GitLabNamedExactRepositoryAdapter(registry, factory), server);
     }
 
     private static GitLabNamedConnectionsProperties.Connection connection(
             String baseUrl,
-            String token,
-            boolean ignoreSslErrors
+            String token
     ) {
         var connection = new GitLabNamedConnectionsProperties.Connection();
         connection.setBaseUrl(baseUrl);
         connection.setToken(token);
-        connection.setIgnoreSslErrors(ignoreSslErrors);
         return connection;
     }
 

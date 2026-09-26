@@ -375,6 +375,24 @@ Na dzisiaj projekt ma:
   niejednoznaczne aliasy, cykle, runtime factories, dynamiczne wyrazenia oraz
   osiagniete limity sa jawnymi diagnostics, a nie zgadywanym wynikiem.
 
+## Weryfikacja TLS integracji REST
+
+GitLab (rowniez named connections), Jira, Confluence i Dynatrace korzystaja ze
+wspolnego `IntegrationRestClientBuilderFactory`. Ustawienie backendowe
+`integrations.http.ignore-ssl-errors=false` domyslnie pozostawia standardowa
+walidacje certyfikatu serwera i nazwy hosta przez klienta JVM. `true` pomija
+obie walidacje lokalnie dla tych klientow; nie wylacza szyfrowania HTTPS ani nie
+zmienia globalnego TLS JVM. Nowe integracje REST korzystaja z tej samej fabryki,
+jesli maja podlegac tej polityce. Ustawienie jest ladowane przy starcie i nie
+jest wystawione przez Workspace Settings.
+
+Starsze `analysis.gitlab.ignore-ssl-errors` i
+`integrations.gitlab.named.connections.<id>.ignore-ssl-errors` nie sa juz
+odczytywane. Ich konfiguracje trzeba zastapic wspolna flaga. Domyslne `false`
+zmienia dotychczasowe zachowanie Dynatrace, ktory wczesniej zawsze pomijal
+walidacje. Elasticsearch nadal ma osobny lokalny wyjatek, a GitHub OAuth/profil
+uzywa standardowej walidacji.
+
 ## Glowne entrypointy HTTP
 
 - `GET /`

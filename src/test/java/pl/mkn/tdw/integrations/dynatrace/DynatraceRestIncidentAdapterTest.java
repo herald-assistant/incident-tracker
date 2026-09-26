@@ -6,6 +6,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.time.Instant;
 
@@ -22,7 +23,7 @@ class DynatraceRestIncidentAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = new DynatraceRestIncidentAdapter(
                 properties,
-                DynatraceRestClientFactory.forMockServer(restClientBuilder)
+                new DynatraceRestClientFactory(IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder))
         );
 
         expectGet(server, """

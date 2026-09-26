@@ -5,6 +5,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,7 +25,7 @@ class GitLabRepositoryBranchServiceTest {
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var service = new GitLabRepositoryBranchService(
-                properties, new GitLabRestClientFactory(properties, restClientBuilder));
+                properties, new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)));
 
         server.expect(requestTo("https://gitlab.example.com/api/v4/projects/crm%2Fportal%2Ffrontend/repository/branches?per_page=100&search=release/2026"))
                 .andExpect(method(HttpMethod.GET))
@@ -50,7 +51,7 @@ class GitLabRepositoryBranchServiceTest {
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var service = new GitLabRepositoryBranchService(
-                properties, new GitLabRestClientFactory(properties, restClientBuilder));
+                properties, new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)));
         server.expect(requestTo("https://gitlab.example.com/api/v4/projects/crm%2Fbackend/repository/branches?per_page=100"))
                 .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 

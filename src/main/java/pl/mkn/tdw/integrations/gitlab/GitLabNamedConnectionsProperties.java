@@ -23,6 +23,5 @@ public class GitLabNamedConnectionsProperties {
 
         private String baseUrl;
         private String token;
-        private boolean ignoreSslErrors;
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -142,7 +143,7 @@ class JiraRestIssueSearchAdapterTest {
         var builder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(builder).build();
         return new Fixture(
-                new JiraRestIssueSearchAdapter(properties, new JiraRestClientFactory(properties, builder)),
+                new JiraRestIssueSearchAdapter(properties, new JiraRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(builder))),
                 server
         );
     }

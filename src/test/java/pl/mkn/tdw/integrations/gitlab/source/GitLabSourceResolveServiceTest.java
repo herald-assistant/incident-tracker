@@ -12,8 +12,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.client.RestClient;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRestClientFactory;
-
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,7 +32,7 @@ class GitLabSourceResolveServiceTest {
         headers.add("X-Next-Page", "2");
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -40,20 +41,20 @@ class GitLabSourceResolveServiceTest {
                         """, MediaType.APPLICATION_JSON).headers(headers));
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=2"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=2"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         []
                         """, MediaType.APPLICATION_JSON));
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/files/src%2Fmain%2Fjava%2Fc%2Fe%2Fsynthetic%2Fresponse%2FResponsePathSelector.java/raw?ref=HEAD"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/files/src%2Fmain%2Fjava%2Fc%2Fe%2Fsynthetic%2Fresponse%2FResponsePathSelector.java/raw?ref=HEAD"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("package c.e.synthetic.response;\npublic class ResponsePathSelector {}", MediaType.TEXT_PLAIN));
 
         var response = serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                "my-group/subgroup",
-                "my-service",
+                "CRM/services",
+                "crm-service",
                 null,
                 "c.e.synthetic.response.ResponsePathSelector"
         ));
@@ -72,7 +73,7 @@ class GitLabSourceResolveServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=dev/atlas&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=dev/crm&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -81,14 +82,14 @@ class GitLabSourceResolveServiceTest {
                         """, MediaType.APPLICATION_JSON));
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/files/src%2Fmain%2Fjava%2Fc%2Fe%2Fsynthetic%2Fresponse%2FResponsePathSelector.java/raw?ref=dev/atlas"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/files/src%2Fmain%2Fjava%2Fc%2Fe%2Fsynthetic%2Fresponse%2FResponsePathSelector.java/raw?ref=dev/crm"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("class ResponsePathSelector {}", MediaType.TEXT_PLAIN));
 
         var response = serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                "my-group/subgroup",
-                "my-service",
-                "dev/atlas",
+                "CRM/services",
+                "crm-service",
+                "dev/crm",
                 ".e.synthetic.response.ResponsePathSelector"
         ));
 
@@ -101,14 +102,14 @@ class GitLabSourceResolveServiceTest {
     void shouldCacheRepositoryTreeWithinSingleHttpRequest() {
         var serviceFixture = newServiceFixture();
         var request = new GitLabSourceResolveRequest(
-                "my-group/subgroup",
-                "my-service",
-                "dev/atlas",
+                "CRM/services",
+                "crm-service",
+                "dev/crm",
                 "c.e.synthetic.response.ResponsePathSelector"
         );
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=dev/atlas&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=dev/crm&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -136,14 +137,14 @@ class GitLabSourceResolveServiceTest {
     void shouldCacheRepositoryTreeWithinExplicitResolveSession() {
         var serviceFixture = newServiceFixture();
         var request = new GitLabSourceResolveRequest(
-                "my-group/subgroup",
-                "my-service",
-                "dev/atlas",
+                "CRM/services",
+                "crm-service",
+                "dev/crm",
                 "c.e.synthetic.response.ResponsePathSelector"
         );
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=dev/atlas&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=dev/crm&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -167,7 +168,7 @@ class GitLabSourceResolveServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=main&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=main&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -178,13 +179,13 @@ class GitLabSourceResolveServiceTest {
                         """, MediaType.APPLICATION_JSON));
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/files/src%2Fmain%2Fjava%2Fc%2Fe%2Fsynthetic%2Fresponse%2FResponsePathSelector.java/raw?ref=main"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/files/src%2Fmain%2Fjava%2Fc%2Fe%2Fsynthetic%2Fresponse%2FResponsePathSelector.java/raw?ref=main"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("class ResponsePathSelector {}", MediaType.TEXT_PLAIN));
 
         var response = serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                "my-group/subgroup",
-                "my-service",
+                "CRM/services",
+                "crm-service",
                 "main",
                 "c.e.synthetic.response.ResponsePathSelector"
         ));
@@ -212,7 +213,7 @@ class GitLabSourceResolveServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmy-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fcrm-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -223,8 +224,8 @@ class GitLabSourceResolveServiceTest {
         var exception = assertThrows(
                 GitLabSourceResolveException.class,
                 () -> serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                        "my-group/subgroup",
-                        "my-service",
+                        "CRM/services",
+                        "crm-service",
                         null,
                         "c.e.synthetic.response.ResponsePathSelector"
                 ))
@@ -242,22 +243,22 @@ class GitLabSourceResolveServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/my-group%2Fsubgroup%2Fmissing-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=1"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fservices%2Fmissing-crm-service/repository/tree?recursive=true&per_page=100&ref=HEAD&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         var exception = assertThrows(
                 GitLabSourceResolveException.class,
                 () -> serviceFixture.service.resolve(new GitLabSourceResolveRequest(
-                        "my-group/subgroup",
-                        "missing-service",
+                        "CRM/services",
+                        "missing-crm-service",
                         null,
                         "c.e.synthetic.response.ResponsePathSelector"
                 ))
         );
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
-        assertEquals("GitLab project or ref not found: my-group/subgroup/missing-service@HEAD", exception.getResponse().message());
+        assertEquals("GitLab project or ref not found: CRM/services/missing-crm-service@HEAD", exception.getResponse().message());
 
         serviceFixture.server.verify();
     }
@@ -268,7 +269,7 @@ class GitLabSourceResolveServiceTest {
         properties.setToken("glpat-test");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var factory = new GitLabRestClientFactory(properties, restClientBuilder);
+        var factory = new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder));
         return new ServiceFixture(GitLabIntegrationTestCreator.sourceResolveService(factory, properties), server);
     }
 
