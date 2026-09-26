@@ -5,7 +5,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
-import pl.mkn.tdw.integrations.confluence.ConfluencePageContent;
+import pl.mkn.tdw.integrations.confluence.contract.ConfluencePageContent;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.util.List;

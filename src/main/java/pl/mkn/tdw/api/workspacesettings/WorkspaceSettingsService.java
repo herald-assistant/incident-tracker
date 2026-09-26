@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.integrations.confluence.ConfluenceProperties;
+import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;

@@ -44,6 +44,12 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   `aiplatform.*`.
 - Trzymaj lokalnie properties, porty, modele request/result i adaptery REST dla
   danej capability.
+- W `confluence/` bezposrednio w pakiecie znajduje sie tylko
+  `ConfluencePagePort`. Publiczny model strony jest w `contract`, adapter w
+  `adapter.rest`, a properties i fabryka klienta w `config`. Konsumenci
+  korzystaja z portu i kontraktu; jedynym wyjatkiem jest
+  `api.workspacesettings.WorkspaceSettingsService`, ktory aktualizuje
+  `ConfluenceProperties` podczas pracy aplikacji.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
@@ -66,4 +72,6 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 
 - `PackageDependencyGuardTest` pilnuje, zeby `integrations.*` nie zaczelo
   importowac warstw aplikacyjnych.
+- `IntegrationPackageBoundaryTest` pilnuje struktury pakietu Confluence i
+  importow jego konsumentow.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.

@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pl.mkn.tdw.integrations.confluence.ConfluencePageContent;
 import pl.mkn.tdw.integrations.confluence.ConfluencePagePort;
+import pl.mkn.tdw.integrations.confluence.contract.ConfluencePageContent;
 
 import static pl.mkn.tdw.api.confluence.ConfluenceSourceDtos.ConfluencePageContentRequest;
 

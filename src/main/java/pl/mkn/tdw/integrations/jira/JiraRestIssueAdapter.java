@@ -6,8 +6,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
-import pl.mkn.tdw.integrations.confluence.ConfluencePageContent;
 import pl.mkn.tdw.integrations.confluence.ConfluencePagePort;
+import pl.mkn.tdw.integrations.confluence.contract.ConfluencePageContent;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;

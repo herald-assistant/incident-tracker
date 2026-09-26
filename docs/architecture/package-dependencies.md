@@ -62,6 +62,13 @@ Warstwa posiada:
 - request/result DTO konkretnej integracji,
 - techniczne wyjatki i lokalne zachowania zewnetrznego systemu.
 
+W `integrations.confluence` pakiet glowny zawiera tylko publiczny
+`ConfluencePagePort`. Publiczny wynik odczytu strony lezy w `contract`, adapter
+REST w `adapter.rest`, a properties i fabryka klienta w `config`. Konsumenci
+zaleza od portu i kontraktu. `api.workspacesettings.WorkspaceSettingsService`
+jest waskim wyjatkiem: aktualizuje `ConfluenceProperties` w runtime.
+`IntegrationPackageBoundaryTest` egzekwuje te granice dla Confluence.
+
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez

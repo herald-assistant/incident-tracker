@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.confluence;
+package pl.mkn.tdw.integrations.confluence.config;
 
 import lombok.Getter;
 import lombok.Setter;

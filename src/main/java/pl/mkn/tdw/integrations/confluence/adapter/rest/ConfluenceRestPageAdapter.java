@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.confluence;
+package pl.mkn.tdw.integrations.confluence.adapter.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +7,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.HtmlUtils;
 import org.springframework.web.util.UriUtils;
+import pl.mkn.tdw.integrations.confluence.ConfluencePagePort;
+import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
+import pl.mkn.tdw.integrations.confluence.config.ConfluenceRestClientFactory;
+import pl.mkn.tdw.integrations.confluence.contract.ConfluencePageContent;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;

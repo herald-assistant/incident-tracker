@@ -1,10 +1,12 @@
-package pl.mkn.tdw.integrations.confluence;
+package pl.mkn.tdw.integrations.confluence.adapter.rest;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
+import pl.mkn.tdw.integrations.confluence.config.ConfluenceRestClientFactory;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,12 +27,12 @@ class ConfluenceRestPageAdapterTest {
                 new ConfluenceRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder))
         );
 
-        server.expect(requestTo("https://confluence.example.com:9999/rest/api/content/686722831?expand=body.storage,version"))
+        server.expect(requestTo("https://confluence.example.com:9999/rest/api/content/123?expand=body.storage,version"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer confluence-token"))
                 .andRespond(withSuccess("""
                         {
-                          "id": "686722831",
+                          "id": "123",
                           "title": "CRM case profile design",
                           "version": { "number": 12 },
                           "body": {
@@ -42,11 +44,11 @@ class ConfluenceRestPageAdapterTest {
                         """, MediaType.APPLICATION_JSON));
 
         var page = adapter.getPageContent(
-                "https://confluence.example.com:9999/pages/viewpage.action?pageId=686722831"
+                "https://confluence.example.com:9999/pages/viewpage.action?pageId=123"
         );
 
         assertThat(page).isPresent();
-        assertThat(page.orElseThrow().pageId()).isEqualTo("686722831");
+        assertThat(page.orElseThrow().pageId()).isEqualTo("123");
         assertThat(page.orElseThrow().title()).isEqualTo("CRM case profile design");
         assertThat(page.orElseThrow().version()).isEqualTo("12");
         assertThat(page.orElseThrow().content()).contains("Prepare CRM case profile data");
