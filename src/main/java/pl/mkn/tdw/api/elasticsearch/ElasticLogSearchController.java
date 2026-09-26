@@ -6,20 +6,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchService;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchPort;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
 
 @RestController
 @RequestMapping("/api/elasticsearch/logs")
 @RequiredArgsConstructor
 public class ElasticLogSearchController {
 
-    private final ElasticLogSearchService elasticLogSearchService;
+    private final ElasticLogSearchPort elasticLogSearchService;
 
     @PostMapping("/search")
     public ElasticLogSearchResult search(@Valid @RequestBody ElasticLogSearchRequest request) {

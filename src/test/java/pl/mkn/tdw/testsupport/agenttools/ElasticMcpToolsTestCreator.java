@@ -2,7 +2,7 @@ package pl.mkn.tdw.testsupport.agenttools;
 
 import pl.mkn.tdw.agenttools.elasticsearch.mcp.ElasticMcpTools;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchService;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchPort;
 
 public final class ElasticMcpToolsTestCreator {
 
@@ -15,7 +15,7 @@ public final class ElasticMcpToolsTestCreator {
 
     public static ElasticMcpTools create(
             ElasticLogPort elasticLogPort,
-            ElasticLogSearchService elasticLogSearchService
+            ElasticLogSearchPort elasticLogSearchService
     ) {
         return new ElasticMcpTools(elasticLogPort, elasticLogSearchService);
     }

@@ -6,17 +6,17 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSample;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpStatusBucket;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogDetailLevel;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchService;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSample;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpStatusBucket;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogDetailLevel;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchPort;
 
 import java.util.List;
 
@@ -35,7 +35,7 @@ class ElasticLogSearchControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ElasticLogSearchService elasticLogSearchService;
+    private ElasticLogSearchPort elasticLogSearchService;
 
     @Test
     void shouldSearchLogsForValidRequest() throws Exception {

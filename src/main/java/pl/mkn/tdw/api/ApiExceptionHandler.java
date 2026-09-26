@@ -7,10 +7,10 @@ import pl.mkn.tdw.api.operationalcontext.OperationalContextEntityNotFoundExcepti
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallDiagnosticError;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSearchException;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchException;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallDiagnosticError;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticHttpCallSearchException;
+import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticLogSearchException;
 import pl.mkn.tdw.integrations.github.auth.GitHubOAuthExchangeException;
 import pl.mkn.tdw.integrations.github.auth.GitHubOAuthStateInvalidException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchException;

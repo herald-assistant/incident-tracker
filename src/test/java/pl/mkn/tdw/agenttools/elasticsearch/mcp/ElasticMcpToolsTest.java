@@ -3,15 +3,15 @@ package pl.mkn.tdw.agenttools.elasticsearch.mcp;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSample;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpStatusBucket;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogDetailLevel;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchService;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSample;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpStatusBucket;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogDetailLevel;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchPort;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 
 import java.util.LinkedHashMap;
@@ -52,7 +52,7 @@ class ElasticMcpToolsTest {
 
     @Test
     void shouldSummarizeHttpCallsByPathThroughTool() {
-        var service = mock(ElasticLogSearchService.class);
+        var service = mock(ElasticLogSearchPort.class);
         when(service.summarizeHttpCalls(any(ElasticHttpCallSummaryRequest.class)))
                 .thenReturn(new ElasticHttpCallSummaryResult(
                         "/external/path/",
@@ -106,7 +106,7 @@ class ElasticMcpToolsTest {
 
     @Test
     void shouldFetchHttpCallLogsByPathWithoutCurrentCorrelationIdFilter() {
-        var service = mock(ElasticLogSearchService.class);
+        var service = mock(ElasticLogSearchPort.class);
         when(service.fetchHttpCallLogs(any(ElasticHttpCallLogsRequest.class)))
                 .thenReturn(new ElasticHttpCallLogsResult(
                         null,
@@ -153,7 +153,7 @@ class ElasticMcpToolsTest {
 
     @Test
     void shouldFetchHttpCallLogsForCurrentCorrelationIdWhenPathIsOmitted() {
-        var service = mock(ElasticLogSearchService.class);
+        var service = mock(ElasticLogSearchPort.class);
         when(service.fetchHttpCallLogs(any(ElasticHttpCallLogsRequest.class)))
                 .thenReturn(new ElasticHttpCallLogsResult(
                         "corr-123",

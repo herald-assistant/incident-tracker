@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.mock.web.MockMultipartFile;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityService;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
+import pl.mkn.tdw.integrations.elasticsearch.service.availability.ElasticConnectionAvailabilityService;
+import pl.mkn.tdw.integrations.elasticsearch.config.ElasticProperties;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
@@ -672,7 +672,7 @@ class AnalysisJobFacadeTest {
                 analysisAiChatProvider,
                 taskExecutor,
                 localRunPersistence,
-                AnalysisJobInputOptionsService.elasticsearchAvailableForTests()
+                AnalysisJobFacadeTestCreator.elasticsearchAvailable()
         );
     }
 
@@ -708,7 +708,7 @@ class AnalysisJobFacadeTest {
                 authRefResolver,
                 accessTokenResolver,
                 IncidentAnalysisLocalRunPersistence.NO_OP,
-                AnalysisJobInputOptionsService.elasticsearchAvailableForTests()
+                AnalysisJobFacadeTestCreator.elasticsearchAvailable()
         );
     }
 
@@ -727,7 +727,7 @@ class AnalysisJobFacadeTest {
                 authRefResolver,
                 accessTokenResolver,
                 localRunPersistence,
-                AnalysisJobInputOptionsService.elasticsearchAvailableForTests()
+                AnalysisJobFacadeTestCreator.elasticsearchAvailable()
         );
     }
 

@@ -1,9 +1,9 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;

@@ -17,9 +17,11 @@ class IntegrationPackageBoundaryTest {
     private static final Path MAIN_JAVA = Path.of("src/main/java");
     private static final String CONFLUENCE_PACKAGE = "pl.mkn.tdw.integrations.confluence";
     private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
+    private static final String ELASTICSEARCH_PACKAGE = "pl.mkn.tdw.integrations.elasticsearch";
     private static final String JIRA_PACKAGE = "pl.mkn.tdw.integrations.jira";
     private static final Path CONFLUENCE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/confluence");
     private static final Path DYNATRACE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/dynatrace");
+    private static final Path ELASTICSEARCH_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/elasticsearch");
     private static final Path JIRA_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/jira");
     private static final Path SETTINGS_SERVICE = MAIN_JAVA.resolve(
             "pl/mkn/tdw/api/workspacesettings/WorkspaceSettingsService.java");
@@ -41,6 +43,13 @@ class IntegrationPackageBoundaryTest {
     void jiraRootContainsOnlyPublicPorts() throws IOException {
         assertRootContainsOnlyPublicPorts(JIRA_ROOT, JIRA_PACKAGE,
                 "JiraIssuePort.java", "JiraIssueSearchPort.java", "JiraIssueStatusHistoryPort.java");
+    }
+
+    @Test
+    void elasticsearchRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(ELASTICSEARCH_ROOT, ELASTICSEARCH_PACKAGE,
+                "ElasticConnectionAvailabilityPort.java", "ElasticLogCsvImportPort.java",
+                "ElasticLogPort.java", "ElasticLogSearchPort.java");
     }
 
     private void assertRootContainsOnlyPublicPorts(
@@ -88,6 +97,13 @@ class IntegrationPackageBoundaryTest {
     void jiraConsumersDependOnlyOnPortsAndContract() throws IOException {
         assertConsumersDependOnlyOnPortAndContract(JIRA_PACKAGE,
                 "JiraProperties", "JiraIssuePort", "JiraIssueSearchPort", "JiraIssueStatusHistoryPort");
+    }
+
+    @Test
+    void elasticsearchConsumersDependOnlyOnPortsAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(ELASTICSEARCH_PACKAGE,
+                "ElasticProperties", "ElasticConnectionAvailabilityPort", "ElasticLogCsvImportPort",
+                "ElasticLogPort", "ElasticLogSearchPort");
     }
 
     private void assertConsumersDependOnlyOnPortAndContract(

@@ -4,14 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobInputOptionsResponse;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobLogSource;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityService;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityPort;
 
 @Service
 @RequiredArgsConstructor
 public class AnalysisJobInputOptionsService {
 
-    private final ElasticConnectionAvailabilityService elasticAvailabilityService;
+    private final ElasticConnectionAvailabilityPort elasticAvailabilityService;
 
     public AnalysisJobInputOptionsResponse currentOptions() {
         var elasticAvailability = elasticAvailabilityService.currentAvailability();
@@ -33,14 +32,5 @@ public class AnalysisJobInputOptionsService {
 
     public boolean elasticsearchStartEnabled() {
         return currentOptions().elasticsearch().enabled();
-    }
-
-    static AnalysisJobInputOptionsService elasticsearchAvailableForTests() {
-        var properties = new ElasticProperties();
-        properties.setBaseUrl("https://kibana.example.internal");
-        properties.setKibanaSpaceId("default");
-        properties.setIndexPattern("logs-*");
-        properties.setAuthorizationHeader("ApiKey test");
-        return new AnalysisJobInputOptionsService(new ElasticConnectionAvailabilityService(properties));
     }
 }

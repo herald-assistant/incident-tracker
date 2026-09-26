@@ -6,7 +6,9 @@ import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.tdw.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.tdw.features.incidentanalysis.job.validation.AnalysisJobStartValidationService;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogCsvImportService;
+import pl.mkn.tdw.integrations.elasticsearch.adapter.csv.ElasticLogCsvImportService;
+import pl.mkn.tdw.integrations.elasticsearch.config.ElasticProperties;
+import pl.mkn.tdw.integrations.elasticsearch.service.availability.ElasticConnectionAvailabilityService;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
@@ -14,6 +16,15 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 final class AnalysisJobFacadeTestCreator {
 
     private AnalysisJobFacadeTestCreator() {
+    }
+
+    static AnalysisJobInputOptionsService elasticsearchAvailable() {
+        var properties = new ElasticProperties();
+        properties.setBaseUrl("https://kibana.example.internal");
+        properties.setKibanaSpaceId("default");
+        properties.setIndexPattern("logs-*");
+        properties.setAuthorizationHeader("ApiKey test");
+        return new AnalysisJobInputOptionsService(new ElasticConnectionAvailabilityService(properties));
     }
 
     static AnalysisJobFacade create(

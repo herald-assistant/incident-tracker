@@ -7,8 +7,8 @@ import pl.mkn.tdw.features.incidentanalysis.job.AnalysisJobInputOptionsService;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobLogSource;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobInputException;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogCsvImportException;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogCsvImportService;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogCsvImportPort;
+import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticLogCsvImportException;
 
 import java.io.IOException;
 
@@ -17,7 +17,7 @@ import java.io.IOException;
 public class AnalysisJobStartValidationService {
 
     private final AnalysisJobInputOptionsService inputOptionsService;
-    private final ElasticLogCsvImportService elasticLogCsvImportService;
+    private final ElasticLogCsvImportPort elasticLogCsvImportService;
 
     public AnalysisLogInput validateAndResolveLogInput(AnalysisJobStartRequest request) {
         request.validateForStart();

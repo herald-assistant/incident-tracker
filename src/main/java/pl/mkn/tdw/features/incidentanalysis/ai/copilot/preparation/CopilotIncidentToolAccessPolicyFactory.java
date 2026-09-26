@@ -8,7 +8,7 @@ import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.integrations.database.DatabaseToolProperties;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityService;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityPort;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ import java.util.List;
 public class CopilotIncidentToolAccessPolicyFactory {
 
     private final CopilotIncidentEvidenceCoverageEvaluator coverageEvaluator;
-    private final ElasticConnectionAvailabilityService elasticAvailabilityService;
+    private final ElasticConnectionAvailabilityPort elasticAvailabilityService;
     private final DatabaseToolProperties databaseToolProperties;
 
     public CopilotIncidentToolAccessPolicy create(

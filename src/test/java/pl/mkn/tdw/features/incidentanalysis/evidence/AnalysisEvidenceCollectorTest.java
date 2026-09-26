@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence;
 
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
@@ -354,7 +354,7 @@ class AnalysisEvidenceCollectorTest {
         }
 
         @Override
-        public pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+        public pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult searchLogsByCorrelationId(
                 String correlationId
         ) {
             throw new UnsupportedOperationException("Not needed in this collector test.");
@@ -369,7 +369,7 @@ class AnalysisEvidenceCollectorTest {
         }
 
         @Override
-        public pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+        public pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult searchLogsByCorrelationId(
                 String correlationId
         ) {
             throw new AssertionError("CSV upload flow must not call ElasticLogPort.searchLogsByCorrelationId.");

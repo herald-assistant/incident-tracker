@@ -85,6 +85,16 @@ zaleza od portow i kontraktu. `api.workspacesettings.WorkspaceSettingsService`
 jest jedynym wyjatkiem dla konfiguracji, poniewaz aktualizuje properties w
 runtime. `IntegrationPackageBoundaryTest` egzekwuje te granice dla Jiry.
 
+W `integrations.elasticsearch` pakiet glowny zawiera tylko cztery porty:
+`ElasticLogPort`, `ElasticLogSearchPort`, `ElasticLogCsvImportPort` i
+`ElasticConnectionAvailabilityPort`. Publiczne modele oraz bledy rozpoznawane
+przez API i feature leza w `contract`, HTTP w `adapter.rest`, import CSV w
+`adapter.csv`, zlozone search i availability w `service`, techniczne kryteria
+w `internal`, a konfiguracja w `config`. API, MCP i Incident Analysis zaleza od
+portow oraz kontraktu. `api.workspacesettings.WorkspaceSettingsService` jest
+jedynym wyjatkiem dla properties, poniewaz aktualizuje je w runtime.
+`IntegrationPackageBoundaryTest` egzekwuje te granice dla Elasticsearch.
+
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez

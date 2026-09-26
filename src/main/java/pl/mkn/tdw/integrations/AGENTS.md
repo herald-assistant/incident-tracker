@@ -60,6 +60,13 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   `adapter.rest`, a properties i fabryka klienta w `config`. Konsumenci
   korzystaja z portow i kontraktu; `api.workspacesettings.WorkspaceSettingsService`
   aktualizuje properties jako waski wyjatek.
+- W `elasticsearch/` bezposrednio w pakiecie znajduja sie tylko porty logow,
+  search, importu CSV i dostepnosci polaczenia. Publiczne modele i rozpoznawane
+  przez konsumentow wyjatki sa w `contract`, klient REST w `adapter.rest`,
+  parser CSV w `adapter.csv`, serwisy search i availability w `service`,
+  techniczne kryteria w `internal`, a properties i fabryka klienta w `config`.
+  Konsumenci korzystaja z portow i kontraktu; tylko
+  `api.workspacesettings.WorkspaceSettingsService` aktualizuje properties.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
@@ -83,5 +90,5 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 - `PackageDependencyGuardTest` pilnuje, zeby `integrations.*` nie zaczelo
   importowac warstw aplikacyjnych.
 - `IntegrationPackageBoundaryTest` pilnuje struktury pakietow Confluence,
-  Dynatrace i Jira oraz importow ich konsumentow.
+  Dynatrace, Jira i Elasticsearch oraz importow ich konsumentow.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.

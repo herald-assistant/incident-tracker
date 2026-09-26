@@ -2,8 +2,8 @@ package pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation;
 
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.tdw.integrations.database.DatabaseToolProperties;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityService;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
+import pl.mkn.tdw.integrations.elasticsearch.service.availability.ElasticConnectionAvailabilityService;
+import pl.mkn.tdw.integrations.elasticsearch.config.ElasticProperties;
 
 final class CopilotIncidentToolAccessPolicyFactoryTestSupport {
 

@@ -8,14 +8,14 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallLogsResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryRequest;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticHttpCallSummaryResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogDetailLevel;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchService;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchPort;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallLogsResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryRequest;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallSummaryResult;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogDetailLevel;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
 
 import java.util.Locale;
 
@@ -31,7 +31,7 @@ public class ElasticMcpTools {
     private static final String REASON_DESCRIPTION = "Short reason in Polish for the operator. Use one practical sentence.";
 
     private final ElasticLogPort elasticLogPort;
-    private final ElasticLogSearchService elasticLogSearchService;
+    private final ElasticLogSearchPort elasticLogSearchService;
 
     @Tool(
             name = SEARCH_LOGS_BY_CORRELATION_ID,
@@ -199,7 +199,7 @@ public class ElasticMcpTools {
         return result;
     }
 
-    private ElasticLogSearchService requireLogSearchService(String toolName) {
+    private ElasticLogSearchPort requireLogSearchService(String toolName) {
         if (elasticLogSearchService == null) {
             throw new IllegalStateException("Tool " + toolName + " requires ElasticLogSearchService.");
         }

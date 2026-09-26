@@ -190,12 +190,20 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   importuje tylko Workspace Settings. Baseline, testy celowane po `clean`,
   pelne `mvn -q clean test` i `git diff --check` przeszly. Brak pozostalego
   driftu Jiry.
-- [ ] Krok 4 — Elasticsearch: sklasyfikowac obecny `ElasticLogPort` i publiczne
+- [x] Krok 4 — Elasticsearch: sklasyfikowac obecny `ElasticLogPort` i publiczne
   search/import/availability capability; dodac waskie porty dla operacji
   wywolywanych poza integracja, przeniesc modele do `contract`, REST/CSV do
   `adapter`, serwisy do `service`, konfiguracje do `config`. Przelaczyc API,
   MCP i Incident Analysis. Dowod: testy adaptera, search, CSV, availability,
   konsumentow, guard i protokol; root zawiera tylko porty.
+  Wynik: root zawiera cztery porty dla logow, search, importu CSV i
+  dostepnosci. Publiczne modele i wyjatki sa w `contract`, REST i CSV w
+  `adapter`, search i availability w `service`, kryteria techniczne w
+  `internal`, konfiguracja w `config`. API, MCP i Incident Analysis zalezy od
+  portow; tylko Workspace Settings aktualizuje properties. Baseline i testy
+  celowane po zmianie przeszly. `mvn -q clean test` zakonczyl sie powodzeniem:
+  1731 testow, 0 failures, 0 errors, 1 skipped. `git diff --check` jest czysty.
+  Brak pozostalego driftu Elasticsearch.
 - [ ] Krok 5 — Database: zdefiniowac port(y) dla operator-facing readonly
   diagnostics uzywanych przez API i MCP; przeniesc publiczne typed
   request/result/scope do `contract`, JDBC/routing do `adapter.jdbc`, SQL

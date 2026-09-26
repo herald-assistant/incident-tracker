@@ -8,7 +8,7 @@ import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
 import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
+import pl.mkn.tdw.integrations.elasticsearch.config.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.jira.config.JiraProperties;

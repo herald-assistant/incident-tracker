@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.elasticsearch;
 
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
+
 import java.util.List;
 
 public class TestElasticLogPort implements ElasticLogPort {

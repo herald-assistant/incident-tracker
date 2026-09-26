@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
+import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
 
 import java.util.List;
 
