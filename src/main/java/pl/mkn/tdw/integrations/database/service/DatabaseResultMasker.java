@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;

@@ -1,10 +1,10 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.adapter.jdbc;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.List;
 import java.util.Map;

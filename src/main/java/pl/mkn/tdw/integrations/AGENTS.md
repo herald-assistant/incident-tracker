@@ -67,6 +67,14 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   techniczne kryteria w `internal`, a properties i fabryka klienta w `config`.
   Konsumenci korzystaja z portow i kontraktu; tylko
   `api.workspacesettings.WorkspaceSettingsService` aktualizuje properties.
+- W `database/` bezposrednio w pakiecie znajduja sie tylko
+  `DatabaseDiagnosticPort` i `DatabaseSqlPolicyPort`. Typowane requesty,
+  wyniki, scope i operatory sa w `contract`; routing, metadata oraz wykonanie
+  zapytan JDBC w `adapter.jdbc`; diagnostyka, SQL guard, masking i limiting w
+  `service`; techniczne modele metadanych w `internal.metadata`, properties
+  w `config`. API i MCP korzystaja z portu diagnostyki,
+  a feature incidentowy odczytuje flage raw SQL przez port policy. Integracja
+  pozostaje readonly i nie rejestruje globalnego `spring.datasource`.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
@@ -90,5 +98,5 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 - `PackageDependencyGuardTest` pilnuje, zeby `integrations.*` nie zaczelo
   importowac warstw aplikacyjnych.
 - `IntegrationPackageBoundaryTest` pilnuje struktury pakietow Confluence,
-  Dynatrace, Jira i Elasticsearch oraz importow ich konsumentow.
+  Dynatrace, Jira, Elasticsearch i Database oraz importow ich konsumentow.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.

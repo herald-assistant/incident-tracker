@@ -7,10 +7,10 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.integrations.database.DatabaseToolService;
+import pl.mkn.tdw.integrations.database.DatabaseDiagnosticPort;
 
 import static pl.mkn.tdw.agenttools.database.DatabaseToolNames.*;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.*;
 
 @Component
 @Slf4j
@@ -20,7 +20,7 @@ public class DatabaseMcpTools {
 
     private static final String REASON_DESCRIPTION = "Short reason in Polish for the operator. Use one practical sentence.";
 
-    private final DatabaseToolService databaseToolService;
+    private final DatabaseDiagnosticPort databaseToolService;
 
     @Tool(
             name = GET_SCOPE,

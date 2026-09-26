@@ -1,11 +1,14 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbApplicationScopeInfo;
+import pl.mkn.tdw.integrations.database.config.DatabaseApplicationProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbApplicationScopeInfo;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

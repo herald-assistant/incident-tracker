@@ -1,6 +1,10 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
+
+import pl.mkn.tdw.integrations.database.adapter.jdbc.DatabaseMetadataClient;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
 
 import java.util.List;
 
@@ -9,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbTableRef;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCapabilityScope;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbTableRef;
 
 class DatabaseSqlGuardTest {
 

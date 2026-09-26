@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.adapter.jdbc;
 
 import org.junit.jupiter.api.Test;
 
@@ -8,6 +8,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static pl.mkn.tdw.integrations.database.internal.metadata.DatabaseMetadataModels.*;
 
 class DatabaseMetadataClientTest {
 

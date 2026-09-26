@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.contract;
 
 public enum DbOperator {
     EQ,

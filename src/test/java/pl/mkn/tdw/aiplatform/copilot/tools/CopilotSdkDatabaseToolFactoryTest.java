@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.integrations.database.DatabaseToolService;
+import pl.mkn.tdw.integrations.database.DatabaseDiagnosticPort;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.agenttools.database.mcp.DatabaseMcpTools;
@@ -27,8 +27,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCountResult;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbTableRef;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCountResult;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbTableRef;
 
 class CopilotSdkDatabaseToolFactoryTest {
 
@@ -70,7 +70,7 @@ class CopilotSdkDatabaseToolFactoryTest {
 
     @Test
     void shouldCaptureDatabaseToolArgumentsAndResultAsAiToolEvidence() {
-        var databaseToolService = mock(DatabaseToolService.class);
+        var databaseToolService = mock(DatabaseDiagnosticPort.class);
         when(databaseToolService.countRows(any(), any())).thenReturn(new DbCountResult(
                 "sandbox-b",
                 "oracle",
@@ -158,10 +158,10 @@ class CopilotSdkDatabaseToolFactoryTest {
     }
 
     private ToolCallbackProvider databaseToolProvider() {
-        return databaseToolProvider(mock(DatabaseToolService.class));
+        return databaseToolProvider(mock(DatabaseDiagnosticPort.class));
     }
 
-    private ToolCallbackProvider databaseToolProvider(DatabaseToolService databaseToolService) {
+    private ToolCallbackProvider databaseToolProvider(DatabaseDiagnosticPort databaseToolService) {
         return MethodToolCallbackProvider.builder()
                 .toolObjects(new DatabaseMcpTools(databaseToolService))
                 .build();

@@ -1,6 +1,7 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
 
 import java.util.LinkedHashMap;
 import java.util.List;

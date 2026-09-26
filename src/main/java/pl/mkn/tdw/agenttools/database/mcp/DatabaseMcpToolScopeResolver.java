@@ -1,7 +1,7 @@
 package pl.mkn.tdw.agenttools.database.mcp;
 
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.Map;
 

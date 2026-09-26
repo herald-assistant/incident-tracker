@@ -1,10 +1,11 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.config;
 
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.integrations.database.DatabaseSqlPolicyPort;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -16,7 +17,7 @@ import java.util.Map;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "analysis.database")
-public class DatabaseToolProperties {
+public class DatabaseToolProperties implements DatabaseSqlPolicyPort {
 
     private boolean enabled = false;
     private DatabaseConnectionProperties connectionDefaults = new DatabaseConnectionProperties();

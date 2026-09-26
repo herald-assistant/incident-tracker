@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.adapter.jdbc;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -9,7 +9,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCapabilityScope;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

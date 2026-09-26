@@ -7,7 +7,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
-import pl.mkn.tdw.integrations.database.DatabaseToolProperties;
+import pl.mkn.tdw.integrations.database.DatabaseSqlPolicyPort;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityPort;
 
 import java.util.List;
@@ -18,7 +18,7 @@ public class CopilotIncidentToolAccessPolicyFactory {
 
     private final CopilotIncidentEvidenceCoverageEvaluator coverageEvaluator;
     private final ElasticConnectionAvailabilityPort elasticAvailabilityService;
-    private final DatabaseToolProperties databaseToolProperties;
+    private final DatabaseSqlPolicyPort databaseToolProperties;
 
     public CopilotIncidentToolAccessPolicy create(
             InitialAnalysisRequest request,

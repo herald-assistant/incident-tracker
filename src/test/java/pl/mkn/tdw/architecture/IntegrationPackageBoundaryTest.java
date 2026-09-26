@@ -16,10 +16,12 @@ class IntegrationPackageBoundaryTest {
 
     private static final Path MAIN_JAVA = Path.of("src/main/java");
     private static final String CONFLUENCE_PACKAGE = "pl.mkn.tdw.integrations.confluence";
+    private static final String DATABASE_PACKAGE = "pl.mkn.tdw.integrations.database";
     private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
     private static final String ELASTICSEARCH_PACKAGE = "pl.mkn.tdw.integrations.elasticsearch";
     private static final String JIRA_PACKAGE = "pl.mkn.tdw.integrations.jira";
     private static final Path CONFLUENCE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/confluence");
+    private static final Path DATABASE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/database");
     private static final Path DYNATRACE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/dynatrace");
     private static final Path ELASTICSEARCH_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/elasticsearch");
     private static final Path JIRA_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/jira");
@@ -32,6 +34,12 @@ class IntegrationPackageBoundaryTest {
     @Test
     void confluenceRootContainsOnlyPublicPorts() throws IOException {
         assertRootContainsOnlyPublicPorts(CONFLUENCE_ROOT, CONFLUENCE_PACKAGE, "ConfluencePagePort.java");
+    }
+
+    @Test
+    void databaseRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(DATABASE_ROOT, DATABASE_PACKAGE,
+                "DatabaseDiagnosticPort.java", "DatabaseSqlPolicyPort.java");
     }
 
     @Test
@@ -88,6 +96,12 @@ class IntegrationPackageBoundaryTest {
     }
 
     @Test
+    void databaseConsumersDependOnlyOnPortsAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(DATABASE_PACKAGE,
+                null, "DatabaseDiagnosticPort", "DatabaseSqlPolicyPort");
+    }
+
+    @Test
     void dynatraceConsumersDependOnlyOnPortAndContract() throws IOException {
         assertConsumersDependOnlyOnPortAndContract(DYNATRACE_PACKAGE,
                 "DynatraceProperties", "DynatraceIncidentPort");
@@ -134,7 +148,7 @@ class IntegrationPackageBoundaryTest {
                     var allowed = List.of(portNames).stream()
                             .anyMatch(portName -> type.equals(integrationPackage + "." + portName))
                             || type.startsWith(integrationPackage + ".contract.")
-                            || (file.equals(SETTINGS_SERVICE)
+                            || (settingsPropertiesName != null && file.equals(SETTINGS_SERVICE)
                                     && type.equals(integrationPackage + ".config." + settingsPropertiesName));
                     if (!allowed) {
                         violations.add(MAIN_JAVA.relativize(file) + " imports " + type);

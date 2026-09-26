@@ -1,6 +1,10 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.adapter.jdbc;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.integrations.database.config.DatabaseConnectionProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentPropertiesTestCreator;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,8 +15,8 @@ class DatabaseConnectionRouterTest {
     @Test
     void shouldInferOracleDriverClassFromJdbcUrl() {
         var router = new DatabaseConnectionRouter(new DatabaseToolProperties());
-        var environmentProperties = new DatabaseEnvironmentProperties();
-        environmentProperties.setJdbcUrl(" jdbc:oracle:thin:@db-sandbox.example.internal:1551:CRM\u2028");
+        var environmentProperties = DatabaseEnvironmentPropertiesTestCreator.withJdbcUrl(
+                " jdbc:oracle:thin:@db-sandbox.example.internal:1551:CRM\u2028");
 
         assertEquals("oracle.jdbc.OracleDriver", router.resolveDriverClassName(environmentProperties));
     }
@@ -20,9 +24,9 @@ class DatabaseConnectionRouterTest {
     @Test
     void shouldPreferExplicitDriverClassNameWhenConfigured() {
         var router = new DatabaseConnectionRouter(new DatabaseToolProperties());
-        var environmentProperties = new DatabaseEnvironmentProperties();
-        environmentProperties.setJdbcUrl("jdbc:oracle:thin:@db-sandbox.example.internal:1551:CRM");
-        environmentProperties.setDriverClassName("oracle.jdbc.replay.OracleDataSourceImpl");
+        var environmentProperties = DatabaseEnvironmentPropertiesTestCreator.withJdbcUrlAndDriver(
+                "jdbc:oracle:thin:@db-sandbox.example.internal:1551:CRM",
+                "oracle.jdbc.replay.OracleDataSourceImpl");
 
         assertEquals(
                 "oracle.jdbc.replay.OracleDataSourceImpl",

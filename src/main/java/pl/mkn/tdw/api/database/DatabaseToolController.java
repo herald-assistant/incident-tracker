@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pl.mkn.tdw.integrations.database.DatabaseToolService;
+import pl.mkn.tdw.integrations.database.DatabaseDiagnosticPort;
 
 import java.util.function.Supplier;
 
 import static pl.mkn.tdw.api.database.DatabaseToolApiDtos.*;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.*;
 
 @RestController
 @RequestMapping("/api/database")
@@ -34,7 +34,7 @@ public class DatabaseToolController {
     private static final String COMPARE_MAPPING_OPERATION = "database.mappings.compare-table";
     private static final String READONLY_SQL_OPERATION = "database.sql.readonly";
 
-    private final ObjectProvider<DatabaseToolService> databaseToolService;
+    private final ObjectProvider<DatabaseDiagnosticPort> databaseToolService;
 
     @PostMapping("/scope")
     public DbScopeResult getScope(@Valid @RequestBody DatabaseGetScopeApiRequest request) {
@@ -147,7 +147,7 @@ public class DatabaseToolController {
         ));
     }
 
-    private DatabaseToolService service() {
+    private DatabaseDiagnosticPort service() {
         var service = databaseToolService.getIfAvailable();
         if (service == null) {
             throw DatabaseToolApiException.disabled();

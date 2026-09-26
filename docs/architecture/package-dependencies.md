@@ -95,6 +95,17 @@ portow oraz kontraktu. `api.workspacesettings.WorkspaceSettingsService` jest
 jedynym wyjatkiem dla properties, poniewaz aktualizuje je w runtime.
 `IntegrationPackageBoundaryTest` egzekwuje te granice dla Elasticsearch.
 
+W `integrations.database` pakiet glowny zawiera tylko
+`DatabaseDiagnosticPort` i `DatabaseSqlPolicyPort`. Typowane requesty,
+wyniki, scope i operatory sa w `contract`. Routing, odczyt metadanych oraz
+wykonanie zapytan JDBC mieszcza sie w `adapter.jdbc`; serwis diagnostyki,
+SQL guard, masking i limiting sa w `service`, techniczne modele metadanych
+w `internal.metadata`, a properties w `config`. API i MCP wywoluja port
+diagnostyki; Incident Analysis odczytuje dopuszczenie raw SQL przez port policy.
+Integracja nie tworzy globalnego `spring.datasource` i zachowuje readonly
+execution.
+`IntegrationPackageBoundaryTest` egzekwuje te granice dla Database.
+
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez

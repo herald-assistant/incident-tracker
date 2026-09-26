@@ -1,12 +1,16 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.database.DbOperator;
-import pl.mkn.tdw.integrations.database.JoinType;
-import pl.mkn.tdw.integrations.database.SortDirection;
+import pl.mkn.tdw.integrations.database.DatabaseDiagnosticPort;
+import pl.mkn.tdw.integrations.database.adapter.jdbc.DatabaseMetadataClient;
+import pl.mkn.tdw.integrations.database.adapter.jdbc.DatabaseReadOnlyQueryClient;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
+import pl.mkn.tdw.integrations.database.contract.DbOperator;
+import pl.mkn.tdw.integrations.database.contract.JoinType;
+import pl.mkn.tdw.integrations.database.contract.SortDirection;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,12 +22,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.internal.metadata.DatabaseMetadataModels.*;
 
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "analysis.database", name = "enabled", havingValue = "true")
-public class DatabaseToolService {
+public class DatabaseToolService implements DatabaseDiagnosticPort {
 
     private final DatabaseToolProperties properties;
     private final DatabaseApplicationScopeResolver scopeResolver;

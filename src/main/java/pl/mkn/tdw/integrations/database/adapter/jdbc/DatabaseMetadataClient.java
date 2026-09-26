@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.adapter.jdbc;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
+import static pl.mkn.tdw.integrations.database.internal.metadata.DatabaseMetadataModels.*;
 
 @Component
 @RequiredArgsConstructor
@@ -635,7 +637,7 @@ public class DatabaseMetadataClient {
         return tableNames;
     }
 
-    String camelToSnakeUpper(String value) {
+    public String camelToSnakeUpper(String value) {
         if (!StringUtils.hasText(value)) {
             return null;
         }
@@ -647,7 +649,7 @@ public class DatabaseMetadataClient {
                 .toUpperCase(Locale.ROOT);
     }
 
-    List<String> inferLikelyKeyColumns(TableMetadata tableMetadata) {
+    public List<String> inferLikelyKeyColumns(TableMetadata tableMetadata) {
         var likely = new ArrayList<String>();
 
         for (var column : tableMetadata.columnNames()) {
@@ -688,119 +690,6 @@ public class DatabaseMetadataClient {
         return Integer.parseInt(value.toString());
     }
 }
-
-record TableMetadata(
-        String schema,
-        String tableName,
-        String tableType,
-        String comment,
-        Integer columnCount,
-        List<String> primaryKeyColumns,
-        Integer importedForeignKeyCount,
-        Integer exportedForeignKeyCount,
-        List<String> columnNames
-) {
-    TableKey key() {
-        return new TableKey(schema, tableName);
-    }
-
-    TableMetadata withDetails(
-            TableColumnInfo tableColumnInfo,
-            List<String> primaryKeys,
-            Integer importedCount,
-            Integer exportedCount
-    ) {
-        return new TableMetadata(
-                schema,
-                tableName,
-                tableType,
-                comment,
-                tableColumnInfo.columnCount(),
-                List.copyOf(primaryKeys),
-                importedCount,
-                exportedCount,
-                tableColumnInfo.columnNames()
-        );
-    }
-}
-
-record ColumnMetadata(
-        String schema,
-        String tableName,
-        String columnName,
-        String dataType,
-        Integer dataLength,
-        Integer dataPrecision,
-        Integer dataScale,
-        boolean nullable,
-        String comment
-) {
-}
-
-record TableDescriptionMetadata(
-        String schema,
-        String tableName,
-        String tableType,
-        String comment,
-        List<ColumnDefinition> columns,
-        List<String> primaryKeyColumns,
-        List<ForeignKeyMetadata> importedForeignKeys,
-        List<ForeignKeyMetadata> exportedForeignKeys,
-        List<IndexMetadata> indexes,
-        Set<RelationshipMetadata> inferredRelationships
-) {
-}
-
-record ColumnDefinition(
-        String name,
-        String dataType,
-        Integer dataLength,
-        Integer dataPrecision,
-        Integer dataScale,
-        boolean nullable,
-        String defaultValue,
-        String comment
-) {
-}
-
-record ForeignKeyMetadata(
-        String constraintName,
-        TableKey sourceTable,
-        List<String> sourceColumns,
-        TableKey targetTable,
-        List<String> targetColumns
-) {
-}
-
-record IndexMetadata(
-        String indexName,
-        boolean unique,
-        List<String> columns
-) {
-}
-
-record RelationshipMetadata(
-        TableKey sourceTable,
-        String sourceColumn,
-        TableKey targetTable,
-        String targetColumn,
-        String evidence,
-        boolean declared
-) {
-}
-
-record TableKey(
-        String schema,
-        String tableName
-) {
-}
-
-record TableColumnInfo(
-        int columnCount,
-        List<String> columnNames
-) {
-}
-
 final class ForeignKeyBuilder {
 
     private final String constraintName;

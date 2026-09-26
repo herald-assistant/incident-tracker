@@ -1,10 +1,15 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.BindException;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.bind.BindException;
 import org.springframework.mock.env.MockEnvironment;
+import pl.mkn.tdw.integrations.database.config.DatabaseApplicationProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseConnectionProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentPropertiesTestCreator;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
 
 import java.util.List;
 
@@ -89,7 +94,7 @@ class DatabaseApplicationScopeResolverTest {
         var databaseProperties = new DatabaseToolProperties();
         var connectionDefaults = new DatabaseConnectionProperties();
         connectionDefaults.setDriverClassName("oracle.jdbc.OracleDriver");
-        connectionDefaults.setUsername("INCIDENT_TRACKER_RO");
+        connectionDefaults.setUsername("CRM_READONLY");
         connectionDefaults.setPassword("secret");
         databaseProperties.setConnectionDefaults(connectionDefaults);
 
@@ -110,7 +115,7 @@ class DatabaseApplicationScopeResolverTest {
 
         var effectiveEnvironment = databaseProperties.resolveEnvironment("sandbox-2");
         assertEquals("jdbc:oracle:thin:@//db-dev.example.internal:1521/dev", effectiveEnvironment.getJdbcUrl());
-        assertEquals("INCIDENT_TRACKER_RO", effectiveEnvironment.getUsername());
+        assertEquals("CRM_READONLY", effectiveEnvironment.getUsername());
         assertEquals(
                 "CRM_APP_2",
                 effectiveEnvironment.getApplications().get("crm-service").getSchema()
@@ -147,7 +152,7 @@ class DatabaseApplicationScopeResolverTest {
     @Test
     void shouldBindCurrentConnectionAndApplicationCatalogModel() {
         var environment = new MockEnvironment()
-                .withProperty("analysis.database.connection-defaults.username", "INCIDENT_TRACKER_RO")
+                .withProperty("analysis.database.connection-defaults.username", "CRM_READONLY")
                 .withProperty("analysis.database.connection-defaults.password", "secret")
                 .withProperty("analysis.database.connections.dev.jdbc-url", "jdbc:oracle:thin:@//db-dev.example.internal:1521/dev")
                 .withProperty("analysis.database.applications.crm-service.database-user", "CRM_APP")
@@ -186,8 +191,7 @@ class DatabaseApplicationScopeResolverTest {
 
     private DatabaseToolProperties sampleProperties() {
         var databaseProperties = new DatabaseToolProperties();
-        var environmentProperties = new DatabaseEnvironmentProperties();
-        environmentProperties.setDatabaseAlias("oracle");
+        var environmentProperties = DatabaseEnvironmentPropertiesTestCreator.withDatabaseAlias("oracle");
         environmentProperties.setAllowedSchemas(List.of("common_dict"));
 
         var crmService = new DatabaseApplicationProperties();

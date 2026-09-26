@@ -1,9 +1,15 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
+
+import pl.mkn.tdw.integrations.database.adapter.jdbc.DatabaseMetadataClient;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import pl.mkn.tdw.integrations.database.DbOperator;
-import pl.mkn.tdw.integrations.database.JoinType;
+import pl.mkn.tdw.integrations.database.adapter.jdbc.DatabaseReadOnlyQueryClient;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentProperties;
+import pl.mkn.tdw.integrations.database.config.DatabaseEnvironmentPropertiesTestCreator;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
+import pl.mkn.tdw.integrations.database.contract.DbOperator;
+import pl.mkn.tdw.integrations.database.contract.JoinType;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,7 +25,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.internal.metadata.DatabaseMetadataModels.*;
 
 class DatabaseToolServiceTest {
 
@@ -396,9 +403,7 @@ class DatabaseToolServiceTest {
     }
 
     private DatabaseEnvironmentProperties environment(String alias) {
-        var environment = new DatabaseEnvironmentProperties();
-        environment.setDatabaseAlias(alias);
-        return environment;
+        return DatabaseEnvironmentPropertiesTestCreator.withDatabaseAlias(alias);
     }
 
     private DatabaseApplicationScopeResolver baseResolver() {

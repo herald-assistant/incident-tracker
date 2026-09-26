@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.contract;
 
 import java.util.List;
 import java.util.Map;

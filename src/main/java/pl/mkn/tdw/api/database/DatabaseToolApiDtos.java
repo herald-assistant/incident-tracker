@@ -3,9 +3,9 @@ package pl.mkn.tdw.api.database;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCapabilityScope;
 
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.*;
 
 public final class DatabaseToolApiDtos {
 

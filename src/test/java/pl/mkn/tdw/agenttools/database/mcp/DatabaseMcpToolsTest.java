@@ -2,10 +2,10 @@ package pl.mkn.tdw.agenttools.database.mcp;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
-import pl.mkn.tdw.integrations.database.DbOperator;
-import pl.mkn.tdw.integrations.database.JoinType;
-import pl.mkn.tdw.integrations.database.SortDirection;
-import pl.mkn.tdw.integrations.database.DatabaseToolService;
+import pl.mkn.tdw.integrations.database.contract.DbOperator;
+import pl.mkn.tdw.integrations.database.contract.JoinType;
+import pl.mkn.tdw.integrations.database.contract.SortDirection;
+import pl.mkn.tdw.integrations.database.DatabaseDiagnosticPort;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 
 import java.util.LinkedHashMap;
@@ -17,11 +17,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.*;
+import static pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.*;
 
 class DatabaseMcpToolsTest {
 
-    private final DatabaseToolService databaseToolService = mock(DatabaseToolService.class);
+    private final DatabaseDiagnosticPort databaseToolService = mock(DatabaseDiagnosticPort.class);
     private final DatabaseMcpTools tools = new DatabaseMcpTools(databaseToolService);
 
     @Test

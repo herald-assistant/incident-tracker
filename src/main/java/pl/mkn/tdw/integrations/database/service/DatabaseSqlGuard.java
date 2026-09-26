@@ -1,16 +1,20 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbTableRef;
-import pl.mkn.tdw.integrations.database.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.tdw.integrations.database.adapter.jdbc.DatabaseMetadataClient;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbCapabilityScope;
+import pl.mkn.tdw.integrations.database.contract.DatabaseCapabilityDtos.DbTableRef;
 
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+
+import static pl.mkn.tdw.integrations.database.internal.metadata.DatabaseMetadataModels.*;
 
 @Component
 @RequiredArgsConstructor

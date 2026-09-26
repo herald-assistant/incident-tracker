@@ -204,13 +204,23 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   celowane po zmianie przeszly. `mvn -q clean test` zakonczyl sie powodzeniem:
   1731 testow, 0 failures, 0 errors, 1 skipped. `git diff --check` jest czysty.
   Brak pozostalego driftu Elasticsearch.
-- [ ] Krok 5 — Database: zdefiniowac port(y) dla operator-facing readonly
+- [x] Krok 5 — Database: zdefiniowac port(y) dla operator-facing readonly
   diagnostics uzywanych przez API i MCP; przeniesc publiczne typed
   request/result/scope do `contract`, JDBC/routing do `adapter.jdbc`, SQL
   guard/masking/limiting do `service` lub `internal`, properties do `config`.
   Dowod: `DatabaseToolServiceTest`, metadata/router/guard tests, testy API/MCP,
   guard i protokol; root zawiera tylko porty i nie pojawia sie globalny
   `spring.datasource`.
+  Wynik: root zawiera `DatabaseDiagnosticPort` i `DatabaseSqlPolicyPort`.
+  Publiczne typed request/result/scope/operator contracts sa w `contract`,
+  routing, metadata i wykonanie zapytan JDBC w `adapter.jdbc`, diagnostyka,
+  SQL guard, masking i limiting w `service`, techniczne modele metadanych w
+  `internal.metadata`, a properties w `config`. API/MCP korzystaja z portu
+  diagnostyki, Incident Analysis odczytuje flage raw SQL przez port policy.
+  Baseline oraz testy celowane po zmianie przeszly. `mvn -q clean test`
+  zakonczyl sie powodzeniem: 1733 testy, 0 failures, 0 errors, 1 skipped.
+  `git diff --check` jest czysty; brak globalnego `spring.datasource`.
+  Brak pozostalego driftu Database.
 - [ ] Krok 6 — GitHub: utworzyc root `github` z waskimi portami OAuth, profile
   i token refresh zgodnie z faktycznymi konsumentami; rozdzielic publiczne
   modele/bledy do `contract`, klientow REST do `adapter.rest`, lokalny stan

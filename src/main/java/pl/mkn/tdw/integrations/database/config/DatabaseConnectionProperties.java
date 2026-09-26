@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.config;
 
 import lombok.Getter;
 import lombok.Setter;

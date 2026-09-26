@@ -1,8 +1,9 @@
-package pl.mkn.tdw.integrations.database;
+package pl.mkn.tdw.integrations.database.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import pl.mkn.tdw.integrations.database.config.DatabaseToolProperties;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
