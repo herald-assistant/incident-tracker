@@ -67,6 +67,8 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   import/export i granice bezpieczenstwa opisuja odpowiednio
   `architecture/ui-explorer-runtime-flow.md` oraz
   `architecture/ux-inspector-runtime-flow.md`.
+- `needs/ui-explorer-ngmodule-routing.md` i
+  `plans/ui-explorer-ngmodule-routing.md` opisuja trwajacy zakres UI Explorera.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
