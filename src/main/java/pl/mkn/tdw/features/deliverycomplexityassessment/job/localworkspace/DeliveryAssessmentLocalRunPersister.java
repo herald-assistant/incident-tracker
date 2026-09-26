@@ -7,11 +7,8 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexi
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.export.DeliveryComplexityAssessmentExportEnvelope;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
-
-import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -28,29 +25,12 @@ public class DeliveryAssessmentLocalRunPersister implements DeliveryAssessmentLo
         if (!workspaceProperties.isEnabled()) {
             throw new IllegalStateException("Local workspace is disabled.");
         }
-        var envelope = DeliveryComplexityAssessmentExportEnvelope.from(snapshot, exportTimestamp(snapshot));
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(envelope),
-                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null)
-        );
-        store.save(new LocalAnalysisRunIndexEntry(
-                snapshot.jobId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.jobId() + "/run.json",
-                FEATURE,
-                snapshot.jiraProject() + " | " + snapshot.fromDate() + " - " + snapshot.toDate(),
-                snapshot.status(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        ), record);
-    }
-
-    private Instant exportTimestamp(DeliveryComplexityAssessmentJobStateSnapshot snapshot) {
-        if (snapshot.completedAt() != null) {
-            return snapshot.completedAt();
-        }
-        return snapshot.updatedAt() != null ? snapshot.updatedAt() : snapshot.createdAt();
+        var envelope = DeliveryComplexityAssessmentExportEnvelope.from(snapshot,
+                LocalAnalysisRunSnapshotWriter.exportTimestamp(snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
+        LocalAnalysisRunSnapshotWriter.save(store, objectMapper.valueToTree(envelope),
+                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null),
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE,
+                        snapshot.jiraProject() + " | " + snapshot.fromDate() + " - " + snapshot.toDate(),
+                        snapshot.status(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 }

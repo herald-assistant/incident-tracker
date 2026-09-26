@@ -212,6 +212,9 @@ deterministycznym inputem initial promptu i nie jest dublowany przez MCP.
 
 MCP jest tylko sposobem ekspozycji capability. Tool nie moze zakladac, ze
 wywoluje go Incident Analysis albo Copilot SDK.
+GitLab repository read tools wspoldziela rozstrzyganie exact/prefix sciezek;
+fallback do kolejnego kandydata nastepuje tylko dla 404. Blad dostepu,
+serwera lub transportu pozostaje jawnym bledem odczytu.
 
 Warstwa nie posiada:
 
@@ -305,6 +308,9 @@ Warstwa posiada neutralny lokalny zapis:
 Feature posiada codec swojej zawartosci i decyduje, czy zapis wspiera
 kontynuacje. Local workspace nie importuje feature'ow i nie jest durable job
 queue.
+`localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter` buduje neutralny
+rekord v1 i wpis indeksu z metadanych dostarczonych przez feature. Feature nadal
+tworzy koperte eksportu, nazwe runu i stan kontynuacji.
 
 ## Docelowy graf importow backendu
 

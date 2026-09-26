@@ -7,13 +7,11 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStatus;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
-import java.time.Instant;
 import java.util.EnumSet;
 
 @Component
@@ -59,14 +57,9 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
             return;
         }
         var sanitizedSnapshot = sanitizer.sanitize(snapshot);
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(UiExplorerLocalRunEnvelope.from(
-                        sanitizedSnapshot,
-                        storedAt(sanitizedSnapshot)
-                )),
-                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null)
-        );
-        localAnalysisRunStore.save(indexEntry(sanitizedSnapshot), record);
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore,
+                objectMapper.valueToTree(UiExplorerLocalRunEnvelope.from(sanitizedSnapshot, storedAt(sanitizedSnapshot))),
+                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null), metadata(sanitizedSnapshot));
     }
 
     @Override
@@ -87,11 +80,9 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
             }
             continuationSnapshotStore.save(UiExplorerContinuationSnapshot.from(snapshot, context, storedAt(snapshot)));
         }
-        var record = LocalAnalysisRunRecord.v1(
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore,
                 objectMapper.valueToTree(UiExplorerLocalRunEnvelope.from(sanitizedSnapshot, storedAt(sanitizedSnapshot))),
-                continuation
-        );
-        localAnalysisRunStore.save(indexEntry(sanitizedSnapshot), record);
+                continuation, metadata(sanitizedSnapshot));
     }
 
     private LocalAnalysisRunContinuation continuation(
@@ -123,19 +114,9 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
         );
     }
 
-    private LocalAnalysisRunIndexEntry indexEntry(UiExplorerJobStateSnapshot snapshot) {
-        return new LocalAnalysisRunIndexEntry(
-                snapshot.jobId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.jobId() + "/run.json",
-                FEATURE,
-                displayName(snapshot),
-                snapshot.status().name(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        );
+    private LocalAnalysisRunSnapshotWriter.Metadata metadata(UiExplorerJobStateSnapshot snapshot) {
+        return new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE, displayName(snapshot),
+                snapshot.status().name(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt());
     }
 
     private String displayName(UiExplorerJobStateSnapshot snapshot) {
@@ -151,13 +132,8 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
         return StringUtils.hasText(snapshot.jobId()) ? snapshot.jobId() : "UI Explorer run";
     }
 
-    private Instant storedAt(UiExplorerJobStateSnapshot snapshot) {
-        if (snapshot.completedAt() != null) {
-            return snapshot.completedAt();
-        }
-        if (snapshot.updatedAt() != null) {
-            return snapshot.updatedAt();
-        }
-        return snapshot.createdAt();
+    private java.time.Instant storedAt(UiExplorerJobStateSnapshot snapshot) {
+        return LocalAnalysisRunSnapshotWriter.exportTimestamp(
+                snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt());
     }
 }

@@ -8,12 +8,9 @@ import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.tdw.features.incidentanalysis.job.export.IncidentAnalysisExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
-
-import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -35,12 +32,12 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
             return;
         }
 
-        var exportEnvelope = IncidentAnalysisExportEnvelope.from(snapshot, exportTimestamp(snapshot));
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(exportEnvelope),
-                continuation(snapshot, aiRequest, copilotSessionId)
-        );
-        localAnalysisRunStore.save(indexEntry(snapshot), record);
+        var exportEnvelope = IncidentAnalysisExportEnvelope.from(snapshot,
+                LocalAnalysisRunSnapshotWriter.exportTimestamp(snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore, objectMapper.valueToTree(exportEnvelope),
+                continuation(snapshot, aiRequest, copilotSessionId),
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.analysisId(), FEATURE, displayName(snapshot),
+                        snapshot.status(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 
     @Override
@@ -50,21 +47,6 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
             String copilotSessionId
     ) {
         persistRunSnapshot(snapshot, aiRequest, copilotSessionId);
-    }
-
-    private LocalAnalysisRunIndexEntry indexEntry(AnalysisJobStateSnapshot snapshot) {
-        return new LocalAnalysisRunIndexEntry(
-                snapshot.analysisId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.analysisId() + "/run.json",
-                FEATURE,
-                displayName(snapshot),
-                snapshot.status(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        );
     }
 
     private String displayName(AnalysisJobStateSnapshot snapshot) {
@@ -91,13 +73,4 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
         ).withLatestCopilotSession(copilotSessionId);
     }
 
-    private Instant exportTimestamp(AnalysisJobStateSnapshot snapshot) {
-        if (snapshot.completedAt() != null) {
-            return snapshot.completedAt();
-        }
-        if (snapshot.updatedAt() != null) {
-            return snapshot.updatedAt();
-        }
-        return snapshot.createdAt();
-    }
 }

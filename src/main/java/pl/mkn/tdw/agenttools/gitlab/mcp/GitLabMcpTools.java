@@ -24,6 +24,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientResponseException;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
@@ -31,6 +32,8 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabExactReadError;
+import pl.mkn.tdw.integrations.gitlab.GitLabExactReadException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
@@ -85,6 +88,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.function.Function;
 
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT;
@@ -1319,60 +1323,10 @@ public class GitLabMcpTools {
             String requestedPath,
             int maxCharacters
     ) {
-        var attemptedPaths = new LinkedHashSet<String>();
-        var readErrors = new ArrayList<String>();
-        for (var candidatePath : expandedRepositoryFilePathCandidates(
-                scope.group(),
-                scope.applicationNames(),
-                projectName,
-                requestedPath
-        )) {
-            attemptedPaths.add(candidatePath);
-            var content = tryReadRepositoryFile(scope, projectName, candidatePath, maxCharacters, readErrors);
-            if (content != null) {
-                return new RepositoryFileReadResult(content, null);
-            }
-        }
-
-        var typeDefinitionCandidates = javaTypeDefinitionCandidatePaths(
-                scope,
-                projectName,
-                requestedPath,
-                attemptedPaths
-        );
-        if (typeDefinitionCandidates.size() > 1) {
-            return new RepositoryFileReadResult(null, "File not found.");
-        }
-        for (var candidatePath : typeDefinitionCandidates) {
-            attemptedPaths.add(candidatePath);
-            var content = tryReadRepositoryFile(scope, projectName, candidatePath, maxCharacters, readErrors);
-            if (content != null) {
-                return new RepositoryFileReadResult(content, null);
-            }
-        }
-
-        return new RepositoryFileReadResult(null, "File not found.");
-    }
-
-    private GitLabRepositoryFileContent tryReadRepositoryFile(
-            GitLabToolScope scope,
-            String projectName,
-            String filePath,
-            int maxCharacters,
-            List<String> readErrors
-    ) {
-        try {
-            return gitLabRepositoryPort.readFile(
-                    scope.group(),
-                    projectName,
-                    scope.branch(),
-                    filePath,
-                    maxCharacters
-            );
-        } catch (RuntimeException exception) {
-            readErrors.add(filePath + ": " + toolErrorMessage(exception));
-            return null;
-        }
+        var lookup = lookupRepositoryFilePath(scope, projectName, requestedPath, true,
+                path -> gitLabRepositoryPort.readFile(
+                        scope.group(), projectName, scope.branch(), path, maxCharacters));
+        return new RepositoryFileReadResult(lookup.value(), lookup.error());
     }
 
     private GitLabRepositoryFileChunk readRepositoryFileChunkByExactOrPartialPath(
@@ -1383,28 +1337,14 @@ public class GitLabMcpTools {
             int endLine,
             int maxCharacters
     ) {
-        var readErrors = new ArrayList<String>();
-        for (var candidatePath : expandedRepositoryFilePathCandidates(
-                scope.group(),
-                scope.applicationNames(),
-                projectName,
-                requestedPath
-        )) {
-            try {
-                return gitLabRepositoryPort.readFileChunk(
-                        scope.group(),
-                        projectName,
-                        scope.branch(),
-                        candidatePath,
-                        startLine,
-                        endLine,
-                        maxCharacters
-                );
-            } catch (RuntimeException exception) {
-                readErrors.add(candidatePath + ": " + toolErrorMessage(exception));
-            }
+        var lookup = lookupRepositoryFilePath(scope, projectName, requestedPath, false,
+                path -> gitLabRepositoryPort.readFileChunk(
+                        scope.group(), projectName, scope.branch(), path,
+                        startLine, endLine, maxCharacters));
+        if (lookup.value() == null) {
+            throw new IllegalStateException(lookup.error());
         }
-        throw new IllegalStateException("File not found.");
+        return lookup.value();
     }
 
     private String resolvedRepositoryFilePathOrRequested(
@@ -1420,6 +1360,9 @@ public class GitLabMcpTools {
                 normalizedRequestedPath,
                 includeJavaTypeDefinitionFallback
         );
+        if (resolution.error() != null && !"File not found.".equals(resolution.error())) {
+            throw new IllegalStateException(resolution.error());
+        }
         return StringUtils.hasText(resolution.filePath()) ? resolution.filePath() : normalizedRequestedPath;
     }
 
@@ -1429,6 +1372,21 @@ public class GitLabMcpTools {
             String requestedPath,
             boolean includeJavaTypeDefinitionFallback
     ) {
+        var lookup = lookupRepositoryFilePath(scope, projectName, requestedPath, includeJavaTypeDefinitionFallback,
+                path -> {
+                    gitLabRepositoryPort.readFileMetadata(scope.group(), projectName, scope.branch(), path);
+                    return path;
+                });
+        return new RepositoryFilePathResolutionResult(lookup.value(), lookup.error());
+    }
+
+    private <T> RepositoryPathLookup<T> lookupRepositoryFilePath(
+            GitLabToolScope scope,
+            String projectName,
+            String requestedPath,
+            boolean includeJavaTypeDefinitionFallback,
+            Function<String, T> read
+    ) {
         var attemptedPaths = new LinkedHashSet<String>();
         for (var candidatePath : expandedRepositoryFilePathCandidates(
                 scope.group(),
@@ -1437,43 +1395,63 @@ public class GitLabMcpTools {
                 requestedPath
         )) {
             attemptedPaths.add(candidatePath);
-            if (repositoryFileExists(scope, projectName, candidatePath)) {
-                return new RepositoryFilePathResolutionResult(candidatePath, null);
+            var lookup = tryRepositoryPath(candidatePath, read);
+            if (lookup.value() != null || lookup.failure()) {
+                return lookup;
             }
         }
 
         if (!includeJavaTypeDefinitionFallback) {
-            return new RepositoryFilePathResolutionResult(null, "File not found.");
+            return RepositoryPathLookup.missing();
         }
 
-        var typeDefinitionCandidates = javaTypeDefinitionCandidatePaths(
-                scope,
-                projectName,
-                requestedPath,
-                attemptedPaths
-        );
+        List<String> typeDefinitionCandidates;
+        try {
+            typeDefinitionCandidates = javaTypeDefinitionCandidatePaths(
+                    scope, projectName, requestedPath, attemptedPaths);
+        } catch (RuntimeException exception) {
+            return RepositoryPathLookup.failed(repositoryReadFailure(exception));
+        }
         if (typeDefinitionCandidates.size() != 1) {
-            return new RepositoryFilePathResolutionResult(null, "File not found.");
+            return RepositoryPathLookup.missing();
         }
 
-        var candidatePath = typeDefinitionCandidates.get(0);
-        return repositoryFileExists(scope, projectName, candidatePath)
-                ? new RepositoryFilePathResolutionResult(candidatePath, null)
-                : new RepositoryFilePathResolutionResult(null, "File not found.");
+        return tryRepositoryPath(typeDefinitionCandidates.get(0), read);
     }
 
-    private boolean repositoryFileExists(GitLabToolScope scope, String projectName, String filePath) {
+    private <T> RepositoryPathLookup<T> tryRepositoryPath(String path, Function<String, T> read) {
         try {
-            gitLabRepositoryPort.readFileMetadata(
-                    scope.group(),
-                    projectName,
-                    scope.branch(),
-                    filePath
-            );
-            return true;
+            var value = read.apply(path);
+            return value != null ? RepositoryPathLookup.found(value) : RepositoryPathLookup.missing();
         } catch (RuntimeException exception) {
-            return false;
+            return isNotFound(exception)
+                    ? RepositoryPathLookup.missing()
+                    : RepositoryPathLookup.failed(repositoryReadFailure(exception));
         }
+    }
+
+    private boolean isNotFound(Throwable exception) {
+        for (var cause = exception; cause != null && cause != cause.getCause(); cause = cause.getCause()) {
+            if (cause instanceof GitLabExactReadException exactRead) {
+                return exactRead.error() == GitLabExactReadError.NOT_FOUND;
+            }
+            if (cause instanceof RestClientResponseException response) {
+                return response.getStatusCode().value() == 404;
+            }
+        }
+        return false;
+    }
+
+    private String repositoryReadFailure(Throwable exception) {
+        for (var cause = exception; cause != null && cause != cause.getCause(); cause = cause.getCause()) {
+            if (cause instanceof GitLabExactReadException exactRead && exactRead.upstreamStatus() != null) {
+                return "GitLab repository file read failed: HTTP " + exactRead.upstreamStatus() + ".";
+            }
+            if (cause instanceof RestClientResponseException response) {
+                return "GitLab repository file read failed: HTTP " + response.getStatusCode().value() + ".";
+            }
+        }
+        return "GitLab repository file read failed: " + exception.getClass().getSimpleName() + ".";
     }
 
     private List<String> expandedRepositoryFilePathCandidates(
@@ -1555,6 +1533,9 @@ public class GitLabMcpTools {
                     MAX_TYPE_DEFINITION_SEARCH_RESULTS_PER_TERM
             );
         } catch (RuntimeException ignored) {
+            if (!isNotFound(ignored)) {
+                throw ignored;
+            }
             return List.of();
         }
         var typeFileName = typeName + ".java";
@@ -2678,6 +2659,20 @@ public class GitLabMcpTools {
             String filePath,
             String error
     ) {
+    }
+
+    private record RepositoryPathLookup<T>(T value, String error, boolean failure) {
+        private static <T> RepositoryPathLookup<T> found(T value) {
+            return new RepositoryPathLookup<>(value, null, false);
+        }
+
+        private static <T> RepositoryPathLookup<T> missing() {
+            return new RepositoryPathLookup<>(null, "File not found.", false);
+        }
+
+        private static <T> RepositoryPathLookup<T> failed(String error) {
+            return new RepositoryPathLookup<>(null, error, true);
+        }
     }
 
     private FileMetadataSnapshot readFileMetadata(GitLabToolScope scope, String projectName, String filePath) {

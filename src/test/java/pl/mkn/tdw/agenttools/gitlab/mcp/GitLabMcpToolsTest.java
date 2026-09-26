@@ -3,6 +3,10 @@ package pl.mkn.tdw.agenttools.gitlab.mcp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
@@ -65,6 +69,10 @@ class GitLabMcpToolsTest {
     private static final String DEFAULT_GROUP = "CRM/backend";
     private static final String DEFAULT_BRANCH_REF = "feature/CRM-923";
     private static final List<String> DEFAULT_APPLICATION_NAMES = List.of("backend");
+
+    private static RuntimeException notFound() {
+        return new HttpClientErrorException(HttpStatus.NOT_FOUND);
+    }
 
     private final GitLabMcpTools gitLabMcpTools = GitLabMcpToolsTestCreator.create(
             new TestGitLabRepositoryPort(),
@@ -916,7 +924,7 @@ class GitLabMcpToolsTest {
                 DEFAULT_BRANCH_REF,
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 500
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFile(
                 "CRM",
                 "shared-lib",
@@ -966,7 +974,7 @@ class GitLabMcpToolsTest {
                 DEFAULT_BRANCH_REF,
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 500
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.searchRepositoryFilesByContent(
                 eq("CRM"),
                 eq("shared-lib"),
@@ -1066,7 +1074,7 @@ class GitLabMcpToolsTest {
                 DEFAULT_BRANCH_REF,
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 500
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFile(
                 "CRM",
                 "shared-lib",
@@ -1097,6 +1105,74 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldNotTryAnotherPathWhenGitLabDeniesFileRead() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
+        var path = "src/main/java/com/example/shared/CustomerMapper.java";
+        when(gitLabRepositoryPort.readFile("CRM", "shared-lib", DEFAULT_BRANCH_REF, path, 500))
+                .thenThrow(new HttpClientErrorException(HttpStatus.FORBIDDEN));
+
+        var exception = assertThrows(IllegalStateException.class, () -> tools.readRepositoryFile(
+                "shared-lib", DEFAULT_BRANCH_REF, List.of("backend"), path, 500,
+                "Czytam plik z repozytorium CRM.", gitLabToolContext()
+        ));
+
+        assertEquals("GitLab repository file read failed: HTTP 403.", exception.getMessage());
+        verify(gitLabRepositoryPort).readFile("CRM", "shared-lib", DEFAULT_BRANCH_REF, path, 500);
+        verifyNoMoreInteractions(gitLabRepositoryPort);
+    }
+
+    @Test
+    void shouldKeepUnauthorizedReadDistinctFromMissingFile() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
+        var path = "src/main/java/com/example/crm/CustomerService.java";
+        when(gitLabRepositoryPort.readFile(DEFAULT_GROUP, "crm-customer-api", DEFAULT_BRANCH_REF, path, 500))
+                .thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED));
+
+        var exception = assertThrows(IllegalStateException.class, () -> tools.readRepositoryFile(
+                "crm-customer-api", DEFAULT_BRANCH_REF, DEFAULT_APPLICATION_NAMES, path, 500,
+                "Czytam kod CRM.", gitLabToolContext()
+        ));
+
+        assertEquals("GitLab repository file read failed: HTTP 401.", exception.getMessage());
+    }
+
+    @Test
+    void shouldPreserveServerFailureInBatchReadResult() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
+        var path = "src/main/java/com/example/crm/CustomerService.java";
+        when(gitLabRepositoryPort.readFile(DEFAULT_GROUP, "crm-customer-api", DEFAULT_BRANCH_REF, path, 500))
+                .thenThrow(new HttpServerErrorException(HttpStatus.SERVICE_UNAVAILABLE));
+
+        var response = tools.readRepositoryFilesByPath(
+                "crm-customer-api", DEFAULT_BRANCH_REF, DEFAULT_APPLICATION_NAMES,
+                List.of(path), 500, 500, "Czytam kod CRM.", gitLabToolContext()
+        );
+
+        assertEquals(1, response.failedFileCount());
+        assertEquals("GitLab repository file read failed: HTTP 503.", response.files().get(0).error());
+    }
+
+    @Test
+    void shouldPreserveTransportFailureInChunkRead() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpTools(gitLabRepositoryPort);
+        var path = "src/main/java/com/example/crm/CustomerService.java";
+        when(gitLabRepositoryPort.readFileChunk(
+                DEFAULT_GROUP, "crm-customer-api", DEFAULT_BRANCH_REF, path, 1, 10, 500
+        )).thenThrow(new ResourceAccessException("connection timed out"));
+
+        var exception = assertThrows(IllegalStateException.class, () -> tools.readRepositoryFileChunk(
+                "crm-customer-api", DEFAULT_BRANCH_REF, DEFAULT_APPLICATION_NAMES,
+                path, 1, 10, 500, "Czytam fragment kodu CRM.", gitLabToolContext()
+        ));
+
+        assertEquals("GitLab repository file read failed: ResourceAccessException.", exception.getMessage());
+    }
+
+    @Test
     void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInRepositoryFileOutline() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
@@ -1106,7 +1182,7 @@ class GitLabMcpToolsTest {
                 DEFAULT_BRANCH_REF,
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 30_000
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFile(
                 "CRM",
                 "shared-lib",
@@ -1157,7 +1233,7 @@ class GitLabMcpToolsTest {
                 3,
                 5,
                 500
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM",
                 "shared-lib",
@@ -1205,7 +1281,7 @@ class GitLabMcpToolsTest {
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
                 "src/main/java/com/example/shared/CustomerMapper.java"
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFileMetadata(
                 "CRM",
                 "shared-lib",
@@ -1275,7 +1351,7 @@ class GitLabMcpToolsTest {
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
                 "src/main/resources/openapi/customer-api.yml"
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFileMetadata(
                 "CRM",
                 "shared-lib",
@@ -1516,7 +1592,7 @@ class GitLabMcpToolsTest {
                 "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/MissingCustomerService.java",
                 10
-        )).thenThrow(new IllegalStateException("file not found"));
+        )).thenThrow(notFound());
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-api",

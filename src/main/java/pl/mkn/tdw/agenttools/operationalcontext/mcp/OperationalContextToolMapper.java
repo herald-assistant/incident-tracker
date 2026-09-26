@@ -3,6 +3,7 @@ package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.*;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearch;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
@@ -10,7 +11,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRes
 
 import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -131,11 +131,14 @@ public class OperationalContextToolMapper {
         }
 
         var queryText = query.trim();
-        var tokens = tokens(queryText);
-        var results = index(catalog).entities().stream()
-                .filter(entity -> normalizedTypes.isEmpty() || normalizedTypes.contains(entity.type()))
-                .map(entity -> score(entity, queryText, tokens))
-                .filter(result -> result.score() > 0)
+        var entitiesByKey = index(catalog).entities().stream()
+                .collect(Collectors.toMap(entity -> entity.type() + "\u0000" + entity.id(),
+                        Function.identity(), (first, ignored) -> first, LinkedHashMap::new));
+        var results = OperationalContextCatalogSearch.search(catalog, queryText).stream()
+                .filter(match -> normalizedTypes.isEmpty() || normalizedTypes.contains(match.type()))
+                .map(match -> new OpctxScoredEntity(
+                        entitiesByKey.get(match.type() + "\u0000" + match.id()),
+                        match.score(), match.fields(), match.signals(), match.why()))
                 .sorted(Comparator.comparingInt(OpctxScoredEntity::score).reversed()
                         .thenComparing(result -> result.entity().type())
                         .thenComparing(result -> result.entity().label(), String.CASE_INSENSITIVE_ORDER))
@@ -820,71 +823,6 @@ public class OperationalContextToolMapper {
                 scored.why(),
                 scored.entity().sourceRefs()
         );
-    }
-
-    private OpctxScoredEntity score(OpctxCatalogEntity entity, String query, List<String> tokens) {
-        var matchedFields = new LinkedHashSet<String>();
-        var matchedSignals = new LinkedHashSet<String>();
-        var score = 0;
-
-        score = Math.max(score, scoreValues("identity", entity.identityValues(), query, tokens, matchedFields, matchedSignals, 100, 90, 75));
-        score = Math.max(score, scoreValues("signals", entity.signalValues(), query, tokens, matchedFields, matchedSignals, 70, 65, 55));
-        score = Math.max(score, scoreValues("summary", entity.summaryValues(), query, tokens, matchedFields, matchedSignals, 50, 45, 35));
-        score = Math.max(score, scoreValues("relations", entity.relationValues(), query, tokens, matchedFields, matchedSignals, 40, 35, 25));
-
-        var why = matchedFields.isEmpty()
-                ? null
-                : "Matched %s for %s:%s.".formatted(String.join(", ", matchedFields), entity.type(), entity.id());
-        return new OpctxScoredEntity(
-                entity,
-                score,
-                List.copyOf(matchedFields),
-                List.copyOf(limit(matchedSignals, 8)),
-                why
-        );
-    }
-
-    private int scoreValues(
-            String field,
-            List<String> values,
-            String query,
-            List<String> tokens,
-            Set<String> matchedFields,
-            Set<String> matchedSignals,
-            int exactScore,
-            int containsScore,
-            int tokenScore
-    ) {
-        var normalizedQuery = normalize(query);
-        var normalizedTokens = tokens.stream().map(this::normalize).filter(StringUtils::hasText).toList();
-        var fieldScore = 0;
-
-        for (var value : values) {
-            var normalizedValue = normalize(value);
-            if (!StringUtils.hasText(normalizedValue)) {
-                continue;
-            }
-
-            if (normalizedValue.equals(normalizedQuery)) {
-                fieldScore = Math.max(fieldScore, exactScore);
-                matchedFields.add(field);
-                matchedSignals.add(value);
-                continue;
-            }
-            if (normalizedValue.contains(normalizedQuery)) {
-                fieldScore = Math.max(fieldScore, containsScore);
-                matchedFields.add(field);
-                matchedSignals.add(value);
-                continue;
-            }
-            if (!normalizedTokens.isEmpty() && normalizedTokens.stream().allMatch(normalizedValue::contains)) {
-                fieldScore = Math.max(fieldScore, tokenScore);
-                matchedFields.add(field);
-                matchedSignals.add(value);
-            }
-        }
-
-        return fieldScore;
     }
 
     private boolean matchesFilter(OpctxCatalogEntity entity, String filter) {
@@ -1848,16 +1786,6 @@ public class OperationalContextToolMapper {
     private boolean containsNormalized(List<String> values, String expected) {
         var normalizedExpected = normalize(expected);
         return safeList(values).stream().map(this::normalize).anyMatch(normalizedExpected::equals);
-    }
-
-    private List<String> tokens(String value) {
-        if (!StringUtils.hasText(value)) {
-            return List.of();
-        }
-        return Arrays.stream(normalize(value).split("\\s+"))
-                .filter(StringUtils::hasText)
-                .distinct()
-                .toList();
     }
 
     private String normalize(String value) {

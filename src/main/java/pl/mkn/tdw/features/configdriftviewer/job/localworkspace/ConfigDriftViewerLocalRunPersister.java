@@ -6,11 +6,8 @@ import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerJobStateSnapshot;
 import pl.mkn.tdw.features.configdriftviewer.job.export.ConfigDriftViewerExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
-
-import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -29,38 +26,13 @@ public class ConfigDriftViewerLocalRunPersister
         }
         var envelope = ConfigDriftViewerExportEnvelope.from(
                 snapshot,
-                exportTimestamp(snapshot)
+                LocalAnalysisRunSnapshotWriter.exportTimestamp(snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt())
         );
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(envelope),
-                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null)
-        );
-        localAnalysisRunStore.save(indexEntry(snapshot), record);
-    }
-
-    private LocalAnalysisRunIndexEntry indexEntry(ConfigDriftViewerJobStateSnapshot snapshot) {
-        return new LocalAnalysisRunIndexEntry(
-                snapshot.jobId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.jobId() + "/run.json",
-                FEATURE,
-                snapshot.systemIds().size() + " komponentów · " + snapshot.sourceBranch() + " → "
-                        + snapshot.targetBranch() + " · " + snapshot.mode(),
-                snapshot.status(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        );
-    }
-
-    private Instant exportTimestamp(ConfigDriftViewerJobStateSnapshot snapshot) {
-        if (snapshot.completedAt() != null) {
-            return snapshot.completedAt();
-        }
-        if (snapshot.updatedAt() != null) {
-            return snapshot.updatedAt();
-        }
-        return snapshot.createdAt();
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore, objectMapper.valueToTree(envelope),
+                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null),
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE,
+                        snapshot.systemIds().size() + " komponentów · " + snapshot.sourceBranch() + " → "
+                                + snapshot.targetBranch() + " · " + snapshot.mode(),
+                        snapshot.status(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 }

@@ -7,8 +7,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.export.FlowExplorerExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
@@ -31,27 +30,12 @@ public class FlowExplorerLocalRunPersister implements FlowExplorerLocalRunPersis
             return;
         }
 
-        var exportEnvelope = FlowExplorerExportEnvelope.from(snapshot, exportTimestamp(snapshot));
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(exportEnvelope),
-                continuation(authRef, copilotSessionId)
-        );
-        localAnalysisRunStore.save(indexEntry(snapshot), record);
-    }
-
-    private LocalAnalysisRunIndexEntry indexEntry(FlowExplorerJobStateSnapshot snapshot) {
-        return new LocalAnalysisRunIndexEntry(
-                snapshot.jobId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.jobId() + "/run.json",
-                FEATURE,
-                displayName(snapshot),
-                snapshot.status(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        );
+        var exportEnvelope = FlowExplorerExportEnvelope.from(snapshot,
+                LocalAnalysisRunSnapshotWriter.exportTimestamp(snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore, objectMapper.valueToTree(exportEnvelope),
+                continuation(authRef, copilotSessionId),
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE, displayName(snapshot),
+                        snapshot.status(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 
     private String displayName(FlowExplorerJobStateSnapshot snapshot) {
@@ -93,13 +77,4 @@ public class FlowExplorerLocalRunPersister implements FlowExplorerLocalRunPersis
         ).withLatestCopilotSession(copilotSessionId);
     }
 
-    private java.time.Instant exportTimestamp(FlowExplorerJobStateSnapshot snapshot) {
-        if (snapshot.completedAt() != null) {
-            return snapshot.completedAt();
-        }
-        if (snapshot.updatedAt() != null) {
-            return snapshot.updatedAt();
-        }
-        return snapshot.createdAt();
-    }
 }

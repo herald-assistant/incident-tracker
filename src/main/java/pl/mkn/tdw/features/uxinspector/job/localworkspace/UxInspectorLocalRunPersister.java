@@ -9,8 +9,6 @@ import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.*;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
-import java.time.Instant;
-
 @Component
 @RequiredArgsConstructor
 public class UxInspectorLocalRunPersister implements UxInspectorLocalRunPersistence {
@@ -26,8 +24,8 @@ public class UxInspectorLocalRunPersister implements UxInspectorLocalRunPersiste
     @Override
     public void persistRunSnapshot(UxInspectorJobStateSnapshot snapshot, AnalysisAiAuthRef authRef, String copilotSessionId) {
         if (snapshot == null) return;
-        var timestamp = snapshot.completedAt() != null ? snapshot.completedAt()
-                : snapshot.updatedAt() != null ? snapshot.updatedAt() : snapshot.createdAt();
+        var timestamp = LocalAnalysisRunSnapshotWriter.exportTimestamp(
+                snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt());
         var eligible = (snapshot.status() == pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStatus.COMPLETED
                 || snapshot.status() == pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStatus.PARTIAL)
                 && snapshot.report() != null && snapshot.result() != null && StringUtils.hasText(copilotSessionId);
@@ -38,11 +36,10 @@ public class UxInspectorLocalRunPersister implements UxInspectorLocalRunPersiste
                     LocalAnalysisRunContinuation.COPILOT_RUNTIME_GITHUB_COPILOT_SDK,
                     LocalAnalysisRunContinuation.CONTINUATION_MODE_COPILOT_SESSION)
                 : new LocalAnalysisRunContinuation(false, null, null, null, null, null, null);
-        var record = LocalAnalysisRunRecord.v1(objectMapper.valueToTree(UxInspectorExportEnvelope.from(snapshot, timestamp)), continuation);
-        store.save(new LocalAnalysisRunIndexEntry(snapshot.jobId(), LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION, "runs/" + snapshot.jobId() + "/run.json", FEATURE,
-                displayName(snapshot), snapshot.status().name(), snapshot.createdAt(), snapshot.updatedAt(),
-                snapshot.completedAt()), record);
+        LocalAnalysisRunSnapshotWriter.save(store,
+                objectMapper.valueToTree(UxInspectorExportEnvelope.from(snapshot, timestamp)), continuation,
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE, displayName(snapshot),
+                        snapshot.status().name(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 
     private String displayName(UxInspectorJobStateSnapshot snapshot) {

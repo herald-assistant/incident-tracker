@@ -8,6 +8,7 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobStatus;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 
 import java.net.URI;
@@ -47,28 +48,16 @@ public class OperationalContextAssistanceLocalRunPersister
                         return null;
                     }
                 }).orElse(null);
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(OperationalContextAssistanceExportEnvelope.from(
-                        snapshot, request, requiredRepositoryScopeIds, previous)),
-                null
-        );
+        var envelope = OperationalContextAssistanceExportEnvelope.from(
+                snapshot, request, requiredRepositoryScopeIds, previous);
         var runs = localAnalysisRunStore.listRuns();
         var existingName = (runs != null ? runs : List.<LocalAnalysisRunIndexEntry>of()).stream()
                 .filter(entry -> snapshot.jobId().equals(entry.analysisId()) && FEATURE.equals(entry.feature()))
                 .map(LocalAnalysisRunIndexEntry::name).findFirst().orElse(null);
-        var index = new LocalAnalysisRunIndexEntry(
-                snapshot.jobId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.jobId() + "/run.json",
-                FEATURE,
-                existingName != null ? existingName : displayName(request),
-                snapshot.status().name(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        );
-        localAnalysisRunStore.save(index, record);
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore, objectMapper.valueToTree(envelope), null,
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE,
+                        existingName != null ? existingName : displayName(request), snapshot.status().name(),
+                        snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 
     @Override

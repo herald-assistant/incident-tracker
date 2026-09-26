@@ -31,6 +31,7 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.ValidationFi
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearch;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
@@ -217,19 +218,9 @@ public class OperationalContextViewService {
         if (!StringUtils.hasText(query)) {
             return List.of();
         }
-        var view = view();
-        var normalizedQuery = normalize(query);
-        var results = new ArrayList<OperationalContextSearchResultDto>();
-        addEntrySearchResults(results, view, SYSTEM, view.catalog().systems(), normalizedQuery);
-        addEntrySearchResults(results, view, REPOSITORY, view.catalog().repositories(), normalizedQuery);
-        addCodeSearchScopeSearchResults(results, view, normalizedQuery);
-        addEntrySearchResults(results, view, PROCESS, view.catalog().processes(), normalizedQuery);
-        addEntrySearchResults(results, view, INTEGRATION, view.catalog().integrations(), normalizedQuery);
-        addEntrySearchResults(results, view, BOUNDED_CONTEXT, view.catalog().boundedContexts(), normalizedQuery);
-        addEntrySearchResults(results, view, TEAM, view.catalog().teams(), normalizedQuery);
-        addGlossarySearchResults(results, view, normalizedQuery);
-        addHandoffSearchResults(results, view, normalizedQuery);
-        return results.stream()
+        var catalog = view().catalog();
+        return OperationalContextCatalogSearch.search(catalog, query).stream()
+                .map(match -> searchResultFor(catalog, match))
                 .sorted(Comparator.comparingInt((OperationalContextSearchResultDto result) -> confidenceRank(result.confidence()))
                         .thenComparing(OperationalContextSearchResultDto::label))
                 .toList();
@@ -728,104 +719,40 @@ public class OperationalContextViewService {
         );
     }
 
-    private void addEntrySearchResults(
-            List<OperationalContextSearchResultDto> results,
-            CatalogView view,
-            String type,
-            List<? extends OperationalContextEntry> entries,
-            String normalizedQuery
+    private OperationalContextSearchResultDto searchResultFor(
+            OperationalContextCatalog catalog,
+            OperationalContextCatalogSearch.Match match
     ) {
-        for (var entry : entries) {
-            var match = matchEntry(entry, normalizedQuery);
-            if (match != null) {
-                results.add(searchResult(type, entry.id(), entry.label(), summaryText(entry), match));
+        var resultMatch = new SearchMatch(match.score() >= 65 ? "high" : "medium", match.fields(), match.why());
+        return switch (match.type()) {
+            case "system" -> entrySearchResult(SYSTEM, catalog.systems(), match.id(), resultMatch);
+            case "repository" -> entrySearchResult(REPOSITORY, catalog.repositories(), match.id(), resultMatch);
+            case "process" -> entrySearchResult(PROCESS, catalog.processes(), match.id(), resultMatch);
+            case "integration" -> entrySearchResult(INTEGRATION, catalog.integrations(), match.id(), resultMatch);
+            case "boundedContext" -> entrySearchResult(BOUNDED_CONTEXT, catalog.boundedContexts(), match.id(), resultMatch);
+            case "team" -> entrySearchResult(TEAM, catalog.teams(), match.id(), resultMatch);
+            case "codeSearchScope" -> {
+                var scope = catalog.codeSearchScopes().stream().filter(value -> value.id().equals(match.id())).findFirst().orElseThrow();
+                yield searchResult(CODE_SEARCH_SCOPE, scope.id(), firstNonBlank(scope.name(), scope.id()), scope.summary(), resultMatch);
             }
-        }
+            case "glossaryTerm" -> {
+                var term = catalog.glossaryTerms().stream().filter(value -> value.id().equals(match.id())).findFirst().orElseThrow();
+                yield searchResult(GLOSSARY_TERM, term.id(), term.term(), term.definition(), resultMatch);
+            }
+            case "handoffRule" -> {
+                var rule = catalog.handoffRules().stream().filter(value -> value.id().equals(match.id())).findFirst().orElseThrow();
+                yield searchResult(HANDOFF_RULE, rule.id(), rule.title(),
+                        firstNonBlank(first(rule.useWhen()), first(rule.expectedFirstAction()), first(rule.notes())), resultMatch);
+            }
+            default -> throw new IllegalArgumentException("Unknown operational context entity type: " + match.type());
+        };
     }
 
-    private SearchMatch matchEntry(OperationalContextEntry entry, String normalizedQuery) {
-        if (normalize(entry.id()).equals(normalizedQuery) || normalize(entry.label()).equals(normalizedQuery)) {
-            return new SearchMatch("high", List.of("identity"), "Exact catalog identity match.");
-        }
-        if (containsAny(normalizedQuery, entry.aliases(), entry.useFor(), entry.matchSignals().allValues())) {
-            return new SearchMatch("high", List.of("signals"), "Matched aliases, usage or catalog signals.");
-        }
-        if (containsAny(normalizedQuery, textValues(entry.summary(), entry.purpose()), entry.genericSignals())) {
-            return new SearchMatch("medium", List.of("summary"), "Matched catalog summary or related signals.");
-        }
-        if (containsAny(normalizedQuery, referencesValues(entry.references()))) {
-            return new SearchMatch("medium", List.of("relations"), "Matched semantic relation ids.");
-        }
-        return null;
-    }
-
-    private void addCodeSearchScopeSearchResults(
-            List<OperationalContextSearchResultDto> results,
-            CatalogView view,
-            String normalizedQuery
+    private OperationalContextSearchResultDto entrySearchResult(
+            String type, List<? extends OperationalContextEntry> entries, String id, SearchMatch match
     ) {
-        for (var scope : view.catalog().codeSearchScopes()) {
-            var values = new ArrayList<String>();
-            values.add(scope.id());
-            values.add(scope.name());
-            values.add(scope.summary());
-            values.add(scope.scopeType());
-            values.add(scope.target().type());
-            values.add(scope.target().id());
-            values.addAll(scope.useFor());
-            values.addAll(scope.limitations());
-            scope.repositories().forEach(repository -> {
-                values.add(repository.repoId());
-                values.add(repository.role());
-                values.add(repository.reason());
-                values.addAll(repository.readFor());
-                values.add(repository.searchMode());
-                values.addAll(repository.pathPrefixes());
-            });
-            if (containsAny(normalizedQuery, values)) {
-                results.add(searchResult(
-                        CODE_SEARCH_SCOPE,
-                        scope.id(),
-                        firstNonBlank(scope.name(), scope.id()),
-                        scope.summary(),
-                        new SearchMatch("high", List.of("codeSearchScope"), "Matched code-search target or repository scope.")
-                ));
-            }
-        }
-    }
-
-    private void addGlossarySearchResults(List<OperationalContextSearchResultDto> results, CatalogView view, String normalizedQuery) {
-        for (var term : view.catalog().glossaryTerms()) {
-            if (containsAny(normalizedQuery, textValues(term.id(), term.term(), term.definition()), term.matchSignals(), term.synonyms())) {
-                results.add(searchResult(
-                        GLOSSARY_TERM,
-                        term.id(),
-                        term.term(),
-                        term.definition(),
-                        new SearchMatch("medium", List.of("glossary"), "Matched glossary term.")
-                ));
-            }
-        }
-    }
-
-    private void addHandoffSearchResults(List<OperationalContextSearchResultDto> results, CatalogView view, String normalizedQuery) {
-        for (var rule : view.catalog().handoffRules()) {
-            if (containsAny(
-                    normalizedQuery,
-                    textValues(rule.id(), rule.title()),
-                    rule.useWhen(),
-                    rule.requiredEvidence(),
-                    rule.expectedFirstAction()
-            )) {
-                results.add(searchResult(
-                        HANDOFF_RULE,
-                        rule.id(),
-                        rule.title(),
-                        firstNonBlank(first(rule.useWhen()), first(rule.expectedFirstAction()), first(rule.notes())),
-                        new SearchMatch("medium", List.of("handoff"), "Matched handoff rule.")
-                ));
-            }
-        }
+        var entry = entries.stream().filter(value -> value.id().equals(id)).findFirst().orElseThrow();
+        return searchResult(type, entry.id(), entry.label(), summaryText(entry), match);
     }
 
     private OperationalContextSearchResultDto searchResult(String type, String id, String label, String subtitle, SearchMatch match) {

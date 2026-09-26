@@ -1,12 +1,14 @@
 package pl.mkn.tdw.api.operationalcontext;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.agenttools.operationalcontext.mcp.OperationalContextToolMapper;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,6 +25,23 @@ import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixture
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextValidationTestCreator.create;
 
 class OperationalContextViewServiceTest {
+
+    @Test
+    void shouldFindTheSameCatalogEntitiesAsOperationalContextTool() {
+        var catalog = typicalCatalog();
+        var service = new OperationalContextViewService(port(catalog), create());
+        var toolMapper = new OperationalContextToolMapper();
+
+        for (var query : List.of("crm-consent-service", "business-analysis", "consent-registry-handoff", "Customer Consent")) {
+            var apiIds = service.search(query).stream()
+                    .map(result -> result.type().replace("-", "") + ":" + result.id())
+                    .collect(Collectors.toSet());
+            var toolIds = toolMapper.search(catalog, query, List.of(), 20).results().stream()
+                    .map(result -> result.type().toLowerCase() + ":" + result.id())
+                    .collect(Collectors.toSet());
+            assertEquals(toolIds, apiIds, query);
+        }
+    }
 
     @Test
     void shouldReturnEmptySummaryForStarterTemplates() {

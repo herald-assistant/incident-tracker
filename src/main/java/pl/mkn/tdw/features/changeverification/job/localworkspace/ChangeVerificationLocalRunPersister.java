@@ -7,11 +7,8 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.changeverification.job.export.ChangeVerificationExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
-import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
-
-import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -28,27 +25,12 @@ public class ChangeVerificationLocalRunPersister implements ChangeVerificationLo
             return;
         }
 
-        var exportEnvelope = ChangeVerificationExportEnvelope.from(snapshot, exportTimestamp(snapshot));
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(exportEnvelope),
-                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null)
-        );
-        localAnalysisRunStore.save(indexEntry(snapshot), record);
-    }
-
-    private LocalAnalysisRunIndexEntry indexEntry(ChangeVerificationJobStateSnapshot snapshot) {
-        return new LocalAnalysisRunIndexEntry(
-                snapshot.jobId(),
-                LocalAnalysisRunRecord.SCHEMA,
-                LocalAnalysisRunRecord.VERSION,
-                "runs/" + snapshot.jobId() + "/run.json",
-                FEATURE,
-                displayName(snapshot),
-                snapshot.status(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt()
-        );
+        var exportEnvelope = ChangeVerificationExportEnvelope.from(snapshot,
+                LocalAnalysisRunSnapshotWriter.exportTimestamp(snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
+        LocalAnalysisRunSnapshotWriter.save(localAnalysisRunStore, objectMapper.valueToTree(exportEnvelope),
+                new LocalAnalysisRunContinuation(false, null, null, null, null, null, null),
+                new LocalAnalysisRunSnapshotWriter.Metadata(snapshot.jobId(), FEATURE, displayName(snapshot),
+                        snapshot.status(), snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt()));
     }
 
     private String displayName(ChangeVerificationJobStateSnapshot snapshot) {
@@ -61,13 +43,4 @@ public class ChangeVerificationLocalRunPersister implements ChangeVerificationLo
         return StringUtils.hasText(snapshot.jobId()) ? snapshot.jobId() : "Change Verification run";
     }
 
-    private Instant exportTimestamp(ChangeVerificationJobStateSnapshot snapshot) {
-        if (snapshot.completedAt() != null) {
-            return snapshot.completedAt();
-        }
-        if (snapshot.updatedAt() != null) {
-            return snapshot.updatedAt();
-        }
-        return snapshot.createdAt();
-    }
 }

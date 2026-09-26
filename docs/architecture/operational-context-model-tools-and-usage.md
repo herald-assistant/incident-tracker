@@ -697,6 +697,12 @@ Operational context tools sa neutralna capability pod prefixem `opctx_`:
 - `opctx_search`,
 - `opctx_get_entity`.
 
+`GET /api/operational-context/search` i `opctx_search` korzystaja z tego samego
+indeksu dopasowan w `integrations.operationalcontext`: tozsamosc, sygnaly,
+opis i relacje sa normalizowane oraz oceniane jednakowo. API zachowuje
+operatorskie typy i tekstowe confidence, a tool swoj ranking liczbowy, limit
+i liste dopasowanych sygnalow.
+
 Tools nie przyjmuja `correlationId`, `environment`, `gitLabGroup` ani
 `gitLabBranch` jako model-facing input. Scope katalogu pochodzi z konfiguracji
 aplikacji i adaptera.
