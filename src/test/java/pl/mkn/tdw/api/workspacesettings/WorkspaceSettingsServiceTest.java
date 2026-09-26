@@ -8,7 +8,7 @@ import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.jira.JiraProperties;
+import pl.mkn.tdw.integrations.jira.config.JiraProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceConfluenceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsStore;

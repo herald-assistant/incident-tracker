@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.contract;
 
 public record JiraIssueLink(
         String type,

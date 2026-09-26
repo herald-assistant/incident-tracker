@@ -100,7 +100,7 @@ public class ChangeVerificationJobService {
             @Override
             public void onJiraMaterialCompleted(
                     String issueKey,
-                    pl.mkn.tdw.integrations.jira.JiraIssueMaterial jiraIssue,
+                    pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial jiraIssue,
                     List<String> limitations
             ) {
                 job.markJiraMaterialCompleted(issueKey, jiraIssue, limitations);

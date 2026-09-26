@@ -17,8 +17,10 @@ class IntegrationPackageBoundaryTest {
     private static final Path MAIN_JAVA = Path.of("src/main/java");
     private static final String CONFLUENCE_PACKAGE = "pl.mkn.tdw.integrations.confluence";
     private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
+    private static final String JIRA_PACKAGE = "pl.mkn.tdw.integrations.jira";
     private static final Path CONFLUENCE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/confluence");
     private static final Path DYNATRACE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/dynatrace");
+    private static final Path JIRA_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/jira");
     private static final Path SETTINGS_SERVICE = MAIN_JAVA.resolve(
             "pl/mkn/tdw/api/workspacesettings/WorkspaceSettingsService.java");
     private static final Pattern PUBLIC_PORT = Pattern.compile("\\bpublic\\s+interface\\s+\\w+Port\\b");
@@ -35,12 +37,22 @@ class IntegrationPackageBoundaryTest {
         assertRootContainsOnlyPublicPorts(DYNATRACE_ROOT, DYNATRACE_PACKAGE, "DynatraceIncidentPort.java");
     }
 
-    private void assertRootContainsOnlyPublicPorts(Path root, String integrationPackage, String expectedPort) throws IOException {
+    @Test
+    void jiraRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(JIRA_ROOT, JIRA_PACKAGE,
+                "JiraIssuePort.java", "JiraIssueSearchPort.java", "JiraIssueStatusHistoryPort.java");
+    }
+
+    private void assertRootContainsOnlyPublicPorts(
+            Path root,
+            String integrationPackage,
+            String... expectedPorts
+    ) throws IOException {
         var violations = new ArrayList<String>();
         try (var files = Files.list(root)) {
             var rootTypes = files.filter(path -> path.toString().endsWith(".java")).toList();
-            assertEquals(List.of(expectedPort), rootTypes.stream()
-                    .map(path -> path.getFileName().toString()).toList());
+            assertEquals(List.of(expectedPorts).stream().sorted().toList(), rootTypes.stream()
+                    .map(path -> path.getFileName().toString()).sorted().toList());
             for (var file : rootTypes) {
                 var content = Files.readString(file);
                 if (!file.getFileName().toString().endsWith("Port.java")
@@ -63,19 +75,25 @@ class IntegrationPackageBoundaryTest {
     @Test
     void confluenceConsumersDependOnlyOnPortAndContract() throws IOException {
         assertConsumersDependOnlyOnPortAndContract(CONFLUENCE_PACKAGE,
-                "ConfluencePagePort", "ConfluenceProperties");
+                "ConfluenceProperties", "ConfluencePagePort");
     }
 
     @Test
     void dynatraceConsumersDependOnlyOnPortAndContract() throws IOException {
         assertConsumersDependOnlyOnPortAndContract(DYNATRACE_PACKAGE,
-                "DynatraceIncidentPort", "DynatraceProperties");
+                "DynatraceProperties", "DynatraceIncidentPort");
+    }
+
+    @Test
+    void jiraConsumersDependOnlyOnPortsAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(JIRA_PACKAGE,
+                "JiraProperties", "JiraIssuePort", "JiraIssueSearchPort", "JiraIssueStatusHistoryPort");
     }
 
     private void assertConsumersDependOnlyOnPortAndContract(
             String integrationPackage,
-            String portName,
-            String settingsPropertiesName
+            String settingsPropertiesName,
+            String... portNames
     ) throws IOException {
         var violations = new ArrayList<String>();
         try (var files = Files.walk(MAIN_JAVA)) {
@@ -97,7 +115,8 @@ class IntegrationPackageBoundaryTest {
                         continue;
                     }
                     var type = imported.group(1);
-                    var allowed = type.equals(integrationPackage + "." + portName)
+                    var allowed = List.of(portNames).stream()
+                            .anyMatch(portName -> type.equals(integrationPackage + "." + portName))
                             || type.startsWith(integrationPackage + ".contract.")
                             || (file.equals(SETTINGS_SERVICE)
                                     && type.equals(integrationPackage + ".config." + settingsPropertiesName));

@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.adapter.rest;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -6,6 +6,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import pl.mkn.tdw.integrations.confluence.contract.ConfluencePageContent;
+import pl.mkn.tdw.integrations.jira.config.JiraProperties;
+import pl.mkn.tdw.integrations.jira.config.JiraRestClientFactory;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueLink;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterialRequest;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.util.List;

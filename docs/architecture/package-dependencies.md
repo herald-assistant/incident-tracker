@@ -77,6 +77,14 @@ konfiguracji. `api.workspacesettings.WorkspaceSettingsService` pozostaje waskim
 wyjatkiem, poniewaz aktualizuje properties w runtime. Test granic pakietow
 egzekwuje te regule rowniez dla Dynatrace.
 
+W `integrations.jira` pakiet glowny zawiera tylko `JiraIssuePort`,
+`JiraIssueSearchPort` i `JiraIssueStatusHistoryPort`. Publiczne modele
+issue/search/status history leza w `contract`, oba adaptery REST w
+`adapter.rest`, a properties i fabryka klienta w `config`. Konsumenci
+zaleza od portow i kontraktu. `api.workspacesettings.WorkspaceSettingsService`
+jest jedynym wyjatkiem dla konfiguracji, poniewaz aktualizuje properties w
+runtime. `IntegrationPackageBoundaryTest` egzekwuje te granice dla Jiry.
+
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez

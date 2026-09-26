@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.adapter.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +7,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
+import pl.mkn.tdw.integrations.jira.JiraIssueSearchPort;
+import pl.mkn.tdw.integrations.jira.JiraIssueStatusHistoryPort;
+import pl.mkn.tdw.integrations.jira.config.JiraProperties;
+import pl.mkn.tdw.integrations.jira.config.JiraRestClientFactory;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchItem;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchRequest;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchResult;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueStatusHistory;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueStatusTransition;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;

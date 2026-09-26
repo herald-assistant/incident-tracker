@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.source;
 
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 
 import java.time.Instant;
 import java.util.List;

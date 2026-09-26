@@ -5,10 +5,10 @@ import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssue;
 import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssueSource;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
-import pl.mkn.tdw.integrations.jira.JiraConfluencePage;
-import pl.mkn.tdw.integrations.jira.JiraIssueComment;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
-import pl.mkn.tdw.integrations.jira.JiraIssueTimeTracking;
+import pl.mkn.tdw.integrations.jira.contract.JiraConfluencePage;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueTimeTracking;
 
 import java.time.Instant;
 import java.util.List;

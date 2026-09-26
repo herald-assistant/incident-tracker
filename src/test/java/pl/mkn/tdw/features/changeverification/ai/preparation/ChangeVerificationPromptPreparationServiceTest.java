@@ -8,7 +8,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 
 import java.util.List;
 

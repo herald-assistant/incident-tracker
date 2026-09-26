@@ -9,12 +9,12 @@ import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeComplexi
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.jira.JiraIssueCustomField;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterialRequest;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueCustomField;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterialRequest;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
-import pl.mkn.tdw.integrations.jira.JiraIssueSearchItem;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchItem;
 import pl.mkn.tdw.integrations.jira.JiraIssueSearchPort;
-import pl.mkn.tdw.integrations.jira.JiraIssueSearchRequest;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchRequest;
 import pl.mkn.tdw.integrations.jira.JiraIssueStatusHistoryPort;
 
 import java.time.Instant;
@@ -181,10 +181,10 @@ public class DeliveryScopeSourceDiscoveryService {
         return new DeliveryScopeTeam(field.id(), name, field.fieldId());
     }
 
-    private Instant finalDoneAt(pl.mkn.tdw.integrations.jira.JiraIssueStatusHistory history) {
+    private Instant finalDoneAt(pl.mkn.tdw.integrations.jira.contract.JiraIssueStatusHistory history) {
         return history.transitions().stream()
                 .filter(transition -> isDone(transition.toStatusCategory()))
-                .map(pl.mkn.tdw.integrations.jira.JiraIssueStatusTransition::changedAt)
+                .map(pl.mkn.tdw.integrations.jira.contract.JiraIssueStatusTransition::changedAt)
                 .filter(java.util.Objects::nonNull)
                 .max(Comparator.naturalOrder())
                 .orElse(null);

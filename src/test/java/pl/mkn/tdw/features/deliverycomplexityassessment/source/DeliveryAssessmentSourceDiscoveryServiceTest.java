@@ -8,17 +8,17 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexi
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.jira.JiraIssueCustomField;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterialRequest;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueCustomField;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterialRequest;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
-import pl.mkn.tdw.integrations.jira.JiraIssueSearchItem;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchItem;
 import pl.mkn.tdw.integrations.jira.JiraIssueSearchPort;
-import pl.mkn.tdw.integrations.jira.JiraIssueSearchRequest;
-import pl.mkn.tdw.integrations.jira.JiraIssueSearchResult;
-import pl.mkn.tdw.integrations.jira.JiraIssueStatusHistory;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchRequest;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchResult;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueStatusHistory;
 import pl.mkn.tdw.integrations.jira.JiraIssueStatusHistoryPort;
-import pl.mkn.tdw.integrations.jira.JiraIssueStatusTransition;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueStatusTransition;
 
 import java.time.Instant;
 import java.time.LocalDate;

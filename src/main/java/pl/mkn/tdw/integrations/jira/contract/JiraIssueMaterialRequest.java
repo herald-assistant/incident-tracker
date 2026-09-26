@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.contract;
 
 import org.springframework.util.StringUtils;
 

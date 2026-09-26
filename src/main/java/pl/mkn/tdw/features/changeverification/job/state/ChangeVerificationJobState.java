@@ -16,9 +16,9 @@ import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestCommit;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
-import pl.mkn.tdw.integrations.jira.JiraIssueComment;
-import pl.mkn.tdw.integrations.jira.JiraIssueLink;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueLink;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
@@ -635,7 +635,7 @@ public final class ChangeVerificationJobState {
         );
     }
 
-    private AnalysisEvidenceItem jiraConfluencePageItem(pl.mkn.tdw.integrations.jira.JiraConfluencePage page) {
+    private AnalysisEvidenceItem jiraConfluencePageItem(pl.mkn.tdw.integrations.jira.contract.JiraConfluencePage page) {
         return new AnalysisEvidenceItem(
                 "Confluence page: " + fallback(page.title(), page.url()),
                 List.of(

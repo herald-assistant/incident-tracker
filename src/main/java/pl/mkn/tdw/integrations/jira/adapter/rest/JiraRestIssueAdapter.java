@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.adapter.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +8,16 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
 import pl.mkn.tdw.integrations.confluence.ConfluencePagePort;
 import pl.mkn.tdw.integrations.confluence.contract.ConfluencePageContent;
+import pl.mkn.tdw.integrations.jira.JiraIssuePort;
+import pl.mkn.tdw.integrations.jira.config.JiraProperties;
+import pl.mkn.tdw.integrations.jira.config.JiraRestClientFactory;
+import pl.mkn.tdw.integrations.jira.contract.JiraConfluencePage;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueCustomField;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueLink;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterialRequest;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueTimeTracking;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;

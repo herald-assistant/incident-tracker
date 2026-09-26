@@ -11,7 +11,9 @@ profilu detailed albo ograniczonego profilu assessment.
 
 - Nie importuj `analysis.*`, `agenttools.*`, `features.*`, `api.*` ani
   `aiplatform.*`.
-- Trzymaj tutaj tylko properties, porty, modele i adapter REST.
+- Bezposrednio w `jira/` trzymaj tylko `JiraIssuePort`, `JiraIssueSearchPort`
+  i `JiraIssueStatusHistoryPort`. Publiczne modele trzymaj w `contract`, oba
+  adaptery w `adapter.rest`, a properties i fabryke klienta w `config`.
 - Jira-specific parsing, limity i nietypowe zachowania HTTP izoluj lokalnie.
 - Publiczny typed search request nie moze przyjmowac raw JQL od feature'a ani UI.
 - Status category rozpoznawaj z kontraktu Jira, nie z nazwy statusu.
@@ -20,4 +22,5 @@ profilu detailed albo ograniczonego profilu assessment.
 ## Weryfikacja
 
 - Dla adaptera REST dodaj test z `MockRestServiceServer`.
-- Po zmianie zaleznosci uruchom `PackageDependencyGuardTest`.
+- Po zmianie zaleznosci uruchom `PackageDependencyGuardTest` i
+  `IntegrationPackageBoundaryTest`.

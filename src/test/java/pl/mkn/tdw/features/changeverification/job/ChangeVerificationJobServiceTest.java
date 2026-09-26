@@ -24,9 +24,9 @@ import pl.mkn.tdw.integrations.gitlab.instructions.InstructionDiscoveryPropertie
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoveryService;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
-import pl.mkn.tdw.integrations.jira.JiraIssueComment;
-import pl.mkn.tdw.integrations.jira.JiraIssueLink;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueLink;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;

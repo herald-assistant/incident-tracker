@@ -9,8 +9,8 @@ import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
 import pl.mkn.tdw.integrations.dynatrace.config.DynatraceRestClientFactory;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRestClientFactory;
-import pl.mkn.tdw.integrations.jira.JiraProperties;
-import pl.mkn.tdw.integrations.jira.JiraRestClientFactory;
+import pl.mkn.tdw.integrations.jira.config.JiraProperties;
+import pl.mkn.tdw.integrations.jira.config.JiraRestClientFactory;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;

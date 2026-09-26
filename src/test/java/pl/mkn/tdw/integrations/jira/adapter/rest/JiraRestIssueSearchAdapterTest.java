@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.adapter.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -8,6 +8,10 @@ import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.integrations.jira.config.JiraProperties;
+import pl.mkn.tdw.integrations.jira.config.JiraRestClientFactory;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchItem;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueSearchRequest;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.jira;
+package pl.mkn.tdw.integrations.jira.config;
 
 import lombok.Getter;
 import lombok.Setter;

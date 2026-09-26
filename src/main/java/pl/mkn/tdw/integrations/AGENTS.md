@@ -55,6 +55,11 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   `adapter.rest`, a properties i fabryka klienta w `config`. Provider evidence
   sprawdza dostepnosc przez port; tylko
   `api.workspacesettings.WorkspaceSettingsService` aktualizuje properties.
+- W `jira/` bezposrednio w pakiecie znajduja sie tylko trzy porty: issue,
+  search i status history. Publiczne modele sa w `contract`, dwa adaptery w
+  `adapter.rest`, a properties i fabryka klienta w `config`. Konsumenci
+  korzystaja z portow i kontraktu; `api.workspacesettings.WorkspaceSettingsService`
+  aktualizuje properties jako waski wyjatek.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
@@ -77,6 +82,6 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 
 - `PackageDependencyGuardTest` pilnuje, zeby `integrations.*` nie zaczelo
   importowac warstw aplikacyjnych.
-- `IntegrationPackageBoundaryTest` pilnuje struktury pakietow Confluence i
-  Dynatrace oraz importow ich konsumentow.
+- `IntegrationPackageBoundaryTest` pilnuje struktury pakietow Confluence,
+  Dynatrace i Jira oraz importow ich konsumentow.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.

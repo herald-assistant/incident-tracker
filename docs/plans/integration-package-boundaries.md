@@ -178,11 +178,18 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   zewnetrzny odczyt konfiguracji ma Workspace Settings. Baseline, testy
   celowane po `clean`, pelne `mvn -q clean test` i `git diff --check` przeszly.
   Brak pozostalego driftu Dynatrace.
-- [ ] Krok 3 — Jira: zachowac trzy oddzielne porty w root, przeniesc publiczne
+- [x] Krok 3 — Jira: zachowac trzy oddzielne porty w root, przeniesc publiczne
   modele do `contract`, oba adaptery do `adapter.rest`, properties/fabryke do
   `config`; przelaczyc API, Change Verification, Delivery Complexity i Delivery
   Scope. Dowod: oba testy adapterow, testy source discovery konsumentow,
   guard i protokol; root zawiera tylko trzy porty.
+  Wynik: root zawiera trzy porty, 12 publicznych modeli jest w `contract`,
+  dwa adaptery sa w `adapter.rest`, a properties i fabryka klienta w `config`.
+  API, Change Verification, Delivery Complexity, Delivery Scope i Workspace
+  Settings korzystaja z nowych lokalizacji; konfiguracje poza integracja
+  importuje tylko Workspace Settings. Baseline, testy celowane po `clean`,
+  pelne `mvn -q clean test` i `git diff --check` przeszly. Brak pozostalego
+  driftu Jiry.
 - [ ] Krok 4 — Elasticsearch: sklasyfikowac obecny `ElasticLogPort` i publiczne
   search/import/availability capability; dodac waskie porty dla operacji
   wywolywanych poza integracja, przeniesc modele do `contract`, REST/CSV do

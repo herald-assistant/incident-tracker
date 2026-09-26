@@ -12,7 +12,7 @@ import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoverySe
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextRequest;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionDiscoveryProperties;
-import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 

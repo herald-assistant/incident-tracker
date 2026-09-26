@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.jira;
 
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterialRequest;
+
 public interface JiraIssuePort {
 
     JiraIssueMaterial getIssueMaterial(String issueKey);
