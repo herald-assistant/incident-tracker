@@ -381,7 +381,8 @@ Na dzisiaj projekt ma:
 ## Weryfikacja TLS integracji REST
 
 GitLab (rowniez named connections), Jira, Confluence i Dynatrace korzystaja ze
-wspolnego `IntegrationRestClientBuilderFactory`. Ustawienie backendowe
+wspolnego `integrations.support.http.IntegrationRestClientBuilderFactory`.
+Ustawienie backendowe
 `integrations.http.ignore-ssl-errors=false` domyslnie pozostawia standardowa
 walidacje certyfikatu serwera i nazwy hosta przez klienta JVM. `true` pomija
 obie walidacje lokalnie dla tych klientow; nie wylacza szyfrowania HTTPS ani nie

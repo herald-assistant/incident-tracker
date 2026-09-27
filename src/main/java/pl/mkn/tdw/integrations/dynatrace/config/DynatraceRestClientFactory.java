@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
-import pl.mkn.tdw.integrations.http.IntegrationRestClientBuilderFactory;
+import pl.mkn.tdw.integrations.support.http.IntegrationRestClientBuilderFactory;
 
 @Component
 @RequiredArgsConstructor

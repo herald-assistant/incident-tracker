@@ -1,8 +1,8 @@
 package pl.mkn.tdw.testsupport.integrations;
 
 import org.springframework.web.client.RestClient;
-import pl.mkn.tdw.integrations.http.IntegrationHttpProperties;
-import pl.mkn.tdw.integrations.http.IntegrationRestClientBuilderFactory;
+import pl.mkn.tdw.integrations.support.http.IntegrationHttpProperties;
+import pl.mkn.tdw.integrations.support.http.IntegrationRestClientBuilderFactory;
 
 public final class IntegrationRestClientBuilderFactoryTestCreator {
 

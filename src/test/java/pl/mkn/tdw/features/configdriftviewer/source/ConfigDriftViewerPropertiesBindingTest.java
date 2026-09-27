@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionsProperties;
-import pl.mkn.tdw.integrations.http.IntegrationHttpProperties;
+import pl.mkn.tdw.integrations.support.http.IntegrationHttpProperties;
 
 import java.util.Map;
 

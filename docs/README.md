@@ -72,9 +72,6 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
-- `plans/integration-package-boundaries.md`
-  jest propozycja stopniowej migracji integracji do portow i wewnetrznych
-  podpakietow; kazdy system ma osobny krok do zatwierdzenia.
 
 Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako
 archiwum. Aktualny stan Delivery Complexity Assessment, Delivery Scope

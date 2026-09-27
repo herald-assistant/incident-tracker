@@ -14,6 +14,7 @@ Obecnie obejmuje m.in.:
 - `gitlab/`
 - `operationalcontext/`
 - `database/`
+- `support/http/` (wspolna infrastruktura REST)
 
 Operational context jest tutaj query-based capability katalogu operacyjnego.
 Incident-specific matching i mapowanie na evidence pozostaja w
@@ -84,12 +85,18 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   w `service`, lokalny YAML/storage i atomic mover w `adapter.local`,
   techniczne typy snapshotu w `internal`, a properties w `config`.
   Konsumenci spoza integracji importuja tylko porty i `contract`.
+- W `gitlab/` bezposrednio w pakiecie znajduja sie tylko porty. Publiczne
+  modele sa w `contract`, adapter REST w `adapter.rest`, konfiguracja w
+  `config`, a zlozone capability w `service`. Konsumenci importuja porty i
+  kontrakty; Workspace Settings aktualizuje properties jako waski wyjatek.
 - Stabilne endpointy FE/operatora trzymaj w `api.*`. Tutaj zostaw adapter,
   porty, modele request/result i service capability.
 - Nietypowe zachowania HTTP izoluj lokalnie dla danej integracji.
 - Nowe integracje REST, ktore maja podlegac wspolnej polityce weryfikacji TLS,
-  buduj przez `integrations.http.IntegrationRestClientBuilderFactory`. Uzywa
-  ona `integrations.http.ignore-ssl-errors` bez zmiany globalnych ustawien JVM.
+  buduj przez `integrations.support.http.IntegrationRestClientBuilderFactory`.
+  Pakiet `support.http` jest wspolna infrastruktura, nie integracja systemowa,
+  dlatego nie podlega regule portow w root. Fabryka uzywa
+  `integrations.http.ignore-ssl-errors` bez zmiany globalnych ustawien JVM.
 - Nie dodawaj tu `AnalysisEvidenceProvider`, klas `@Tool`, promptow, skilli ani
   heurystyk incidentowych.
 - Dla Database capability nie wprowadzaj globalnego `spring.datasource`, nie
@@ -107,6 +114,6 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
 - `PackageDependencyGuardTest` pilnuje, zeby `integrations.*` nie zaczelo
   importowac warstw aplikacyjnych.
 - `IntegrationPackageBoundaryTest` pilnuje struktury pakietow Confluence,
-  Dynatrace, Jira, Elasticsearch, Database i Operational Context oraz importow
-  ich konsumentow.
+  Dynatrace, Jira, Elasticsearch, Database, Operational Context i GitLab,
+  importow ich konsumentow oraz tego, by nowa integracja zostala objeta testem.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.

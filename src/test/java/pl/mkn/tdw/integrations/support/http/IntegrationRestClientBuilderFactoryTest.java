@@ -1,4 +1,4 @@
-package pl.mkn.tdw.integrations.http;
+package pl.mkn.tdw.integrations.support.http;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

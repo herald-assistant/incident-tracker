@@ -62,6 +62,24 @@ Warstwa posiada:
 - request/result DTO konkretnej integracji,
 - techniczne wyjatki i lokalne zachowania zewnetrznego systemu.
 
+Kazda integracja systemowa trzyma bezposrednio w swoim pakiecie wylacznie
+publiczne interfejsy portow. Publiczne modele i bledy rozpoznawane przez
+konsumentow naleza do `contract`, a implementacje, konfiguracja i techniczne
+modele do odpowiednich podpakietow. Konsumenci poza integracja importuja porty
+oraz `contract`; jedynymi wyjatkami konfiguracji sa konkretne properties
+aktualizowane przez `api.workspacesettings.WorkspaceSettingsService`.
+`IntegrationPackageBoundaryTest` sprawdza wszystkie obecne integracje systemowe,
+ich konsumentow oraz inwentarz katalogow, aby nowy system wymagal jawnego
+objecia testem.
+
+`integrations.support.http` jest wspolna infrastruktura klientow REST, nie
+integracja systemowa, wiec nie podlega regule portow w root. Zawiera
+`IntegrationRestClientBuilderFactory` i `IntegrationHttpProperties`. Fabryki
+klientow Confluence, Dynatrace, GitLab i Jira korzystaja z niej, zachowujac
+dotychczasowa polityke TLS i klucz konfiguracji
+`integrations.http.ignore-ssl-errors`. Nie zmienia ona globalnych ustawien TLS
+JVM.
+
 W `integrations.confluence` pakiet glowny zawiera tylko publiczny
 `ConfluencePagePort`. Publiczny wynik odczytu strony lezy w `contract`, adapter
 REST w `adapter.rest`, a properties i fabryka klienta w `config`. Konsumenci

@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class IntegrationPackageBoundaryTest {
 
     private static final Path MAIN_JAVA = Path.of("src/main/java");
+    private static final Path INTEGRATIONS_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations");
     private static final String CONFLUENCE_PACKAGE = "pl.mkn.tdw.integrations.confluence";
     private static final String DATABASE_PACKAGE = "pl.mkn.tdw.integrations.database";
     private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
@@ -34,6 +35,18 @@ class IntegrationPackageBoundaryTest {
     private static final Pattern PUBLIC_PORT = Pattern.compile("\\bpublic\\s+interface\\s+\\w+Port\\b");
     private static final Pattern PACKAGE = Pattern.compile("^package\\s+([^;]+);");
     private static final Pattern IMPORT = Pattern.compile("^import\\s+(?:static\\s+)?([^;]+);");
+
+    @Test
+    void everyIntegrationSystemRootHasBoundaryCoverage() throws IOException {
+        try (var entries = Files.list(INTEGRATIONS_ROOT)) {
+            var directories = entries.filter(Files::isDirectory)
+                    .map(path -> path.getFileName().toString())
+                    .sorted()
+                    .toList();
+            assertEquals(List.of("confluence", "database", "dynatrace", "elasticsearch",
+                    "gitlab", "jira", "operationalcontext", "support"), directories);
+        }
+    }
 
     @Test
     void confluenceRootContainsOnlyPublicPorts() throws IOException {
