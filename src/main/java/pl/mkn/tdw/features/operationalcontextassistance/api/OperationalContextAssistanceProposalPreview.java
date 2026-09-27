@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.api;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogFieldError;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogPreviewViolation;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogFieldError;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogPreviewViolation;
 
 import java.util.List;
 import java.util.LinkedHashMap;

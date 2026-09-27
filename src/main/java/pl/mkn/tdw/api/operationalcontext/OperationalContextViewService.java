@@ -1,5 +1,7 @@
 package pl.mkn.tdw.api.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -28,36 +30,37 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalC
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextTeamRowDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.SourceReferenceDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.ValidationFindingDto;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearch;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegrationParticipant;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextMatchSignals;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRelation;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCodeSearchReadModel;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearchPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogSearchMatch;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegrationParticipant;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextMatchSignals;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextOpenQuestion;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRelation;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextTeam;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndexBuilder;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityRef;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.SourceRef;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndexPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution.Owner;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipPort;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -68,8 +71,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_PATH_PREFIXES;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_WHOLE_REPOSITORY;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.CODE_SEARCH_MODE_PATH_PREFIXES;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.CODE_SEARCH_MODE_WHOLE_REPOSITORY;
 
 @Service
 @RequiredArgsConstructor
@@ -98,15 +101,13 @@ public class OperationalContextViewService {
     );
 
     private final OperationalContextPort operationalContextPort;
-    private final OperationalContextCatalogValidationService validationService;
-    private final OperationalContextRelationIndexBuilder relationIndexBuilder =
-            new OperationalContextRelationIndexBuilder();
-    private final OperationalContextCodeSearchReadModelBuilder codeSearchReadModelBuilder =
-            new OperationalContextCodeSearchReadModelBuilder(relationIndexBuilder);
+    private final OperationalContextCatalogValidationPort validationService;
+    private final OperationalContextRelationIndexPort relationIndexBuilder;
+    private final OperationalContextCodeSearchPort codeSearchReadModelBuilder;
     private final OperationalContextProfiledReadModelMapper profiledReadModelMapper =
             new OperationalContextProfiledReadModelMapper();
-    private final OperationalContextOwnershipResolver ownershipResolver =
-            new OperationalContextOwnershipResolver();
+    private final OperationalContextOwnershipPort ownershipResolver;
+    private final OperationalContextCatalogSearchPort catalogSearch;
 
     public OperationalContextSummaryDto summary() {
         var view = view();
@@ -219,7 +220,7 @@ public class OperationalContextViewService {
             return List.of();
         }
         var catalog = view().catalog();
-        return OperationalContextCatalogSearch.search(catalog, query).stream()
+        return catalogSearch.find(catalog, query).stream()
                 .map(match -> searchResultFor(catalog, match))
                 .sorted(Comparator.comparingInt((OperationalContextSearchResultDto result) -> confidenceRank(result.confidence()))
                         .thenComparing(OperationalContextSearchResultDto::label))
@@ -689,7 +690,7 @@ public class OperationalContextViewService {
     }
 
     private ValidationFindingDto validationFinding(
-            OperationalContextCatalogValidationService.FingerprintedFinding fingerprinted
+            OperationalContextValidationReport.FingerprintedFinding fingerprinted
     ) {
         var finding = fingerprinted.finding();
         var firstRef = finding.sourceRefs().stream().findFirst().orElse(null);
@@ -721,7 +722,7 @@ public class OperationalContextViewService {
 
     private OperationalContextSearchResultDto searchResultFor(
             OperationalContextCatalog catalog,
-            OperationalContextCatalogSearch.Match match
+            OperationalContextCatalogSearchMatch match
     ) {
         var resultMatch = new SearchMatch(match.score() >= 65 ? "high" : "medium", match.fields(), match.why());
         return switch (match.type()) {
@@ -776,7 +777,7 @@ public class OperationalContextViewService {
             CatalogView view,
             String entityType,
             String entityId,
-            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences references
+            pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences references
     ) {
         var values = referencesValues(references);
         return aggregate(
@@ -797,7 +798,7 @@ public class OperationalContextViewService {
             CatalogView view,
             String entityType,
             String entityId,
-            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences references
+            pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences references
     ) {
         return nonEmptyGroups(
                 groupFromIds("Systems", SYSTEM, references.systems(), view.systemsById()),
@@ -1285,7 +1286,7 @@ public class OperationalContextViewService {
         );
     }
 
-    private Map<String, Object> referencesMap(pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences references) {
+    private Map<String, Object> referencesMap(pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences references) {
         return map(
                 "systems", references.systems(),
                 "repositories", references.repositories(),
@@ -1331,13 +1332,13 @@ public class OperationalContextViewService {
         );
     }
 
-    private pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences scopeReferences(
+    private pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences scopeReferences(
             OperationalContextRepositorySearchScope scope
     ) {
         var systems = "system".equals(normalizeType(scope.target().type())) ? textValues(scope.target().id()) : List.<String>of();
         var processes = "process".equals(normalizeType(scope.target().type())) ? textValues(scope.target().id()) : List.<String>of();
         var contexts = BOUNDED_CONTEXT.equals(normalizeType(scope.target().type())) ? textValues(scope.target().id()) : List.<String>of();
-        return new pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences(
+        return new pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences(
                 systems,
                 scope.repositories().stream().map(OperationalContextRepositorySearchRepository::repoId).toList(),
                 processes,
@@ -1613,7 +1614,7 @@ public class OperationalContextViewService {
         return firstNonBlank(repository.role(), "referenced") + " in " + repository.repoId();
     }
 
-    private List<String> referencesValues(pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences references) {
+    private List<String> referencesValues(pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences references) {
         var values = new ArrayList<String>();
         values.addAll(references.systems());
         values.addAll(references.repositories());

@@ -1,13 +1,13 @@
 package pl.mkn.tdw.features.operationalcontextassistance.draft;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogBatchMutationPreview;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalBatchCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogFieldError;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogBatchMutationPreview;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalBatchCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogFieldError;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogMaintenanceService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot;
 
 import java.util.List;
 

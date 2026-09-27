@@ -1,13 +1,15 @@
 package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.*;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearch;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.*;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearchPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogSearchMatch;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution.Owner;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipPort;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 import static pl.mkn.tdw.agenttools.operationalcontext.mcp.OperationalContextToolDtos.*;
 
 @Component
+@RequiredArgsConstructor
 public class OperationalContextToolMapper {
 
     static final String TYPE_SYSTEM = "system";
@@ -64,7 +67,8 @@ public class OperationalContextToolMapper {
             "openQuestions"
     );
 
-    private final OperationalContextOwnershipResolver ownershipResolver = new OperationalContextOwnershipResolver();
+    private final OperationalContextOwnershipPort ownershipResolver;
+    private final OperationalContextCatalogSearchPort catalogSearch;
 
     public OpctxScopeResult getScope(OperationalContextCatalog catalog) {
         var index = index(catalog);
@@ -134,7 +138,7 @@ public class OperationalContextToolMapper {
         var entitiesByKey = index(catalog).entities().stream()
                 .collect(Collectors.toMap(entity -> entity.type() + "\u0000" + entity.id(),
                         Function.identity(), (first, ignored) -> first, LinkedHashMap::new));
-        var results = OperationalContextCatalogSearch.search(catalog, queryText).stream()
+        var results = catalogSearch.find(catalog, queryText).stream()
                 .filter(match -> normalizedTypes.isEmpty() || normalizedTypes.contains(match.type()))
                 .map(match -> new OpctxScoredEntity(
                         entitiesByKey.get(match.type() + "\u0000" + match.id()),

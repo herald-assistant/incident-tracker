@@ -1,15 +1,15 @@
 package pl.mkn.tdw.features.uiexplorer.catalog;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGit;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchTarget;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGit;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchTarget;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot;
 
 import java.util.List;
 import java.util.Map;

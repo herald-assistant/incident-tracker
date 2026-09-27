@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogEntityType;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogEntityType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenancePort;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceMode;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceRepositoryFacts;
 
@@ -54,7 +54,7 @@ public class OperationalContextAssistanceDraftParser {
     );
 
     private final ObjectMapper objectMapper;
-    private final OperationalContextCatalogMaintenanceService maintenanceService;
+    private final OperationalContextCatalogMaintenancePort maintenanceService;
 
     public OperationalContextAssistanceDraft parse(String content, OperationalContextAssistanceDraftScope scope) {
         if (content == null || content.isBlank()) {

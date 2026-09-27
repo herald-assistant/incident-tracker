@@ -9,7 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.normalize;
 
 record OperationalContextIncidentSignals(
         String corpus,

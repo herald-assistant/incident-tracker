@@ -1,9 +1,10 @@
 package pl.mkn.tdw.features.flowexplorer.context;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 
 import java.util.List;
 import java.util.Map;
@@ -11,9 +12,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.CODE_SEARCH_SCOPE;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.REPOSITORY;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.SYSTEM;
 
 class FlowExplorerSystemSelectionServiceTest {
 
@@ -23,7 +24,7 @@ class FlowExplorerSystemSelectionServiceTest {
         var service = new FlowExplorerSystemSelectionService(query -> {
             capturedQuery.set(query);
             return catalog();
-        });
+        }, new OperationalContextOwnershipResolver());
 
         var systems = service.systems();
 

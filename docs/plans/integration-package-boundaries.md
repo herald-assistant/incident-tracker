@@ -228,19 +228,37 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   Przelaczyc `api.githubauth` i token provider. Dowod: testy OAuth/profile/
   refresh, `GitHubAuthServiceTest`, guard i protokol; root `github` zawiera
   tylko porty.
-- [ ] Krok 7a — Operational Context read: zachowac waski port odczytu,
+  Kolejnosc zmieniona na prosbe uzytkownika: GitHub pozostaje odlozony;
+  Operational Context wykonujemy przed nim.
+- [x] Krok 7a — Operational Context read: zachowac waski port odczytu,
   przeniesc publiczny katalog, snapshot i query do `contract`, adapter/local
   store do `adapter.local`, query/search/ownership/read models do `service`
   lub `internal`; przelaczyc API, tools i feature'y odczytujace katalog.
   Dowod: testy adaptera/store/query/search, API/MCP, guard i protokol; odczyt
   katalogu pozostaje z jednego snapshotu.
-- [ ] Krok 7b — Operational Context maintenance/validation: wystawic waskie
+  Wynik: `OperationalContextPort` nadal udostepnia captured snapshot i
+  dokumenty z jednego odczytu. Osobne porty udostepniaja search, ownership,
+  relation index, code-search read model, read-model validation, repository
+  paths i ustawienia. Publiczne modele oraz stateless query sa w `contract`,
+  implementacje neutralnych odczytow w `service`, a lokalny adapter/store w
+  `adapter.local`. API, MCP, katalog frontendow i feature'y importuja porty
+  oraz kontrakty. Testy bazowe i celowane po zmianie przeszly; pelne
+  `mvn -q clean test`: 1735 testow, 0 failures, 0 errors, 1 skipped.
+- [x] Krok 7b — Operational Context maintenance/validation: wystawic waskie
   porty dla operacji wywolywanych poza integracja, przeniesc publiczne
   command/preview/result/error do `contract`, YAML/atomic storage do
   `adapter.local`, walidacje i maintenance do `service`; przelaczyc API i
   Operational Context Assistance. Dowod: testy batch/recovery, walidacji,
   asysty i guard oraz protokol; root zawiera tylko porty i zachowuje warunkowy
   batch write.
+  Wynik: root Operational Context zawiera 10 publicznych portow. Maintenance
+  i walidacja sa za osobnymi portami, publiczne command/preview/result/error
+  oraz validation report sa w `contract`, a YAML, atomic mover i lokalny
+  storage w `adapter.local`; techniczne typy snapshotu sa w `internal`.
+  API i Operational Context Assistance korzystaja z portow. Testy batch,
+  recovery, walidacji, asysty, API/MCP i oba guardy przeszly; pelne
+  `mvn -q clean test`: 1735 testow, 0 failures, 0 errors, 1 skipped.
+  `git diff --check` jest czysty. Brak pozostalego driftu Operational Context.
 - [ ] Krok 8a — GitLab repository foundation: rozdzielic obecny szeroki port
   na waskie porty dla rzeczywistych konsumentow repository read, branch,
   endpoint inventory, search, tree, revision, verified reader i named exact

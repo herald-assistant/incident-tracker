@@ -1,6 +1,11 @@
 package pl.mkn.tdw.integrations.operationalcontext;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDocumentSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextReadSession;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot;
+
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 
 public interface OperationalContextPort {
 

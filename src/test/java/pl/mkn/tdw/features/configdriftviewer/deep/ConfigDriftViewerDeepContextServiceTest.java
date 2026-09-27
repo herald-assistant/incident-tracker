@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.configdriftviewer.deep;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCodeSearchReadModelBuilder;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerCodeGrounding;
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerCodeRefSource;
@@ -17,9 +18,9 @@ import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftView
 import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftViewerValueType;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.source.ConfigDriftViewerFileRole;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerMode;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.LinkedHashMap;
@@ -46,8 +47,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 preflightService,
                 codeSearch,
                 operationalContext,
-                ownership
-        );
+                ownership, new OperationalContextCodeSearchReadModelBuilder());
 
         var result = service.build(
                 ConfigDriftViewerMode.BASIC,
@@ -74,8 +74,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 preflightService,
                 codeSearch,
                 operationalContext,
-                new OperationalContextOwnershipResolver()
-        );
+                new OperationalContextOwnershipResolver(), new OperationalContextCodeSearchReadModelBuilder());
 
         var result = service.build(
                 ConfigDriftViewerMode.DEEP,
@@ -118,8 +117,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 preflightService,
                 codeSearch,
                 operationalContext,
-                new OperationalContextOwnershipResolver()
-        );
+                new OperationalContextOwnershipResolver(), new OperationalContextCodeSearchReadModelBuilder());
 
         var result = service.build(
                 ConfigDriftViewerMode.DEEP,

@@ -15,8 +15,8 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelationKind;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseUnresolvedReference;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaTypeKind;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 
 import java.util.List;
 import java.util.Map;

@@ -1,13 +1,13 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextTeam;
 
 import java.util.List;
 

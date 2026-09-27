@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.api;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogPreviewViolation;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEditableEntity;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogPreviewViolation;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEditableEntity;
 
 import java.util.List;
 

@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.job;
 
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,20 +31,20 @@ import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContex
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceFile;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSelectionException;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalBatchCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogBatchMutationPreview;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogBatchMutationResult;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMutationPreview;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEditableEntity;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogMaintenanceService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalBatchCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogBatchMutationPreview;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogBatchMutationResult;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationPreview;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogValidationService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEditableEntity;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotRequiredContextTierException;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
@@ -539,12 +541,12 @@ class OperationalContextAssistanceJobServiceTest {
                 ))
         );
         when(validationService.validate(any())).thenReturn(
-                new OperationalContextCatalogValidationService.ValidationReport(
+                new OperationalContextValidationReport(
                         List.of(first, second), List.of(
-                                new OperationalContextCatalogValidationService.FingerprintedFinding(
+                                new OperationalContextValidationReport.FingerprintedFinding(
                                         "fingerprint-first", first
                                 ),
-                                new OperationalContextCatalogValidationService.FingerprintedFinding(
+                                new OperationalContextValidationReport.FingerprintedFinding(
                                         "fingerprint-second", second
                                 )
                         )
@@ -962,13 +964,13 @@ class OperationalContextAssistanceJobServiceTest {
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
                 List.of(repo, scopeUpdate), List.of()));
         org.mockito.Mockito.doAnswer(invocation -> {
-            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext
+            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext.contract
                     .OperationalContextCatalogMutationCommand.class);
             return new OperationalContextCatalogMutationPreview(
                     command.type(), command.id(), "digest-1", command.payload(), List.of());
         }).when(maintenanceService).previewCreate(any());
         org.mockito.Mockito.doAnswer(invocation -> {
-            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext
+            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext.contract
                     .OperationalContextCatalogMutationCommand.class);
             return new OperationalContextCatalogMutationPreview(
                     command.type(), command.id(), "digest-1", command.payload(), List.of());
@@ -992,7 +994,7 @@ class OperationalContextAssistanceJobServiceTest {
                 proposals, List.of()
         ));
         org.mockito.Mockito.doAnswer(invocation -> {
-            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext
+            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext.contract
                     .OperationalContextCatalogMutationCommand.class);
             return new OperationalContextCatalogMutationPreview(
                     command.type(), command.id(), "digest-1", command.payload(), List.of()

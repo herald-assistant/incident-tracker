@@ -34,10 +34,10 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextServ
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryMethod;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryStatus;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaTypeKind;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;

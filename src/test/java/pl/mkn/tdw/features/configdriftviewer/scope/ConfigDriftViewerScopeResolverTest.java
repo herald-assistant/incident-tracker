@@ -3,10 +3,10 @@ package pl.mkn.tdw.features.configdriftviewer.scope;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.configdriftviewer.source.ConfigDriftViewerRepositoryCatalog;
 import pl.mkn.tdw.features.configdriftviewer.source.ConfigDriftViewerRepositoryProfile;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadSession;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextReadSession;
 
 import java.util.List;
 import java.util.Map;

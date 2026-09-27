@@ -106,6 +106,18 @@ Integracja nie tworzy globalnego `spring.datasource` i zachowuje readonly
 execution.
 `IntegrationPackageBoundaryTest` egzekwuje te granice dla Database.
 
+W `integrations.operationalcontext` pakiet glowny zawiera wylacznie porty
+odczytu katalogu, search, ownership, read models, walidacji, repository paths,
+ustawien i maintenance. Publiczne modele katalogu, snapshotu, query,
+mutacji i bledow leza w `contract`. Stateless query filtruje captured snapshot
+bez ponownego odczytu storage. Neutralne implementacje search, ownership,
+read models, walidacji i maintenance leza w `service`, lokalne YAML/storage
+oraz atomic mover w `adapter.local`, techniczne typy snapshotu w `internal`,
+a properties w `config`. API, tools i feature'y zaleza od portow i `contract`.
+Warunkowy batch write nadal waliduje caly kandydat oraz publikuje wiele
+dokumentow jako jedna logiczna decyzje z recovery. `IntegrationPackageBoundaryTest`
+egzekwuje granice pakietu i importow konsumentow.
+
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez

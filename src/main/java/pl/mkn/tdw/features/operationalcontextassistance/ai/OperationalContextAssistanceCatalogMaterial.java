@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.operationalcontextassistance.ai;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

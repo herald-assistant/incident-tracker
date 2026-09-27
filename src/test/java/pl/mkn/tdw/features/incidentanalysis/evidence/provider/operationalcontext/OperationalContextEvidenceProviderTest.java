@@ -1,10 +1,11 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.adapter.local.OperationalContextAdapterTestCreator;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -29,7 +30,7 @@ class OperationalContextEvidenceProviderTest {
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper()
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
         );
 
         var section = provider.collect(sampleContext());
@@ -49,7 +50,7 @@ class OperationalContextEvidenceProviderTest {
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper()
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
         );
 
         var section = provider.collect(sampleContext());

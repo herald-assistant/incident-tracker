@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.uiexplorer.api;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextReadModelValidator;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerFrontendCatalogService;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
@@ -13,7 +14,7 @@ class UiExplorerInputOptionsServiceTest {
     @Test
     void shouldReturnCrmFrontendAndCompleteUiExplorerContractOptions() {
         var catalogService = new UiExplorerFrontendCatalogService(
-                new FrontendApplicationCatalogService(port(eligibleCrmCatalog()))
+                new FrontendApplicationCatalogService(port(eligibleCrmCatalog()), new OperationalContextReadModelValidator())
         );
         var response = new UiExplorerInputOptionsService(catalogService).inputOptions();
 

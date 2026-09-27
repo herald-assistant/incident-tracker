@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.configdriftviewer.deep.model;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
 
 import java.util.List;
 

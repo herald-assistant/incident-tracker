@@ -27,7 +27,7 @@ import pl.mkn.tdw.features.configdriftviewer.deterministic.source.ConfigDriftVie
 import pl.mkn.tdw.features.configdriftviewer.deterministic.source.ConfigDriftViewerFileCoverage;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.source.ConfigDriftViewerFileRole;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.source.ConfigDriftViewerFileStatus;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
 
 import java.util.List;
 

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
@@ -14,8 +15,8 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveMatch;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveSession;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.adapter.local.OperationalContextAdapterTestCreator;
+import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
 import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace.DynatraceEvidenceProviderTestCreator;
@@ -295,7 +296,7 @@ class AnalysisEvidenceCollectorTest {
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper()
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
         );
     }
 

@@ -6,10 +6,10 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceSourceOptions;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGit;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGit;
 
 import java.net.URI;
 import java.util.Comparator;

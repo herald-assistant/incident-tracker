@@ -3,24 +3,24 @@ package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontex
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextTeam;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSettingsPort;
 
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.function.Function;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.normalize;
 import static pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.anyOverlap;
 import static pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.containsAnyId;
 import static pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextMatchingSupport.genericSignals;
@@ -30,7 +30,7 @@ import static pl.mkn.tdw.features.incidentanalysis.evidence.provider.operational
 @RequiredArgsConstructor
 public class OperationalContextCatalogMatcher {
 
-    private final OperationalContextProperties properties;
+    private final OperationalContextSettingsPort properties;
 
     public OperationalContextMatchBundle match(
             OperationalContextCatalog catalog,

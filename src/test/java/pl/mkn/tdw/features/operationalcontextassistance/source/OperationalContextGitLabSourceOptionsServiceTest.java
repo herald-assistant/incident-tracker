@@ -3,9 +3,9 @@ package pl.mkn.tdw.features.operationalcontextassistance.source;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGit;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGit;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
 
 import java.util.List;
 import java.util.Map;

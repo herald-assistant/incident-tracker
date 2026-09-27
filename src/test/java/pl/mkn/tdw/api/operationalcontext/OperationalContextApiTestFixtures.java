@@ -1,11 +1,16 @@
 package pl.mkn.tdw.api.operationalcontext;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextOpenQuestion;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationPort;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCodeSearchReadModelBuilder;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogSearch;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextRelationIndexBuilder;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +23,15 @@ final class OperationalContextApiTestFixtures {
 
     static OperationalContextPort port(OperationalContextCatalog catalog) {
         return query -> catalog;
+    }
+
+    static OperationalContextViewService viewService(
+            OperationalContextPort port, OperationalContextCatalogValidationPort validation
+    ) {
+        return new OperationalContextViewService(port, validation,
+                new OperationalContextRelationIndexBuilder(),
+                new OperationalContextCodeSearchReadModelBuilder(),
+                new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch());
     }
 
     static OperationalContextCatalog emptyCatalog() {

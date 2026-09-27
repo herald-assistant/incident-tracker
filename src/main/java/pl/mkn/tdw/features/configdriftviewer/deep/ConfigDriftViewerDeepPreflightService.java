@@ -14,13 +14,13 @@ import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeExcepti
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeResolver;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCodeSearchReadModel;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSettingsPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,14 +36,13 @@ public class ConfigDriftViewerDeepPreflightService {
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,99}");
     private static final Pattern SAFE_REF = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,254}");
 
-    private final OperationalContextProperties operationalContextProperties;
+    private final OperationalContextSettingsPort operationalContextProperties;
     private final OperationalContextPort operationalContextPort;
     private final ConfigDriftViewerScopeResolver scopeResolver;
     private final GitLabProperties gitLabProperties;
     private final GitLabRepositoryPort gitLabRepositoryPort;
-    private final OperationalContextCatalogValidationService validationService;
-    private final OperationalContextCodeSearchReadModelBuilder codeSearchBuilder =
-            new OperationalContextCodeSearchReadModelBuilder();
+    private final OperationalContextCatalogValidationPort validationService;
+    private final OperationalContextCodeSearchPort codeSearchBuilder;
 
     public ConfigDriftViewerDeepPreflight check(
             String repositoryId,

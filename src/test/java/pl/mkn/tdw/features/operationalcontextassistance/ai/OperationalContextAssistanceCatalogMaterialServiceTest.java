@@ -1,8 +1,8 @@
 package pl.mkn.tdw.features.operationalcontextassistance.ai;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDocumentSnapshot;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDocumentSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.LinkedHashMap;

@@ -12,8 +12,8 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointParameterDocumentation;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 
 import java.util.List;
 import java.util.LinkedHashMap;

@@ -1,14 +1,14 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextEntry;
 
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.normalize;
 
 final class OperationalContextMatchingSupport {
 

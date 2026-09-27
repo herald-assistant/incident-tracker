@@ -10,8 +10,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.port;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.viewService;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.typicalCatalog;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextValidationTestCreator.create;
+import static pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextValidationTestCreator.create;
 
 class OperationalContextReadModelContractTest {
 
@@ -19,7 +20,7 @@ class OperationalContextReadModelContractTest {
 
     @Test
     void shouldKeepReadModelPayloadsFocusedOnRelationsAndCodeSearch() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         var relations = service.entityRelationsReadModel("system", "crm-consent-service");
         var codeSearch = service.codeSearchReadModel("system", "crm-consent-service");
@@ -54,7 +55,7 @@ class OperationalContextReadModelContractTest {
 
     @Test
     void shouldExposeCompactProfilesWithoutLegacyReadModelNames() throws Exception {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         var compactEntity = (OperationalContextProfiledReadModelDto) service.entity(
                 "system",
@@ -95,7 +96,7 @@ class OperationalContextReadModelContractTest {
 
     @Test
     void shouldKeepNoProfileReadModelsEquivalentToExpandedProfile() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         assertEquals(
                 objectMapper.valueToTree(service.entityRelationsReadModel("system", "crm-consent-service")),

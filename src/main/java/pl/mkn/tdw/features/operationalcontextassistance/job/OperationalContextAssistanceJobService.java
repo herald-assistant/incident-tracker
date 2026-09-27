@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.job;
 
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -31,19 +33,19 @@ import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContext
 import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceLocalRunPersistence;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogFieldError;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalMutationCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalBatchCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMutationCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogPreviewViolation;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogFieldError;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenancePort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalMutationCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalBatchCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogPreviewViolation;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
@@ -77,8 +79,8 @@ public class OperationalContextAssistanceJobService {
     private final Map<String, OperationalContextAssistanceJobStartRequest> requests = new ConcurrentHashMap<>();
     private final OperationalContextPort operationalContextPort;
     private final OperationalContextAssistanceCatalogMaterialService catalogMaterialService;
-    private final OperationalContextCatalogMaintenanceService maintenanceService;
-    private final OperationalContextCatalogValidationService validationService;
+    private final OperationalContextCatalogMaintenancePort maintenanceService;
+    private final OperationalContextCatalogValidationPort validationService;
     private final OperationalContextGitLabSourceCollector sourceCollector;
     private final OperationalContextAssistancePromptPreparationService promptPreparationService;
     private final OperationalContextAssistanceCopilotProvider copilotProvider;
@@ -769,7 +771,7 @@ public class OperationalContextAssistanceJobService {
                                 && target.entityType().equals(firstRef.entityType())
                                 && target.entityId().equals(firstRef.entityId());
                     })
-                    .map(OperationalContextCatalogValidationService.FingerprintedFinding::finding)
+                    .map(OperationalContextValidationReport.FingerprintedFinding::finding)
                     .findFirst().orElseThrow(() -> new BlockedRun("Wskazany finding Validation nie istnieje."));
             result.set("finding", objectMapper.valueToTree(finding));
         }

@@ -1,38 +1,40 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegrationParticipant;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegrationParticipant;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextTeam;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution.Owner;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipPort;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.normalize;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.normalize;
 
 @Component
+@RequiredArgsConstructor
 public class OperationalContextEvidenceMapper {
 
-    private final OperationalContextOwnershipResolver ownershipResolver = new OperationalContextOwnershipResolver();
+    private final OperationalContextOwnershipPort ownershipResolver;
 
     public AnalysisEvidenceSection emptySection() {
         return new AnalysisEvidenceSection(

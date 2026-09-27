@@ -1,8 +1,8 @@
 package pl.mkn.tdw.api.operationalcontext.dto;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ReadModelRelation;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityRef;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ReadModelRelation;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ValidationFinding;
 
 import java.util.List;
 import java.util.Map;

@@ -7,14 +7,14 @@ import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.common.PlatformSourceCodeProperties;
 import pl.mkn.tdw.features.flowexplorer.endpoint.FlowExplorerGitLabConfigurationException;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,9 +25,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.CODE_SEARCH_SCOPE;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.REPOSITORY;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.SYSTEM;
 
 @Service
 @RequiredArgsConstructor

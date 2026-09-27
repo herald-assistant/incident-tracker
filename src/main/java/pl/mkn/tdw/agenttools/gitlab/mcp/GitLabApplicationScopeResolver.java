@@ -3,9 +3,9 @@ package pl.mkn.tdw.agenttools.gitlab.mcp;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;

@@ -9,7 +9,7 @@ import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import static pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator.endpointService;

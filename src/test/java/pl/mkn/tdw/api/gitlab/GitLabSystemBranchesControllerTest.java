@@ -7,7 +7,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.List;

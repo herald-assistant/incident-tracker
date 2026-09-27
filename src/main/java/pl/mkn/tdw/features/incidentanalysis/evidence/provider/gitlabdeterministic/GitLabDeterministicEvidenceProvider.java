@@ -16,7 +16,7 @@ import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveMatch;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveRequest;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveSession;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRepositoryProjectPathResolver;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRepositoryPathPort;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
@@ -70,7 +70,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     private final GitLabProperties gitLabProperties;
     private final GitLabSourceResolveService gitLabSourceResolveService;
     private final DeploymentContextResolver deploymentContextResolver;
-    private final OperationalContextRepositoryProjectPathResolver repositoryProjectPathResolver;
+    private final OperationalContextRepositoryPathPort repositoryProjectPathResolver;
 
     @Override
     public AnalysisEvidenceSection collect(AnalysisContext context) {

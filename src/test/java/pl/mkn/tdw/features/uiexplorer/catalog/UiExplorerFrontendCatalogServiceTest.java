@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.uiexplorer.catalog;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextReadModelValidator;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 
@@ -60,8 +61,8 @@ class UiExplorerFrontendCatalogServiceTest {
     }
 
     private UiExplorerFrontendCatalogService service(
-            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog
+            pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog catalog
     ) {
-        return new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog)));
+        return new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog), new OperationalContextReadModelValidator()));
     }
 }

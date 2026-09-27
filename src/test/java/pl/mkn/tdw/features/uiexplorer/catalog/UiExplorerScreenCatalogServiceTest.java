@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.uiexplorer.catalog;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextReadModelValidator;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerFrontendNotEligibleException;
@@ -170,20 +171,20 @@ class UiExplorerScreenCatalogServiceTest {
     }
 
     private UiExplorerScreenCatalogService service(
-            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
+            pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog catalog,
             GitLabFrontendRouteGraphDiscoveryService discovery
     ) {
         return service(catalog, discovery, FrontendViewCatalogCache.disabled());
     }
 
     private UiExplorerScreenCatalogService service(
-            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
+            pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog catalog,
             GitLabFrontendRouteGraphDiscoveryService discovery,
             FrontendViewCatalogCache cache
     ) {
         return new UiExplorerScreenCatalogService(
-                new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog))),
-                new FrontendViewCatalogService(new FrontendApplicationCatalogService(port(catalog)), discovery,
+                new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog), new OperationalContextReadModelValidator())),
+                new FrontendViewCatalogService(new FrontendApplicationCatalogService(port(catalog), new OperationalContextReadModelValidator()), discovery,
                         cache)
         );
     }

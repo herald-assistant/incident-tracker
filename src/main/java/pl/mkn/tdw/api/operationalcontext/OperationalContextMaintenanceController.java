@@ -18,12 +18,12 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextMaintenanceDtos.D
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextMaintenanceDtos.EditableEntityDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextMaintenanceDtos.EntityWriteRequest;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextMaintenanceDtos.MutationResultDto;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogEntityType;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogFieldError;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMutationCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMutationResult;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogEntityType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogFieldError;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenancePort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationResult;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.Arrays;
@@ -34,7 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 class OperationalContextMaintenanceController {
 
-    private final OperationalContextCatalogMaintenanceService maintenanceService;
+    private final OperationalContextCatalogMaintenancePort maintenanceService;
     private final OperationalContextPort operationalContextPort;
 
     @GetMapping("/capabilities")
@@ -130,7 +130,7 @@ class OperationalContextMaintenanceController {
         return new OperationalContextCatalogMutationCommand(canonicalPathType, effectiveId, request.payload());
     }
 
-    private EditableEntityDto toDto(pl.mkn.tdw.integrations.operationalcontext.OperationalContextEditableEntity entity) {
+    private EditableEntityDto toDto(pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEditableEntity entity) {
         return new EditableEntityDto(entity.type(), entity.id(), entity.sourceFile(), entity.payload());
     }
 

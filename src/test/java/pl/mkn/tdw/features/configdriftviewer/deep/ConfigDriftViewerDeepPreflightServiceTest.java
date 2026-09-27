@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.configdriftviewer.deep;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCodeSearchReadModelBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerCodeRefSource;
@@ -9,18 +10,18 @@ import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeExcepti
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeResolver;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGit;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextOwnership;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchTarget;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGit;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextOwnership;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchTarget;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadSession;
+import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextReadSession;
 
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextValidationTestCreator.create;
+import static pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextValidationTestCreator.create;
 
 class ConfigDriftViewerDeepPreflightServiceTest {
 
@@ -90,8 +91,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 scopeResolver,
                 gitLabProperties(),
                 gitLabPort,
-                create()
-        );
+                create(), new OperationalContextCodeSearchReadModelBuilder());
 
         var result = service.check("runtime-config", "backend", null);
 
@@ -118,8 +118,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 scopeResolver,
                 gitLabProperties(),
                 mock(GitLabRepositoryPort.class),
-                create()
-        );
+                create(), new OperationalContextCodeSearchReadModelBuilder());
 
         assertEquals(
                 "RUNTIME_CONFIGURATION_SYSTEM_NOT_FOUND",
@@ -200,8 +199,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                         scopeResolver,
                         gitLabProperties(),
                         gitLabPort,
-                        create()
-                ),
+                        create(), new OperationalContextCodeSearchReadModelBuilder()),
                 contextPort,
                 gitLabPort
         );

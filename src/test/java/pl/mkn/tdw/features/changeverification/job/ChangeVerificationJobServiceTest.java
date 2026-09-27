@@ -28,7 +28,7 @@ import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueLink;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;

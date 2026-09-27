@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSettingsPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
@@ -23,7 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OperationalContextEvidenceProvider implements AnalysisEvidenceProvider {
 
-    private final OperationalContextProperties properties;
+    private final OperationalContextSettingsPort properties;
     private final OperationalContextPort operationalContextPort;
     private final OperationalContextCatalogMatcher catalogMatcher;
     private final OperationalContextEvidenceMapper evidenceMapper;

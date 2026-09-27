@@ -4,25 +4,25 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerSystemOptionResponse;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.CODE_SEARCH_SCOPE;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.REPOSITORY;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType.SYSTEM;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +35,7 @@ public class FlowExplorerSystemSelectionService {
     );
 
     private final OperationalContextPort operationalContextPort;
-    private final OperationalContextOwnershipResolver ownershipResolver = new OperationalContextOwnershipResolver();
+    private final OperationalContextOwnershipPort ownershipResolver;
 
     public List<FlowExplorerSystemOptionResponse> systems() {
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(

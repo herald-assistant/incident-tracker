@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.incidentanalysis.job;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.mock.web.MockMultipartFile;
@@ -10,8 +11,8 @@ import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.adapter.local.OperationalContextAdapterTestCreator;
+import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
 import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
@@ -806,7 +807,7 @@ class AnalysisJobFacadeTest {
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper()
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
         );
     }
 

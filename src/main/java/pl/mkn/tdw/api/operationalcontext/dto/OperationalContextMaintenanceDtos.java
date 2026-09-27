@@ -1,6 +1,6 @@
 package pl.mkn.tdw.api.operationalcontext.dto;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDeleteImpact.InboundReference;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDeleteImpact.InboundReference;
 
 import java.util.List;
 import java.util.Map;

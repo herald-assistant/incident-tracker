@@ -2,7 +2,7 @@ package pl.mkn.tdw.features.operationalcontextassistance.draft;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogMaintenanceService;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceMode;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceRepositoryFacts;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;

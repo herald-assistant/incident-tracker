@@ -6,10 +6,10 @@ import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearch
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTarget;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableRepository;
 import pl.mkn.tdw.common.GitLabPathUtils;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
 
 import java.util.ArrayList;
 import java.util.Comparator;

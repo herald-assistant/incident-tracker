@@ -2,10 +2,10 @@ package pl.mkn.tdw.features.operationalcontextassistance.draft;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalBatchCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalMutationCommand;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalBatchCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalMutationCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenancePort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.List;
@@ -18,7 +18,7 @@ public class OperationalContextAssistanceDraftPreflight {
 
     private static final int MAX_ISSUES = 12;
     private final OperationalContextAssistanceDraftParser parser;
-    private final OperationalContextCatalogMaintenanceService maintenanceService;
+    private final OperationalContextCatalogMaintenancePort maintenanceService;
     private final OperationalContextPort catalogPort;
 
     public Result validate(String content, OperationalContextAssistanceDraftScope scope, String expectedDigest) {

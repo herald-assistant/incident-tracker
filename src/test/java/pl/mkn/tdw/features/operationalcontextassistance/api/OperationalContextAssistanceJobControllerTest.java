@@ -9,7 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.features.operationalcontextassistance.job.OperationalContextAssistanceJobNotFoundException;
 import pl.mkn.tdw.features.operationalcontextassistance.job.OperationalContextAssistanceJobService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
 
 import java.time.Instant;
 import java.util.List;

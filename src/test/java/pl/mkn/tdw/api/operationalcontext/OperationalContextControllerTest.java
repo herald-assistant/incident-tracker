@@ -15,8 +15,8 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalC
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextResolvedOwnershipDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCodeSearchReadModel;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityRef;
 
 import java.util.List;
 import java.util.Map;

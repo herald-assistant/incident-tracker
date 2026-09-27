@@ -20,11 +20,13 @@ class IntegrationPackageBoundaryTest {
     private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
     private static final String ELASTICSEARCH_PACKAGE = "pl.mkn.tdw.integrations.elasticsearch";
     private static final String JIRA_PACKAGE = "pl.mkn.tdw.integrations.jira";
+    private static final String OPERATIONAL_CONTEXT_PACKAGE = "pl.mkn.tdw.integrations.operationalcontext";
     private static final Path CONFLUENCE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/confluence");
     private static final Path DATABASE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/database");
     private static final Path DYNATRACE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/dynatrace");
     private static final Path ELASTICSEARCH_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/elasticsearch");
     private static final Path JIRA_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/jira");
+    private static final Path OPERATIONAL_CONTEXT_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/operationalcontext");
     private static final Path SETTINGS_SERVICE = MAIN_JAVA.resolve(
             "pl/mkn/tdw/api/workspacesettings/WorkspaceSettingsService.java");
     private static final Pattern PUBLIC_PORT = Pattern.compile("\\bpublic\\s+interface\\s+\\w+Port\\b");
@@ -58,6 +60,17 @@ class IntegrationPackageBoundaryTest {
         assertRootContainsOnlyPublicPorts(ELASTICSEARCH_ROOT, ELASTICSEARCH_PACKAGE,
                 "ElasticConnectionAvailabilityPort.java", "ElasticLogCsvImportPort.java",
                 "ElasticLogPort.java", "ElasticLogSearchPort.java");
+    }
+
+    @Test
+    void operationalContextRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(OPERATIONAL_CONTEXT_ROOT, OPERATIONAL_CONTEXT_PACKAGE,
+                "OperationalContextCatalogMaintenancePort.java", "OperationalContextCatalogSearchPort.java",
+                "OperationalContextCatalogValidationPort.java",
+                "OperationalContextCodeSearchPort.java", "OperationalContextOwnershipPort.java",
+                "OperationalContextPort.java", "OperationalContextReadModelValidationPort.java",
+                "OperationalContextRelationIndexPort.java", "OperationalContextRepositoryPathPort.java",
+                "OperationalContextSettingsPort.java");
     }
 
     private void assertRootContainsOnlyPublicPorts(
@@ -118,6 +131,16 @@ class IntegrationPackageBoundaryTest {
         assertConsumersDependOnlyOnPortAndContract(ELASTICSEARCH_PACKAGE,
                 "ElasticProperties", "ElasticConnectionAvailabilityPort", "ElasticLogCsvImportPort",
                 "ElasticLogPort", "ElasticLogSearchPort");
+    }
+
+    @Test
+    void operationalContextConsumersDependOnlyOnPortsAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(OPERATIONAL_CONTEXT_PACKAGE, null,
+                "OperationalContextCatalogMaintenancePort", "OperationalContextCatalogSearchPort",
+                "OperationalContextCatalogValidationPort",
+                "OperationalContextCodeSearchPort", "OperationalContextOwnershipPort", "OperationalContextPort",
+                "OperationalContextReadModelValidationPort", "OperationalContextRelationIndexPort",
+                "OperationalContextRepositoryPathPort", "OperationalContextSettingsPort");
     }
 
     private void assertConsumersDependOnlyOnPortAndContract(

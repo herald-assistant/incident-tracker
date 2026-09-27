@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.uiexplorer.context;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextReadModelValidator;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerFrontendCatalogService;
@@ -137,11 +138,11 @@ class UiExplorerScreenReachabilityContextServiceTest {
     }
 
     private static UiExplorerScreenReachabilityContextService service(
-            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
+            pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog catalog,
             GitLabFrontendScreenReachabilityService discovery
     ) {
         return new UiExplorerScreenReachabilityContextService(
-                new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog))), discovery
+                new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog), new OperationalContextReadModelValidator())), discovery
         );
     }
 

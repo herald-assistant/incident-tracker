@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 
 import java.util.List;
 
@@ -177,7 +177,7 @@ public class OperationalContextMcpTools {
         return result;
     }
 
-    private pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog loadCatalog() {
+    private pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog loadCatalog() {
         return operationalContextPort.loadContext(new OperationalContextQuery(
                 java.util.Set.of(),
                 List.of()

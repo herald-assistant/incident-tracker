@@ -15,13 +15,13 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalC
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSearchResultDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.ValidationFindingDto;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityKey;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.Provenance;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ReadModelRelation;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCodeSearchReadModel;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityKey;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityRef;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.Provenance;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ReadModelRelation;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.SourceRef;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ValidationFinding;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

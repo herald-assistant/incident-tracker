@@ -9,17 +9,17 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogEntityType;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogFieldError;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMutationResult;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDeleteImpact;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEditableEntity;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogEntityType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogFieldError;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogMaintenanceService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationResult;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDeleteImpact;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEditableEntity;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextSnapshot;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextStoreException;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextStoreException;
 
 import java.util.List;
 import java.util.Map;
@@ -72,7 +72,7 @@ class OperationalContextMaintenanceControllerTest {
     @Test
     void shouldCreateEachYamlTypeWithoutSecurityOrRevisionHeaders() throws Exception {
         when(maintenanceService.create(any())).thenAnswer(invocation -> {
-            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMutationCommand.class);
+            var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationCommand.class);
             var entity = new OperationalContextEditableEntity(
                     command.type(), command.id(), sourceFile(command.type()), command.payload()
             );

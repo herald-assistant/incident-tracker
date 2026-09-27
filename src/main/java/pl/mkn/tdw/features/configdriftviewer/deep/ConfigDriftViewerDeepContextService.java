@@ -13,19 +13,19 @@ import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerOperati
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerPrimarySystem;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftViewerDeterministicContext;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerMode;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextBoundedContext;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextEntry;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcess;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,9 +43,8 @@ public class ConfigDriftViewerDeepContextService {
     private final ConfigDriftViewerDeepPreflightService preflightService;
     private final ConfigDriftViewerCodeUsageSearchService codeUsageSearchService;
     private final OperationalContextPort operationalContextPort;
-    private final OperationalContextOwnershipResolver ownershipResolver;
-    private final OperationalContextCodeSearchReadModelBuilder codeSearchBuilder =
-            new OperationalContextCodeSearchReadModelBuilder();
+    private final OperationalContextOwnershipPort ownershipResolver;
+    private final OperationalContextCodeSearchPort codeSearchBuilder;
 
     public Optional<ConfigDriftViewerDeepContext> build(
             ConfigDriftViewerMode mode,
@@ -453,7 +452,7 @@ public class ConfigDriftViewerDeepContextService {
         }
 
         private void addReferences(
-                pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences references,
+                pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences references,
                 String evidenceKind,
                 ConfigDriftViewerGroundingConfidence confidence,
                 List<String> differenceIds,

@@ -1,11 +1,15 @@
 package pl.mkn.tdw.api.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogSearch;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
+
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.operationalcontext.mcp.OperationalContextToolMapper;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogValidationService;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,16 +25,17 @@ import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixture
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.emptyCatalog;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.map;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.port;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.viewService;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.typicalCatalog;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextValidationTestCreator.create;
+import static pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextValidationTestCreator.create;
 
 class OperationalContextViewServiceTest {
 
     @Test
     void shouldFindTheSameCatalogEntitiesAsOperationalContextTool() {
         var catalog = typicalCatalog();
-        var service = new OperationalContextViewService(port(catalog), create());
-        var toolMapper = new OperationalContextToolMapper();
+        var service = viewService(port(catalog), create());
+        var toolMapper = new OperationalContextToolMapper(new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch());
 
         for (var query : List.of("crm-consent-service", "business-analysis", "consent-registry-handoff", "Customer Consent")) {
             var apiIds = service.search(query).stream()
@@ -45,7 +50,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldReturnEmptySummaryForStarterTemplates() {
-        var service = new OperationalContextViewService(port(emptyCatalog()), create());
+        var service = viewService(port(emptyCatalog()), create());
 
         var summary = service.summary();
 
@@ -59,7 +64,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeCatalogueRowsFromSimplifiedContract() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         var system = service.systems().get(0);
         assertEquals("crm-consent-service", system.id());
@@ -118,7 +123,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeOnlyRelationsAndCodeSearchReadModelsForOperatorApi() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         var relations = service.entityRelationsReadModel("system", "crm-consent-service");
         assertEquals("operational-context.entity-relations", relations.contract());
@@ -134,7 +139,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeCompactProfilesWithoutRemovedExpansions() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         var compactEntity = (OperationalContextProfiledReadModelDto) service.entity(
                 "system",
@@ -170,7 +175,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldValidateBrokenReferences() {
-        var service = new OperationalContextViewService(port(brokenCatalog()), create());
+        var service = viewService(port(brokenCatalog()), create());
 
         var findings = service.validation();
 
@@ -195,14 +200,14 @@ class OperationalContextViewServiceTest {
         );
         var validationService = mock(OperationalContextCatalogValidationService.class);
         when(validationService.validate(any())).thenReturn(
-                new OperationalContextCatalogValidationService.ValidationReport(
+                new OperationalContextValidationReport(
                         List.of(first, second), List.of(
-                                new OperationalContextCatalogValidationService.FingerprintedFinding("fingerprint-first", first),
-                                new OperationalContextCatalogValidationService.FingerprintedFinding("fingerprint-second", second)
+                                new OperationalContextValidationReport.FingerprintedFinding("fingerprint-first", first),
+                                new OperationalContextValidationReport.FingerprintedFinding("fingerprint-second", second)
                         )
                 )
         );
-        var service = new OperationalContextViewService(port(emptyCatalog()), validationService);
+        var service = viewService(port(emptyCatalog()), validationService);
 
         var findings = service.validation();
 
@@ -214,7 +219,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeOwnershipContractValidation() {
-        var service = new OperationalContextViewService(port(OperationalContextDtos.catalogFromRaw(
+        var service = viewService(port(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
                 List.of(map("id", "crm-customer-service")),
@@ -239,7 +244,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldSearchByBusinessAndCatalogTerms() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         assertFalse(service.search("crm-consent-service").isEmpty());
         assertTrue(service.search("business-analysis").stream()
@@ -252,7 +257,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldReturnEntityDetailsAndControlledNotFound() {
-        var service = new OperationalContextViewService(port(typicalCatalog()), create());
+        var service = viewService(port(typicalCatalog()), create());
 
         var detail = service.entity("system", "crm-consent-service");
         var repositoryDetail = service.entity("repository", "crm-consent-repo");

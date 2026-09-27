@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.context;
 
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
 
 import java.util.List;
 

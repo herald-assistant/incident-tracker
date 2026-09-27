@@ -3,14 +3,14 @@ package pl.mkn.tdw.frontendcatalog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadModelValidator;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadModelValidationPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ValidationFinding;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -23,8 +23,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static pl.mkn.tdw.common.GitLabPathUtils.relativeProjectPath;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_PATH_PREFIXES;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_WHOLE_REPOSITORY;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.CODE_SEARCH_MODE_PATH_PREFIXES;
+import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.CODE_SEARCH_MODE_WHOLE_REPOSITORY;
 
 @Service
 @RequiredArgsConstructor
@@ -50,7 +50,7 @@ public class FrontendApplicationCatalogService {
     );
 
     private final OperationalContextPort operationalContextPort;
-    private final OperationalContextReadModelValidator validator = new OperationalContextReadModelValidator();
+    private final OperationalContextReadModelValidationPort validator;
 
     public FrontendApplicationCatalog loadCatalog() {
         var readSession = operationalContextPort.capture();

@@ -1,14 +1,16 @@
 package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogSearch;
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.adapter.local.OperationalContextAdapterTestCreator;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextOpenQuestion;
+import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,7 +25,7 @@ class OperationalContextMcpToolsTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final OperationalContextMcpTools tools = new OperationalContextMcpTools(
             ignored -> catalog(),
-            new OperationalContextToolMapper()
+            new OperationalContextToolMapper(new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch())
     );
 
     @Test
@@ -226,7 +228,7 @@ class OperationalContextMcpToolsTest {
     void shouldKeepEntityPayloadCompactForLargeCodeSearchScope() throws Exception {
         var catalogTools = new OperationalContextMcpTools(
                 OperationalContextAdapterTestCreator.create(new OperationalContextProperties()),
-                new OperationalContextToolMapper()
+                new OperationalContextToolMapper(new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch())
         );
 
         var result = catalogTools.getEntity(
