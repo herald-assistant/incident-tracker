@@ -6,9 +6,9 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.RepositoryPathTreeRenderer;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeNode;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreePort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeNode;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.util.ArrayDeque;
@@ -24,7 +24,7 @@ public class UxInspectorRepositoryTreeArtifactService {
     static final int DEPTH = 4;
     private static final int PAGE_SIZE = 100;
 
-    private final GitLabRepositoryPort repositoryPort;
+    private final GitLabRepositoryTreePort repositoryPort;
 
     public UxInspectorRepositoryTreeArtifact prepare(UxInspectorTargetContext context) {
         if (context == null || context.sourceScope() == null || context.sourceRevision() == null) {
@@ -111,7 +111,7 @@ public class UxInspectorRepositoryTreeArtifactService {
     private boolean isDirectChild(String directory, GitLabRepositoryTreeNode node) {
         if (node == null || !StringUtils.hasText(node.path())
                 || !("tree".equals(node.type()) || "blob".equals(node.type()))
-                || !GitLabVerifiedRepositoryFileReader.isSafePath(node.path(), false)) {
+                || !GitLabRepositoryPath.isSafePath(node.path(), false)) {
             return false;
         }
         var prefix = directory.isEmpty() ? "" : directory + "/";

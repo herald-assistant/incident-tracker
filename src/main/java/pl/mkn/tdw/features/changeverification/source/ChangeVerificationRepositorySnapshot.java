@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.changeverification.source;
 
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionSource;
 
 import java.util.List;
 

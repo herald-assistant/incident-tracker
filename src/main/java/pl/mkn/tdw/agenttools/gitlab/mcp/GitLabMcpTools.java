@@ -28,28 +28,30 @@ import org.springframework.web.client.RestClientResponseException;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactReadError;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactReadException;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadError;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpointListRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextRequest;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFilePort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabVerifiedFile;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceMethodSelector;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.GitLabJavaMethodSlicePort;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabOpenApiEndpointSlicePort;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabEndpointUseCaseContextPort;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabJavaMethodUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabJavaMethodUseCaseContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
@@ -136,14 +138,15 @@ public class GitLabMcpTools {
             OperationalContextEntryType.CODE_SEARCH_SCOPE
     );
 
+    private final GitLabVerifiedRepositoryFilePort verifiedFileReader;
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
-    private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
-    private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
-    private final GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService;
-    private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
-    private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
-    private final GitLabProperties gitLabProperties;
+    private final GitLabRepositoryEndpointPort gitLabRepositoryEndpointService;
+    private final GitLabEndpointUseCaseContextPort gitLabEndpointUseCaseContextService;
+    private final GitLabJavaMethodUseCaseContextPort gitLabJavaMethodUseCaseContextService;
+    private final GitLabJavaMethodSlicePort gitLabJavaMethodSliceService;
+    private final GitLabOpenApiEndpointSlicePort gitLabOpenApiEndpointSliceService;
+    private final GitLabSettingsPort gitLabProperties;
 
     private GitLabToolScope scope(
             String projectName,
@@ -861,11 +864,11 @@ public class GitLabMcpTools {
             var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
             var verified = Boolean.TRUE.equals(toolContext.getContext().get(
                     AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ))
-                    ? GitLabVerifiedRepositoryFileReader.readComplete(
+                    ? verifiedFileReader.readComplete(
                             gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(), filePath)
-                    : GitLabVerifiedRepositoryFileReader.read(
+                    : verifiedFileReader.read(
                             gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(),
-                            filePath, GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES);
+                            filePath, GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES);
             return new GitLabReadRepositoryFileToolResponse(
                     target.group(), target.projectName(), target.commitId(), verified.path(),
                     verified.content(), false, repositoryScope.recordRead(target, verified.path())
@@ -1059,7 +1062,7 @@ public class GitLabMcpTools {
             if (reason == null || reason.isBlank() || reason.length() > 500) {
                 throw new IllegalArgumentException("A short reason is required.");
             }
-            if (!GitLabVerifiedRepositoryFileReader.isSafePath(filePath, false)) {
+            if (!GitLabRepositoryPath.isSafePath(filePath, false)) {
                 throw new IllegalArgumentException("Only relative OpenAPI file paths can be read.");
             }
             pinnedTarget = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
@@ -1618,7 +1621,7 @@ public class GitLabMcpTools {
             if (reason == null || reason.isBlank() || reason.length() > 500) {
                 throw new IllegalArgumentException("A short reason is required.");
             }
-            if (!GitLabVerifiedRepositoryFileReader.isSafePath(filePath, false)) {
+            if (!GitLabRepositoryPath.isSafePath(filePath, false)) {
                 throw new IllegalArgumentException("Only relative text file paths can be read.");
             }
             var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
@@ -2111,7 +2114,7 @@ public class GitLabMcpTools {
         );
     }
 
-    List<GitLabFlowContextCandidate> toFlowContextCandidates(List<pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate> candidates) {
+    List<GitLabFlowContextCandidate> toFlowContextCandidates(List<pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate> candidates) {
         return defaultList(candidates).stream()
                 .map(candidate -> {
                     var inferredRole = inferRole(candidate.filePath(), candidate.matchReason());

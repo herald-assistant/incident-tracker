@@ -6,9 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeComplexityProperties;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeComplexityJobStartRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestPort;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueCustomField;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterialRequest;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
@@ -35,8 +35,8 @@ public class DeliveryScopeSourceDiscoveryService {
     private final JiraIssueSearchPort jiraIssueSearchPort;
     private final JiraIssuePort jiraIssuePort;
     private final JiraIssueStatusHistoryPort jiraIssueStatusHistoryPort;
-    private final GitLabRepositoryPort gitLabRepositoryPort;
-    private final GitLabProperties gitLabProperties;
+    private final GitLabMergeRequestPort gitLabRepositoryPort;
+    private final GitLabSettingsPort gitLabProperties;
     private final DeliveryScopeComplexityProperties properties;
     private final DeliveryScopeSourceExecutor sourceExecutor;
 

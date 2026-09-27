@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit;
 
 import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssue;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
 
 import java.util.List;
 

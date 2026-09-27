@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchPort;
 
 import java.util.List;
 
@@ -20,7 +20,7 @@ public class OperationalContextAssistanceBranchOptionsController {
     private static final int MAX_SEARCH_LENGTH = 160;
 
     private final OperationalContextGitLabSourceCollector sourceCollector;
-    private final GitLabRepositoryBranchService branchService;
+    private final GitLabRepositoryBranchPort branchService;
 
     @GetMapping
     public BranchesResponse branches(

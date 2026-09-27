@@ -1,13 +1,26 @@
 package pl.mkn.tdw.integrations.gitlab;
 
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFilePage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreePage;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventory;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventoryRequest;
 
 import java.util.List;
 
-public interface GitLabRepositoryPort {
+public interface GitLabRepositoryPort extends GitLabProjectSearchPort, GitLabCodeSearchPort,
+        GitLabRepositoryTreePort, GitLabRepositoryReadPort, GitLabRepositoryRevisionPort,
+        GitLabMergeRequestPort, GitLabInstructionRepositoryPort {
 
     List<GitLabRepositoryProjectCandidate> searchProjects(String group, List<String> projectHints);
 

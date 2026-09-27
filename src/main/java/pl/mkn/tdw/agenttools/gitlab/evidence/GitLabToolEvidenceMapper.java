@@ -25,7 +25,7 @@ import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabSearchRepositoryCan
 import pl.mkn.tdw.agenttools.gitlab.frontend.mcp.GitLabFrontendToolDtos.RouteBranchSliceToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.frontend.mcp.GitLabFrontendToolDtos.TypeScriptSymbolSliceToolResponse;
 import pl.mkn.tdw.common.JsonPayloadReader;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceResponse;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -3,7 +3,7 @@ package pl.mkn.tdw.integrations;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.dynatrace.contract.DynatraceIncidentQuery;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 import pl.mkn.tdw.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 

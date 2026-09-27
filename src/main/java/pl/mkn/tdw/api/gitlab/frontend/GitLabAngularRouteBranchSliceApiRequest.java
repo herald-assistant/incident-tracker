@@ -5,8 +5,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
 
 import java.util.List;
 

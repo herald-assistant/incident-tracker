@@ -1,14 +1,15 @@
 package pl.mkn.tdw.testsupport.agenttools;
 
+import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabMcpTools;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryEndpointService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.service.openapi.GitLabOpenApiEndpointSliceService;
+import pl.mkn.tdw.integrations.gitlab.service.source.GitLabJavaMethodSliceService;
+import pl.mkn.tdw.integrations.gitlab.service.usecase.GitLabEndpointUseCaseContextService;
+import pl.mkn.tdw.integrations.gitlab.service.usecase.GitLabJavaMethodUseCaseContextService;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
@@ -83,7 +84,7 @@ public final class GitLabMcpToolsTestCreator {
             GitLabProperties gitLabProperties
     ) {
         return new GitLabMcpTools(
-                gitLabRepositoryPort,
+                new GitLabVerifiedRepositoryFileService(), gitLabRepositoryPort,
                 operationalContextPort,
                 gitLabRepositoryEndpointService,
                 gitLabEndpointUseCaseContextService,

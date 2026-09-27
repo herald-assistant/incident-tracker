@@ -8,7 +8,7 @@ import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerDeepPre
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScope;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeException;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeResolver;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGit;

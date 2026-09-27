@@ -18,13 +18,13 @@ import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionModeAssignment;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiagnosticSeverity;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenSelectionRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiagnosticSeverity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphLimits;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.GitLabFrontendScreenReachabilityPort;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenSelectionRequest;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,7 +38,7 @@ public class UiExplorerScreenReachabilityContextService {
     private static final int MAX_SCREEN_ID_LENGTH = 240;
     private static final int MAX_REVISION_LENGTH = 160;
     private final UiExplorerFrontendCatalogService frontendCatalogService;
-    private final GitLabFrontendScreenReachabilityService screenReachabilityService;
+    private final GitLabFrontendScreenReachabilityPort screenReachabilityService;
 
     public UiExplorerScreenReachabilityContext buildContext(
             String systemId,

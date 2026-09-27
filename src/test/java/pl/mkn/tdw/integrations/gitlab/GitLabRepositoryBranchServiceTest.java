@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryBranchService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;

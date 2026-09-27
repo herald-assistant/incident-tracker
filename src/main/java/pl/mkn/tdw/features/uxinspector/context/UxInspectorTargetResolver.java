@@ -1,11 +1,19 @@
 package pl.mkn.tdw.features.uxinspector.context;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphLimits;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenSelectionRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBinding;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBindingKind;
+import pl.mkn.tdw.integrations.gitlab.GitLabFrontendScreenReachabilityPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
-import pl.mkn.tdw.integrations.gitlab.frontend.*;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.util.ArrayList;
@@ -31,7 +39,7 @@ public class UxInspectorTargetResolver {
     private static final Pattern ATTRIBUTE_SELECTOR = Pattern.compile(
             "^[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label|class)(~=|=)\"([A-Za-z][A-Za-z0-9_.:-]*)\"\\]$");
     private final FrontendApplicationCatalogService applicationCatalogService;
-    private final GitLabFrontendScreenReachabilityService screenReachabilityService;
+    private final GitLabFrontendScreenReachabilityPort screenReachabilityService;
 
     public UxInspectorTargetContext resolve(String systemId, String branch, String viewId,
                                             String expectedRevision, UxInspectorCapture capture) {

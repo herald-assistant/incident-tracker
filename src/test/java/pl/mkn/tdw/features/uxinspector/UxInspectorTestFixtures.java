@@ -1,10 +1,24 @@
 package pl.mkn.tdw.features.uxinspector;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendEffectiveRouteChain;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponentLevel;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteChainSegment;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteConfiguration;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteConfigurationKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNodeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteTarget;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceRevision;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
 import pl.mkn.tdw.features.uxinspector.context.*;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalog;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationRegistration;
-import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.time.Instant;
 import java.util.List;

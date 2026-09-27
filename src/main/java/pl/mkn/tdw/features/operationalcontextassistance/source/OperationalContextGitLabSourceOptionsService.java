@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceSourceOptions;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
@@ -25,7 +25,7 @@ public class OperationalContextGitLabSourceOptionsService {
 
     private static final Pattern SAFE_PROJECT = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,511}");
 
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
     private final OperationalContextPort operationalContextPort;
 
     public OperationalContextAssistanceSourceOptions getOptions() {

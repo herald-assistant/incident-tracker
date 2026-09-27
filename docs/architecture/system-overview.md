@@ -362,7 +362,7 @@ Na dzisiaj projekt ma:
 - osobny endpoint do testowego mapowania hintow komponentu na repozytoria i
   kandydatow plikow w GitLabie,
 - osobny endpoint do rozwiazywania pliku z GitLaba po symbolu klasy/interfejsu.
-- neutralna capability `integrations.gitlab.frontend` do statycznego,
+- neutralna capability `integrations.gitlab` do statycznego,
   ograniczonego rozpoznawania Angular/Nx: workspace signals, standalone i
   module routes, lazy loading, guardy, route parameters, view roots,
   template/style, formularze, NgRx, REST, WebSocket i auth signals. Route
@@ -914,7 +914,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `memberNames`. Repository/ref/source revision i allowlista targetow sa
   ukrytym scope'em sesji. Pelny Screen Reachability zasila initial artifacts i
   nie jest toolem.
-- `pl.mkn.tdw.integrations.gitlab.source`
+- `pl.mkn.tdw.integrations.gitlab.service.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.tdw.api`
   Obsluga bledow API, wspolny kontrakt walidacji i shared/operator API dla

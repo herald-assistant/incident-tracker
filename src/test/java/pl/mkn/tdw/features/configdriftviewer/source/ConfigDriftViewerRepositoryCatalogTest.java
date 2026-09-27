@@ -2,8 +2,8 @@ package pl.mkn.tdw.features.configdriftviewer.source;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeException;
-import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionRegistry;
-import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionRegistry;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionsProperties;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

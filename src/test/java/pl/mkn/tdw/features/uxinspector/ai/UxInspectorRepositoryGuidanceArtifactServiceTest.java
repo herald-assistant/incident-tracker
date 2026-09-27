@@ -1,10 +1,11 @@
 package pl.mkn.tdw.features.uxinspector.ai;
 
+import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 
 import java.nio.charset.StandardCharsets;
@@ -22,7 +23,7 @@ class UxInspectorRepositoryGuidanceArtifactServiceTest {
     private final GitLabRepositoryPort repositoryPort = mock(GitLabRepositoryPort.class);
     private final UxInspectorRepositoryGuidanceArtifactService service =
             new UxInspectorRepositoryGuidanceArtifactService(
-                    repositoryPort, new ObjectMapper().findAndRegisterModules());
+                    new GitLabVerifiedRepositoryFileService(), repositoryPort, new ObjectMapper().findAndRegisterModules());
 
     @Test
     void shouldInlinePinnedCopilotInstructionsAndOnlyCatalogHeadersFromSupportedProjectSkills() {

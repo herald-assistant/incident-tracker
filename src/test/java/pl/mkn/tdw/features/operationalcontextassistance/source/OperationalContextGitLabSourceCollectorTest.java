@@ -1,13 +1,13 @@
 package pl.mkn.tdw.features.operationalcontextassistance.source;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevision;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeExplorer;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryTreeExplorer;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

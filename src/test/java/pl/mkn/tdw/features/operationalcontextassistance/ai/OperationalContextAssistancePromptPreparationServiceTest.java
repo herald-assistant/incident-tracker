@@ -8,7 +8,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkillState;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceFile;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
 
 import java.util.LinkedHashMap;
 import java.util.List;

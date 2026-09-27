@@ -2,8 +2,8 @@ package pl.mkn.tdw.api.gitlab;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextRequest;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryScope;
 
 import java.util.List;
 

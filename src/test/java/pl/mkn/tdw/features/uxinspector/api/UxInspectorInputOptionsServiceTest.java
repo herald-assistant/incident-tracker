@@ -3,7 +3,7 @@ package pl.mkn.tdw.features.uxinspector.api;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
 import pl.mkn.tdw.frontendcatalog.*;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
 
 import java.util.List;
 

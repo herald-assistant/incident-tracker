@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseContextRequest;
 
 public record GitLabEndpointUseCaseContextApiRequest(
         @NotBlank(message = "group must not be blank")

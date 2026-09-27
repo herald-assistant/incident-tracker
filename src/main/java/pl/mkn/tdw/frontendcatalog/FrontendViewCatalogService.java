@@ -1,9 +1,16 @@
 package pl.mkn.tdw.frontendcatalog;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiagnosticSeverity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphLimits;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNodeKind;
+import pl.mkn.tdw.integrations.gitlab.GitLabFrontendRouteGraphPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -14,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FrontendViewCatalogService {
     private final FrontendApplicationCatalogService applicationCatalogService;
-    private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
+    private final GitLabFrontendRouteGraphPort routeGraphDiscoveryService;
     private final FrontendViewCatalogCache viewCatalogCache;
 
     public FrontendViewCatalog loadCatalog(String systemId, String ref) {

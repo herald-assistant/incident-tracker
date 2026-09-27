@@ -1,5 +1,26 @@
 package pl.mkn.tdw.features.uiexplorer.context;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiagnosticSeverity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendEffectiveRouteChain;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphDiagnostic;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphDiagnosticCode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponentLevel;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteChainSegment;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteConfiguration;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteConfigurationKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNodeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteTarget;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenSelectionRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceRevision;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabFrontendScreenReachabilityService;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextReadModelValidator;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -10,7 +31,6 @@ import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerScreenSelectionSta
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionChangedException;
 import pl.mkn.tdw.features.uiexplorer.contract.*;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
-import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.List;
 

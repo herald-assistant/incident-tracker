@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.configdriftviewer.deterministic.source;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactFileMetadata;
 
 final class ConfigDriftViewerRawFile {
 

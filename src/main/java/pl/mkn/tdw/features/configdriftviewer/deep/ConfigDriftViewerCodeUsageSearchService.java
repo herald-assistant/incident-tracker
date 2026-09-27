@@ -9,10 +9,10 @@ import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerDeepPre
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerDeepRepositoryScope;
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerGroundingConfidence;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftViewerDeterministicContext;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -38,7 +38,7 @@ class ConfigDriftViewerCodeUsageSearchService {
             "\\b(?:class|interface|record|enum)\\s+([A-Za-z_$][A-Za-z0-9_$]*)"
     );
 
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
     private final GitLabRepositoryPort gitLabRepositoryPort;
 
     ConfigDriftViewerCodeSearchResult search(

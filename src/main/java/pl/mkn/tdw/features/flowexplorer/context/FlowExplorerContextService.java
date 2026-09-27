@@ -3,15 +3,15 @@ package pl.mkn.tdw.features.flowexplorer.context;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseEndpointContext;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseFileCandidate;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseMethodCandidate;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseConfidence;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseContextResult;
+import pl.mkn.tdw.integrations.gitlab.GitLabEndpointUseCaseContextPort;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseEndpointContext;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseLimits;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseMethodCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseRelation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,7 +24,7 @@ import java.util.Locale;
 public class FlowExplorerContextService {
 
     private final FlowExplorerRepositoryScopeService repositoryScopeService;
-    private final GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService;
+    private final GitLabEndpointUseCaseContextPort gitLabEndpointUseCaseContextService;
     private final FlowExplorerSnippetCardService snippetCardService;
     private final FlowExplorerOpenApiContractService openApiContractService;
 

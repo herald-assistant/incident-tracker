@@ -1,8 +1,10 @@
 package pl.mkn.tdw.integrations.gitlab.openapi;
 
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.service.openapi.GitLabOpenApiEndpointSliceService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 
 import java.util.List;

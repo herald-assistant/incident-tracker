@@ -1,0 +1,1496 @@
+package pl.mkn.tdw.integrations.gitlab.adapter.rest;
+
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabFileTooLargeException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestChangedFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestCommit;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFilePage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreePage;
+import pl.mkn.tdw.integrations.gitlab.internal.GitLabRepositoryAnalysisCache;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryTreeService;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.util.UriUtils;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventory;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventoryRequest;
+
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+
+@Component
+@RequiredArgsConstructor
+public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
+
+    private static final int PROJECT_SEARCH_PAGE_SIZE = 100;
+    private static final int MERGE_REQUEST_DIFFS_PAGE_SIZE = 100;
+
+    private final GitLabProperties properties;
+    private final GitLabRestClientFactory gitLabRestClientFactory;
+    private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
+    private final GitLabRepositoryAnalysisCache analysisCache;
+
+    @Override
+    public List<GitLabRepositoryProjectCandidate> searchProjects(String group, List<String> projectHints) {
+        var searchTokens = distinctProjectSearchTokens(group, projectHints);
+        if (!StringUtils.hasText(group) || searchTokens.isEmpty()) {
+            return List.of();
+        }
+
+        var candidateScores = new LinkedHashMap<String, ProjectCandidateAccumulator>();
+
+        for (var searchToken : searchTokens) {
+            for (var project : searchGroupProjects(group, searchToken)) {
+                var projectPath = toRelativeProjectPath(group, project.pathWithNamespace());
+                if (!StringUtils.hasText(projectPath)) {
+                    continue;
+                }
+
+                var matchScore = projectMatchScore(projectPath, project.name(), searchToken);
+                if (matchScore <= 0) {
+                    continue;
+                }
+
+                candidateScores.computeIfAbsent(
+                                projectPath,
+                                ignored -> new ProjectCandidateAccumulator(group, projectPath))
+                        .registerMatch(searchToken, matchScore);
+            }
+        }
+
+        return candidateScores.values().stream()
+                .sorted((left, right) -> Integer.compare(right.matchScore(), left.matchScore()))
+                .limit(properties.getMaxCandidateCount())
+                .map(ProjectCandidateAccumulator::toCandidate)
+                .toList();
+    }
+
+    @Override
+    public List<GitLabRepositoryFileCandidate> searchCandidateFiles(GitLabRepositorySearchQuery query) {
+        var projectNames = resolveProjectSearchTargets(query.group(), query.projectNames());
+        var searchTerms = distinctSearchTerms(query.keywords(), query.operationNames());
+        var pathPrefixes = distinctPathPrefixes(query.pathPrefixes());
+
+        if (projectNames.isEmpty() || searchTerms.isEmpty()) {
+            return List.of();
+        }
+
+        var candidateScores = new LinkedHashMap<String, CandidateAccumulator>();
+
+        for (var projectName : projectNames) {
+            for (var searchTerm : searchTerms) {
+                for (var blobMatch : searchProjectBlobs(query.group(), projectName, query.branch(), searchTerm)) {
+                    if (!matchesPathPrefixes(blobMatch.path(), pathPrefixes)) {
+                        continue;
+                    }
+                    var key = projectName + "::" + blobMatch.path();
+                    candidateScores.computeIfAbsent(
+                                    key,
+                                    ignored -> new CandidateAccumulator(query.group(), projectName, query.branch(), blobMatch.path()))
+                            .registerMatch(searchTerm);
+                }
+            }
+        }
+
+        return candidateScores.values().stream()
+                .sorted((left, right) -> Integer.compare(right.matchScore(), left.matchScore()))
+                .limit(properties.getMaxCandidateCount())
+                .map(CandidateAccumulator::toCandidate)
+                .toList();
+    }
+
+    @Override
+    public List<GitLabRepositoryFileCandidate> searchRepositoryFilesByContent(
+            String group,
+            String projectName,
+            String branch,
+            List<String> searchTerms,
+            int maxResultsPerTerm
+    ) {
+        var normalizedTerms = distinctSearchTerms(searchTerms, List.of());
+        if (!StringUtils.hasText(group)
+                || !StringUtils.hasText(projectName)
+                || !StringUtils.hasText(branch)
+                || normalizedTerms.isEmpty()) {
+            return List.of();
+        }
+
+        var candidateScores = new LinkedHashMap<String, CandidateAccumulator>();
+        var safeMaxResultsPerTerm = maxResultsPerTerm > 0
+                ? maxResultsPerTerm
+                : properties.getSearchResultsPerTerm();
+
+        for (var searchTerm : normalizedTerms) {
+            for (var blobMatch : searchProjectBlobs(group, projectName, branch, searchTerm, safeMaxResultsPerTerm)) {
+                var key = projectName + "::" + blobMatch.path();
+                candidateScores.computeIfAbsent(
+                                key,
+                                ignored -> new CandidateAccumulator(group, projectName, branch, blobMatch.path()))
+                        .registerMatch(searchTerm);
+            }
+        }
+
+        return candidateScores.values().stream()
+                .sorted((left, right) -> Integer.compare(right.matchScore(), left.matchScore()))
+                .map(CandidateAccumulator::toCandidate)
+                .toList();
+    }
+
+    @Override
+    public List<GitLabRepositoryFile> listRepositoryFiles(
+            String group,
+            String projectName,
+            String branch,
+            String pathPrefix
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(branch)) {
+            return List.of();
+        }
+
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.repository-files",
+                    Arrays.asList(apiBaseUrl(), group, projectName, branch, pathPrefix),
+                    () -> listRepositoryFilesUncached(group, projectName, branch, pathPrefix)
+            );
+        }
+
+        return listRepositoryFilesUncached(group, projectName, branch, pathPrefix);
+    }
+
+    @Override
+    public GitLabRepositoryFilePage listRepositoryFilesPage(
+            String group,
+            String projectName,
+            String revision,
+            String pathPrefix,
+            String cursor,
+            int maxResults
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(revision)) {
+            throw new IllegalArgumentException("GitLab project and immutable revision are required.");
+        }
+        try {
+            var page = gitLabRepositoryTreeService.fetchRepositoryBlobsPage(
+                    properties.getBaseUrl(), group.trim() + "/" + projectName.trim(), revision.trim(),
+                    pathPrefix, cursor, maxResults);
+            var files = page.nodes().stream()
+                    .filter(node -> StringUtils.hasText(node.path()))
+                    .map(node -> new GitLabRepositoryFile(group, projectName, revision, node.path()))
+                    .toList();
+            return new GitLabRepositoryFilePage(files, page.nextCursor());
+        } catch (GitLabRepositoryTreeException exception) {
+            if (exception.statusCode() == 404) {
+                return new GitLabRepositoryFilePage(List.of(), null);
+            }
+            throw new IllegalStateException("GitLab repository tree request failed for " + group + "/" + projectName,
+                    exception);
+        }
+    }
+
+    @Override
+    public GitLabRepositoryTreePage listRepositoryTreeChildrenPage(
+            String group,
+            String projectName,
+            String revision,
+            String directory,
+            String cursor,
+            int maxEntries
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(revision)) {
+            throw new IllegalArgumentException("GitLab project and immutable revision are required.");
+        }
+        try {
+            var page = gitLabRepositoryTreeService.fetchRepositoryChildrenPage(
+                    properties.getBaseUrl(), group.trim() + "/" + projectName.trim(), revision.trim(),
+                    directory, cursor, maxEntries);
+            return new GitLabRepositoryTreePage(page.nodes(), page.nextCursor());
+        } catch (GitLabRepositoryTreeException exception) {
+            if (exception.statusCode() == 404) {
+                return new GitLabRepositoryTreePage(List.of(), null);
+            }
+            throw new IllegalStateException("GitLab repository directory request failed for " + group + "/" + projectName,
+                    exception);
+        }
+    }
+
+    private List<GitLabRepositoryFile> listRepositoryFilesUncached(
+            String group,
+            String projectName,
+            String branch,
+            String pathPrefix
+    ) {
+        try {
+            return gitLabRepositoryTreeService.fetchRepositoryBlobs(
+                            properties.getBaseUrl(),
+                            group.trim() + "/" + projectName.trim(),
+                            branch.trim(),
+                            pathPrefix,
+                            gitLabRepositoryTreeService.requestScopedSession()
+                    )
+                    .stream()
+                    .filter(node -> StringUtils.hasText(node.path()))
+                    .map(node -> new GitLabRepositoryFile(
+                            group,
+                            projectName,
+                            branch,
+                            node.path()
+                    ))
+                    .toList();
+        } catch (GitLabRepositoryTreeException exception) {
+            if (exception.statusCode() == 404) {
+                return List.of();
+            }
+
+            throw new IllegalStateException("GitLab repository tree request failed for " + group + "/" + projectName, exception);
+        }
+    }
+
+    @Override
+    public GitLabRepositoryFileContent readFile(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            int maxCharacters
+    ) {
+        var content = fetchRawFile(group, projectName, branch, filePath);
+        var limitedContent = limitCharacters(content, maxCharacters);
+        var truncated = limitedContent.length() != content.length();
+
+        return new GitLabRepositoryFileContent(
+                group,
+                projectName,
+                branch,
+                filePath,
+                limitedContent,
+                truncated
+        );
+    }
+
+    @Override
+    public GitLabRepositoryFileContent readFileBounded(
+            String group,
+            String projectName,
+            String revision,
+            String filePath,
+            int maxBytes
+    ) {
+        if (maxBytes < 1 || maxBytes > 1_048_576) {
+            throw new IllegalArgumentException("maxBytes must be between 1 and 1048576.");
+        }
+        try {
+            var content = restClient().get()
+                    .uri(rawFileUri(group, projectName, revision, filePath))
+                    .accept(MediaType.TEXT_PLAIN)
+                    .exchange((request, response) -> {
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            throw new IllegalStateException("GitLab bounded file read returned HTTP "
+                                    + response.getStatusCode().value() + ".");
+                        }
+                        if (response.getHeaders().getContentLength() > maxBytes) {
+                            throw new GitLabFileTooLargeException(filePath, maxBytes);
+                        }
+                        var body = response.getBody().readNBytes(maxBytes + 1);
+                        if (body.length > maxBytes) {
+                            throw new GitLabFileTooLargeException(filePath, maxBytes);
+                        }
+                        return decodeTextFile(body, filePath);
+                    });
+            return new GitLabRepositoryFileContent(group, projectName, revision, filePath, content, false);
+        } catch (GitLabFileTooLargeException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("GitLab bounded file read failed for "
+                    + group + "/" + projectName + "@" + revision + " :: " + filePath, exception);
+        }
+    }
+
+    @Override
+    public GitLabRepositoryFileContent readFileComplete(
+            String group, String projectName, String revision, String filePath
+    ) {
+        try {
+            var content = restClient().get()
+                    .uri(rawFileUri(group, projectName, revision, filePath))
+                    .accept(MediaType.TEXT_PLAIN)
+                    .exchange((request, response) -> {
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            throw new IllegalStateException("GitLab complete file read returned HTTP "
+                                    + response.getStatusCode().value() + ".");
+                        }
+                        return decodeTextFile(response.getBody().readAllBytes(), filePath);
+                    });
+            return new GitLabRepositoryFileContent(group, projectName, revision, filePath, content, false);
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("GitLab complete file read failed for "
+                    + group + "/" + projectName + "@" + revision + " :: " + filePath, exception);
+        }
+    }
+
+    private String decodeTextFile(byte[] bytes, String filePath) {
+        try {
+            var content = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+            for (var index = 0; index < content.length(); index++) {
+                var character = content.charAt(index);
+                if (character == '\0' || (Character.isISOControl(character)
+                        && character != '\n' && character != '\r' && character != '\t')) {
+                    throw new IllegalStateException("GitLab file is not safe UTF-8 text: " + filePath);
+                }
+            }
+            return content;
+        } catch (CharacterCodingException exception) {
+            throw new IllegalStateException("GitLab file is not valid UTF-8 text: " + filePath, exception);
+        }
+    }
+
+    @Override
+    public InstructionRepositoryFile readFile(InstructionRepositoryFileRequest request) {
+        var target = resolveInstructionRepositoryTarget(request.repositoryKey());
+        if (!StringUtils.hasText(target.group()) || !StringUtils.hasText(target.projectName())) {
+            return InstructionRepositoryFile.failed(
+                    request.repositoryKey(),
+                    request.ref(),
+                    request.path(),
+                    "GitLab instruction repository target could not be resolved for " + request.repositoryKey() + "."
+            );
+        }
+
+        try {
+            var file = readFile(
+                    target.group(),
+                    target.projectName(),
+                    request.ref(),
+                    request.path(),
+                    request.maxCharacters()
+            );
+            return new InstructionRepositoryFile(
+                    request.repositoryKey(),
+                    request.ref(),
+                    request.path(),
+                    true,
+                    file.content(),
+                    file.truncated(),
+                    null
+            );
+        } catch (RuntimeException exception) {
+            return InstructionRepositoryFile.missing(request.repositoryKey(), request.ref(), request.path());
+        }
+    }
+
+    @Override
+    public InstructionRepositoryInventory loadFileInventory(InstructionRepositoryInventoryRequest request) {
+        var target = resolveInstructionRepositoryTarget(request.repositoryKey());
+        if (!StringUtils.hasText(target.group()) || !StringUtils.hasText(target.projectName())) {
+            return InstructionRepositoryInventory.unavailable(
+                    "GitLab instruction repository target could not be resolved for " + request.repositoryKey() + "."
+            );
+        }
+
+        try {
+            var paths = listRepositoryFiles(
+                    target.group(),
+                    target.projectName(),
+                    request.ref(),
+                    null
+            ).stream()
+                    .map(GitLabRepositoryFile::filePath)
+                    .toList();
+            return InstructionRepositoryInventory.available(paths);
+        } catch (RuntimeException exception) {
+            return InstructionRepositoryInventory.unavailable(
+                    "GitLab repository file inventory could not be loaded for "
+                            + request.repositoryKey() + "@" + request.ref() + "."
+            );
+        }
+    }
+
+    @Override
+    public GitLabRepositoryFileMetadata readFileMetadata(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        var metadata = fetchFileMetadata(group, projectName, branch, filePath);
+        var lastModifiedAt = lastModifiedAt(group, projectName, metadata.lastCommitId());
+
+        return new GitLabRepositoryFileMetadata(
+                group,
+                projectName,
+                branch,
+                StringUtils.hasText(metadata.filePath()) ? metadata.filePath() : filePath,
+                metadata.blobId(),
+                metadata.commitId(),
+                metadata.lastCommitId(),
+                lastModifiedAt,
+                metadata.contentSha256(),
+                metadata.sizeBytes()
+        );
+    }
+
+    @Override
+    public GitLabRepositoryRevision resolveRevision(
+            String group,
+            String projectName,
+            String ref
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(ref)) {
+            throw new IllegalArgumentException("GitLab revision scope must contain group, projectName and ref.");
+        }
+        var revision = fetchCommitMetadata(group, projectName, ref);
+        if (revision == null || !StringUtils.hasText(revision.id())) {
+            throw new IllegalStateException(
+                    "GitLab revision could not be resolved for " + group + "/" + projectName + "@" + ref
+            );
+        }
+        return new GitLabRepositoryRevision(
+                group,
+                projectName,
+                ref,
+                revision.id(),
+                revision.committedDate()
+        );
+    }
+
+    @Override
+    public GitLabRepositoryFileChunk readFileChunk(
+            String group,
+            String projectName,
+            String branch,
+            String filePath,
+            int startLine,
+            int endLine,
+            int maxCharacters
+    ) {
+        var content = fetchRawFile(group, projectName, branch, filePath);
+        var lines = content.lines().toList();
+        var totalLines = lines.size();
+        var requestedStartLine = Math.max(1, startLine);
+        var requestedEndLine = Math.max(requestedStartLine, endLine);
+
+        if (totalLines == 0 || requestedStartLine > totalLines) {
+            return new GitLabRepositoryFileChunk(
+                    group,
+                    projectName,
+                    branch,
+                    filePath,
+                    requestedStartLine,
+                    requestedEndLine,
+                    0,
+                    0,
+                    totalLines,
+                    "",
+                    false
+            );
+        }
+
+        var returnedStartLine = requestedStartLine;
+        var returnedEndLine = Math.min(requestedEndLine, totalLines);
+        var chunkContent = String.join("\n", lines.subList(returnedStartLine - 1, returnedEndLine));
+        var limitedContent = limitCharacters(chunkContent, maxCharacters);
+        var truncated = limitedContent.length() != chunkContent.length();
+
+        return new GitLabRepositoryFileChunk(
+                group,
+                projectName,
+                branch,
+                filePath,
+                requestedStartLine,
+                requestedEndLine,
+                returnedStartLine,
+                returnedEndLine,
+                totalLines,
+                limitedContent,
+                truncated
+        );
+    }
+
+    @Override
+    public boolean branchExists(String group, String projectName, String branch) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(branch)) {
+            return false;
+        }
+
+        try {
+            restClient().get()
+                    .uri(branchUri(group, projectName, branch))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                return false;
+            }
+            throw new IllegalStateException(
+                    "GitLab branch lookup failed for " + group + "/" + projectName + "@" + branch,
+                    exception
+            );
+        }
+    }
+
+    @Override
+    public boolean refExists(String group, String projectName, String ref) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(ref)) {
+            return false;
+        }
+
+        try {
+            restClient().get()
+                    .uri(commitMetadataUri(group, projectName, ref))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                return false;
+            }
+            throw new IllegalStateException(
+                    "GitLab ref lookup failed for " + group + "/" + projectName + "@" + ref,
+                    exception
+            );
+        }
+    }
+
+    @Override
+    public GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
+            String group,
+            String issueKey,
+            int maxResults
+    ) {
+        var resolvedGroup = StringUtils.hasText(group) ? group.trim() : properties.getGroup();
+        if (!StringUtils.hasText(resolvedGroup) || !StringUtils.hasText(issueKey)) {
+            return new GitLabMergeRequestSearchResult(
+                    issueKey,
+                    resolvedGroup,
+                    List.of(),
+                    List.of("GitLab group or Jira issue key is missing.")
+            );
+        }
+
+        var safeMaxResults = maxResults > 0 ? maxResults : properties.getMaxMergeRequests();
+        var limitations = new ArrayList<String>();
+        var searchResults = searchGroupMergeRequests(resolvedGroup, issueKey.trim(), safeMaxResults);
+        if (searchResults.size() >= safeMaxResults) {
+            limitations.add("GitLab MR search reached max result limit: " + safeMaxResults + ".");
+        }
+
+        var mergeRequests = searchResults.stream()
+                .limit(safeMaxResults)
+                .map(result -> mergeRequestFromSearchResult(resolvedGroup, result))
+                .toList();
+
+        return new GitLabMergeRequestSearchResult(
+                issueKey.trim(),
+                resolvedGroup,
+                mergeRequests,
+                limitations
+        );
+    }
+
+    private List<GitLabGroupProjectResult> searchGroupProjects(String group, String searchToken) {
+        var results = new ArrayList<GitLabGroupProjectResult>();
+        var page = "1";
+
+        while (StringUtils.hasText(page)) {
+            try {
+                var entity = restClient().get()
+                        .uri(groupProjectsUri(group, searchToken, page))
+                        .retrieve()
+                        .toEntity(GitLabGroupProjectResult[].class);
+
+                var body = entity.getBody();
+                if (body != null) {
+                    results.addAll(List.of(body));
+                }
+
+                page = entity.getHeaders().getFirst("X-Next-Page");
+            } catch (RestClientResponseException exception) {
+                if (exception.getStatusCode().value() == 404) {
+                    return List.of();
+                }
+
+                throw new IllegalStateException("GitLab group project search failed for " + group, exception);
+            }
+        }
+
+        return List.copyOf(results);
+    }
+
+    private List<GitLabBlobSearchResult> searchProjectBlobs(String group, String projectName, String branch, String searchTerm) {
+        return searchProjectBlobs(group, projectName, branch, searchTerm, properties.getSearchResultsPerTerm());
+    }
+
+    private List<GitLabMergeRequestSearchResponse> searchGroupMergeRequests(
+            String group,
+            String issueKey,
+            int maxResults
+    ) {
+        var results = new ArrayList<GitLabMergeRequestSearchResponse>();
+        var page = "1";
+        var perPage = Math.max(1, Math.min(100, maxResults));
+
+        while (StringUtils.hasText(page) && results.size() < maxResults) {
+            try {
+                var entity = restClient().get()
+                        .uri(groupMergeRequestsUri(group, issueKey, page, perPage))
+                        .retrieve()
+                        .toEntity(GitLabMergeRequestSearchResponse[].class);
+
+                var body = entity.getBody();
+                if (body != null) {
+                    results.addAll(List.of(body));
+                }
+
+                page = entity.getHeaders().getFirst("X-Next-Page");
+            } catch (RestClientResponseException exception) {
+                if (exception.getStatusCode().value() == 404) {
+                    return List.of();
+                }
+
+                throw new IllegalStateException("GitLab merge request search failed for " + group, exception);
+            }
+        }
+
+        return List.copyOf(results);
+    }
+
+    private GitLabMergeRequest mergeRequestFromSearchResult(
+            String group,
+            GitLabMergeRequestSearchResponse result
+    ) {
+        var limitations = new ArrayList<String>();
+        var projectPath = projectPath(group, result);
+        var commits = fetchMergeRequestCommits(result.projectId(), result.iid(), limitations);
+        var changedFiles = fetchMergeRequestChangedFiles(result.projectId(), result.iid(), limitations);
+
+        return new GitLabMergeRequest(
+                result.id(),
+                result.iid(),
+                result.projectId(),
+                projectPath,
+                result.title(),
+                result.state(),
+                result.webUrl(),
+                result.sourceBranch(),
+                result.targetBranch(),
+                result.author() != null ? result.author().name() : "",
+                result.author() != null ? result.author().id() : null,
+                result.createdAt(),
+                result.updatedAt(),
+                result.mergedAt(),
+                result.changesCount(),
+                commits,
+                changedFiles,
+                limitations
+        );
+    }
+
+    private List<GitLabMergeRequestCommit> fetchMergeRequestCommits(
+            Long projectId,
+            Long mergeRequestIid,
+            List<String> limitations
+    ) {
+        if (projectId == null || mergeRequestIid == null) {
+            limitations.add("MR commits could not be fetched because project id or MR iid is missing.");
+            return List.of();
+        }
+
+        try {
+            var commits = restClient().get()
+                    .uri(mergeRequestCommitsUri(projectId, mergeRequestIid))
+                    .retrieve()
+                    .body(GitLabMergeRequestCommitResponse[].class);
+            if (commits == null) {
+                return List.of();
+            }
+            if (commits.length >= properties.getMaxMergeRequestCommits()) {
+                limitations.add("MR commits reached max result limit: " + properties.getMaxMergeRequestCommits() + ".");
+            }
+            return Arrays.stream(commits)
+                    .map(commit -> new GitLabMergeRequestCommit(
+                            commit.id(),
+                            commit.shortId(),
+                            commit.title(),
+                            commit.authorName(),
+                            commit.createdAt()
+                    ))
+                    .toList();
+        } catch (RestClientResponseException exception) {
+            limitations.add("MR commits could not be fetched: HTTP " + exception.getStatusCode().value() + ".");
+            return List.of();
+        }
+    }
+
+    private List<GitLabMergeRequestChangedFile> fetchMergeRequestChangedFiles(
+            Long projectId,
+            Long mergeRequestIid,
+            List<String> limitations
+    ) {
+        if (projectId == null || mergeRequestIid == null) {
+            limitations.add("MR changed files could not be fetched because project id or MR iid is missing.");
+            return List.of();
+        }
+
+        try {
+            var maxChangedFiles = Math.max(1, properties.getMaxMergeRequestChangedFiles());
+            var diffs = new ArrayList<GitLabMergeRequestDiffResponse>();
+            var page = "1";
+            var perPage = Math.min(MERGE_REQUEST_DIFFS_PAGE_SIZE, maxChangedFiles);
+
+            while (StringUtils.hasText(page) && diffs.size() < maxChangedFiles) {
+                var entity = restClient().get()
+                        .uri(mergeRequestDiffsUri(projectId, mergeRequestIid, page, perPage))
+                        .retrieve()
+                        .toEntity(GitLabMergeRequestDiffResponse[].class);
+                var body = entity.getBody();
+                if (body != null) {
+                    for (var diff : body) {
+                        if (diffs.size() >= maxChangedFiles) {
+                            break;
+                        }
+                        diffs.add(diff);
+                    }
+                }
+                page = entity.getHeaders().getFirst("X-Next-Page");
+            }
+            if (diffs.size() >= maxChangedFiles && StringUtils.hasText(page)) {
+                limitations.add("MR changed files reached max result limit: " + maxChangedFiles + ".");
+            }
+            return diffs.stream()
+                    .map(diff -> new GitLabMergeRequestChangedFile(
+                            diff.oldPath(),
+                            diff.newPath(),
+                            diff.newFile(),
+                            diff.renamedFile(),
+                            diff.deletedFile(),
+                            diff.diff()
+                    ))
+                    .toList();
+        } catch (RestClientResponseException exception) {
+            limitations.add("MR changed files could not be fetched: HTTP " + exception.getStatusCode().value() + ".");
+            return List.of();
+        }
+    }
+
+    private List<GitLabBlobSearchResult> searchProjectBlobs(
+            String group,
+            String projectName,
+            String branch,
+            String searchTerm,
+            int maxResults
+    ) {
+        try {
+            var results = restClient().get()
+                    .uri(projectSearchUri(group, projectName, branch, searchTerm, maxResults))
+                    .retrieve()
+                    .body(GitLabBlobSearchResult[].class);
+
+            if (results == null) {
+                return List.of();
+            }
+
+            return List.of(results);
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                return List.of();
+            }
+
+            throw new IllegalStateException("GitLab project search failed for " + group + "/" + projectName, exception);
+        }
+    }
+
+    private String fetchRawFile(String group, String projectName, String branch, String filePath) {
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.raw-file",
+                    Arrays.asList(apiBaseUrl(), group, projectName, branch, filePath),
+                    () -> fetchRawFileUncached(group, projectName, branch, filePath)
+            );
+        }
+
+        return fetchRawFileUncached(group, projectName, branch, filePath);
+    }
+
+    private GitLabFileMetadataResponse fetchFileMetadata(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.file-metadata",
+                    Arrays.asList(apiBaseUrl(), group, projectName, branch, filePath),
+                    () -> fetchFileMetadataUncached(group, projectName, branch, filePath)
+            );
+        }
+
+        return fetchFileMetadataUncached(group, projectName, branch, filePath);
+    }
+
+    private GitLabFileMetadataResponse fetchFileMetadataUncached(
+            String group,
+            String projectName,
+            String branch,
+            String filePath
+    ) {
+        try {
+            var entity = restClient().head()
+                    .uri(fileMetadataUri(group, projectName, branch, filePath))
+                    .retrieve()
+                    .toBodilessEntity();
+
+            return GitLabFileMetadataResponse.fromHeaders(entity.getHeaders(), filePath);
+        } catch (RestClientResponseException exception) {
+            throw new IllegalStateException(
+                    "GitLab file metadata read failed for " + group + "/" + projectName + "@" + branch + " :: " + filePath,
+                    exception
+            );
+        }
+    }
+
+    private String lastModifiedAt(String group, String projectName, String lastCommitId) {
+        if (!StringUtils.hasText(lastCommitId)) {
+            return null;
+        }
+
+        try {
+            var commit = fetchCommitMetadata(group, projectName, lastCommitId);
+            return commit != null ? commit.committedDate() : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private GitLabCommitMetadataResponse fetchCommitMetadata(
+            String group,
+            String projectName,
+            String commitId
+    ) {
+        if (analysisCache != null) {
+            return analysisCache.getOrCompute(
+                    "gitlab.commit-metadata",
+                    Arrays.asList(apiBaseUrl(), group, projectName, commitId),
+                    () -> fetchCommitMetadataUncached(group, projectName, commitId)
+            );
+        }
+
+        return fetchCommitMetadataUncached(group, projectName, commitId);
+    }
+
+    private GitLabCommitMetadataResponse fetchCommitMetadataUncached(
+            String group,
+            String projectName,
+            String commitId
+    ) {
+        try {
+            return restClient().get()
+                    .uri(commitMetadataUri(group, projectName, commitId))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .body(GitLabCommitMetadataResponse.class);
+        } catch (RestClientResponseException exception) {
+            throw new IllegalStateException(
+                    "GitLab commit metadata read failed for " + group + "/" + projectName + " :: " + commitId,
+                    exception
+            );
+        }
+    }
+
+    private String fetchRawFileUncached(String group, String projectName, String branch, String filePath) {
+        try {
+            return restClient().get()
+                    .uri(rawFileUri(group, projectName, branch, filePath))
+                    .accept(MediaType.TEXT_PLAIN)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientResponseException exception) {
+            throw new IllegalStateException(
+                    "GitLab file read failed for " + group + "/" + projectName + "@" + branch + " :: " + filePath,
+                    exception
+            );
+        }
+    }
+
+    private RestClient restClient() {
+        return gitLabRestClientFactory.create();
+    }
+
+    private URI groupProjectsUri(String group, String searchToken, String page) {
+        return URI.create(apiBaseUrl()
+                + "/groups/" + encodePathSegment(group)
+                + "/projects?include_subgroups=true"
+                + "&simple=true"
+                + "&per_page=" + PROJECT_SEARCH_PAGE_SIZE
+                + "&search=" + encodeQueryParam(searchToken)
+                + "&page=" + encodeQueryParam(page));
+    }
+
+    private URI projectSearchUri(String group, String projectName, String branch, String searchTerm) {
+        return projectSearchUri(group, projectName, branch, searchTerm, properties.getSearchResultsPerTerm());
+    }
+
+    private URI groupMergeRequestsUri(String group, String issueKey, String page, int perPage) {
+        return URI.create(apiBaseUrl()
+                + "/groups/" + encodePathSegment(group)
+                + "/merge_requests?scope=all"
+                + "&state=all"
+                + "&search=" + encodeQueryParam(issueKey)
+                + "&in=title,source_branch"
+                + "&per_page=" + Math.max(1, perPage)
+                + "&page=" + encodeQueryParam(page));
+    }
+
+    private URI mergeRequestCommitsUri(Long projectId, Long mergeRequestIid) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + projectId
+                + "/merge_requests/" + mergeRequestIid
+                + "/commits?per_page=" + Math.max(1, properties.getMaxMergeRequestCommits()));
+    }
+
+    private URI mergeRequestDiffsUri(Long projectId, Long mergeRequestIid, String page, int perPage) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + projectId
+                + "/merge_requests/" + mergeRequestIid
+                + "/diffs?per_page=" + Math.max(1, perPage)
+                + "&page=" + encodeQueryParam(page));
+    }
+
+    private URI projectSearchUri(
+            String group,
+            String projectName,
+            String branch,
+            String searchTerm,
+            int maxResults
+    ) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/search?scope=blobs"
+                + "&search=" + encodeQueryParam(searchTerm)
+                + "&ref=" + encodeQueryParam(branch)
+                + "&per_page=" + Math.max(1, maxResults));
+    }
+
+    private URI rawFileUri(String group, String projectName, String branch, String filePath) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/files/" + encodePathSegment(filePath)
+                + "/raw?ref=" + encodeQueryParam(branch));
+    }
+
+    private URI fileMetadataUri(String group, String projectName, String branch, String filePath) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/files/" + encodePathSegment(filePath)
+                + "?ref=" + encodeQueryParam(branch));
+    }
+
+    private URI branchUri(String group, String projectName, String branch) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/branches/" + encodePathSegment(branch));
+    }
+
+    private URI commitMetadataUri(String group, String projectName, String commitId) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/commits/" + encodePathSegment(commitId)
+                + "?stats=false");
+    }
+
+    private String apiBaseUrl() {
+        if (!StringUtils.hasText(properties.getBaseUrl())) {
+            throw new IllegalStateException("analysis.gitlab.base-url must be configured for REST mode.");
+        }
+
+        return properties.getBaseUrl().endsWith("/")
+                ? properties.getBaseUrl() + "api/v4"
+                : properties.getBaseUrl() + "/api/v4";
+    }
+
+    private List<String> resolveProjectSearchTargets(String group, List<String> projectHints) {
+        var directProjectNames = distinctProjectNames(projectHints);
+        var resolvedProjectNames = new LinkedHashSet<String>();
+
+        for (var projectCandidate : searchProjects(group, directProjectNames)) {
+            if (StringUtils.hasText(projectCandidate.projectPath())) {
+                resolvedProjectNames.add(projectCandidate.projectPath().trim());
+            }
+        }
+
+        resolvedProjectNames.addAll(directProjectNames);
+        return List.copyOf(resolvedProjectNames);
+    }
+
+    private List<String> distinctProjectNames(List<String> projectNames) {
+        var values = new LinkedHashSet<String>();
+
+        for (var projectName : projectNames != null ? projectNames : List.<String>of()) {
+            if (StringUtils.hasText(projectName)) {
+                values.add(projectName.trim());
+            }
+        }
+
+        return List.copyOf(values);
+    }
+
+    private List<String> distinctPathPrefixes(List<String> pathPrefixes) {
+        var values = new LinkedHashSet<String>();
+
+        for (var pathPrefix : pathPrefixes != null ? pathPrefixes : List.<String>of()) {
+            if (!StringUtils.hasText(pathPrefix)) {
+                continue;
+            }
+
+            var normalized = pathPrefix.trim().replace('\\', '/');
+            while (normalized.startsWith("/")) {
+                normalized = normalized.substring(1);
+            }
+            while (normalized.endsWith("/")) {
+                normalized = normalized.substring(0, normalized.length() - 1);
+            }
+            if (StringUtils.hasText(normalized)) {
+                values.add(normalized);
+            }
+        }
+
+        return List.copyOf(values);
+    }
+
+    private boolean matchesPathPrefixes(String filePath, List<String> pathPrefixes) {
+        if (pathPrefixes.isEmpty()) {
+            return true;
+        }
+        if (!StringUtils.hasText(filePath)) {
+            return false;
+        }
+
+        var normalizedPath = filePath.trim().replace('\\', '/');
+        return pathPrefixes.stream().anyMatch(prefix ->
+                normalizedPath.equals(prefix) || normalizedPath.startsWith(prefix + "/")
+        );
+    }
+
+    private List<String> distinctProjectSearchTokens(String group, List<String> projectHints) {
+        var values = new LinkedHashSet<String>();
+
+        for (var projectHint : projectHints != null ? projectHints : List.<String>of()) {
+            addProjectSearchToken(values, group, projectHint);
+        }
+
+        return List.copyOf(values);
+    }
+
+    private List<String> distinctSearchTerms(List<String> keywords, List<String> operationNames) {
+        var values = new LinkedHashSet<String>();
+
+        for (var keyword : keywords != null ? keywords : List.<String>of()) {
+            if (StringUtils.hasText(keyword)) {
+                values.add(keyword.trim());
+            }
+        }
+
+        for (var operationName : operationNames != null ? operationNames : List.<String>of()) {
+            if (StringUtils.hasText(operationName)) {
+                values.add(operationName.trim());
+            }
+        }
+
+        return List.copyOf(values);
+    }
+
+    private String limitCharacters(String content, int maxCharacters) {
+        var safeLimit = maxCharacters > 0 ? maxCharacters : 4_000;
+        return content.length() > safeLimit ? content.substring(0, safeLimit) : content;
+    }
+
+    private String toRelativeProjectPath(String group, String pathWithNamespace) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(pathWithNamespace)) {
+            return null;
+        }
+
+        var normalizedGroup = trimSlashes(group.trim());
+        var normalizedPath = trimSlashes(pathWithNamespace.trim());
+        var prefix = normalizedGroup + "/";
+
+        if (!normalizedPath.regionMatches(true, 0, prefix, 0, prefix.length())) {
+            return null;
+        }
+
+        return normalizedPath.substring(prefix.length());
+    }
+
+    private String trimSlashes(String value) {
+        var start = 0;
+        var end = value.length();
+
+        while (start < end && value.charAt(start) == '/') {
+            start++;
+        }
+        while (end > start && value.charAt(end - 1) == '/') {
+            end--;
+        }
+
+        return value.substring(start, end);
+    }
+
+    private InstructionRepositoryTarget resolveInstructionRepositoryTarget(String repositoryKey) {
+        if (!StringUtils.hasText(repositoryKey)) {
+            return new InstructionRepositoryTarget(properties.getGroup(), null);
+        }
+
+        var configuredGroup = properties.getGroup();
+        var normalizedRepositoryKey = trimSlashes(repositoryKey.trim());
+        if (StringUtils.hasText(configuredGroup)) {
+            var normalizedGroup = trimSlashes(configuredGroup.trim());
+            var prefix = normalizedGroup + "/";
+            if (normalizedRepositoryKey.equals(normalizedGroup)) {
+                return new InstructionRepositoryTarget(normalizedGroup, "");
+            }
+            if (normalizedRepositoryKey.startsWith(prefix)) {
+                return new InstructionRepositoryTarget(
+                        normalizedGroup,
+                        normalizedRepositoryKey.substring(prefix.length())
+                );
+            }
+        }
+
+        var slash = normalizedRepositoryKey.lastIndexOf('/');
+        if (slash <= 0) {
+            return new InstructionRepositoryTarget(configuredGroup, normalizedRepositoryKey);
+        }
+
+        return new InstructionRepositoryTarget(
+                normalizedRepositoryKey.substring(0, slash),
+                normalizedRepositoryKey.substring(slash + 1)
+        );
+    }
+
+    private int projectMatchScore(String projectPath, String projectName, String searchToken) {
+        var normalizedProjectPath = normalizeProjectComparable(projectPath);
+        var normalizedProjectName = normalizeProjectComparable(projectName);
+        var normalizedSearchToken = normalizeProjectComparable(searchToken);
+
+        if (!StringUtils.hasText(normalizedSearchToken)) {
+            return 0;
+        }
+        if (normalizedSearchToken.equals(normalizedProjectName)
+                || normalizedSearchToken.equals(normalizedProjectPath)
+                || (normalizedProjectPath != null && normalizedProjectPath.endsWith("/" + normalizedSearchToken))) {
+            return 120;
+        }
+        if (normalizedProjectName != null && normalizedProjectName.endsWith("_" + normalizedSearchToken)) {
+            return 110;
+        }
+        if (normalizedProjectName != null && normalizedProjectName.contains(normalizedSearchToken)) {
+            return 100;
+        }
+        if (normalizedProjectPath != null && normalizedProjectPath.contains(normalizedSearchToken)) {
+            return 90;
+        }
+
+        return 0;
+    }
+
+    private void addProjectSearchToken(LinkedHashSet<String> values, String group, String projectHint) {
+        if (!StringUtils.hasText(projectHint)) {
+            return;
+        }
+
+        var trimmedHint = projectHint.trim();
+        values.add(trimmedHint);
+
+        var normalizedHint = normalizeProjectComparable(trimmedHint);
+        if (StringUtils.hasText(normalizedHint)) {
+            values.add(normalizedHint);
+
+            var normalizedGroupPrefix = normalizeProjectComparable(groupLeafToken(group));
+            if (StringUtils.hasText(normalizedGroupPrefix)) {
+                var prefix = normalizedGroupPrefix + "_";
+                if (normalizedHint.startsWith(prefix) && normalizedHint.length() > prefix.length()) {
+                    values.add(normalizedHint.substring(prefix.length()));
+                }
+            }
+        }
+    }
+
+    private String groupLeafToken(String group) {
+        if (!StringUtils.hasText(group)) {
+            return null;
+        }
+
+        var trimmedGroup = group.trim();
+        var lastSlash = trimmedGroup.lastIndexOf('/');
+        return lastSlash >= 0 ? trimmedGroup.substring(lastSlash + 1) : trimmedGroup;
+    }
+
+    private String normalizeProjectComparable(String value) {
+        return value == null
+                ? null
+                : value.trim()
+                        .toLowerCase(Locale.ROOT)
+                        .replace('-', '_')
+                        .replaceAll("[^a-z0-9/_]+", "_");
+    }
+
+    private String projectPath(String group, GitLabMergeRequestSearchResponse result) {
+        if (result.references() != null && StringUtils.hasText(result.references().full())) {
+            var full = result.references().full();
+            var separator = full.indexOf('!');
+            return separator > 0 ? full.substring(0, separator) : full;
+        }
+
+        if (StringUtils.hasText(result.webUrl())) {
+            var marker = "/-/merge_requests/";
+            var markerIndex = result.webUrl().indexOf(marker);
+            if (markerIndex > 0) {
+                var beforeMarker = result.webUrl().substring(0, markerIndex);
+                var apiRoot = properties.getBaseUrl();
+                if (StringUtils.hasText(apiRoot) && beforeMarker.startsWith(apiRoot)) {
+                    return trimSlashes(beforeMarker.substring(apiRoot.length()));
+                }
+            }
+        }
+
+        return group;
+    }
+
+    private String encodePathSegment(String value) {
+        return UriUtils.encodePathSegment(value, StandardCharsets.UTF_8);
+    }
+
+    private String encodeQueryParam(String value) {
+        return UriUtils.encodeQueryParam(value, StandardCharsets.UTF_8);
+    }
+
+    private record GitLabBlobSearchResult(
+            String path
+    ) {
+    }
+
+    private record GitLabMergeRequestSearchResponse(
+            Long id,
+            Long iid,
+            @JsonProperty("project_id")
+            Long projectId,
+            String title,
+            String state,
+            @JsonProperty("web_url")
+            String webUrl,
+            @JsonProperty("source_branch")
+            String sourceBranch,
+            @JsonProperty("target_branch")
+            String targetBranch,
+            GitLabUserResponse author,
+            @JsonProperty("created_at")
+            String createdAt,
+            @JsonProperty("updated_at")
+            String updatedAt,
+            @JsonProperty("merged_at")
+            String mergedAt,
+            @JsonProperty("changes_count")
+            String changesCount,
+            GitLabMergeRequestReferencesResponse references
+    ) {
+    }
+
+    private record GitLabMergeRequestReferencesResponse(
+            String full
+    ) {
+    }
+
+    private record GitLabUserResponse(
+            Long id,
+            String name
+    ) {
+    }
+
+    private record GitLabMergeRequestCommitResponse(
+            String id,
+            @JsonProperty("short_id")
+            String shortId,
+            String title,
+            @JsonProperty("author_name")
+            String authorName,
+            @JsonProperty("created_at")
+            String createdAt
+    ) {
+    }
+
+    private record GitLabMergeRequestDiffResponse(
+            @JsonProperty("old_path")
+            String oldPath,
+            @JsonProperty("new_path")
+            String newPath,
+            @JsonProperty("new_file")
+            boolean newFile,
+            @JsonProperty("renamed_file")
+            boolean renamedFile,
+            @JsonProperty("deleted_file")
+            boolean deletedFile,
+            String diff
+    ) {
+    }
+
+    private record GitLabGroupProjectResult(
+            String name,
+            String path,
+            @JsonProperty("path_with_namespace")
+            String pathWithNamespace
+    ) {
+    }
+
+    private record GitLabFileMetadataResponse(
+            String filePath,
+            String blobId,
+            String commitId,
+            String lastCommitId,
+            String contentSha256,
+            Long sizeBytes
+    ) {
+        private static GitLabFileMetadataResponse fromHeaders(HttpHeaders headers, String fallbackFilePath) {
+            return new GitLabFileMetadataResponse(
+                    firstHeader(headers, "X-Gitlab-File-Path", fallbackFilePath),
+                    firstHeader(headers, "X-Gitlab-Blob-Id", null),
+                    firstHeader(headers, "X-Gitlab-Commit-Id", null),
+                    firstHeader(headers, "X-Gitlab-Last-Commit-Id", null),
+                    firstHeader(headers, "X-Gitlab-Content-Sha256", null),
+                    parseLong(firstHeader(headers, "X-Gitlab-Size", null))
+            );
+        }
+
+        private static String firstHeader(HttpHeaders headers, String headerName, String fallback) {
+            var value = headers.getFirst(headerName);
+            return StringUtils.hasText(value) ? value : fallback;
+        }
+
+        private static Long parseLong(String value) {
+            if (!StringUtils.hasText(value)) {
+                return null;
+            }
+
+            try {
+                return Long.parseLong(value);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+    }
+
+    private record GitLabCommitMetadataResponse(
+            String id,
+            @JsonProperty("committed_date")
+            String committedDate
+    ) {
+    }
+
+    private record InstructionRepositoryTarget(String group, String projectName) {
+    }
+
+    private static final class CandidateAccumulator {
+
+        private final String group;
+        private final String projectName;
+        private final String branch;
+        private final String filePath;
+        private final List<String> matchedTerms = new ArrayList<>();
+
+        private CandidateAccumulator(String group, String projectName, String branch, String filePath) {
+            this.group = group;
+            this.projectName = projectName;
+            this.branch = branch;
+            this.filePath = filePath;
+        }
+
+        private void registerMatch(String term) {
+            if (!matchedTerms.contains(term)) {
+                matchedTerms.add(term);
+            }
+        }
+
+        private int matchScore() {
+            return matchedTerms.size() * 10;
+        }
+
+        private GitLabRepositoryFileCandidate toCandidate() {
+            return new GitLabRepositoryFileCandidate(
+                    group,
+                    projectName,
+                    branch,
+                    filePath,
+                    "Matched GitLab search terms " + matchedTerms + " on branch " + branch + ".",
+                    matchScore()
+            );
+        }
+    }
+
+    private static final class ProjectCandidateAccumulator {
+
+        private final String group;
+        private final String projectPath;
+        private final List<String> matchedTerms = new ArrayList<>();
+        private int score;
+
+        private ProjectCandidateAccumulator(String group, String projectPath) {
+            this.group = group;
+            this.projectPath = projectPath;
+        }
+
+        private void registerMatch(String term, int termScore) {
+            if (!matchedTerms.contains(term)) {
+                matchedTerms.add(term);
+                score += termScore;
+            }
+        }
+
+        private int matchScore() {
+            return score;
+        }
+
+        private GitLabRepositoryProjectCandidate toCandidate() {
+            return new GitLabRepositoryProjectCandidate(
+                    group,
+                    projectPath,
+                    "Matched GitLab project hints " + matchedTerms + ".",
+                    matchScore()
+            );
+        }
+    }
+
+}

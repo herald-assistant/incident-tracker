@@ -1,5 +1,9 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabFileTooLargeException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,8 +15,8 @@ import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTe
 
 import java.util.List;
 
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventoryRequest;
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

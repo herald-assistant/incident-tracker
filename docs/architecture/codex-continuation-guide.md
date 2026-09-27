@@ -112,7 +112,7 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
   initial preparation, nie duzym MCP result.
 - `src/main/java/pl/mkn/tdw/integrations`
   adaptery do zewnetrznych systemow.
-- `src/main/java/pl/mkn/tdw/integrations/gitlab/frontend`
+- `src/main/java/pl/mkn/tdw/integrations/gitlab/service/frontend`
   neutralne graph-first rozpoznanie Angular/Nx od `provideRouter(...)`,
   resolver selected route/view subtree, jawne `ROUTED_CHILD`, pelne template'y,
   iteracyjny BFS komponentow oraz

@@ -3,9 +3,9 @@ package pl.mkn.tdw.features.configdriftviewer.deterministic.source;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScope;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactFileMetadata;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactReadError;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactReadException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadError;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadException;
 import pl.mkn.tdw.integrations.gitlab.GitLabExactRepositoryPort;
 
 import java.util.ArrayList;

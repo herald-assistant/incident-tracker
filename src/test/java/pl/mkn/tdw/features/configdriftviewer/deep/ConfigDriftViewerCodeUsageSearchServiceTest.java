@@ -13,11 +13,11 @@ import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftView
 import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftViewerSensitivity;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftViewerValueType;
 import pl.mkn.tdw.features.configdriftviewer.deterministic.source.ConfigDriftViewerFileRole;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;

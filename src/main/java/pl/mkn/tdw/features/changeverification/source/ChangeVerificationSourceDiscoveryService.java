@@ -1,17 +1,18 @@
 package pl.mkn.tdw.features.changeverification.source;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoveryService;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextRequest;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.GitLabInstructionContextPort;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextResult;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryScope;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
 
@@ -31,8 +32,8 @@ public class ChangeVerificationSourceDiscoveryService {
 
     private final JiraIssuePort jiraIssuePort;
     private final GitLabRepositoryPort gitLabRepositoryPort;
-    private final GitLabProperties gitLabProperties;
-    private final InstructionContextDiscoveryService instructionContextDiscoveryService;
+    private final GitLabSettingsPort gitLabProperties;
+    private final GitLabInstructionContextPort instructionContextDiscoveryService;
     private final ChangeVerificationOperationalContextMatcher operationalContextMatcher;
 
     public ChangeVerificationSourceDiscoveryResult discover(ChangeVerificationJobStartRequest request) {
@@ -104,7 +105,7 @@ public class ChangeVerificationSourceDiscoveryService {
             return new GitLabMergeRequestSearchResult(null, gitLabProperties.getGroup(), List.of(), List.of());
         }
 
-        var mergeRequestsByKey = new LinkedHashMap<String, pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest>();
+        var mergeRequestsByKey = new LinkedHashMap<String, pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest>();
         var collectedLimitations = new ArrayList<String>();
         for (var issueKey : issueKeys) {
             var result = fetchMergeRequests(issueKey, limitations);
@@ -157,7 +158,7 @@ public class ChangeVerificationSourceDiscoveryService {
         return List.copyOf(issueKeys);
     }
 
-    private String mergeRequestIdentity(pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest mergeRequest) {
+    private String mergeRequestIdentity(pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest mergeRequest) {
         if (mergeRequest.id() != null) {
             return "id:" + mergeRequest.id();
         }
@@ -307,7 +308,7 @@ public class ChangeVerificationSourceDiscoveryService {
     }
 
     private String analysisRef(
-            pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest mergeRequest,
+            pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest mergeRequest,
             Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
     ) {
         var sourceRef = StringUtils.hasText(mergeRequest.sourceBranch())

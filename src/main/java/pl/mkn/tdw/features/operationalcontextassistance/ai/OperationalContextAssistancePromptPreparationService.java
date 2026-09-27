@@ -11,8 +11,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.common.RepositoryPathTreeRenderer;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceFile;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -437,7 +437,7 @@ public class OperationalContextAssistancePromptPreparationService {
         ArrayNode entries = result.putArray("entries");
         for (var entry : tree.entries()) {
             if (entry.path() == null || entry.path().length() > 512
-                    || !GitLabVerifiedRepositoryFileReader.isSafePath(entry.path(), false)
+                    || !GitLabRepositoryPath.isSafePath(entry.path(), false)
                     || !("tree".equals(entry.type()) || "blob".equals(entry.type()))) {
                 continue;
             }
@@ -448,7 +448,7 @@ public class OperationalContextAssistancePromptPreparationService {
         ArrayNode continuations = result.putArray("continuations");
         for (var continuation : tree.continuations()) {
             if (continuation.path() == null || continuation.path().length() > 512
-                    || !GitLabVerifiedRepositoryFileReader.isSafePath(continuation.path(), true)) {
+                    || !GitLabRepositoryPath.isSafePath(continuation.path(), true)) {
                 continue;
             }
             ObjectNode item = continuations.addObject();

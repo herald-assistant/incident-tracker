@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.frontend.mcp;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolKind;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
@@ -9,14 +10,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendTypeScriptImportResolverService;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabAngularRouteBranchSlicePort;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.GitLabFrontendTypeScriptImportResolverPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSelector;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabTypeScriptSymbolSlicePort;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,9 +34,9 @@ public class GitLabFrontendMcpTools {
     private static final int MAX_REASON_CHARACTERS = 500;
     private static final int MAX_MEMBER_NAMES = 50;
 
-    private final GitLabAngularRouteBranchSliceService routeBranchSliceService;
-    private final GitLabTypeScriptSymbolSliceService typeScriptSymbolSliceService;
-    private final GitLabFrontendTypeScriptImportResolverService importResolverService;
+    private final GitLabAngularRouteBranchSlicePort routeBranchSliceService;
+    private final GitLabTypeScriptSymbolSlicePort typeScriptSymbolSliceService;
+    private final GitLabFrontendTypeScriptImportResolverPort importResolverService;
 
     @Tool(
             name = READ_FRONTEND_ROUTE_BRANCH_SLICE,
@@ -61,7 +62,7 @@ public class GitLabFrontendMcpTools {
                 context.screenSliceRef(),
                 context.sourceRevision(),
                 true,
-                GitLabAngularRouteBranchSliceService.DEFAULT_OUTPUT_CHARACTERS
+                GitLabAngularRouteBranchSlicePort.DEFAULT_OUTPUT_CHARACTERS
         ));
         logResult(READ_FRONTEND_ROUTE_BRANCH_SLICE, sliceRef, response.status(), response.returnedCharacters());
         return GitLabFrontendToolDtos.RouteBranchSliceToolResponse.from(sliceRef, response);
@@ -109,7 +110,7 @@ public class GitLabFrontendMcpTools {
                 true,
                 true,
                 true,
-                GitLabTypeScriptSymbolSliceService.DEFAULT_OUTPUT_CHARACTERS
+                GitLabTypeScriptSymbolSlicePort.DEFAULT_OUTPUT_CHARACTERS
         ));
         logResult(READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE, response.filePath(), response.status(), response.returnedCharacters());
         return GitLabFrontendToolDtos.TypeScriptSymbolSliceToolResponse.from(response, response.downstreamReferences());
@@ -133,7 +134,7 @@ public class GitLabFrontendMcpTools {
             if (!StringUtils.hasText(filePath) || !StringUtils.hasText(declaringTypeName)) {
                 throw new IllegalArgumentException("Direct TypeScript mode requires filePath and declaringTypeName");
             }
-            if (!GitLabVerifiedRepositoryFileReader.isSafePath(filePath, false)) {
+            if (!GitLabRepositoryPath.isSafePath(filePath, false)) {
                 throw new IllegalArgumentException("Direct TypeScript filePath is unsafe");
             }
             return new TypeScriptTarget(filePath.trim().replace('\\', '/'), declaringTypeName.trim());
@@ -158,7 +159,7 @@ public class GitLabFrontendMcpTools {
         }
         return requested.stream()
                 .map(name -> new GitLabTypeScriptSymbolSelector(
-                        name, pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind.AUTO, null))
+                        name, pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolKind.AUTO, null))
                 .toList();
     }
 

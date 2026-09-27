@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab.source;
 
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveException;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveRequest;
+import pl.mkn.tdw.integrations.gitlab.service.source.GitLabSourceResolveService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -10,8 +13,8 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.client.RestClient;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRestClientFactory;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 

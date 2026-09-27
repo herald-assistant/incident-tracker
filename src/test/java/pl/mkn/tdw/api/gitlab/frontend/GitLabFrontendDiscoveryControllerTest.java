@@ -1,12 +1,37 @@
 package pl.mkn.tdw.api.gitlab.frontend;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceFile;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendBootstrapRoot;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendCoverageStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendEffectiveRouteChain;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphCoverage;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponentLevel;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteChainSegment;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNodeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteTarget;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceRevision;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabAngularRouteBranchSliceService;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabFrontendRouteGraphDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabFrontendScreenReachabilityService;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabTypeScriptSymbolSliceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.List;
 

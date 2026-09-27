@@ -13,11 +13,11 @@ import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticHttpCallSearc
 import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticLogSearchException;
 import pl.mkn.tdw.integrations.github.auth.GitHubOAuthExchangeException;
 import pl.mkn.tdw.integrations.github.auth.GitHubOAuthStateInvalidException;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchException;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveException;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveException;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveResponse;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextStoreException;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;

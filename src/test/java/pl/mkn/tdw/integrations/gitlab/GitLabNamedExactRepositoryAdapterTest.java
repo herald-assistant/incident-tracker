@@ -1,5 +1,12 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.adapter.rest.GitLabNamedExactRepositoryAdapter;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionRegistry;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionsProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadError;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;

@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import pl.mkn.tdw.common.GitLabPathUtils;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
@@ -34,8 +34,8 @@ public class GitLabSystemBranchesController {
     private static final int MAX_PRIMARY_REPOSITORIES = 8;
 
     private final OperationalContextPort operationalContextPort;
-    private final GitLabProperties gitLabProperties;
-    private final GitLabRepositoryBranchService branchService;
+    private final GitLabSettingsPort gitLabProperties;
+    private final GitLabRepositoryBranchPort branchService;
 
     @GetMapping("/{systemId}/branches")
     public BranchesResponse branches(

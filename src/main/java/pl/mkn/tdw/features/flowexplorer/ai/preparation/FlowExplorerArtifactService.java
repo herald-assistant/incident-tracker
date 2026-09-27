@@ -13,7 +13,7 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerOpenApiEndpointContr
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
-import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.usecase.GitLabEndpointUseCaseContextRequest;
 
 import java.time.Instant;
 import java.util.ArrayList;

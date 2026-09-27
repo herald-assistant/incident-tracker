@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.changeverification.job;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextResult;
 import org.springframework.stereotype.Service;
 import org.springframework.core.task.TaskExecutor;
 import lombok.extern.slf4j.Slf4j;
@@ -116,7 +118,7 @@ public class ChangeVerificationJobService {
             @Override
             public void onMergeRequestDiscoveryCompleted(
                     String issueKey,
-                    pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests,
+                    pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult mergeRequests,
                     List<String> limitations
             ) {
                 job.markMergeRequestDiscoveryCompleted(issueKey, mergeRequests, limitations);
@@ -126,7 +128,7 @@ public class ChangeVerificationJobService {
 
             @Override
             public void onInstructionContextStarted(
-                    pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests
+                    pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult mergeRequests
             ) {
                 job.markInstructionContextStarted(mergeRequests);
                 persistRunSnapshot(job);
@@ -134,8 +136,8 @@ public class ChangeVerificationJobService {
 
             @Override
             public void onInstructionContextCompleted(
-                    pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests,
-                    pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult instructionContext,
+                    pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult mergeRequests,
+                    pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextResult instructionContext,
                     List<String> limitations
             ) {
                 job.markInstructionContextCompleted(mergeRequests, instructionContext, limitations);

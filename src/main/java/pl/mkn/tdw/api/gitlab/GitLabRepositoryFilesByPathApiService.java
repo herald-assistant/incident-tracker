@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryReadPort;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -25,7 +25,7 @@ public class GitLabRepositoryFilesByPathApiService {
     static final int MAX_TOTAL_CHARACTERS = 500_000;
     private static final int PREVIEW_MAX_CHARACTERS = 200;
 
-    private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final GitLabRepositoryReadPort gitLabRepositoryPort;
 
     public GitLabRepositoryFilesByPathApiResponse readFiles(GitLabRepositoryFilesByPathApiRequest request) {
         var requestedFilePaths = normalizeRepositoryFilePaths(request.filePaths(), request.projectName());

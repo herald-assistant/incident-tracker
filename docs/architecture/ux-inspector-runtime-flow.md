@@ -5,7 +5,7 @@
 UX Inspector odpowiada na jedno pytanie o jeden element wskazany w uruchomionej
 aplikacji frontendowej. Nie dokumentuje calego widoku i nie jest trybem UI
 Explorera. Oba feature'y korzystaja z neutralnego katalogu frontendu,
-`integrations.gitlab.frontend`, platformy Copilota i wspolnych komponentow run
+`integrations.gitlab`, platformy Copilota i wspolnych komponentow run
 UI, ale maja rozdzielne requesty, joby, prompty, polityki tools oraz kontrakty
 wyniku.
 
@@ -335,7 +335,7 @@ tworzy wynik read-only bez prawa do wznowienia sesji.
 - `features.uxinspector` posiada request/result, capture, resolver, prompt,
   tool policy, report, job i import/export.
 - `frontendcatalog` posiada neutralny katalog aplikacji, widokow i cache.
-- `integrations.gitlab.frontend` posiada graph discovery i source slices.
+- `integrations.gitlab` posiada graph discovery i source slices.
 - `agenttools` oraz `aiplatform` pozostaja neutralne wobec feature'a.
 - `features.uxinspector` i `features.uiexplorer` nie importuja siebie.
 - `frontend/public/browser-tools` jest uniwersalnym shellem z rejestrem akcji;

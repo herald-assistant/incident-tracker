@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.uiexplorer.ai.preparation;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
@@ -14,23 +15,23 @@ import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryStatus;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendEffectiveRouteChain;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponentLevel;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdge;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteChainSegment;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNode;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNodeKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteTarget;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceReference;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRevision;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendEffectiveRouteChain;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponentLevel;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyCategory;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdge;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdgeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteChainSegment;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNodeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteTarget;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceRevision;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -516,7 +517,7 @@ class UiExplorerInitialPromptMatrixTest {
                 mainComponent.symbol(), mainComponent.sourcePath(), List.of(mainComponent.selector())
         );
         var routePattern = routePatterns.get(routePatterns.size() - 1);
-        var integrationIdentity = new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenIdentity(
+        var integrationIdentity = new pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity(
                 id,
                 routeNodeId,
                 routePattern,

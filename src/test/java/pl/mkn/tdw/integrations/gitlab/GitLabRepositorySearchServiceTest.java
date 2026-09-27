@@ -1,5 +1,11 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchRequest;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositorySearchService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 

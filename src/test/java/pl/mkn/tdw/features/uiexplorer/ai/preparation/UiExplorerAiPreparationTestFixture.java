@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.uiexplorer.ai.preparation;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerReachabilityBoundary;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSectionContextCoverage;
@@ -11,20 +13,20 @@ import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryStatus;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendEffectiveRouteChain;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponentLevel;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteChainSegment;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNode;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNodeKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteTarget;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRevision;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendEffectiveRouteChain;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponentLevel;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyCategory;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteChainSegment;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNodeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteTarget;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceRevision;
 
 import java.util.List;
 import java.util.Map;
@@ -59,11 +61,11 @@ public final class UiExplorerAiPreparationTestFixture {
         var target = new GitLabFrontendRouteTarget(
                 "CrmContactPreferencesComponent", COMPONENT_PATH, List.of("crm-contact-preferences")
         );
-        var identity = new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenIdentity(
+        var identity = new pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIdentity(
                 "crm-contact-preferences", "crm-contact-preferences-route",
                 "/contacts/:contactId/preferences", "primary", target
         );
-        var routeReference = new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceReference(
+        var routeReference = new pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference(
                 ROUTE_PATH, "crmContactRoutes", 10, 18
         );
         var node = new GitLabFrontendRouteNode(

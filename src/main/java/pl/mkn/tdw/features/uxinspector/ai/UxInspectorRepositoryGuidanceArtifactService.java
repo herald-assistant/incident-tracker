@@ -11,7 +11,9 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFilePort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabVerifiedFile;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.util.LinkedHashSet;
@@ -29,12 +31,13 @@ public class UxInspectorRepositoryGuidanceArtifactService {
     static final String COPILOT_INSTRUCTIONS_PATH = ".github/copilot-instructions.md";
     static final int MAX_COPILOT_INSTRUCTIONS_BYTES = 64 * 1024;
     static final int MAX_PROJECT_SKILLS = 100;
-    private static final int MAX_SKILL_BYTES = GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES;
+    private static final int MAX_SKILL_BYTES = GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES;
     private static final Pattern SKILL_PATH = Pattern.compile(
             "^(?:\\.github|\\.claude|\\.agents)/skills/[^/]+/SKILL\\.md$"
     );
     private static final Pattern SKILL_NAME = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
 
+    private final GitLabVerifiedRepositoryFilePort verifiedFileReader;
     private final GitLabRepositoryPort repositoryPort;
     private final ObjectMapper objectMapper;
 
@@ -122,9 +125,9 @@ public class UxInspectorRepositoryGuidanceArtifactService {
         throw invalid("Project skill frontmatter field '" + field + "' must be a non-blank string: " + path);
     }
 
-    private GitLabVerifiedRepositoryFileReader.VerifiedFile read(RepositoryScope scope, String path, int maxBytes) {
+    private GitLabVerifiedFile read(RepositoryScope scope, String path, int maxBytes) {
         try {
-            return GitLabVerifiedRepositoryFileReader.read(
+            return verifiedFileReader.read(
                     repositoryPort, scope.group(), scope.project(), scope.commit(), path, maxBytes);
         } catch (RuntimeException exception) {
             throw unavailable("Repository guidance file could not be read from the pinned revision: " + path, exception);

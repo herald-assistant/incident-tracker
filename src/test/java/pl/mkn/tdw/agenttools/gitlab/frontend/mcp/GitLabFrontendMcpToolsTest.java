@@ -1,23 +1,24 @@
 package pl.mkn.tdw.agenttools.gitlab.frontend.mcp;
 
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabResolvedImport;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRevision;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendTypeScriptImportResolverService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptDownstreamReference;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptDownstreamReferenceKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabAngularRouteBranchSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceRevision;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabFrontendTypeScriptImportResolverService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSelector;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabTypeScriptSymbolSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptDownstreamReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptDownstreamReferenceKind;
 
 import java.util.List;
 import java.util.Map;
@@ -104,7 +105,7 @@ class GitLabFrontendMcpToolsTest {
                 org.mockito.ArgumentMatchers.eq(COMPONENT_PATH),
                 org.mockito.ArgumentMatchers.eq("./crm-contact-preferences.facade"),
                 org.mockito.ArgumentMatchers.eq("CrmContactPreferencesFacade")))
-                .thenReturn(new GitLabFrontendTypeScriptImportResolverService.ResolvedImport(
+                .thenReturn(new GitLabResolvedImport(
                         FACADE_PATH, "CrmContactPreferencesFacade"));
 
         var imported = tools.readTypeScriptSymbolSlice(

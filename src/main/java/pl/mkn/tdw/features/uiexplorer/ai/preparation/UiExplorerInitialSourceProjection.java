@@ -1,8 +1,8 @@
 package pl.mkn.tdw.features.uiexplorer.ai.preparation;
 
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
 
 import java.util.LinkedHashSet;
 import java.util.Set;

@@ -3,8 +3,8 @@ package pl.mkn.tdw.features.uxinspector.ai;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeNode;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreePage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeNode;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreePage;
 
 import java.util.List;
 

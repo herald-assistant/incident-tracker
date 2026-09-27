@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyCategory;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdgeKind;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

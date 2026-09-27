@@ -12,12 +12,12 @@ import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryRespons
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScope;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScopeRepository;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScopeService;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpoint;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointDocumentation;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListResult;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointParameterDocumentation;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpoint;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpointDocumentation;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpointListRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpointListResult;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpointParameterDocumentation;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointPort;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ import java.util.Locale;
 public class FlowExplorerEndpointInventoryService {
 
     private final FlowExplorerRepositoryScopeService repositoryScopeService;
-    private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
+    private final GitLabRepositoryEndpointPort gitLabRepositoryEndpointService;
     private final FlowExplorerEndpointInventoryCache endpointInventoryCache;
 
     public FlowExplorerEndpointInventoryResponse endpoints(

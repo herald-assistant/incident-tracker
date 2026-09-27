@@ -3,9 +3,9 @@ package pl.mkn.tdw.api.gitlab.frontend;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenSelectionRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphLimits;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRepositoryScope;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenSelectionRequest;
 
 import java.util.List;
 

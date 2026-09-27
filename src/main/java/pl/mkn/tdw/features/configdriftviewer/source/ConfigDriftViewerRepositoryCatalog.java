@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeException;
-import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionRegistry;
+import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionPort;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ import java.util.List;
 public class ConfigDriftViewerRepositoryCatalog {
 
     private final ConfigDriftViewerRepositoryProperties properties;
-    private final GitLabNamedConnectionRegistry connectionRegistry;
+    private final GitLabNamedConnectionPort connectionRegistry;
 
     public ConfigDriftViewerRepositoryProfile require(String repositoryId) {
         var normalizedId = StringUtils.hasText(repositoryId) ? repositoryId.trim() : "";

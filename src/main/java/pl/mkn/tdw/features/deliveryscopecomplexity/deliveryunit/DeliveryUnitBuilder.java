@@ -3,7 +3,7 @@ package pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssueSource;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

@@ -11,7 +11,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCus
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabMcpTools;
 

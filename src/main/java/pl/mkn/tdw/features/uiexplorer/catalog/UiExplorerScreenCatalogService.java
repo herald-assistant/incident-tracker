@@ -9,7 +9,7 @@ import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundE
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 import pl.mkn.tdw.frontendcatalog.FrontendViewCatalog;
 import pl.mkn.tdw.frontendcatalog.FrontendViewCatalogService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
 
 @Service
 @RequiredArgsConstructor

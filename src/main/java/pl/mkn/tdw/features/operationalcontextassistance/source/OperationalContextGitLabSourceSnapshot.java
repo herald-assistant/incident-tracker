@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.operationalcontextassistance.source;
 
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
 
 import java.util.List;
 

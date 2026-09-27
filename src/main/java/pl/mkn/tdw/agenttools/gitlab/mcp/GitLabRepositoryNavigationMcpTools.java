@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranch;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -7,14 +8,16 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeExplorer;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeExplorerPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFilePort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabVerifiedFile;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import java.util.List;
@@ -37,10 +40,11 @@ public class GitLabRepositoryNavigationMcpTools {
     private static final int MAX_SEARCH_SCAN_FILES = 20;
     private static final Pattern CURSOR = Pattern.compile("[A-Za-z0-9_-]{1,2048}");
 
+    private final GitLabVerifiedRepositoryFilePort verifiedFileReader;
     private final GitLabRepositoryPort repositoryPort;
-    private final GitLabRepositoryTreeExplorer treeExplorer;
-    private final GitLabRepositoryBranchService branchService;
-    private final GitLabProperties properties;
+    private final GitLabRepositoryTreeExplorerPort treeExplorer;
+    private final GitLabRepositoryBranchPort branchService;
+    private final GitLabSettingsPort properties;
     private final OperationalContextPort operationalContextPort;
 
     @Tool(name = LIST_REPOSITORY_BRANCHES, description = """
@@ -113,7 +117,7 @@ public class GitLabRepositoryNavigationMcpTools {
                 target.commitId(), prefix, safeCursor(afterPath), MAX_LIST_RESULTS);
         var paths = page.files().stream()
                 .filter(file -> matches(file, target) && withinPrefix(file.filePath(), prefix)
-                        && GitLabVerifiedRepositoryFileReader.isSafePath(file.filePath(), false))
+                        && GitLabRepositoryPath.isSafePath(file.filePath(), false))
                 .map(GitLabRepositoryFile::filePath).distinct().toList();
         return new FilePathsResult(target.projectPath(), target.branch(), target.commitId(), paths,
                 page.nextCursor() != null, page.nextCursor());
@@ -157,7 +161,7 @@ public class GitLabRepositoryNavigationMcpTools {
                     target.group(), target.projectName(), target.branch(), List.of(query), MAX_SEARCH_RESULTS);
             var paths = candidates.stream()
                     .filter(candidate -> matches(candidate, target) && withinPrefix(candidate.filePath(), prefix)
-                            && GitLabVerifiedRepositoryFileReader.isSafePath(candidate.filePath(), false))
+                            && GitLabRepositoryPath.isSafePath(candidate.filePath(), false))
                     .map(GitLabRepositoryFileCandidate::filePath).distinct().limit(MAX_SEARCH_RESULTS).toList();
             var verifiedPaths = paths.stream()
                     .filter(path -> matchesPinnedContent(target, path, query, completeRead)).toList();
@@ -203,7 +207,7 @@ public class GitLabRepositoryNavigationMcpTools {
         if (allowRoot && (path == null || path.isBlank())) {
             return "";
         }
-        if (!GitLabVerifiedRepositoryFileReader.isSafePath(path, false)) {
+        if (!GitLabRepositoryPath.isSafePath(path, false)) {
             throw new IllegalArgumentException("A safe relative GitLab path is required.");
         }
         return path;
@@ -244,11 +248,11 @@ public class GitLabRepositoryNavigationMcpTools {
     ) {
         try {
             var file = completeRead
-                    ? GitLabVerifiedRepositoryFileReader.readComplete(
+                    ? verifiedFileReader.readComplete(
                             repositoryPort, target.group(), target.projectName(), target.commitId(), path)
-                    : GitLabVerifiedRepositoryFileReader.read(
+                    : verifiedFileReader.read(
                             repositoryPort, target.group(), target.projectName(), target.commitId(), path,
-                            GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES);
+                            GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES);
             return file.content().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT));
         } catch (RuntimeException exception) {
             return false;
@@ -263,7 +267,7 @@ public class GitLabRepositoryNavigationMcpTools {
                 target.commitId(), prefix, cursor, MAX_SEARCH_SCAN_FILES);
         var paths = page.files().stream()
                 .filter(file -> matches(file, target) && withinPrefix(file.filePath(), prefix)
-                        && GitLabVerifiedRepositoryFileReader.isSafePath(file.filePath(), false))
+                        && GitLabRepositoryPath.isSafePath(file.filePath(), false))
                 .map(GitLabRepositoryFile::filePath).distinct()
                 .filter(path -> matchesPinnedContent(target, path, query, completeRead)).toList();
         return new FilePathsResult(target.projectPath(), target.branch(), target.commitId(), paths,
@@ -274,7 +278,7 @@ public class GitLabRepositoryNavigationMcpTools {
                                   List<String> paths, boolean truncated, String nextCursor) {
     }
 
-    public record BranchesResult(String projectPath, List<GitLabRepositoryBranchService.Branch> branches,
+    public record BranchesResult(String projectPath, List<GitLabBranch> branches,
                                  boolean truncated) {
     }
 

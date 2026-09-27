@@ -1,12 +1,14 @@
 package pl.mkn.tdw.features.operationalcontextassistance.api;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranchPage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryBranchService;
 
 import java.util.List;
 
@@ -29,8 +31,8 @@ class OperationalContextAssistanceBranchOptionsControllerTest {
         when(sourceCollector.projectPathForBranchOptions("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null))
                 .thenReturn("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         when(branchService.listBranches("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", "release"))
-                .thenReturn(new GitLabRepositoryBranchService.BranchPage(
-                        List.of(new GitLabRepositoryBranchService.Branch("release/2026.09", false)), true));
+                .thenReturn(new GitLabBranchPage(
+                        List.of(new GitLabBranch("release/2026.09", false)), true));
 
         mockMvc.perform(get("/api/operational-context/assistance/source-options/branches")
                         .param("project", "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS")
@@ -48,8 +50,8 @@ class OperationalContextAssistanceBranchOptionsControllerTest {
         when(sourceCollector.projectPathForBranchOptions(null, url))
                 .thenReturn("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         when(branchService.listBranches("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", ""))
-                .thenReturn(new GitLabRepositoryBranchService.BranchPage(
-                        List.of(new GitLabRepositoryBranchService.Branch("main", true)), false));
+                .thenReturn(new GitLabBranchPage(
+                        List.of(new GitLabBranch("main", true)), false));
 
         mockMvc.perform(get("/api/operational-context/assistance/source-options/branches")
                         .param("projectUrl", url))

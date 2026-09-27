@@ -5,12 +5,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryReadPort;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceMethodSelector;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.GitLabJavaMethodSlicePort;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,11 +25,11 @@ public class FlowExplorerSnippetCardService {
 
     private static final int CONTEXT_LINES = 3;
     private static final int MAX_CARDS = 20;
-    private static final int GITLAB_METHOD_SLICE_MAX_CHARACTERS = GitLabJavaMethodSliceService.MAX_OUTPUT_CHARACTERS;
+    private static final int GITLAB_METHOD_SLICE_MAX_CHARACTERS = GitLabJavaMethodSlicePort.MAX_OUTPUT_CHARACTERS;
     private static final String METHOD_SLICE_OK_STATUS = "OK";
 
-    private final GitLabRepositoryPort gitLabRepositoryPort;
-    private final GitLabJavaMethodSliceService javaMethodSliceService;
+    private final GitLabRepositoryReadPort gitLabRepositoryPort;
+    private final GitLabJavaMethodSlicePort javaMethodSliceService;
 
     public FlowExplorerSnippetCardResult buildSnippetCards(
             String gitLabGroup,

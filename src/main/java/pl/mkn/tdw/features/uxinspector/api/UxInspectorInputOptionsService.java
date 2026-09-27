@@ -6,7 +6,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorContextException;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 import pl.mkn.tdw.frontendcatalog.FrontendViewCatalogService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 @Service

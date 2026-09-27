@@ -1,12 +1,14 @@
 package pl.mkn.tdw.api.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranchPage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryBranchService;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
@@ -40,12 +42,12 @@ class GitLabSystemBranchesControllerTest {
         when(gitLabProperties.getGroup()).thenReturn("crm");
         when(operationalContextPort.loadContext(any())).thenReturn(catalog());
         when(branchService.listBranches("crm/backend", "release"))
-                .thenReturn(new GitLabRepositoryBranchService.BranchPage(List.of(
-                        new GitLabRepositoryBranchService.Branch("release/one", false)), false));
+                .thenReturn(new GitLabBranchPage(List.of(
+                        new GitLabBranch("release/one", false)), false));
         when(branchService.listBranches("crm/portal", "release"))
-                .thenReturn(new GitLabRepositoryBranchService.BranchPage(List.of(
-                        new GitLabRepositoryBranchService.Branch("release/one", true),
-                        new GitLabRepositoryBranchService.Branch("release/two", false)), true));
+                .thenReturn(new GitLabBranchPage(List.of(
+                        new GitLabBranch("release/one", true),
+                        new GitLabBranch("release/two", false)), true));
 
         mockMvc.perform(get("/api/gitlab/systems/crm-system/branches").queryParam("search", "release"))
                 .andExpect(status().isOk())
@@ -86,8 +88,8 @@ class GitLabSystemBranchesControllerTest {
         when(gitLabProperties.getGroup()).thenReturn("crm");
         when(operationalContextPort.loadContext(any())).thenReturn(catalog());
         when(branchService.listBranches("crm/backend", ""))
-                .thenReturn(new GitLabRepositoryBranchService.BranchPage(List.of(
-                        new GitLabRepositoryBranchService.Branch("main", true)), false));
+                .thenReturn(new GitLabBranchPage(List.of(
+                        new GitLabBranch("main", true)), false));
         when(branchService.listBranches("crm/portal", ""))
                 .thenThrow(new IllegalStateException("private upstream detail"));
 

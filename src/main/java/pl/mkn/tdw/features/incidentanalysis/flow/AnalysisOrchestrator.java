@@ -3,7 +3,7 @@ package pl.mkn.tdw.features.incidentanalysis.flow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.features.incidentanalysis.evidence.*;
@@ -19,7 +19,7 @@ public class AnalysisOrchestrator {
 
     private final AnalysisEvidenceCollector analysisEvidenceCollector;
     private final InitialAnalysisProvider initialAnalysisProvider;
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
 
     public AnalysisExecution analyze(String correlationId) {
         return analyze(correlationId, AnalysisExecutionListener.NO_OP);

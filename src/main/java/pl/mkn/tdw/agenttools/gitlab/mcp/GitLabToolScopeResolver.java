@@ -4,7 +4,7 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolScope;
 import pl.mkn.tdw.common.GitLabPathUtils;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextSystem;
@@ -26,14 +26,14 @@ final class GitLabToolScopeResolver {
                     OperationalContextEntryType.CODE_SEARCH_SCOPE
             );
 
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
     private final OperationalContextPort operationalContextPort;
 
     GitLabToolScopeResolver(
-            GitLabProperties gitLabProperties,
+            GitLabSettingsPort gitLabProperties,
             OperationalContextPort operationalContextPort
     ) {
-        this.gitLabProperties = gitLabProperties != null ? gitLabProperties : new GitLabProperties();
+        this.gitLabProperties = gitLabProperties;
         this.operationalContextPort = operationalContextPort;
     }
 
@@ -225,7 +225,7 @@ final class GitLabToolScopeResolver {
     }
 
     private String configuredGroup() {
-        return trimToNull(gitLabProperties.getGroup());
+        return trimToNull(gitLabProperties != null ? gitLabProperties.getGroup() : null);
     }
 
     private String requiredBranch(String branchRef) {

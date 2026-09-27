@@ -1,9 +1,9 @@
 package pl.mkn.tdw.features.flowexplorer.context;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.service.openapi.GitLabOpenApiEndpointSliceService;
 
 import java.util.List;
 

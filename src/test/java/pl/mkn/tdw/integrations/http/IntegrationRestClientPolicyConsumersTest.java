@@ -7,8 +7,8 @@ import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
 import pl.mkn.tdw.integrations.confluence.config.ConfluenceRestClientFactory;
 import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
 import pl.mkn.tdw.integrations.dynatrace.config.DynatraceRestClientFactory;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRestClientFactory;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
 import pl.mkn.tdw.integrations.jira.config.JiraProperties;
 import pl.mkn.tdw.integrations.jira.config.JiraRestClientFactory;
 

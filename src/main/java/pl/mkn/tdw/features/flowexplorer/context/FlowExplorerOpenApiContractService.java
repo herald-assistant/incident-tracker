@@ -3,9 +3,9 @@ package pl.mkn.tdw.features.flowexplorer.context;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.GitLabOpenApiEndpointSlicePort;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -21,7 +21,7 @@ public class FlowExplorerOpenApiContractService {
     private static final int OPENAPI_MAX_CHARACTERS = 20_000;
     private static final String OPENAPI_CONTRACT_ROLE = "OPENAPI_CONTRACT";
 
-    private final GitLabOpenApiEndpointSliceService openApiEndpointSliceService;
+    private final GitLabOpenApiEndpointSlicePort openApiEndpointSliceService;
 
     public FlowExplorerOpenApiContractResult buildEndpointContracts(
             String gitLabGroup,
@@ -64,7 +64,7 @@ public class FlowExplorerOpenApiContractService {
                 limitations.addAll(boundaryLimitations.stream()
                         .map(limitation -> candidate.filePath() + ": " + limitation)
                         .toList());
-                if (GitLabOpenApiEndpointSliceService.STATUS_OK.equals(response.status())) {
+                if (GitLabOpenApiEndpointSlicePort.STATUS_OK.equals(response.status())) {
                     contracts.add(contract(response, boundaryLimitations));
                 }
             } catch (RuntimeException exception) {

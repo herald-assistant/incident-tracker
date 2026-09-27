@@ -19,12 +19,14 @@ class IntegrationPackageBoundaryTest {
     private static final String DATABASE_PACKAGE = "pl.mkn.tdw.integrations.database";
     private static final String DYNATRACE_PACKAGE = "pl.mkn.tdw.integrations.dynatrace";
     private static final String ELASTICSEARCH_PACKAGE = "pl.mkn.tdw.integrations.elasticsearch";
+    private static final String GITLAB_PACKAGE = "pl.mkn.tdw.integrations.gitlab";
     private static final String JIRA_PACKAGE = "pl.mkn.tdw.integrations.jira";
     private static final String OPERATIONAL_CONTEXT_PACKAGE = "pl.mkn.tdw.integrations.operationalcontext";
     private static final Path CONFLUENCE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/confluence");
     private static final Path DATABASE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/database");
     private static final Path DYNATRACE_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/dynatrace");
     private static final Path ELASTICSEARCH_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/elasticsearch");
+    private static final Path GITLAB_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/gitlab");
     private static final Path JIRA_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/jira");
     private static final Path OPERATIONAL_CONTEXT_ROOT = MAIN_JAVA.resolve("pl/mkn/tdw/integrations/operationalcontext");
     private static final Path SETTINGS_SERVICE = MAIN_JAVA.resolve(
@@ -71,6 +73,39 @@ class IntegrationPackageBoundaryTest {
                 "OperationalContextPort.java", "OperationalContextReadModelValidationPort.java",
                 "OperationalContextRelationIndexPort.java", "OperationalContextRepositoryPathPort.java",
                 "OperationalContextSettingsPort.java");
+    }
+
+    @Test
+    void gitLabRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(GITLAB_ROOT, GITLAB_PACKAGE,
+                "GitLabAngularRouteBranchSlicePort.java", "GitLabCodeSearchPort.java",
+                "GitLabEndpointUseCaseContextPort.java", "GitLabExactRepositoryPort.java",
+                "GitLabFrontendRouteGraphPort.java", "GitLabFrontendScreenReachabilityPort.java",
+                "GitLabFrontendTypeScriptImportResolverPort.java", "GitLabInstructionContextPort.java",
+                "GitLabInstructionRepositoryPort.java", "GitLabJavaMethodSlicePort.java",
+                "GitLabJavaMethodUseCaseContextPort.java", "GitLabMergeRequestPort.java",
+                "GitLabNamedConnectionPort.java", "GitLabOpenApiEndpointSlicePort.java",
+                "GitLabProjectSearchPort.java", "GitLabRepositoryBranchPort.java",
+                "GitLabRepositoryEndpointPort.java", "GitLabRepositoryPort.java",
+                "GitLabRepositoryReadPort.java", "GitLabRepositoryRevisionPort.java",
+                "GitLabRepositorySearchPort.java", "GitLabRepositoryTreeExplorerPort.java",
+                "GitLabRepositoryTreePort.java", "GitLabSettingsPort.java",
+                "GitLabSourceResolvePort.java", "GitLabSourceResolveSessionPort.java",
+                "GitLabTypeScriptSymbolSlicePort.java", "GitLabVerifiedRepositoryFilePort.java");
+    }
+
+    @Test
+    void gitLabNarrowPortsRequireExplicitImplementations() throws IOException {
+        try (var files = Files.list(GITLAB_ROOT)) {
+            for (var file : files.filter(path -> path.toString().endsWith("Port.java")).toList()) {
+                if (file.getFileName().toString().equals("GitLabRepositoryPort.java")) {
+                    continue; // Legacy composite port retains its compatibility defaults.
+                }
+                var body = Files.readString(file);
+                assertTrue(!body.contains("default "),
+                        () -> file + " contains a silent default operation");
+            }
+        }
     }
 
     private void assertRootContainsOnlyPublicPorts(
@@ -143,6 +178,25 @@ class IntegrationPackageBoundaryTest {
                 "OperationalContextRepositoryPathPort", "OperationalContextSettingsPort");
     }
 
+    @Test
+    void gitLabConsumersDependOnlyOnPortsAndContract() throws IOException {
+        assertConsumersDependOnlyOnPortAndContract(GITLAB_PACKAGE, null,
+                "GitLabAngularRouteBranchSlicePort", "GitLabCodeSearchPort",
+                "GitLabEndpointUseCaseContextPort", "GitLabExactRepositoryPort",
+                "GitLabFrontendRouteGraphPort", "GitLabFrontendScreenReachabilityPort",
+                "GitLabFrontendTypeScriptImportResolverPort", "GitLabInstructionContextPort",
+                "GitLabInstructionRepositoryPort", "GitLabJavaMethodSlicePort",
+                "GitLabJavaMethodUseCaseContextPort", "GitLabMergeRequestPort",
+                "GitLabNamedConnectionPort", "GitLabOpenApiEndpointSlicePort",
+                "GitLabProjectSearchPort", "GitLabRepositoryBranchPort",
+                "GitLabRepositoryEndpointPort", "GitLabRepositoryPort",
+                "GitLabRepositoryReadPort", "GitLabRepositoryRevisionPort",
+                "GitLabRepositorySearchPort", "GitLabRepositoryTreeExplorerPort",
+                "GitLabRepositoryTreePort", "GitLabSettingsPort", "GitLabSourceResolvePort",
+                "GitLabSourceResolveSessionPort", "GitLabTypeScriptSymbolSlicePort",
+                "GitLabVerifiedRepositoryFilePort");
+    }
+
     private void assertConsumersDependOnlyOnPortAndContract(
             String integrationPackage,
             String settingsPropertiesName,
@@ -172,7 +226,10 @@ class IntegrationPackageBoundaryTest {
                             .anyMatch(portName -> type.equals(integrationPackage + "." + portName))
                             || type.startsWith(integrationPackage + ".contract.")
                             || (settingsPropertiesName != null && file.equals(SETTINGS_SERVICE)
-                                    && type.equals(integrationPackage + ".config." + settingsPropertiesName));
+                                    && type.equals(integrationPackage + ".config." + settingsPropertiesName))
+                            || (integrationPackage.equals(GITLAB_PACKAGE) && file.equals(SETTINGS_SERVICE)
+                                    && (type.equals(GITLAB_PACKAGE + ".config.GitLabProperties")
+                                    || type.equals(GITLAB_PACKAGE + ".config.GitLabNamedConnectionsProperties")));
                     if (!allowed) {
                         violations.add(MAIN_JAVA.relativize(file) + " imports " + type);
                     }

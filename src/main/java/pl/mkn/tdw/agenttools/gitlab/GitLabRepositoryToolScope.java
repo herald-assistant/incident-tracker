@@ -1,6 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab;
 
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevisionPort;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,7 +69,7 @@ public final class GitLabRepositoryToolScope {
         return selectedCommit;
     }
 
-    public Target resolve(String projectName, String branchRef, GitLabRepositoryPort port) {
+    public Target resolve(String projectName, String branchRef, GitLabRepositoryRevisionPort port) {
         var project = relativeProject(projectName);
         var branch = checkedBranch(branchRef);
         if (selectedProject.equals(project) && !selectedBranch.equals(branch)) {

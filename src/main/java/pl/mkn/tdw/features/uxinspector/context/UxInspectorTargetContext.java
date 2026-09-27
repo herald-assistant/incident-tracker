@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.uxinspector.context;
 
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
 
 import java.util.List;
 

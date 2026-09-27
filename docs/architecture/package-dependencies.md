@@ -118,10 +118,22 @@ Warunkowy batch write nadal waliduje caly kandydat oraz publikuje wiele
 dokumentow jako jedna logiczna decyzje z recovery. `IntegrationPackageBoundaryTest`
 egzekwuje granice pakietu i importow konsumentow.
 
-`integrations.gitlab.frontend` jest przykladem takiej reusable capability:
+W `integrations.gitlab` pakiet glowny zawiera tylko porty. Waskie porty
+repozytorium rozdzielaja project/code search, read, tree, revision, merge
+requests i instruction inventory; porty zlozonych operacji obejmuja branch,
+endpoint inventory, source resolve, OpenAPI, use case i frontend discovery.
+`GitLabRepositoryPort` pozostaje kontraktem zgodnosci dla konsumentow
+korzystajacych z kilku operacji. Publiczne modele, requesty, wyniki i bledy
+leza w `contract` oraz jego podpakietach, REST w `adapter.rest`, properties
+i fabryki w `config`, cache tree w `internal`, a serwisy w `service`.
+Konsumenci poza integracja importuja porty i kontrakty; wyjatkiem jest
+`api.workspacesettings.WorkspaceSettingsService`, ktory aktualizuje properties
+w runtime. `IntegrationPackageBoundaryTest` sprawdza obie granice.
+
+`integrations.gitlab.service.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez
-targeted reads z `GitLabRepositoryPort`, a screen reachability rozwija
+targeted reads przez porty repozytorium, a screen reachability rozwija
 effective route chain wybranego ekranu, routowane poddrzewo view targets, BFS
 osiagalnych komponentow oraz kanoniczny rejestr faktycznie uzytych zaleznosci.
 Resolver selected route/view subtree pozostaje prywatnym seedem reachability;
@@ -151,7 +163,7 @@ Ten sam adapter ma byc mozliwy do wywolania przez evidence provider, tool,
 shared/operator API albo kolejny feature.
 
 `features.uiexplorer.catalog` jest feature-owned composition boundary nad
-Operational Context i `integrations.gitlab.frontend`: rozwiazuje system do
+Operational Context i `integrations.gitlab`: rozwiazuje system do
 jednego primary repository, przekazuje ukryty GitLab scope do integracji i
 mapuje wynik na publiczny katalog bez danych repository. Publiczne DTO w
 `features.uiexplorer.api` i `contract` nie importuja klas integracji.
@@ -219,7 +231,7 @@ persistence feature'a; nie importuje shared `api.analysisruns`. Wspolne
 evidence/activity/feedback, uzywany także przez Incident i Flow.
 
 `frontendcatalog` posiada neutralne rozpoznanie zarejestrowanego frontendu z
-Operational Context, katalog widokow nad `integrations.gitlab.frontend` oraz
+Operational Context, katalog widokow nad `integrations.gitlab` oraz
 trwaly cache publicznego neutralnego katalogu po zakonczonym discovery. Cache
 zalezy od `localworkspace.storage`, jest kluczowany przez repository scope,
 ref i limity oraz obsluguje jawny scoped refresh. Pakiet nie importuje
@@ -258,7 +270,7 @@ Warstwa posiada:
 - neutralne input/output DTO potrzebne wielu runtime'om agenta.
 
 `agenttools.gitlab.frontend.mcp` deleguje do
-`integrations.gitlab.frontend` i wystawia route branch slice oraz TypeScript
+`integrations.gitlab` i wystawia route branch slice oraz TypeScript
 symbol slice. Model nie wybiera repository ani refa. Route branch safe ref
 zwraca wybrane poddrzewo kontenera. Dla TypeScriptu model kopiuje naturalny
 plik/typ z artifactu albo wspolrzedne oryginalnego importu ze zwroconego kodu;

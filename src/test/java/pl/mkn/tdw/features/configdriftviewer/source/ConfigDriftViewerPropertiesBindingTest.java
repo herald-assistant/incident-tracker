@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
-import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionsProperties;
 import pl.mkn.tdw.integrations.http.IntegrationHttpProperties;
 
 import java.util.Map;

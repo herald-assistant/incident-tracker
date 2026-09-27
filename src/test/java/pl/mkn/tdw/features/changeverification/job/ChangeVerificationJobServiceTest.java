@@ -1,5 +1,13 @@
 package pl.mkn.tdw.features.changeverification.job;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventory;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventoryRequest;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationAiResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
@@ -14,16 +22,16 @@ import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNot
 import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatcher;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestCommit;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestChangedFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestCommit;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionDiscoveryProperties;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoveryService;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.config.InstructionDiscoveryProperties;
+import pl.mkn.tdw.integrations.gitlab.service.instructions.InstructionContextDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFileRequest;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueComment;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueLink;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
@@ -284,7 +292,7 @@ class ChangeVerificationJobServiceTest {
     private static final class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
         @Override
-        public List<pl.mkn.tdw.integrations.gitlab.GitLabRepositoryProjectCandidate> searchProjects(
+        public List<pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate> searchProjects(
                 String group,
                 List<String> projectHints
         ) {
@@ -292,14 +300,14 @@ class ChangeVerificationJobServiceTest {
         }
 
         @Override
-        public List<pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate> searchCandidateFiles(
-                pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery query
+        public List<pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate> searchCandidateFiles(
+                pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery query
         ) {
             return List.of();
         }
 
         @Override
-        public List<pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile> listRepositoryFiles(
+        public List<pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile> listRepositoryFiles(
                 String group,
                 String projectName,
                 String branch,
@@ -309,7 +317,7 @@ class ChangeVerificationJobServiceTest {
         }
 
         @Override
-        public pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent readFile(
+        public pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent readFile(
                 String group,
                 String projectName,
                 String branch,
@@ -326,7 +334,7 @@ class ChangeVerificationJobServiceTest {
             if (content == null) {
                 throw new IllegalArgumentException("Missing test instruction file: " + filePath);
             }
-            return new pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent(
+            return new pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent(
                     group,
                     projectName,
                     branch,
@@ -355,10 +363,10 @@ class ChangeVerificationJobServiceTest {
         }
 
         @Override
-        public pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory loadFileInventory(
-                pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest request
+        public pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventory loadFileInventory(
+                pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventoryRequest request
         ) {
-            return pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory.available(List.of(
+            return pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventory.available(List.of(
                     "AGENTS.md",
                     ".github/copilot-instructions.md",
                     "src/main/java/AGENTS.md",
@@ -367,7 +375,7 @@ class ChangeVerificationJobServiceTest {
         }
 
         @Override
-        public pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk readFileChunk(
+        public pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk readFileChunk(
                 String group,
                 String projectName,
                 String branch,

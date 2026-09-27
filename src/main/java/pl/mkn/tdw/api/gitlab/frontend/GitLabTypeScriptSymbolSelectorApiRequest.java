@@ -3,8 +3,8 @@ package pl.mkn.tdw.api.gitlab.frontend;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSelector;
 
 public record GitLabTypeScriptSymbolSelectorApiRequest(
         @NotBlank @Size(max = 200) String name,

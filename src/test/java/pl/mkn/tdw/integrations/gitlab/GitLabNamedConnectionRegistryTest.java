@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionRegistry;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabNamedConnectionsProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

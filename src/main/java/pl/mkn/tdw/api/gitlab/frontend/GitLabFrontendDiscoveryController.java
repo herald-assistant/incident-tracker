@@ -6,24 +6,24 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraph;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraphDiscoveryService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteGraph;
+import pl.mkn.tdw.integrations.gitlab.GitLabFrontendRouteGraphPort;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.GitLabFrontendScreenReachabilityPort;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.GitLabAngularRouteBranchSlicePort;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.GitLabTypeScriptSymbolSlicePort;
 
 @RestController
 @RequestMapping("/api/gitlab/frontend")
 @RequiredArgsConstructor
 public class GitLabFrontendDiscoveryController {
 
-    private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
-    private final GitLabFrontendScreenReachabilityService screenReachabilityService;
-    private final GitLabAngularRouteBranchSliceService routeBranchSliceService;
-    private final GitLabTypeScriptSymbolSliceService typeScriptSymbolSliceService;
+    private final GitLabFrontendRouteGraphPort routeGraphDiscoveryService;
+    private final GitLabFrontendScreenReachabilityPort screenReachabilityService;
+    private final GitLabAngularRouteBranchSlicePort routeBranchSliceService;
+    private final GitLabTypeScriptSymbolSlicePort typeScriptSymbolSliceService;
 
     @PostMapping("/catalog")
     public GitLabFrontendRouteGraph discoverCatalog(

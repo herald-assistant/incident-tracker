@@ -2,9 +2,9 @@ package pl.mkn.tdw.features.configdriftviewer.deterministic.source;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScope;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactFileMetadata;
-import pl.mkn.tdw.integrations.gitlab.GitLabExactReadException;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadException;
 import pl.mkn.tdw.integrations.gitlab.GitLabExactRepositoryPort;
 
 import java.util.LinkedHashMap;

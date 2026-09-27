@@ -12,8 +12,8 @@ import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerDeepRep
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScope;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeException;
 import pl.mkn.tdw.features.configdriftviewer.scope.ConfigDriftViewerScopeResolver;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevisionPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCodeSearchReadModel;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationPort;
@@ -39,8 +39,8 @@ public class ConfigDriftViewerDeepPreflightService {
     private final OperationalContextSettingsPort operationalContextProperties;
     private final OperationalContextPort operationalContextPort;
     private final ConfigDriftViewerScopeResolver scopeResolver;
-    private final GitLabProperties gitLabProperties;
-    private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final GitLabSettingsPort gitLabProperties;
+    private final GitLabRepositoryRevisionPort gitLabRepositoryPort;
     private final OperationalContextCatalogValidationPort validationService;
     private final OperationalContextCodeSearchPort codeSearchBuilder;
 

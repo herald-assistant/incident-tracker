@@ -1,8 +1,8 @@
 package pl.mkn.tdw.api.gitlab;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 
 import java.util.List;

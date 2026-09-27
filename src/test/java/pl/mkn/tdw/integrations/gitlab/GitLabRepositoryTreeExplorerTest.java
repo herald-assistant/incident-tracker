@@ -1,5 +1,9 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeNode;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreePage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryTreeExplorer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -1,7 +1,7 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiOperationCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiEndpointSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.openapi.GitLabOpenApiOperationCandidate;
 
 import java.util.List;
 import java.util.Map;

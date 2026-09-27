@@ -3,11 +3,11 @@ package pl.mkn.tdw.features.changeverification.ai.preparation;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestChangedFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextResult;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionSource;
 import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 
 import java.util.List;

@@ -2,7 +2,7 @@ package pl.mkn.tdw.features.flowexplorer.context;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.common.PlatformSourceCodeProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 

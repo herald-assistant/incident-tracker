@@ -6,7 +6,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.common.PlatformSourceCodeProperties;
 import pl.mkn.tdw.features.flowexplorer.endpoint.FlowExplorerGitLabConfigurationException;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextRepositorySearchRepository;
@@ -40,7 +40,7 @@ public class FlowExplorerRepositoryScopeService {
     );
 
     private final OperationalContextPort operationalContextPort;
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
     private final PlatformSourceCodeProperties platformSourceCodeProperties;
 
     public FlowExplorerRepositoryScope resolve(String systemId, String branch) {

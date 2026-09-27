@@ -3,8 +3,8 @@
 ## Zakres
 
 Ten pakiet jest neutralna capability integracji z GitLabem. Obejmuje adapter
-REST, port repozytorium, wyszukiwanie kodu, pobieranie plikow, source resolve,
-wspolne repository tree/cache oraz inventory endpointow repozytorium.
+REST, waskie porty repozytorium, wyszukiwanie kodu, pobieranie plikow, source
+resolve, wspolne repository tree/cache oraz inventory endpointow repozytorium.
 
 Kod w `integrations.gitlab` ma byc reusable przez evidence providers,
 tools/MCP, shared/operator API i przyszle feature'y analityczne. Nie moze
@@ -18,25 +18,31 @@ zawierac semantyki incident analysis, Copilota ani MCP runtime.
   warstwach wyzszych. Ten pakiet zwraca neutralne modele integracyjne,
   ograniczenia widocznosci i techniczne sygnaly jak confidence albo suggested
   next reads.
-- `GitLabRepositoryPort` jest neutralna fasada dla warstw wyzszych. Jesli nowa
-  capability GitLaba ma byc uzywana przez tool albo feature, najpierw rozwaz
-  dodanie metody portu i implementacji adaptera zamiast laczenia sie z GitLabem
-  bezposrednio poza tym pakietem.
-- `source/` zawiera kontrakty i serwis source resolve. Nie duplikuj tam
+- Bezposrednio w `integrations.gitlab` sa tylko publiczne porty. Modele,
+  requesty, wyniki i bledy sa w `contract`; REST w `adapter.rest`, properties
+  i fabryki w `config`, cache w `internal`, a operacje zlozone w `service`.
+- Konsument powinien wybierac waski port odpowiadajacy uzywanej operacji.
+  `GitLabRepositoryPort` pozostaje zlozonym kontraktem zgodnosci dla miejsc,
+  ktore rzeczywiscie lacza kilka capability. Jego stare metody domyslne nie
+  sa wzorcem dla nowych wymaganych operacji.
+- `contract.source` i `service.source` zawieraja source resolve; sesja source
+  resolve jest widoczna na zewnatrz tylko przez opaque port. Nie duplikuj
   mechaniki wspolnej z reszta GitLab capability.
+- Frontend, instructions, OpenAPI i use case maja wlasne podpakiety `contract`
+  oraz `service`; parsery frontendowe moga mieszkac w `internal.frontend`.
 
 ## Repository tree i cache
 
-- Dostep do GitLab `repository/tree` ma isc przez `GitLabRepositoryTreeService`.
+- Dostep do GitLab `repository/tree` ma isc przez `service.GitLabRepositoryTreeService`.
   Nie tworz osobnej paginacji, osobnego URL buildera ani osobnego cache dla tego
   endpointu.
-- Cache tree trzymaj w `GitLabRepositoryTreeSession`. Jesli konkretna capability
+- Cache tree trzymaj w `internal.GitLabRepositoryTreeSession`. Jesli konkretna capability
   ma wlasna sesje, powinna opakowywac albo delegowac do wspolnej sesji, tak jak
   `GitLabSourceResolveSession`.
 - Klucz cache musi uwzgledniac GitLab base URL, projekt, branch/ref oraz
   `pathPrefix`, zeby nie mieszac wynikow miedzy repozytoriami i scope'ami.
 - Zachowanie statusow HTTP specyficzne dla tree trzymaj lokalnie przez
-  `GitLabRepositoryTreeException`, a mapowanie na kontrakt danej capability
+  `contract.GitLabRepositoryTreeException`, a mapowanie na kontrakt danej capability
   wykonuj w serwisie wywolujacym.
 
 ## Endpoint inventory

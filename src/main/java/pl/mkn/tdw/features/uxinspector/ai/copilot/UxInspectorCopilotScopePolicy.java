@@ -14,7 +14,7 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
 
 import java.util.LinkedHashMap;
 import java.util.Set;
@@ -134,7 +134,7 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
             boolean allowRoot,
             String field
     ) {
-        if (!GitLabVerifiedRepositoryFileReader.isSafePath(path, allowRoot)) {
+        if (!GitLabRepositoryPath.isSafePath(path, allowRoot)) {
             reject(request, field + " must be a safe path inside the selected UX Inspector repository.", true);
         }
     }

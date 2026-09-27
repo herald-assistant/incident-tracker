@@ -17,7 +17,7 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftValidationTools;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
@@ -53,7 +53,7 @@ public class OperationalContextAssistanceCopilotRunRequestAssembler {
     private final CopilotSdkToolFactory toolFactory;
     private final OperationalContextAssistanceDraftValidationTools validationTools;
     private final OperationalContextAssistanceAiProperties aiProperties;
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
 
     public OperationalContextAssistanceCopilotRunAssembly assemble(
             String runReference,

@@ -6,9 +6,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveRequest;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveResponse;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveResponse;
+import pl.mkn.tdw.integrations.gitlab.service.source.GitLabSourceResolveService;
 
 import java.util.List;
 

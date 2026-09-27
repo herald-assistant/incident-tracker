@@ -7,15 +7,15 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryProjectCandidate;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveMatch;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveRequest;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveSession;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveMatch;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabSourceResolvePort;
+import pl.mkn.tdw.integrations.gitlab.GitLabSourceResolveSessionPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRepositoryPathPort;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProvider;
@@ -67,8 +67,8 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     );
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
-    private final GitLabProperties gitLabProperties;
-    private final GitLabSourceResolveService gitLabSourceResolveService;
+    private final GitLabSettingsPort gitLabProperties;
+    private final GitLabSourceResolvePort gitLabSourceResolveService;
     private final DeploymentContextResolver deploymentContextResolver;
     private final OperationalContextRepositoryPathPort repositoryProjectPathResolver;
 
@@ -163,7 +163,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
             ResolvedDeploymentContext deployment,
             ElasticLogEvidenceView.LogEntry logEntry,
             GitLabCodeReference reference,
-            GitLabSourceResolveSession resolveSession,
+            GitLabSourceResolveSessionPort resolveSession,
             Map<String, List<String>> projectPathCache
     ) {
         for (var projectName : resolveProjectPaths(logEntry, deployment, projectPathCache)) {
@@ -223,7 +223,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
             ResolvedDeploymentContext deployment,
             String projectName,
             GitLabCodeReference reference,
-            GitLabSourceResolveSession resolveSession
+            GitLabSourceResolveSessionPort resolveSession
     ) {
         for (var symbolCandidate : symbolCandidates(reference.symbol())) {
             try {

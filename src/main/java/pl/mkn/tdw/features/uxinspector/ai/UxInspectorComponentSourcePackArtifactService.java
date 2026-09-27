@@ -8,14 +8,16 @@ import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetCandidate;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdge;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteConfiguration;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceReference;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFilePort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabVerifiedFile;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdge;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdgeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteConfiguration;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendSourceReference;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,6 +42,7 @@ public class UxInspectorComponentSourcePackArtifactService {
     private static final String INHERITED_SLICE_BOUNDARY_MARKER =
             "\n// ... direct inherited slice bounded by UX Inspector ...";
 
+    private final GitLabVerifiedRepositoryFilePort verifiedFileReader;
     private final GitLabRepositoryPort repositoryPort;
 
     public UxInspectorComponentSourcePackArtifact prepare(
@@ -234,7 +237,7 @@ public class UxInspectorComponentSourcePackArtifactService {
     }
 
     private PackFile readFile(UxInspectorTargetContext context, String path) {
-        if (!GitLabVerifiedRepositoryFileReader.isSafePath(path, false)) {
+        if (!GitLabRepositoryPath.isSafePath(path, false)) {
             return PackFile.unavailable(path, "UNSAFE_OR_INVALID_PATH");
         }
         if (context == null || context.sourceScope() == null || context.sourceRevision() == null
@@ -244,13 +247,13 @@ public class UxInspectorComponentSourcePackArtifactService {
             return PackFile.unavailable(path, "PINNED_REPOSITORY_SCOPE_UNAVAILABLE");
         }
         try {
-            var file = GitLabVerifiedRepositoryFileReader.read(
+            var file = verifiedFileReader.read(
                     repositoryPort,
                     context.sourceScope().group(),
                     context.sourceScope().projectName(),
                     context.sourceRevision().revision(),
                     path,
-                    GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES
+                    GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES
             );
             return PackFile.available(file.path(), file.content(), file.sizeBytes());
         } catch (RuntimeException exception) {

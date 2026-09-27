@@ -3,11 +3,11 @@ package pl.mkn.tdw.features.uxinspector.context;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBinding;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBindingKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabFrontendScreenReachabilityService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBinding;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBindingKind;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +26,7 @@ class UxInspectorTargetResolverTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        var components = new ArrayList<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent>();
+        var components = new ArrayList<pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent>();
         var fixtureKinds = List.of("validation", "validation", "validation", "data-origin", "data-origin", "data-origin",
                 "state", "state", "state", "action", "action", "action");
         for (var index = 0; index < fixtureKinds.size(); index++) {
@@ -161,11 +161,11 @@ class UxInspectorTargetResolverTest {
                 "login", 1, 0, true, "ROUTE_TARGET", "LoginComponent", "app-login",
                 sourcePath, null, template,
                 "RESOLVED", List.of(
-                        new pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBinding(
-                                pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBindingKind.EVENT,
+                        new pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBinding(
+                                pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBindingKind.EVENT,
                                 "ngSubmit", "doLogin()", List.of("doLogin"), 1),
-                        new pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBinding(
-                                pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBindingKind.TWO_WAY,
+                        new pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBinding(
+                                pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBindingKind.TWO_WAY,
                                 "ngModel", "email", List.of("email"), 2)
                 ), List.of(), List.of(), List.of(), List.of(),
                 "export class LoginComponent { email = ''; doLogin() {} }", 120, 120, false, List.of()

@@ -1,20 +1,21 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence;
 
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
 import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryProjectCandidate;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveMatch;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveSession;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveMatch;
+import pl.mkn.tdw.integrations.gitlab.service.source.GitLabSourceResolveService;
+import pl.mkn.tdw.integrations.gitlab.internal.source.GitLabSourceResolveSession;
 import pl.mkn.tdw.integrations.operationalcontext.adapter.local.OperationalContextAdapterTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
 import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
@@ -427,7 +428,7 @@ class AnalysisEvidenceCollectorTest {
         }
 
         @Override
-        public List<pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile> listRepositoryFiles(
+        public List<pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile> listRepositoryFiles(
                 String group,
                 String projectName,
                 String branch,

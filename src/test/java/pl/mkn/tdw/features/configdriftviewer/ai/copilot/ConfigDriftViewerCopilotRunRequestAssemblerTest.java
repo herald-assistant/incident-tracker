@@ -18,7 +18,7 @@ import pl.mkn.tdw.features.configdriftviewer.ai.report.ConfigDriftViewerReportSe
 import pl.mkn.tdw.features.configdriftviewer.deterministic.model.ConfigDriftViewerDeterministicStatus;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerJobStartRequest;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerMode;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.util.List;

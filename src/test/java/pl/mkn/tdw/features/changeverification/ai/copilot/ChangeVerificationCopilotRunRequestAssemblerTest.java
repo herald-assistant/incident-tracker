@@ -16,7 +16,7 @@ import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFi
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatch;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionSource;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.util.List;

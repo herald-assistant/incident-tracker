@@ -11,7 +11,7 @@ import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerDeepCon
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerDeepRepositoryScope;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerJobStartRequest;
 import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerMode;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,7 +27,7 @@ public class ConfigDriftViewerCopilotToolSessionContextFactory {
 
     private static final String SESSION_PREFIX = "runtime-config-";
 
-    private final GitLabProperties gitLabProperties;
+    private final GitLabSettingsPort gitLabProperties;
 
     public CopilotToolSessionContext create(
             String runReference,

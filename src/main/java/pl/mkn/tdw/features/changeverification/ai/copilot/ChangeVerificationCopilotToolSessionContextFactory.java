@@ -8,7 +8,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStart
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
-import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
+import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionSource;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;

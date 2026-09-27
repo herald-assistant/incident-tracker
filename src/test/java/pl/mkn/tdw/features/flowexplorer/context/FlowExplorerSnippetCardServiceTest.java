@@ -3,12 +3,12 @@ package pl.mkn.tdw.features.flowexplorer.context;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceMethodCandidate;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceMethodCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabJavaMethodSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.service.source.GitLabJavaMethodSliceService;
 
 import java.util.List;
 

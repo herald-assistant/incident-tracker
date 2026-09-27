@@ -57,7 +57,7 @@ jako jawnie zarejestrowany `internal-service/frontend` z jednym primary
 repository i kontrolowanym code-search scope. Brak lub konflikt rejestracji
 jest jawnym bledem konfiguracji; feature nie zgaduje repository.
 
-Neutralny `frontendcatalog` i `integrations.gitlab.frontend` buduja katalog
+Neutralny `frontendcatalog` i `integrations.gitlab` buduja katalog
 Angular/Nx graph-first. Discovery zaczyna od produkcyjnego bootstrapu
 `bootstrapApplication` z `provideRouter` albo
 `platformBrowserDynamic().bootstrapModule` z osiagalnym przez statyczne importy
@@ -273,7 +273,7 @@ raw JSON nie sa glowna trescia raportu.
   persistence.
 - `frontendcatalog` posiada neutralny katalog zarejestrowanych frontendow i
   jego cache.
-- `integrations.gitlab.frontend` posiada parsery, graph discovery,
+- `integrations.gitlab` posiada parsery, graph discovery,
   reachability i source slices.
 - `agenttools` i `aiplatform` pozostaja neutralne wobec feature'a.
 - `shared.ai.chat` posiada tylko wspolny stan wiadomosci i capture turnu.

@@ -259,7 +259,7 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   recovery, walidacji, asysty, API/MCP i oba guardy przeszly; pelne
   `mvn -q clean test`: 1735 testow, 0 failures, 0 errors, 1 skipped.
   `git diff --check` jest czysty. Brak pozostalego driftu Operational Context.
-- [ ] Krok 8a — GitLab repository foundation: rozdzielic obecny szeroki port
+- [x] Krok 8a — GitLab repository foundation: rozdzielic obecny szeroki port
   na waskie porty dla rzeczywistych konsumentow repository read, branch,
   endpoint inventory, search, tree, revision, verified reader i named exact
   read; przeniesc publiczne modele i bledy do `contract`, REST do
@@ -267,18 +267,34 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   zlozone operacje do `service`. Dowod: testy obu adapterow, tree/search,
   podstawowych API/MCP, guard i protokol; brak cichych defaultow dla
   wymaganych operacji.
-- [ ] Krok 8b — GitLab source capabilities: przeniesc `source`, `openapi`,
+  Wynik: root zawiera tylko porty; wymagane operacje nowych waskich portow
+  nie maja metod domyslnych. Szeroki `GitLabRepositoryPort` zachowuje
+  dotychczasowe defaulty jako kontrakt zgodnosci dla konsumentow laczacych
+  kilka operacji. Modele i bledy leza w `contract`, REST w `adapter.rest`,
+  konfiguracja w `config`, cache i source session w `internal`, a operacje
+  zlozone w `service`. API, tools i feature'y korzystaja z portow i kontraktow.
+- [x] Krok 8b — GitLab source capabilities: przeniesc `source`, `openapi`,
   `instructions` i `usecase` do spojnych podpakietow `contract`/`service`/
   `internal`, wystawic root port dla kazdej capability wywolywanej z zewnatrz
   integracji i przelaczyc API, tools oraz feature'y. Dowod: targeted source,
   OpenAPI, instructions i use-case tests, konsumenci, guard i protokol;
   rezultaty i limity pozostaja bez zmian.
-- [ ] Krok 8c — GitLab frontend: przeniesc publiczne kontrakty do
+  Wynik: source, OpenAPI, instructions i use case maja kontrakty w `contract`,
+  serwisy w `service` i osobne porty uzywane przez konsumentow. Source
+  session jest dostepna na zewnatrz wylacznie jako opaque port.
+- [x] Krok 8c — GitLab frontend: przeniesc publiczne kontrakty do
   `contract.frontend`, implementacje/parsing do `service.frontend` i
   `internal.frontend`, wystawic waskie root porty dla route, symbol i screen
   discovery, przelaczyc frontend catalog, API, tools, UI Explorer i UX
   Inspector. Dowod: testy frontend discovery/slices/reachability, konsumenci,
   guard i protokol; root GitLaba zawiera juz tylko porty.
+  Wynik: publiczne modele frontendowe sa w `contract.frontend`, serwisy w
+  `service.frontend`, wyodrebnione parsery w `internal.frontend`. Katalog,
+  API, tools, UI Explorer i UX Inspector korzystaja z portow oraz kontraktow.
+  Testy celowane adapterow, source, OpenAPI, instructions, use case, frontend
+  i guardow przeszly. Pelne `mvn -q clean test`: 1737 testow, 0 failures,
+  0 errors, 1 skipped. Koncowe `mvn -q test` po ostatnich zmianach:
+  1738 testow, 0 failures, 0 errors, 1 skipped. `git diff --check` jest czysty.
 - [ ] Krok 9 — Wspolne HTTP i finalna granica: przeniesc
   `integrations.http` do `integrations.support.http`, przelaczyc fabryki
   klientow i testy; rozszerzyc guard na wszystkie systemy i usunac tymczasowe

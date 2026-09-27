@@ -1,18 +1,20 @@
 package pl.mkn.tdw.features.uxinspector.ai;
 
+import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetCandidate;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdge;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependency;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyCategory;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityDependencyKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdge;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityEdgeKind;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenReachabilityGraph;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
 
     private final GitLabRepositoryPort repositoryPort = mock(GitLabRepositoryPort.class);
     private final UxInspectorComponentSourcePackArtifactService service =
-            new UxInspectorComponentSourcePackArtifactService(repositoryPort);
+            new UxInspectorComponentSourcePackArtifactService(new GitLabVerifiedRepositoryFileService(), repositoryPort);
 
     @Test
     void shouldIncludeOnlyResolvedTargetToViewPathAndOmitSiblingFromPrompt() {
@@ -222,7 +224,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     void shouldOmitComponentsAndRelationsOutsideTheFocusedPathFromALargeGraph() {
         var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
         var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
-        var components = new ArrayList<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent>();
+        var components = new ArrayList<pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent>();
         var edges = new ArrayList<GitLabFrontendReachabilityEdge>();
         components.add(root);
         components.add(target);
@@ -379,19 +381,19 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     }
 
     private UxInspectorTargetContext contextWithGraph(
-            List<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent> components,
+            List<pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent> components,
             List<GitLabFrontendReachabilityEdge> edges,
-            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent target,
+            pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent target,
             UxInspectorTargetResolutionStatus status
     ) {
         return contextWithGraph(components, edges, List.of(), target, status);
     }
 
     private UxInspectorTargetContext contextWithGraph(
-            List<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent> components,
+            List<pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent> components,
             List<GitLabFrontendReachabilityEdge> edges,
             List<GitLabFrontendReachabilityDependency> dependencies,
-            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent target,
+            pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent target,
             UxInspectorTargetResolutionStatus status
     ) {
         var original = targetContext();
@@ -409,7 +411,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     }
 
     private UxInspectorTargetCandidate candidate(
-            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent component,
+            pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent component,
             int score
     ) {
         return new UxInspectorTargetCandidate(component.componentId(), score, List.of("test match"),
@@ -436,20 +438,20 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     }
 
     private GitLabFrontendReachabilityEdge edge(
-            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent parent,
-            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent child,
+            pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent parent,
+            pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent child,
             GitLabFrontendReachabilityEdgeKind kind
     ) {
         return new GitLabFrontendReachabilityEdge(parent.componentId(), child.componentId(), kind,
                 child.selector(), parent.templatePath(), parent.symbol(), null);
     }
 
-    private pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent withRelations(
-            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent component,
+    private pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent withRelations(
+            pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent component,
             List<String> dependencyIds,
             List<String> childComponentIds
     ) {
-        return new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent(
+        return new pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent(
                 component.componentId(), component.breadthFirstOrder(), component.depth(),
                 component.connectedToSelectedScreen(), component.discoveryKind(), component.symbol(),
                 component.selector(), component.sourcePath(), component.templatePath(), component.templateContent(),

@@ -1,15 +1,15 @@
 package pl.mkn.tdw.agenttools.gitlab.frontend.mcp;
 
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceFile;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteChildReference;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendEffectiveRouteChain;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphDiagnostic;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNode;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptDownstreamReference;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolCandidate;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceResponse;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBinding;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceFile;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteBranchSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabAngularRouteChildReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendEffectiveRouteChain;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphDiagnostic;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptDownstreamReference;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptSymbolSliceResponse;
+import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBinding;
 
 import java.util.List;
 

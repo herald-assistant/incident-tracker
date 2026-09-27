@@ -3,8 +3,8 @@ package pl.mkn.tdw.features.deliverycomplexityassessment.evidence;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.deliverycomplexityassessment.deliveryunit.DeliveryUnit;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestChangedFile;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

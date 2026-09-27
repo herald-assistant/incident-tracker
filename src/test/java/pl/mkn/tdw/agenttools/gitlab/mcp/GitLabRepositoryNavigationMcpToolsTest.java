@@ -1,22 +1,25 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranchPage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranch;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFilePage;
+import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryBranchService;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFilePage;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevision;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeExplorer;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeNode;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreePage;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision;
+import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryTreeExplorer;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeNode;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreePage;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.testsupport.agenttools.GitLabMcpToolsTestCreator;
 
@@ -40,19 +43,19 @@ class GitLabRepositoryNavigationMcpToolsTest {
     private final GitLabRepositoryToolScope scope = new GitLabRepositoryToolScope(
             "CRM", "PROCESSES/customer-profile", "main", SELECTED_COMMIT);
     private final GitLabRepositoryNavigationMcpTools tools = new GitLabRepositoryNavigationMcpTools(
-            port, new GitLabRepositoryTreeExplorer(port), branchService, new GitLabProperties(),
+            new GitLabVerifiedRepositoryFileService(), port, new GitLabRepositoryTreeExplorer(port), branchService, new GitLabProperties(),
             mock(OperationalContextPort.class));
 
     @Test
     void listsBranchesOfAnUncataloguedProjectInsideTheConfiguredMainGroup() {
         when(branchService.listBranches("CRM/LIBS/shared", "release"))
-                .thenReturn(new GitLabRepositoryBranchService.BranchPage(List.of(
-                        new GitLabRepositoryBranchService.Branch("release/1", true)), false));
+                .thenReturn(new GitLabBranchPage(List.of(
+                        new GitLabBranch("release/1", true)), false));
 
         var result = tools.listRepositoryBranches("LIBS/shared", "release", "Ustalam gałąź biblioteki.", context());
 
         assertThat(result.projectPath()).isEqualTo("CRM/LIBS/shared");
-        assertThat(result.branches()).extracting(GitLabRepositoryBranchService.Branch::name)
+        assertThat(result.branches()).extracting(GitLabBranch::name)
                 .containsExactly("release/1");
         assertThat(result.branches().get(0).isDefault()).isTrue();
         assertThat(scope.readSourceRefs()).isEmpty();

@@ -4,13 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.GitLabPathUtils;
-import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevision;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeExplorer;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeSlice;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryTreeExplorerPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeSlice;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -36,9 +36,9 @@ public class OperationalContextGitLabSourceCollector {
     private static final Pattern SAFE_REF = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,254}");
     private static final Pattern COMMIT_ID = Pattern.compile("(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})");
 
-    private final GitLabProperties properties;
+    private final GitLabSettingsPort properties;
     private final GitLabRepositoryPort repositoryPort;
-    private final GitLabRepositoryTreeExplorer treeExplorer;
+    private final GitLabRepositoryTreeExplorerPort treeExplorer;
 
     public void validateProjectUrl(String projectUrl) {
         relativeProjectFromUrl(projectUrl);
