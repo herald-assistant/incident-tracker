@@ -10,6 +10,8 @@ Obecnie obejmuje:
 - wspolny kontrakt bledow HTTP,
 - globalny `ApiExceptionHandler`,
 - wspolny kontrakt walidacji,
+- status fine-grained PAT Copilota i Workspace Settings jako jedyne zrodlo
+  tokena dla runtime,
 - katalog opcji AI nad `aiplatform.copilot.runtime.options`,
 - stabilne fasady nad integracjami uzywane przez wiele ekranow, np.
   Elasticsearch log search, GitLab repository/source search, Database console
@@ -27,6 +29,8 @@ Obecnie obejmuje:
   potrzebuje wspolnego typu, przenies go do `shared` albo blizej wlasciciela.
 - Stabilne endpointy FE/operatora trzymaj tutaj; adapter, porty, modele
   request/result i service capability zostaja w `integrations.*`.
+- `GET /api/auth/github/status` zwraca jedynie `configured` i `settingsUrl`.
+  Nie dodawaj tu OAuth, cookie sesji operatora ani tokena do odpowiedzi statusu.
 
 ## Aktualny refactor opcji AI
 

@@ -720,13 +720,13 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.tdw.api.workspacesettings`
   Shared/operator API lokalnych ustawien workspace'u. Pakiet laczy
   `application.properties` z `localworkspace.settings`, pokazuje zrodlo
-  wartosci dla UI i aplikuje efektywne override'y do runtime properties
-  uzywanych przez brand UI, lokalny token Copilota oraz integracje GitLaba,
-  Elasticsearch i Dynatrace.
+  wartosci dla UI, zapisuje fine-grained PAT Copilota w `settings.json` i
+  aplikuje pozostale efektywne override'y do runtime properties uzywanych
+  przez brand UI oraz integracje GitLaba, Elasticsearch i Dynatrace.
 - `pl.mkn.tdw.api.githubauth`
-  Shared/operator API autoryzacji GitHub dla UI oraz backendowa operator
-  session cookie. Ten pakiet zna request HTTP, ale nie przechowuje tokenow w
-  frontendzie ani publicznych requestach joba.
+  Shared/operator API statusu fine-grained PAT Copilota. Zwraca tylko
+  `configured` i `settingsUrl`; nie tworzy sesji operatora ani nie ujawnia
+  tokena w odpowiedzi statusowej.
 - `pl.mkn.tdw.features.incidentanalysis.evidence`
   Deterministyczne zbieranie evidence przez providery i jawny opis krokow
   pipeline, z rownoleglym fan-outem Dynatrace + GitLab po deployment context.
@@ -806,9 +806,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   kolejnosc 90% runtime upgrade, 95% compaction i 98% buffer exhaustion, wiec
   domyslny prog CLI nie moze wyprzedzic platformowego przelaczenia tieru.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
-  Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
-  `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i
-  ustawia `useLoggedInUser=false`.
+  Platformowe rozstrzyganie aktualnego fine-grained PAT z Workspace Settings
+  tuz przed zbudowaniem `CopilotClientOptions`. Runtime zawsze przekazuje
+  `githubToken` jawnie i ustawia `useLoggedInUser=false`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.options`
   Platformowy provider cache'owanego katalogu modeli Copilota i neutralne DTO.
   Pobiera pelny typed wynik `models.list`, zachowujac reasoning metadata oraz

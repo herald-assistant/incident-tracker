@@ -960,12 +960,13 @@ Decyzje MVP:
 - run moze byc zapisany juz po utworzeniu joba (`QUEUED`) i potem nadpisywany
   kolejnymi snapshotami progressu; jest to stan operator UI/history, a nie
   kolejka workerow ani gwarancja wznowienia po restarcie backendu,
-- `tokens.json` lezy obok `index.json`, przechowuje lokalne access tokeny
-  zapisane z UI i nie jest czescia exportu,
 - `settings.json` lezy obok `index.json` i przechowuje lokalne override'y
-  workspace'u; gdy pole jest ustawione w tym pliku, ma pierwszenstwo przed
-  `application.properties`, a puste albo identyczne z bazowa konfiguracja pole
-  usuwa override,
+  workspace'u, w tym fine-grained PAT Copilota; PAT jest odczytywany przez
+  runtime z aktualnych ustawien workspace'u i nie jest czescia exportu,
+- starszy `tokens.json` moze pozostac obok `index.json`, ale nie jest juz
+  zrodlem PAT dla Copilota ani czescia exportu; pozostale pola ustawien maja
+  pierwszenstwo przed `application.properties`, a puste albo identyczne z
+  bazowa konfiguracja pole usuwa override,
 - stan Copilota jest pod `${tdw.workspace.directory}/copilot`, zeby
   `resumeSession` moglo korzystac z tego samego lokalnego workspace'u,
 - historia lokalnych runow jest shared/operator API pod `/analysis/runs`, a

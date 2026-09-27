@@ -84,10 +84,11 @@ Operator zapisuje fine-grained PAT (`github_pat_`) w Workspace Settings.
 Backend odczytuje go stamtad przy kazdym nowym uruchomieniu i kontynuacji.
 Frontend nie dostaje tokena poza ekranem ustawien ani SDK-specific typu.
 
-`AnalysisJobFacade` przed utworzeniem joba rozwiązuje non-secret
-`AnalysisAiAuthRef` dla aktualnego requestu i sprawdza, czy token da sie
-uzyskac. Do background flow trafia tylko ta referencja, nie token. Follow-up
-chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
+`AnalysisJobFacade` przed utworzeniem joba sprawdza, czy aktualny PAT jest
+dostepny. `AnalysisAiAuthRef` pozostaje niejawna, nietajna referencja do
+Workspace Settings; do background flow nie trafia token. Follow-up chat
+reuse'uje `authRef` zapisany w `InitialAnalysisRequest`, ale runtime zawsze
+odczytuje aktualny PAT z Workspace Settings.
 
 Pozostale shared/operator wejscia, np. `/api/database/*`,
 `/api/operational-context/*`, GitLab/Elasticsearch helper endpoints i route'y
@@ -170,7 +171,7 @@ Preparation obejmuje:
 - wyrenderowanie manifestu, digestu i evidence artifacts z efektywna lista
   tools oraz sekcja `runtimeSkills`,
 - osadzenie artifact contents inline w promptcie,
-- dolaczenie platformowego `CopilotRunAuth` z non-secret auth reference,
+- dolaczenie platformowego `CopilotRunAuth` bez danych tokena,
 - zastosowanie requestowych preferencji AI (`model`, `reasoningEffort`) albo
   fallback do properties,
 - zebranie metryk preparation.
@@ -211,9 +212,10 @@ renderingu i konfiguracji SDK:
   `CopilotSessionConfigFactory` buduje client options, `SessionConfig`,
   `ResumeSessionConfig`, permission handler, hooks i disabled skills.
 
-`CopilotSessionConfigFactory` rozwiązuje access token przez
+`CopilotSessionConfigFactory` pobiera aktualny PAT przez
 `aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver` dopiero podczas
-tworzenia `CopilotClientOptions`. Client options zawsze dostaja jawne
+tworzenia `CopilotClientOptions`. Resolver czyta Workspace Settings niezaleznie
+od wartosci `CopilotRunAuth`. Client options zawsze dostaja jawne
 `githubToken` oraz `useLoggedInUser=false`; runtime nie korzysta z lokalnych
 credentiali GitHub CLI/Copilot CLI.
 

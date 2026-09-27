@@ -48,7 +48,7 @@ Frontend nie jest source of truth dla:
 
 - katalogu modeli AI,
 - dostepnych `reasoningEffort`,
-- GitHub/Copilot auth,
+- statusu fine-grained PAT Copilota,
 - runtime tytulu UI.
 - platformowego default branch/ref dla ekranow pracujacych ze zrodlem kodu.
 
@@ -61,6 +61,10 @@ Te dane pobieraj z backendu przez shared/operator API:
 `GET /api/ui/config` dostarcza rowniez `defaultBranch` z jedynego
 `platform.source-code.default-branch`. Feature nie powinien utrzymywac dla
 niego lokalnej stalej ani feature-specific endpointu.
+
+Status PAT zawiera `configured` i `settingsUrl`. Gdy `configured=false`,
+skieruj operatora do Workspace Settings. UI nie uruchamia OAuth ani nie
+przekazuje PAT w requestach analiz i follow-up chatu.
 
 UI nie powinno zalezec od typow Copilot SDK ani od backendowych klas Javy.
 Trzymaj kontrakty w TypeScript modelach na granicy HTTP.

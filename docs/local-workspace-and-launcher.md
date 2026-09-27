@@ -104,7 +104,7 @@ potrzebne:
 ```text
 tdw-data/
   index.json
-  tokens.json
+  settings.json
   logs/
     tdw-server.log
     tdw-server-error.log
@@ -125,8 +125,10 @@ historii czyta ten plik bez ladowania wszystkich pelnych runow.
 dopiero po otwarciu konkretnej analizy, eksporcie albo kontynuacji follow-up
 chat.
 
-`tokens.json` przechowuje lokalne access tokeny zapisane z UI. Nie jest czescia
-exportu i nie powinien byc udostepniany innym osobom.
+`settings.json` przechowuje ustawienia zapisane przez Workspace Settings, w tym
+fine-grained PAT Copilota. Plik jest lokalny i moze zawierac jawne sekrety;
+nie udostepniaj go ani nie dodawaj do repozytorium. Starszy `tokens.json` moze
+pozostac w istniejacym workspace, ale nie jest zrodlem PAT dla Copilota.
 
 `logs/` przechowuje standardowe wyjscie i bledy ostatniego uruchomienia przez
 interaktywny launcher. Kolejny start albo restart zastepuje te pliki nowymi
@@ -141,6 +143,17 @@ lokalnej, niewersjonowanej kopii. Aktualizacja JAR-a jej nie nadpisuje.
 Aplikacja nie tworzy historii ani rollbacku Operational Context; backup polega
 na skopiowaniu tego katalogu albo calego `tdw-data`.
 
+## Dostep do GitHub Copilot
+
+W `Platform / Workspace Settings` wpisz wlasny fine-grained PAT zaczynajacy sie
+od `github_pat_` i zapisz ustawienia. Token konta uzytkownika wymaga uprawnienia
+`Copilot Requests` zgodnie z [instrukcja GitHub](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli).
+To jedyne zrodlo tokena dla nowych analiz i kontynuacji lokalnych runow.
+Status `GET /api/auth/github/status` potwierdza, ze zapisano token o poprawnym
+prefiksie; waznosc i uprawnienia sprawdza GitHub podczas wywolania SDK.
+Zmiana PAT w Workspace Settings dotyczy kolejnych wywolan bez ponownego
+laczenia konta.
+
 ## Local Workspace A Export
 
 Local workspace jest prywatnym, lokalnym stanem aplikacji. Pozwala pokazac
@@ -148,9 +161,9 @@ historie analiz, otworzyc zakonczony run i kontynuowac follow-up chat, dopoki
 aplikacja ma dostep do tego samego katalogu danych.
 
 Export JSON jest read-only pakietem do podgladu albo dzielenia sie wynikiem.
-Export nie zawiera `tokens.json`, lokalnego `copilotSessionId`, hidden context,
-stanu Copilota ani sciezek lokalnych. Import exportu laduje wynik do UI bez
-zapisywania go jako kontynuowalnego runu.
+Export nie zawiera `settings.json`, starszego `tokens.json`, lokalnego
+`copilotSessionId`, hidden context, stanu Copilota ani sciezek lokalnych.
+Import exportu laduje wynik do UI bez zapisywania go jako kontynuowalnego runu.
 
 Pelny backup robi sie przez skopiowanie calego katalogu `tdw-data`, najlepiej
 przy zatrzymanej aplikacji. Zwykly export JSON nie jest backupem kontynuowalnej
@@ -182,7 +195,8 @@ Usuniecie `tdw-data` usuwa:
 - liste historii analiz,
 - pelne lokalne `run.json`,
 - mozliwosc kontynuacji follow-up chat dla tych runow,
-- tokeny zapisane lokalnie w `tokens.json`,
+- PAT i inne sekrety zapisane w `settings.json` oraz ewentualny starszy
+  `tokens.json`,
 - lokalny stan sesji Copilota.
 
 Po usunieciu katalogu aplikacja moze wystartowac od nowa, ale poprzednie lokalne
@@ -191,5 +205,6 @@ runy nie beda widoczne ani kontynuowalne.
 ## Bezpieczenstwo
 
 `tdw-data` moze zawierac wrazliwe informacje operacyjne, fragmenty promptow,
-wyniki analiz, evidence oraz lokalne access tokeny. Tego katalogu nie nalezy
+wyniki analiz, evidence oraz fine-grained PAT Copilota i inne lokalne sekrety.
+Tego katalogu nie nalezy
 commitowac, wysylac jako exportu ani kopiowac poza zaufane miejsce.

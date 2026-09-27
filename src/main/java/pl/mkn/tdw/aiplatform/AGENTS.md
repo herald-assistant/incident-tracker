@@ -106,6 +106,10 @@ Nie obejmuje:
 - Platforma moze zalezec od malych neutralnych kontraktow `shared.*`,
   `common.*`, neutralnych keys/nazw z `agenttools.*` oraz bibliotek
   SDK/technicznych.
+- Runtime Copilota odczytuje aktualny fine-grained PAT przez
+  `CopilotPatSource` z Workspace Settings. `CopilotClientOptions` dostaje
+  jawny `githubToken` i `useLoggedInUser=false`; nie przywracaj fallbacku
+  do credentials CLI ani wyboru trybu OAuth.
 - Feature ma dostarczac prompt, opcjonalne guidance do uzycia skilli, available tools,
   hidden context, evidence sink i response handling jako parametry
   uruchomienia.

@@ -576,7 +576,8 @@ Opcje modeli i reasoning pobieraj z kanonicznego
 tokenow na froncie lub w feature controllerze.
 
 Frontend najpierw pobiera status PAT. Katalog modeli pobiera dopiero, gdy
-`configured=true`; brak PAT kieruje do Workspace Settings. Frontend wybiera wartosci z aktualnego katalogu. Backend obecnie
+`configured=true`; brak PAT kieruje do Workspace Settings. Frontend wybiera
+wartosci z aktualnego katalogu. Backend obecnie
 waliduje ksztalt i dlugosc, ale nie ma neutralnego cross-checku wzgledem
 katalogu SDK. Jesli taki preflight jest potrzebny, dodaj go raz w
 `aiplatform` i wystaw przez shared/operator API, nie kopiuj do kazdego
@@ -1287,8 +1288,8 @@ dodaniem kolejnego wyciagnij neutralny `AiOptionsApiService` i zmigruj
 istniejacych konsumentow albo zapisz jawne, ograniczone odroczenie. Reuse'uj
 selection logic z `core/utils/analysis-ai-model-options.utils.ts`.
 
-Auth ma juz neutralny `GithubAuthService`; reuse'uj go i jego return URL
-semantics, nie tworz kolejnego auth clienta. Historia ma neutralny
+Status PAT ma juz neutralny `GithubAuthService`; reuse'uj jego `getStatus()`
+i `openSettings()`, nie tworz kolejnego klienta statusu. Historia ma neutralny
 `AnalysisRunHistoryApiService`.
 
 ### Wspolne komponenty
@@ -1378,8 +1379,8 @@ Przy rozbieznosci kopiuj semantyke Incident Analysis:
 
 Blad pollingu zatrzymuje scheduler, zachowuje ostatni poprawny snapshot i
 pokazuje kontrolowany error/retry. Nie uruchamiaj petli requestow po bledzie.
-Auth required/reauth kieruj przez `GithubAuthService` z zachowaniem return URL;
-field errors z `ApiErrorResponse` mapuj do formularza.
+Brakujacy albo niepoprawny PAT kieruj przez `GithubAuthService.openSettings()`
+do Workspace Settings; field errors z `ApiErrorResponse` mapuj do formularza.
 
 Nie kopiuj `setInterval` z Flow Explorera ani trzeciej lokalnej implementacji.
 Jesli kolejny feature wymaga tego samego lifecycle, wyciagnij wspolny,
@@ -1560,7 +1561,8 @@ wszystkich DTO, a dopiero na koncu jednego nieweryfikowalnego runtime flow.
 - [ ] API service przez `HttpTestingController`, exact optional fields i
   bezpieczne kodowanie job id,
 - [ ] form validation, field errors i request mapping,
-- [ ] auth required/reauth CTA przez `GithubAuthService` z return URL,
+- [ ] CTA dla brakujacego albo niepoprawnego PAT przez
+      `GithubAuthService.openSettings()`,
 - [ ] start i natychmiastowe `localRunId`,
 - [ ] restore z query param i feature validation,
 - [ ] polling bez overlap oraz poprawne zatrzymanie,
