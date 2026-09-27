@@ -1,6 +1,9 @@
 <div class="ui-explorer-screen-select" (click)="keepOpen($event)">
   <span class="ui-explorer-screen-select__label">
     <span class="field-label">View</span>
+    @if (facade.screenMatchedFromBrowserTools()) {
+      <span class="ui-explorer-screen-option__badge">sugestia Browser Tools</span>
+    }
     <span
       class="ui-explorer-screen-select__help"
       tabindex="0"

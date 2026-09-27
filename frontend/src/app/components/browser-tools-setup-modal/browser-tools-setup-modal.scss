@@ -39,6 +39,19 @@
   object-fit: contain;
 }
 
+.browser-tools-modal__close {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+}
+
+.browser-tools-modal__close .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
 .browser-tools-modal__header h2,
 .browser-tools-modal__header p,
 .browser-tools-modal__description,

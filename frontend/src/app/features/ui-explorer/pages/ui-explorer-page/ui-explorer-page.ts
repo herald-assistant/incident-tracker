@@ -11,6 +11,7 @@ import { UiExplorerConfigurationComponent } from '../../components/ui-explorer-c
 import { UiExplorerResultComponent } from '../../components/ui-explorer-result/ui-explorer-result';
 import { UiExplorerJobStatus } from '../../models/ui-explorer.models';
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
+import { UiExplorerPageContextIngressService } from '../../services/ui-explorer-page-context-ingress.service';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 
@@ -25,7 +26,7 @@ import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils
     UiExplorerConfigurationComponent,
     UiExplorerResultComponent
   ],
-  providers: [UiExplorerFacade],
+  providers: [UiExplorerPageContextIngressService, UiExplorerFacade],
   templateUrl: './ui-explorer-page.html',
   styleUrl: './ui-explorer-page.scss'
 })

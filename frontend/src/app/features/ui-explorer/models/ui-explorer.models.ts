@@ -21,6 +21,12 @@ export type UiExplorerSectionId =
 export type UiExplorerSectionMode = 'OFF' | 'COMPACT' | 'DEEP';
 export type UiExplorerScreenCatalogStatus = 'READY' | 'PARTIAL' | 'BLOCKED';
 export type UiExplorerLoadingState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
+export interface UiExplorerPageContext {
+  schema: 'tdw.ui-explorer-page-context';
+  version: 1;
+  contextId: string;
+  page: { origin: string; path: string; componentBoundaryTags: string[] };
+}
 export type UiExplorerClaimConfidence = 'CONFIRMED' | 'INFERRED' | 'UNKNOWN';
 export type UiExplorerCoverageStatus = 'READY' | 'PARTIAL' | 'BLOCKED';
 
@@ -82,6 +88,7 @@ export interface UiExplorerScreenCatalogEntry {
   label: string;
   routePattern: string;
   parentRoutePattern: string;
+  componentSelectors: string[];
   status: string;
   lazyLoaded: boolean;
   guards: string[];

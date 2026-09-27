@@ -7,6 +7,7 @@ public record UiExplorerScreenCatalogEntry(
         String label,
         String routePattern,
         String parentRoutePattern,
+        List<String> componentSelectors,
         String status,
         boolean lazyLoaded,
         List<String> guards,
@@ -15,6 +16,7 @@ public record UiExplorerScreenCatalogEntry(
 ) {
 
     public UiExplorerScreenCatalogEntry {
+        componentSelectors = componentSelectors != null ? List.copyOf(componentSelectors) : List.of();
         guards = guards != null ? List.copyOf(guards) : List.of();
         routeParameters = routeParameters != null ? List.copyOf(routeParameters) : List.of();
         limitations = limitations != null ? List.copyOf(limitations) : List.of();

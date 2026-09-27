@@ -31,7 +31,7 @@ function config(tdwOrigin = 'https://tdw.example.com') {
   return {
     schema: 'tdw.browser-tool-launcher',
     version: 1,
-    featureId: 'ux-inspector',
+    featureId: 'browser-tools',
     tdwOrigin
   };
 }
@@ -389,7 +389,7 @@ test('remote loader derives TDW origin and loads protocol before runtime', async
     '/browser-tools/protocol.js',
     '/browser-tools/runtime.js'
   ]);
-  assert.deepEqual(runtimeConfig, config());
+  assert.deepEqual(runtimeConfig, { ...config(), featureId: 'ux-inspector' });
   assert.deepEqual(alerts, []);
   assert.equal(loader.isConnected, false);
   assert.equal(window.__TDW_BROWSER_TOOL_REMOTE_LOAD__, undefined);
@@ -410,7 +410,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.0.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.1.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -449,6 +449,11 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     /TDW Browser Tools|Dostępne narzędzia|Kod działa tylko w tej karcie|Usuń narzędzia ze strony/
   );
   assert.match(action.textContent, /UX Inspector/);
+  const explorerAction = menu.querySelector('.tdw-tool-action[data-feature-id="ui-explorer"]');
+  assert.match(explorerAction.textContent, /UI Explorer/);
+  assert.equal(menu.querySelector('.tdw-capture-profile').hidden, true);
+  action.click();
+  assert.equal(menu.querySelector('.tdw-capture-profile').hidden, false);
   const profiles = menu.querySelectorAll('.tdw-capture-profile input');
   assert.equal(profiles.length, 2);
   assert.equal(profiles[0].value, 'ELEMENT_CONTEXT');
@@ -456,7 +461,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
   profiles[1].checked = true;
   profiles[1].dispatchEvent(new window.Event('change', { bubbles: true }));
 
-  action.click();
+  menu.querySelector('.tdw-capture-profile__start').click();
   const inspector = window.document.querySelector(
     '[data-tdw-browser-tool-root="ux-inspector"]'
   );
@@ -524,7 +529,8 @@ test('runtime selects through its shield and transfers exactly one capture after
     null
   );
   shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
-  shell.shadowRoot.querySelector('.tdw-tool-action').click();
+  shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]').click();
+  shell.shadowRoot.querySelector('.tdw-capture-profile__start').click();
 
   const host = window.document.querySelector(
     '[data-tdw-browser-tool-root="ux-inspector"]'
@@ -629,6 +635,12 @@ test('runtime selects through its shield and transfers exactly one capture after
     window.document.querySelectorAll('[data-tdw-browser-tool-root="browser-tools-shell"]').length,
     1
   );
+  shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
+  assert.equal(shell.shadowRoot.querySelector('.tdw-capture-profile').hidden, true);
+  assert.equal(
+    shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]').getAttribute('aria-expanded'),
+    'false'
+  );
   dom.window.close();
 });
 
@@ -652,7 +664,8 @@ test('runtime fails closed and discards capture when the UX Inspector window is 
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
-  shell.shadowRoot.querySelector('.tdw-tool-action').click();
+  shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]').click();
+  shell.shadowRoot.querySelector('.tdw-capture-profile__start').click();
   const inspector = window.document.querySelector(
     '[data-tdw-browser-tool-root="ux-inspector"]'
   );
@@ -700,8 +713,18 @@ test('relaunch reuses the shell, Escape exits only the tool and menu X cleans ev
   const firstShell = window.document.querySelector(
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
-  firstShell.shadowRoot.querySelector('.tdw-tools-launcher').click();
-  firstShell.shadowRoot.querySelector('.tdw-tool-action').click();
+  const launcher = firstShell.shadowRoot.querySelector('.tdw-tools-launcher');
+  const inspectorButton = firstShell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]');
+  const profileFieldset = firstShell.shadowRoot.querySelector('.tdw-capture-profile');
+  launcher.click();
+  inspectorButton.click();
+  assert.equal(profileFieldset.hidden, false);
+  launcher.click();
+  launcher.click();
+  assert.equal(profileFieldset.hidden, true);
+  assert.equal(inspectorButton.getAttribute('aria-expanded'), 'false');
+  inspectorButton.click();
+  firstShell.shadowRoot.querySelector('.tdw-capture-profile__start').click();
   assert.equal(window.document.querySelectorAll('[data-tdw-browser-tool-root]').length, 2);
 
   window.dispatchEvent(
@@ -713,6 +736,9 @@ test('relaunch reuses the shell, Escape exits only the tool and menu X cleans ev
   );
   assert.equal(window.document.querySelectorAll('[data-tdw-browser-tool-root]').length, 1);
   assert.equal(firstShell.hidden, false);
+  launcher.click();
+  assert.equal(profileFieldset.hidden, true);
+  assert.equal(inspectorButton.getAttribute('aria-expanded'), 'false');
 
   window.eval(protocolSource);
   window.__TDW_BROWSER_TOOL_CONFIG__ = config();
@@ -728,6 +754,88 @@ test('relaunch reuses the shell, Escape exits only the tool and menu X cleans ev
   assert.equal(removeButton.getAttribute('aria-label'), 'Usuń Browser Tools ze strony');
   removeButton.click();
   assert.equal(window.document.querySelectorAll('[data-tdw-browser-tool-root]').length, 0);
+  dom.window.close();
+});
+
+test('UI Explorer opens immediately and transfers only route and routed component after a strict handshake', () => {
+  const dom = createDom(
+    '<!doctype html><html><body><crm-shell><router-outlet></router-outlet><crm-contact-view><button>Save</button></crm-contact-view></crm-shell></body></html>',
+    'https://crm.example.com/contacts/123456?token=redacted'
+  );
+  const { window } = dom;
+  const protocol = protocolFor(dom);
+  const posted = [];
+  let openedUrl = '';
+  const bridgeWindow = { postMessage(message, targetOrigin) { posted.push({ message, targetOrigin }); } };
+  window.open = (url) => { openedUrl = String(url); return bridgeWindow; };
+  window.__TDW_BROWSER_TOOLS_TEST_MODE__ = true;
+  window.__TDW_BROWSER_TOOL_CONFIG__ = config();
+  window.eval(runtimeSource);
+
+  const shell = window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]');
+  shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
+  shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ui-explorer"]').click();
+
+  assert.match(openedUrl, /^https:\/\/tdw\.example\.com\/ui-explorer#/);
+  assert.doesNotMatch(openedUrl, /contacts|crm-contact-view|123456|redacted/);
+  assert.equal(window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'), null);
+  const nonce = new URLSearchParams(new URL(openedUrl).hash.slice(1)).get('nonce');
+  const ready = protocol.createMessage('TDW_UI_EXPLORER_READY', nonce);
+  window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://wrong.example.com', source: bridgeWindow, data: ready
+  }));
+  window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: {}, data: ready
+  }));
+  assert.equal(posted.length, 0);
+  window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: bridgeWindow, data: ready
+  }));
+  assert.equal(posted.length, 1);
+  assert.equal(posted[0].message.type, 'TDW_UI_EXPLORER_CONTEXT');
+  assert.equal(posted[0].targetOrigin, 'https://tdw.example.com');
+  assert.equal(posted[0].message.context.page.path, '/contacts/:value');
+  assert.deepEqual(Array.from(posted[0].message.context.page.componentBoundaryTags), [
+    'crm-contact-view', 'crm-shell'
+  ]);
+  assert.equal('target' in posted[0].message.context, false);
+  assert.equal('formSnapshot' in posted[0].message.context, false);
+  window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: bridgeWindow, data: ready
+  }));
+  assert.equal(posted.length, 1);
+  window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: bridgeWindow,
+    data: protocol.createMessage('TDW_UI_EXPLORER_RECEIVED', nonce, {
+      contextId: posted[0].message.contextId
+    })
+  }));
+  assert.equal(shell.hidden, false);
+  dom.window.close();
+});
+
+test('UI Explorer page context rejects ambiguous main components and malformed payloads', () => {
+  const dom = createDom(
+    '<!doctype html><html><body><router-outlet></router-outlet><crm-left></crm-left><router-outlet></router-outlet><crm-right></crm-right></body></html>',
+    'https://crm.example.com/contacts/new'
+  );
+  const protocol = protocolFor(dom);
+  const context = protocol.capturePageContext();
+  assert.deepEqual(Array.from(context.page.componentBoundaryTags), []);
+  dom.window.document.querySelectorAll('router-outlet')[1].setAttribute('name', 'modal');
+  assert.deepEqual(Array.from(protocol.capturePageContext().page.componentBoundaryTags), ['crm-left']);
+  assert.equal(protocol.normalizePageContext({ ...context, extra: true }).ok, false);
+  assert.equal(protocol.normalizePageContext({
+    ...context, page: { ...context.page, path: '/contacts/new?secret=value' }
+  }).ok, false);
+  dom.window.close();
+});
+
+test('legacy UX Inspector launcher config remains accepted', () => {
+  const dom = createDom('<!doctype html><html><body></body></html>', 'https://crm.example.com/');
+  const protocol = protocolFor(dom);
+  assert.equal(protocol.normalizeLauncherConfig({ ...config(), featureId: 'ux-inspector' }).ok, true);
+  assert.equal(protocol.normalizeLauncherConfig(config()).value.featureId, 'browser-tools');
   dom.window.close();
 });
 

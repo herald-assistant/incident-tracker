@@ -181,6 +181,11 @@ Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
 history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
 UI jawnie rozroznia wszystkie trzy pochodzenia, zachowuje copy/download Markdown
 i odrzuca obca, nieobslugiwana lub uszkodzona koperta bez fallbacku.
+Browser Tools maja osobna akcje UI Explorera, ktora bez wybierania elementu
+otwiera nowa karte z nieufna wskazowka route path i glownego routowanego
+komponentu. Formularz porownuje je z katalogiem wybranej aplikacji i refa,
+korzystajac z tego samego matcheru co UX Inspector; zrodlem screen id oraz
+immutable revision pozostaje katalog kodu, a job startuje tylko jawnie.
 UX Inspector jest osobnym pionem dla jednego pytania o element wskazany przez
 TDW Browser Tools. Statyczne zasoby sa dostepne tylko pod `/browser-tools/**`;
 selection runtime tworzy capture v1 w jawnym profilu `ELEMENT_CONTEXT` albo

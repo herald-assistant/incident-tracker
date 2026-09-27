@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.0.0';
+  const RUNTIME_VERSION = '1.1.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -44,9 +44,13 @@
     [
       'ux-inspector',
       (config, onExit, options) => new UxInspector(config, onExit, options)
+    ],
+    [
+      'ui-explorer',
+      (config, onExit) => new UiExplorer(config, onExit)
     ]
   ]);
-  if (!featureFactories.has(configResult.value.featureId)) {
+  if (configResult.value.featureId !== 'browser-tools' && !featureFactories.has(configResult.value.featureId)) {
     console.error('[TDW Browser Tools] Unknown feature: ' + configResult.value.featureId);
     return;
   }
@@ -92,7 +96,8 @@
 
     this.inspectorButton = button('tdw-tool-action', '');
     this.inspectorButton.dataset.featureId = 'ux-inspector';
-    this.inspectorButton.setAttribute('aria-label', 'Uruchom TDW UX Inspector');
+    this.inspectorButton.setAttribute('aria-label', 'Wybierz zakres danych UX Inspectora');
+    this.inspectorButton.setAttribute('aria-expanded', 'false');
     const actionIcon = element('span', 'tdw-tool-action__icon');
     actionIcon.setAttribute('aria-hidden', 'true');
     actionIcon.append(createInspectIcon());
@@ -106,6 +111,9 @@
     this.inspectorButton.append(actionIcon, actionCopy, actionArrow);
 
     this.profileFieldset = element('fieldset', 'tdw-capture-profile');
+    this.profileFieldset.id = 'tdw-capture-profile';
+    this.profileFieldset.hidden = true;
+    this.inspectorButton.setAttribute('aria-controls', this.profileFieldset.id);
     this.profileFieldset.append(element('legend', '', 'Zakres danych'));
     this.profileInputs = [
       profileOption('ELEMENT_CONTEXT', 'Element', 'Bez wartości formularza', true),
@@ -124,8 +132,24 @@
         'Hasła, tokeny i pliki są zawsze wykluczone. Pola hidden są dołączane.'
       )
     );
+    this.runInspectorButton = button('tdw-capture-profile__start', 'Wskaż element');
+    this.profileFieldset.append(this.runInspectorButton);
 
-    this.menu.append(menuHeader, this.profileFieldset, this.inspectorButton);
+    this.explorerButton = button('tdw-tool-action', '');
+    this.explorerButton.dataset.featureId = 'ui-explorer';
+    this.explorerButton.setAttribute('aria-label', 'Uruchom TDW UI Explorer');
+    const explorerIcon = element('span', 'tdw-tool-action__icon', '▦');
+    explorerIcon.setAttribute('aria-hidden', 'true');
+    const explorerCopy = element('span', 'tdw-tool-action__copy');
+    explorerCopy.append(
+      element('strong', '', 'UI Explorer'),
+      element('span', '', 'Otwórz dokumentację bieżącego widoku')
+    );
+    const explorerArrow = element('span', 'tdw-tool-action__arrow', '→');
+    explorerArrow.setAttribute('aria-hidden', 'true');
+    this.explorerButton.append(explorerIcon, explorerCopy, explorerArrow);
+
+    this.menu.append(menuHeader, this.inspectorButton, this.profileFieldset, this.explorerButton);
 
     this.launcherButton = button('tdw-tools-launcher', '');
     this.launcherButton.setAttribute('aria-label', 'Otwórz TDW Browser Tools');
@@ -139,7 +163,9 @@
     this.shadowRoot.append(this.style, this.dock);
 
     this.onLauncherClick = this.onLauncherClick.bind(this);
-    this.onInspectorClick = this.startFeature.bind(this, 'ux-inspector');
+    this.onInspectorClick = this.toggleInspectorOptions.bind(this);
+    this.onRunInspectorClick = this.startFeature.bind(this, 'ux-inspector');
+    this.onExplorerClick = this.startFeature.bind(this, 'ui-explorer');
     this.onProfileChange = this.onProfileChange.bind(this);
     this.onRemoveClick = this.dispose.bind(this, 'user-removed');
     this.onDocumentPointerDown = this.onDocumentPointerDown.bind(this);
@@ -156,6 +182,8 @@
     root.append(this.host);
     this.launcherButton.addEventListener('click', this.onLauncherClick);
     this.inspectorButton.addEventListener('click', this.onInspectorClick);
+    this.runInspectorButton.addEventListener('click', this.onRunInspectorClick);
+    this.explorerButton.addEventListener('click', this.onExplorerClick);
     this.profileInputs.forEach(({ input }) =>
       input.addEventListener('change', this.onProfileChange)
     );
@@ -188,6 +216,8 @@
     if (this.disposed || this.activeFeature) {
       return;
     }
+    this.profileFieldset.hidden = true;
+    this.inspectorButton.setAttribute('aria-expanded', 'false');
     this.menu.hidden = false;
     this.launcherButton.setAttribute('aria-expanded', 'true');
     this.state = 'menu-open';
@@ -244,6 +274,12 @@
     }
   };
 
+  TdwBrowserTools.prototype.toggleInspectorOptions = function toggleInspectorOptions() {
+    this.profileFieldset.hidden = !this.profileFieldset.hidden;
+    this.inspectorButton.setAttribute('aria-expanded', String(!this.profileFieldset.hidden));
+    if (!this.profileFieldset.hidden) this.runInspectorButton.focus({ preventScroll: true });
+  };
+
   TdwBrowserTools.prototype.startFeature = function startFeature(featureId) {
     if (this.disposed || this.activeFeature) {
       return;
@@ -286,6 +322,8 @@
     this.closeMenu(false);
     this.launcherButton.removeEventListener('click', this.onLauncherClick);
     this.inspectorButton.removeEventListener('click', this.onInspectorClick);
+    this.runInspectorButton.removeEventListener('click', this.onRunInspectorClick);
+    this.explorerButton.removeEventListener('click', this.onExplorerClick);
     this.profileInputs.forEach(({ input }) =>
       input.removeEventListener('change', this.onProfileChange)
     );
@@ -681,6 +719,101 @@
     global.setTimeout(() => this.dispose('transfer-failed'), testMode ? 0 : 2200);
   };
 
+  function UiExplorer(config, onExit) {
+    this.config = config;
+    this.onExit = onExit;
+    this.disposed = false;
+    this.bridgeWindow = null;
+    this.bridgeNonce = '';
+    this.bridgeTimer = null;
+    this.context = null;
+    this.state = 'idle';
+    this.onBridgeMessage = this.onBridgeMessage.bind(this);
+  }
+
+  UiExplorer.prototype.start = function start() {
+    try {
+      this.context = protocol.capturePageContext();
+    } catch (error) {
+      console.error('[TDW UI Explorer] Page context failed.', error);
+      this.fail('Nie udało się odczytać adresu i głównego komponentu widoku.');
+      return;
+    }
+    this.bridgeNonce = protocol.createNonce();
+    const targetUrl = new URL('/ui-explorer', this.config.tdwOrigin);
+    targetUrl.hash = new URLSearchParams({
+      nonce: this.bridgeNonce,
+      sourceOrigin: global.location.origin
+    }).toString();
+    global.addEventListener('message', this.onBridgeMessage, true);
+    this.bridgeWindow = global.open(targetUrl.toString(), `tdw-ui-explorer-${this.bridgeNonce}`);
+    if (!this.bridgeWindow) {
+      this.fail('Przeglądarka zablokowała otwarcie UI Explorera.');
+      return;
+    }
+    this.state = 'transferring';
+    this.resetTimer('Nie udało się potwierdzić połączenia z UI Explorerem.');
+  };
+
+  UiExplorer.prototype.onBridgeMessage = function onBridgeMessage(event) {
+    if (event.origin !== this.config.tdwOrigin || event.source !== this.bridgeWindow ||
+        !this.bridgeNonce) return;
+    if (this.state === 'transferring' &&
+        protocol.isUiExplorerReadyMessage(event.data, this.bridgeNonce)) {
+      try {
+        this.bridgeWindow.postMessage(
+          protocol.createMessage('TDW_UI_EXPLORER_CONTEXT', this.bridgeNonce, {
+            contextId: this.context.contextId,
+            context: this.context
+          }),
+          this.config.tdwOrigin
+        );
+        this.state = 'awaiting-receipt';
+        this.resetTimer('UI Explorer nie potwierdził odbioru widoku.');
+      } catch (error) {
+        console.error('[TDW UI Explorer] postMessage failed.', error);
+        this.fail('Nie udało się przekazać widoku do UI Explorera.');
+      }
+      return;
+    }
+    if (protocol.isUiExplorerErrorMessage(event.data, this.bridgeNonce)) {
+      this.fail('UI Explorer odrzucił widok: ' + event.data.code + '.');
+      return;
+    }
+    if (this.state === 'awaiting-receipt' &&
+        protocol.isUiExplorerReceivedMessage(event.data, this.bridgeNonce) &&
+        event.data.contextId === this.context?.contextId) {
+      this.dispose('transferred');
+    }
+  };
+
+  UiExplorer.prototype.resetTimer = function resetTimer(message) {
+    if (this.bridgeTimer !== null) global.clearTimeout(this.bridgeTimer);
+    this.bridgeTimer = global.setTimeout(() => this.fail(message), testMode ? 80 : BRIDGE_TIMEOUT_MS);
+  };
+
+  UiExplorer.prototype.fail = function fail(message) {
+    if (this.disposed) return;
+    try { this.bridgeWindow?.close(); } catch { /* COOP may detach the window. */ }
+    if (typeof global.alert === 'function') global.alert('TDW UI Explorer\n\n' + message);
+    this.dispose('transfer-failed');
+  };
+
+  UiExplorer.prototype.dispose = function dispose(reason) {
+    if (this.disposed) return;
+    this.disposed = true;
+    global.removeEventListener('message', this.onBridgeMessage, true);
+    if (this.bridgeTimer !== null) global.clearTimeout(this.bridgeTimer);
+    this.bridgeTimer = null;
+    this.bridgeWindow = null;
+    this.bridgeNonce = '';
+    this.context = null;
+    this.state = 'disposed';
+    const onExit = this.onExit;
+    this.onExit = null;
+    onExit?.(reason);
+  };
+
   function consumeEvent(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -945,6 +1078,18 @@
       border: 1px solid #d6e0ed;
       border-radius: 12px;
       background: #ffffff;
+    }
+    .tdw-capture-profile[hidden] { display: none; }
+    .tdw-capture-profile__start {
+      margin: 2px 4px 0;
+      padding: 7px 10px;
+      color: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      background: #0c66e4;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
     }
 
     .tdw-capture-profile legend {

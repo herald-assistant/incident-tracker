@@ -13,6 +13,7 @@ describe('UiExplorerScreenCatalogComponent', () => {
     label: 'CrmContactPreferencesComponent',
     routePattern: '/crm/contacts/:contactId/preferences',
     parentRoutePattern: '/crm/contacts/:contactId',
+    componentSelectors: ['crm-contact-preferences'],
     status: 'RESOLVED',
     lazyLoaded: true,
     guards: ['CrmContactAccessGuard'],
@@ -24,6 +25,7 @@ describe('UiExplorerScreenCatalogComponent', () => {
   const facade = {
     selectedScreenId,
     selectedScreen,
+    screenMatchedFromBrowserTools: signal(false),
     selectedSystemId: signal('crm-agent-portal'),
     screenState: signal('ready'),
     controlsLocked: signal(false),

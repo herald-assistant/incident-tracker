@@ -1,5 +1,5 @@
 export const BROWSER_TOOLS_LAUNCHER_VERSION = 1 as const;
-export const BROWSER_TOOLS_RUNTIME_VERSION = '1.0.0' as const;
+export const BROWSER_TOOLS_RUNTIME_VERSION = '1.1.0' as const;
 
 export function buildBrowserToolsBookmarkletUrl(tdwOrigin: string): string {
   const origin = normalizeHttpOrigin(tdwOrigin);
@@ -10,7 +10,7 @@ export function buildBrowserToolsBookmarkletUrl(tdwOrigin: string): string {
     ';(function(d){',
     "var s=d.createElement('script');",
     `s.src=${JSON.stringify(loaderUrl.toString())};`,
-    "s.dataset.tdwFeatureId='ux-inspector';",
+    "s.dataset.tdwFeatureId='browser-tools';",
     "s.referrerPolicy='no-referrer';",
     "s.onerror=function(){s.remove();alert('TDW Browser Tools: skrypt zostal zablokowany.');};",
     '(d.head||d.documentElement).appendChild(s);',

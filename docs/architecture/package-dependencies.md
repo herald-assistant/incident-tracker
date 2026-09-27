@@ -522,7 +522,9 @@ Zasady:
   jednego feature'a do wspolnego serwisu,
 - `frontend/public/browser-tools` jest framework-neutralnym, statycznym shellem
   akcji uruchamianych na badanej stronie; nie importuje Angulara ani klienta
-  API i przekazuje capture tylko do dedykowanego receivera feature'a,
+  API i przekazuje UX capture albo wskazowke widoku UI Explorera do
+  dedykowanych receiverow feature'ow; wspolny matcher route/komponentu
+  nalezy do frontendowego `core`,
 - podobny wyglad nie jest wystarczajacym powodem ekstrakcji; wspolny komponent
   musi miec wspolna semantyke, input i lifecycle.
 

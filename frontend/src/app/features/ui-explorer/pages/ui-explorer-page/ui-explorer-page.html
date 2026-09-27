@@ -42,6 +42,22 @@
       </section>
     } @else {
       <section class="analysis-card ui-explorer-composer">
+        @if (facade.pageContext(); as context) {
+          <div class="ui-explorer-browser-context" role="status">
+            <div>
+              <strong>Widok z Browser Tools</strong>
+              <span>{{ context.page.origin }}{{ context.page.path }}</span>
+              @if (context.page.componentBoundaryTags.length) {
+                <small>Główny komponent: {{ context.page.componentBoundaryTags[0] }}</small>
+              }
+            </div>
+            <button type="button" class="secondary-button" (click)="facade.dismissPageContext()">Usuń wskazówkę</button>
+          </div>
+        } @else if (facade.pageContextStatus() === 'waiting') {
+          <p role="status">Odbieram widok z Browser Tools…</p>
+        } @else if (facade.pageContextError()) {
+          <p role="alert">{{ facade.pageContextError() }}</p>
+        }
         <app-ui-explorer-configuration (importRequested)="triggerImport(importInput)" />
       </section>
     }

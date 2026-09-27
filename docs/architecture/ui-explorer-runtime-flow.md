@@ -79,9 +79,36 @@ jest cache'owany w local workspace pod pelnym kluczem scope/ref/repository i
 limitow. Zwykly odczyt reuse'uje cache po restarcie, a `refresh=true` usuwa i
 odbudowuje tylko dopasowany wpis.
 
-Publiczny katalog pokazuje biznesowa nazwe, `routePattern`, pomocnicza nazwe
-komponentu, status i source revision. Nie ujawnia GitLab group, project ani
-ukrytych search prefixes.
+Publiczny katalog pokazuje biznesowa nazwe, `routePattern`, potwierdzone
+selektory komponentu, pomocnicza nazwe komponentu, status i source revision.
+Nie ujawnia GitLab group, project ani ukrytych search prefixes.
+
+## Wejscie z Browser Tools
+
+Akcja `UI Explorer` w Browser Tools jest pod przyciskiem UX Inspectora.
+Otwiera nowa karte `/ui-explorer` bez wskazywania elementu na stronie.
+Przy otwarciu menu opcja zakresu danych UX Inspectora jest zwinieta.
+Efemeryczny runtime odczytuje wylacznie zredagowany route path oraz
+uporzadkowane tagi glownego routowanego komponentu wykryte przy aktywnym
+`router-outlet`. Niejednoznaczny komponent daje pusta liste tagow. Osobny
+`tdw.ui-explorer-page-context` v1 nie odczytuje capture UX, wartosci
+formularzy, query ani browser storage i ma limit 4 KiB. Sciezka jest
+redagowana heurystycznie i pozostaje nieufna.
+
+Transfer uzywa jednorazowego nonce oraz exact-origin/source postMessage z
+potwierdzeniem odbioru. Fragment URL zawiera tylko parametry handshake,
+jest natychmiast czyszczony, a sam kontekst pozostaje w pamieci receivera.
+Popup blocker, COOP lub timeout koncza transfer bez kanalu zastepczego.
+
+UI Explorer traktuje path i tagi jako niezaufana wskazowke. Gdy jest jeden
+zarejestrowany frontend, moze go ustawic; przy wielu operator wybiera
+Application. Branch pochodzi z platformowego defaultu albo wyboru operatora.
+Po pobraniu katalogu dla tej pary wspolny z UX Inspectorem matcher porownuje
+route path z `routePattern`; przy remisie uzywa najblizszego jednoznacznego
+tagu z `componentSelectors`. Brak rozstrzygniecia pozostawia View puste.
+Sugestia jest oznaczona i edytowalna, a source revision pochodzi wylacznie
+z katalogu kodu. Tryby sekcji i model zachowuja domyslne wartosci; opis
+scenariusza pozostaje pusty. Job wymaga jawnej akcji operatora.
 
 ## Deterministyczny context pipeline
 

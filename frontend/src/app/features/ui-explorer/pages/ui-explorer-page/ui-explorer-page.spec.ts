@@ -436,6 +436,7 @@ function crmScreenCatalog(branch: string, revision: string): UiExplorerScreenCat
         label: 'CrmContactCreateComponent',
         routePattern: '/contacts/new',
         parentRoutePattern: '/contacts',
+        componentSelectors: ['crm-contact-create'],
         status: 'READY',
         lazyLoaded: true,
         guards: ['crm-role-guard'],

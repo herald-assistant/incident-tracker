@@ -15,6 +15,7 @@ import {
   UiExplorerScreenCatalogResponse
 } from '../models/ui-explorer.models';
 import { UiExplorerApiService } from '../services/ui-explorer-api.service';
+import { UiExplorerPageContextIngressService } from '../services/ui-explorer-page-context-ingress.service';
 import { UiExplorerFacade } from './ui-explorer.facade';
 
 describe('UiExplorerFacade', () => {
@@ -29,6 +30,14 @@ describe('UiExplorerFacade', () => {
     load: vi.fn()
   };
   const inputOptions = crmInputOptions();
+  const pageContext = signal<import('../models/ui-explorer.models').UiExplorerPageContext | null>(null);
+  const ingress = {
+    context: pageContext,
+    status: signal<'idle' | 'waiting' | 'received' | 'invalid'>('idle'),
+    error: signal(''),
+    start: vi.fn(),
+    dismiss: vi.fn(() => pageContext.set(null))
+  };
   const screenCatalog = crmScreenCatalog();
   const api = {
     getInputOptions: vi.fn(() => of(inputOptions)),
@@ -79,6 +88,7 @@ describe('UiExplorerFacade', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    pageContext.set(null);
     appUiConfig.update((config) => ({ ...config, defaultBranch: 'main' }));
     TestBed.configureTestingModule({
       providers: [
@@ -87,7 +97,8 @@ describe('UiExplorerFacade', () => {
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         { provide: AiOptionsApiService, useValue: aiOptionsApi },
         { provide: AnalysisJobPollingService, useValue: polling },
-        { provide: AppUiConfigService, useValue: appUiConfigService }
+        { provide: AppUiConfigService, useValue: appUiConfigService },
+        { provide: UiExplorerPageContextIngressService, useValue: ingress }
       ]
     });
   });
@@ -116,6 +127,56 @@ describe('UiExplorerFacade', () => {
     expect(facade.selectedReasoningEffort()).toBe('medium');
     expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'main', false);
     expect(facade.sourceRevision()?.revision).toBe('crm-revision-a1b2c3');
+  });
+
+  it('suggests the same view as UX Inspector from route and nearest main component', () => {
+    pageContext.set({
+      schema: 'tdw.ui-explorer-page-context', version: 1,
+      contextId: 'ctx_0123456789abcdef',
+      page: { origin: 'https://crm.example.com', path: '/contacts/:value',
+        componentBoundaryTags: ['crm-contact-create', 'crm-shell'] }
+    });
+    api.getScreens.mockReturnValueOnce(of({
+      ...screenCatalog,
+      screens: [
+        { ...screenCatalog.screens[0], screenId: 'crm-contact-details',
+          routePattern: '/contacts/:contactId', componentSelectors: ['crm-contact-details'] },
+        { ...screenCatalog.screens[0], routePattern: '/contacts/:contactKey' }
+      ]
+    }));
+    const facade = TestBed.inject(UiExplorerFacade);
+    facade.initialize();
+    TestBed.tick();
+
+    expect(facade.selectedScreenId()).toBe('crm-contact-create');
+    expect(facade.screenMatchedFromBrowserTools()).toBe(true);
+    facade.selectScreen('crm-contact-details');
+    expect(facade.screenMatchedFromBrowserTools()).toBe(false);
+    expect(facade.selectedScreenId()).toBe('crm-contact-details');
+  });
+
+  it('leaves Application empty when Browser Tools cannot identify one of several frontends', () => {
+    pageContext.set({
+      schema: 'tdw.ui-explorer-page-context', version: 1,
+      contextId: 'ctx_0123456789abcdef',
+      page: { origin: 'https://crm.example.com', path: '/contacts/new',
+        componentBoundaryTags: [] }
+    });
+    api.getInputOptions.mockReturnValueOnce(of({
+      ...inputOptions,
+      systems: [...inputOptions.systems, {
+        systemId: 'crm-self-service', label: 'CRM Self Service', summary: 'CRM portal'
+      }]
+    }));
+    const facade = TestBed.inject(UiExplorerFacade);
+    facade.initialize();
+    TestBed.tick();
+
+    expect(facade.selectedSystemId()).toBe('');
+    expect(api.getScreens).not.toHaveBeenCalled();
+    facade.selectSystem('crm-agent-portal');
+    TestBed.tick();
+    expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'main', false);
   });
 
   it('bypasses the CRM view cache only for an explicit refresh', () => {
@@ -501,6 +562,7 @@ function crmScreenCatalog(): UiExplorerScreenCatalogResponse {
         label: 'CrmContactCreateComponent',
         routePattern: '/contacts/new',
         parentRoutePattern: '/contacts',
+        componentSelectors: ['crm-contact-create'],
         status: 'READY',
         lazyLoaded: true,
         guards: ['crm-role-guard'],

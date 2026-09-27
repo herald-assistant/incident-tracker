@@ -2,7 +2,8 @@
 
 TDW Browser Tools jest dostarczany razem z frontendem Team Delivery Workspace.
 Nie jest rozszerzeniem Chrome i nie ma stalego dostepu do odwiedzanych stron.
-Pierwszym narzedziem w launcherze jest UX Inspector.
+Menu udostepnia UX Inspector dla wskazanego elementu oraz UI Explorer dla
+biezacego widoku.
 
 ## Uruchomienie
 
@@ -12,13 +13,18 @@ Pierwszym narzedziem w launcherze jest UX Inspector.
    originu tej instancji TDW.
 3. Na zwyklej stronie HTTP(S) uruchom zakladke i kliknij przycisk TDW w prawym
    dolnym rogu.
-4. W menu wybierz zakres `Element` albo `Formularz`, uruchom `UX Inspector`,
-   wskaz element i kliknij. `Escape` konczy inspekcje i przywraca launcher.
-5. Ekran UX Inspectora odbierze capture v1. Dopisz pytanie, potwierdz
-   Application, Branch, View, model i reasoning effort, a nastepnie uruchom job.
+4. Dla UX Inspectora kliknij jego przycisk, wybierz maly `Zakres danych`
+   (`Element` albo `Formularz`), kliknij `Wskaz element`, a nastepnie wskaz
+   element na stronie. `Escape` konczy inspekcje i przywraca launcher. Po
+   kazdym otwarciu menu `Zakres danych` jest zwiniety; po rozwinieciu ostatnio
+   wybrany profil nadal jest zaznaczony.
+5. Dla UI Explorera kliknij przycisk pod UX Inspectorem. Nowa karta TDW
+   otworzy formularz bez wybierania elementu na badanej stronie.
+6. Potwierdz Application, Branch i sugerowany View. Rewizja pochodzi z
+   katalogu kodu; doprecyzuj scenariusz i uruchom job recznie.
 
-Ikona `X` w naglowku menu usuwa Browser Tools i wszystkie jego listenery z
-badanej strony.
+Przycisk `X` w modalu instalacyjnym zamyka modal. Ikona `X` w naglowku menu
+usuwa Browser Tools i wszystkie jego listenery z badanej strony.
 
 ## Granica zaufania
 
@@ -34,10 +40,12 @@ badanej strony.
   z kontrolkami `type=hidden`. Nadal wyklucza hasla, tokeny, pliki, cookies i
   storage.
 - Runtime nie czyta requestow ani screenshotow.
-- Transfer wymaga zgodnosci `event.origin`, `event.source`, nonce, protokolu v1
-  oraz limitu 128 KiB.
-- UX Inspector ponownie waliduje capture na zaufanym originie. Raw capture nie
-  jest przekazywany do UI Explorera ani kodowany w URL.
+- Oba transfery wymagaja zgodnosci `event.origin`, `event.source`, nonce i
+  protokolu v1. UX capture ma limit 128 KiB, a wskazowka UI Explorera 4 KiB.
+- UX Inspector ponownie waliduje capture na zaufanym originie. UI Explorer
+  odbiera osobny kontekst: zredagowany route path oraz tagi glownego
+  routowanego komponentu. Nie zawiera elementu ani wartosci formularzy.
+  Obserwacja nie jest kodowana w URL ani zapisywana w storage.
 
 ## Ograniczenia
 

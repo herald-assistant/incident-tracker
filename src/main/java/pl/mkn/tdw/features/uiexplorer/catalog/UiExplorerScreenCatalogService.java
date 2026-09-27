@@ -46,7 +46,8 @@ public class UiExplorerScreenCatalogService {
                 new UiExplorerSourceRevision(source.sourceRevision().branch(), source.sourceRevision().revision()),
                 UiExplorerScreenCatalogStatus.valueOf(source.status().name()),
                 source.views().stream().map(view -> new UiExplorerScreenCatalogEntry(
-                        view.viewId(), view.label(), view.routePattern(), view.parentRoutePattern(), view.status(),
+                        view.viewId(), view.label(), view.routePattern(), view.parentRoutePattern(),
+                        view.componentSelectors(), view.status(),
                         view.lazyLoaded(), view.guards(), view.routeParameters(), view.limitations())).toList(),
                 source.diagnostics().stream().map(value -> new UiExplorerScreenCatalogDiagnostic(
                         value.severity(), value.code(), value.message(), value.sourcePath())).toList(),

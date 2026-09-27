@@ -13,6 +13,7 @@ import { AiOptionsApiService } from '../../../core/services/ai-options-api.servi
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AppUiConfigService } from '../../../core/services/app-ui-config.service';
+import { matchRouteToView } from '../../../core/utils/view-route-match.utils';
 import { appendOptimisticChatTurn } from '../../../core/utils/analysis-chat-optimistic.utils';
 import { reportEditErrorMessage } from '../../../core/utils/report-edit-error.utils';
 import {
@@ -35,6 +36,7 @@ import {
   UiExplorerSectionMode
 } from '../models/ui-explorer.models';
 import { UiExplorerApiService } from '../services/ui-explorer-api.service';
+import { UiExplorerPageContextIngressService } from '../services/ui-explorer-page-context-ingress.service';
 import {
   parseUiExplorerLocalRunEnvelope
 } from '../utils/ui-explorer-import-export.utils';
@@ -46,6 +48,7 @@ export class UiExplorerFacade {
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly uiConfig = inject(AppUiConfigService);
+  private readonly ingress = inject(UiExplorerPageContextIngressService);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
   private screenRequestId = 0;
@@ -78,6 +81,10 @@ export class UiExplorerFacade {
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
   readonly selectedScreenId = signal('');
+  readonly screenMatchedFromBrowserTools = signal(false);
+  readonly pageContext = this.ingress.context;
+  readonly pageContextStatus = this.ingress.status;
+  readonly pageContextError = this.ingress.error;
   readonly sectionModes = signal<Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>>({});
   readonly scenarioDescription = signal('');
   readonly selectedModel = signal('');
@@ -174,10 +181,16 @@ export class UiExplorerFacade {
 
   constructor() {
     effect(() => this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch));
+    effect(() => this.applyPageContextSuggestion());
+    effect(() => {
+      if (this.ingress.context() && this.selectedSystemId() && this.branch().trim() &&
+          !this.screenCatalog() && this.screenState() === 'idle') this.loadScreens();
+    });
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
   initialize(): void {
+    this.ingress.start();
     this.uiConfig.load();
     this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch);
     this.loadInputOptions();
@@ -207,12 +220,19 @@ export class UiExplorerFacade {
             (system) => system.systemId === this.selectedSystemId()
           );
           if (!selectedStillExists) {
-            this.selectedSystemId.set(options.systems[0]?.systemId ?? '');
+            this.selectedSystemId.set(
+              (this.ingress.context() || this.ingress.status() === 'waiting') && options.systems.length !== 1
+                ? '' : options.systems[0]?.systemId ?? ''
+            );
             this.clearScreenSelection();
           }
 
           if (Object.keys(this.sectionModes()).length === 0) {
             this.applyDefaultSectionModes(options.defaultSectionModes);
+          }
+
+          if (this.ingress.context() && this.selectedSystemId() && this.branch().trim()) {
+            this.loadScreens();
           }
 
         },
@@ -254,6 +274,7 @@ export class UiExplorerFacade {
     }
     this.selectedSystemId.set(systemId);
     this.clearScreenSelection();
+    if (this.ingress.context() && this.branch().trim()) this.loadScreens();
   }
 
   changeBranch(branch: string): void {
@@ -313,6 +334,27 @@ export class UiExplorerFacade {
       return;
     }
     this.selectedScreenId.set(screenId);
+    this.screenMatchedFromBrowserTools.set(false);
+  }
+
+  dismissPageContext(): void {
+    if (this.screenMatchedFromBrowserTools()) this.selectedScreenId.set('');
+    this.screenMatchedFromBrowserTools.set(false);
+    this.ingress.dismiss();
+  }
+
+  private applyPageContextSuggestion(): void {
+    const context = this.ingress.context();
+    const catalog = this.screenCatalog();
+    if (!context || !catalog || this.controlsLocked() || this.selectedScreenId()) return;
+    if (catalog.systemId !== this.selectedSystemId() ||
+        catalog.sourceRevision.branch !== this.branch().trim()) return;
+    const match = matchRouteToView(
+      context.page.path, catalog.screens, context.page.componentBoundaryTags
+    );
+    if (!match) return;
+    this.selectedScreenId.set(match.screenId);
+    this.screenMatchedFromBrowserTools.set(true);
   }
 
   private applyDefaultSectionModes(defaults: UiExplorerInputOptionsResponse['defaultSectionModes']): void {
@@ -623,6 +665,7 @@ export class UiExplorerFacade {
   }
 
   private clearScreenSelection(): void {
+    this.screenMatchedFromBrowserTools.set(false);
     this.screenRequestId++;
     this.screenCatalog.set(null);
     this.selectedScreenId.set('');

@@ -6,6 +6,9 @@
   const CAPTURE_VERSION = 1;
   const CAPTURE_SCHEMA = 'tdw.ux-inspector-capture';
   const MAX_CAPTURE_BYTES = 128 * 1024;
+  const PAGE_CONTEXT_SCHEMA = 'tdw.ui-explorer-page-context';
+  const PAGE_CONTEXT_VERSION = 1;
+  const MAX_PAGE_CONTEXT_BYTES = 4096;
   const MAX_TEXT_LENGTH = 180;
   const MAX_ACCESSIBLE_NAME_LENGTH = 140;
   const MAX_ATTRIBUTE_LENGTH = 100;
@@ -240,6 +243,70 @@
           .filter((tag) => tag.includes('-'))
       )
     ).slice(0, MAX_COMPONENT_BOUNDARIES);
+  }
+
+  function routedComponentBoundaryTags() {
+    const candidates = Array.from(global.document.querySelectorAll('router-outlet'))
+      .filter((outlet) => !outlet.hasAttribute('name') || outlet.getAttribute('name') === 'primary')
+      .map((outlet) => outlet.nextElementSibling)
+      .filter((component) => component && /^[a-z][a-z0-9-]*-[a-z0-9-]+$/.test(component.tagName.toLowerCase()))
+      .map((component) => {
+        let depth = 0;
+        for (let parent = component.parentElement; parent; parent = parent.parentElement) depth++;
+        return { component, depth };
+      })
+      .sort((left, right) => right.depth - left.depth);
+    if (!candidates.length || candidates[1]?.depth === candidates[0].depth) return [];
+    const ancestry = [];
+    for (let node = candidates[0].component; node; node = node.parentElement) ancestry.push(node);
+    return componentBoundaryTags(ancestry);
+  }
+
+  function capturePageContext() {
+    const pageUrl = new URL(global.location.href);
+    if (!['http:', 'https:'].includes(pageUrl.protocol) || global.top !== global) {
+      throw new Error('UI Explorer supports only top-level HTTP(S) pages.');
+    }
+    const result = normalizePageContext({
+      schema: PAGE_CONTEXT_SCHEMA,
+      version: PAGE_CONTEXT_VERSION,
+      contextId: createNonce(),
+      page: {
+        origin: pageUrl.origin,
+        path: safeRouteHash(pageUrl.hash) || sanitizePathname(pageUrl.pathname),
+        componentBoundaryTags: routedComponentBoundaryTags()
+      }
+    });
+    if (!result.ok) throw new Error(result.error);
+    return result.value;
+  }
+
+  function normalizePageContext(input) {
+    if (!hasExactKeys(input, ['schema', 'version', 'contextId', 'page']) ||
+        input.schema !== PAGE_CONTEXT_SCHEMA || input.version !== PAGE_CONTEXT_VERSION ||
+        serializedSize(input) > MAX_PAGE_CONTEXT_BYTES ||
+        !hasExactKeys(input.page, ['origin', 'path', 'componentBoundaryTags'])) {
+      return failure('UI Explorer page context is invalid.');
+    }
+    const origin = normalizeOrigin(input.page.origin);
+    const path = input.page.path;
+    const tags = input.page.componentBoundaryTags;
+    if (!origin || typeof input.contextId !== 'string' ||
+        !SAFE_CAPTURE_ID_PATTERN.test(input.contextId) ||
+        typeof path !== 'string' || !path.startsWith('/') || path.length > 500 ||
+        path.includes('?') || path.includes('#') || sanitizePathname(path) !== path ||
+        !Array.isArray(tags) || tags.length > MAX_COMPONENT_BOUNDARIES ||
+        tags.some((tag) => typeof tag !== 'string' ||
+          !/^[a-z][a-z0-9-]*-[a-z0-9-]+$/.test(tag)) ||
+        new Set(tags).size !== tags.length) {
+      return failure('UI Explorer page context fields are invalid.');
+    }
+    return success({
+      schema: PAGE_CONTEXT_SCHEMA,
+      version: PAGE_CONTEXT_VERSION,
+      contextId: input.contextId,
+      page: { origin, path, componentBoundaryTags: [...tags] }
+    });
   }
 
   function labelFor(element) {
@@ -1310,7 +1377,7 @@
       !hasExactKeys(input, ['schema', 'version', 'featureId', 'tdwOrigin']) ||
       input.schema !== 'tdw.browser-tool-launcher' ||
       input.version !== 1 ||
-      input.featureId !== 'ux-inspector'
+      !['browser-tools', 'ux-inspector'].includes(input.featureId)
     ) {
       return failure('Unsupported launcher configuration.');
     }
@@ -1321,7 +1388,7 @@
     return success({
       schema: 'tdw.browser-tool-launcher',
       version: 1,
-      featureId: 'ux-inspector',
+      featureId: input.featureId,
       tdwOrigin
     });
   }
@@ -1330,14 +1397,17 @@
     if (!isObject(data) || data.protocolVersion !== PROTOCOL_VERSION || data.type !== type || data.nonce !== nonce) {
       return false;
     }
-    const keys = type === 'TDW_UX_INSPECTOR_READY'
-      ? ['type', 'protocolVersion', 'nonce']
-      : type === 'TDW_UX_INSPECTOR_RECEIVED'
-        ? ['type', 'protocolVersion', 'nonce', 'captureId']
-        : type === 'TDW_UX_INSPECTOR_ERROR'
-          ? ['type', 'protocolVersion', 'nonce', 'code']
-          : ['type', 'protocolVersion', 'nonce', 'captureId', 'capture'];
-    return hasExactKeys(data, keys);
+    const shapes = {
+      TDW_UX_INSPECTOR_READY: ['type', 'protocolVersion', 'nonce'],
+      TDW_UX_INSPECTOR_CAPTURE: ['type', 'protocolVersion', 'nonce', 'captureId', 'capture'],
+      TDW_UX_INSPECTOR_RECEIVED: ['type', 'protocolVersion', 'nonce', 'captureId'],
+      TDW_UX_INSPECTOR_ERROR: ['type', 'protocolVersion', 'nonce', 'code'],
+      TDW_UI_EXPLORER_READY: ['type', 'protocolVersion', 'nonce'],
+      TDW_UI_EXPLORER_CONTEXT: ['type', 'protocolVersion', 'nonce', 'contextId', 'context'],
+      TDW_UI_EXPLORER_RECEIVED: ['type', 'protocolVersion', 'nonce', 'contextId'],
+      TDW_UI_EXPLORER_ERROR: ['type', 'protocolVersion', 'nonce', 'code']
+    };
+    return Object.hasOwn(shapes, type) && hasExactKeys(data, shapes[type]);
   }
 
   function createMessage(type, nonce, extra) {
@@ -1353,6 +1423,9 @@
     PROTOCOL_VERSION,
     CAPTURE_VERSION,
     CAPTURE_SCHEMA,
+    PAGE_CONTEXT_SCHEMA,
+    PAGE_CONTEXT_VERSION,
+    MAX_PAGE_CONTEXT_BYTES,
     CAPTURE_PROFILES: Object.freeze(['ELEMENT_CONTEXT', 'FORM_DIAGNOSTICS']),
     MAX_CAPTURE_BYTES,
     normalizeText,
@@ -1362,7 +1435,9 @@
     safeRouteHash,
     describeElement,
     captureElement,
+    capturePageContext,
     normalizeCapture,
+    normalizePageContext,
     normalizeLauncherConfig,
     serializedSize,
     createNonce,
@@ -1374,7 +1449,13 @@
     isCaptureMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_CAPTURE', nonce),
     isErrorMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_ERROR', nonce)
+      isProtocolMessage(data, 'TDW_UX_INSPECTOR_ERROR', nonce),
+    isUiExplorerReadyMessage: (data, nonce) =>
+      isProtocolMessage(data, 'TDW_UI_EXPLORER_READY', nonce),
+    isUiExplorerReceivedMessage: (data, nonce) =>
+      isProtocolMessage(data, 'TDW_UI_EXPLORER_RECEIVED', nonce),
+    isUiExplorerErrorMessage: (data, nonce) =>
+      isProtocolMessage(data, 'TDW_UI_EXPLORER_ERROR', nonce)
   });
 
   try {

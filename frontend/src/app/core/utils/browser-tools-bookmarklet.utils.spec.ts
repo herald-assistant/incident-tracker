@@ -12,7 +12,7 @@ describe('browser tools bookmarklet', () => {
     expect(source).toContain(
       `https://tdw.example.com/browser-tools/loader.js?v=${BROWSER_TOOLS_RUNTIME_VERSION}`
     );
-    expect(source).toContain("s.dataset.tdwFeatureId='ux-inspector'");
+    expect(source).toContain("s.dataset.tdwFeatureId='browser-tools'");
     expect(source).not.toContain('Snippet');
     expect(new TextEncoder().encode(bookmarklet).byteLength).toBeLessThan(2048);
     expect(() => new Function(source)).not.toThrow();

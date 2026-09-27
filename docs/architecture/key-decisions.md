@@ -1163,9 +1163,12 @@ poprawna dopiero po rzeczywistym full/chunk read tego pliku z pinned commit;
 wynik tree/list/search sam nie jest dowodem tresci.
 
 TDW Browser Tools jest efemerycznym statycznym shellem uruchamianym przez
-bookmarklet z modala UX Inspectora, nie rozszerzeniem Chrome. Capture jest
-przenoszony tylko protokolem v1 do
-`/ux-inspector`, z exact `origin`, `source`, nonce i potwierdzeniem capture id.
+bookmarklet z modala UX Inspectora, nie rozszerzeniem Chrome. UX Inspector
+pokazuje wybor zakresu danych po kliknieciu swojej akcji i przenosi capture v1
+do `/ux-inspector`. Osobna akcja UI Explorer otwiera `/ui-explorer` bez
+wskazywania elementu i przenosi tylko zredagowany route path oraz tagi
+glownego routowanego komponentu w osobnym kontrakcie v1. Oba transfery
+sprawdzaja exact `origin`, `source`, nonce i potwierdzenie id.
 Nie istnieje payload w URL, browser storage, clipboard transfer, dummy receiver,
 inna wersja kontraktu ani redirect ze starego `/tdw-inspector/**`. CSP, popup blocker, COOP,
 niepoprawna wiadomosc i stale source zatrzymuja operacje jawnie.
@@ -1178,7 +1181,10 @@ jak token, session, secret, CSRF, JWT lub OTP. Preview ujawnia operatorowi liczb
 truncation. `domFingerprint` i selector candidates sa sygnalem do
 deterministycznego rozpoznania, a nie autorytatywnym wskazaniem pliku.
 
-System, branch, view i revision nie pochodza z badanej strony. Backend powtarza
+System, branch, katalogowy view/screen id i revision nie pochodza z badanej
+strony. UI Explorer oraz UX Inspector sugeruja View z route path i
+potwierdzonych selectorow komponentu tylko przy jednoznacznym dopasowaniu;
+scope i rewizja pozostaja wyborami zaufanego formularza i katalogu. Backend powtarza
 strict validation, allowliste i redakcje capture oraz wyprowadza jawny
 `sourceBinding` z przypietego source evidence. Source tools sa walidowane wobec
 hidden pinned scope. README, `AGENTS.md`, instrukcje Copilota, project skills

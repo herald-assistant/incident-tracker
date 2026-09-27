@@ -143,9 +143,10 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
 - `frontend/src/app/features`
   strony i prezentacja specyficzna dla feature'ow.
 - `frontend/public/browser-tools`
-  loader, protocol v1 i efemeryczny runtime akcji na badanej stronie;
-  bookmarklet jest generowany przez modal UX Inspectora, bez klienta REST i
-  storage.
+  loader, protocol v1 i efemeryczny runtime dwoch akcji na badanej stronie;
+  bookmarklet jest generowany przez modal UX Inspectora. UX Inspector ma
+  wybor zakresu danych, a UI Explorer otwiera widok bez selekcji elementu;
+  oba transfery nie uzywaja klienta REST ani storage.
 - shell i routing aplikacji
   composition root nawigacji oraz rejestracji feature'ow.
 

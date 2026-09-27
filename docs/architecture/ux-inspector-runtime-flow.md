@@ -17,6 +17,10 @@ wartosci najblizszego formularza i jego natywny stan walidacji.
 ## Publiczne wejscia i kontrakty
 
 - Modal na `/ux-inspector` udostepnia przeciagany bookmarklet Browser Tools.
+  W menu zakres danych pojawia sie jako mala opcja dopiero po wyborze
+  przycisku UX Inspector; pod nim jest osobna akcja UI Explorer. Przy kazdym
+  otwarciu menu zakres danych jest zwiniety, takze po przekazaniu wskazanego
+  elementu. Ostatnio wybrany profil pozostaje zapamietany po rozwinieciu.
 - `GET /api/ux-inspector/input-options` zwraca zarejestrowane frontendy.
 - `GET /api/ux-inspector/views?systemId=...&branch=...&refresh=...` zwraca
   widoki i immutable source revision; `refresh=true` omija cache tego scope'u.
@@ -43,7 +47,7 @@ wersja jest odrzucana.
   -> loader.js z originu TDW
   -> protocol.js + runtime.js
   -> Browser Tools shell w izolowanym Shadow DOM
-  -> wybor profilu + selection shield + highlight
+  -> przycisk UX Inspector -> wybor profilu -> selection shield + highlight
   -> jeden capture v1
   -> popup /ux-inspector#nonce=...&sourceOrigin=...
   -> READY / CAPTURE / RECEIVED przez exact-origin postMessage

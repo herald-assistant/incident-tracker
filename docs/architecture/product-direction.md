@@ -270,6 +270,10 @@ klasyfikuje report references; niepotwierdzone twierdzenia pozostaja jawnymi
 gaps albo visibility limits.
 Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje
 capture przez URL, storage lub kanal reczny.
+Drugie dzialanie Browser Tools otwiera UI Explorer dla biezacego widoku bez
+wyboru elementu. Przekazuje tylko zredagowany route path i tagi glownego
+routowanego komponentu jako sugestie View; katalog przypietej rewizji
+pozostaje zrodlem potwierdzonego screenId.
 
 ### Functional logic explorer
 

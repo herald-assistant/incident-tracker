@@ -60,6 +60,7 @@ class UiExplorerScreenCatalogServiceTest {
             assertThat(screen.screenId()).startsWith("screen-");
             assertThat(screen.label()).isEqualTo("Customer profile");
             assertThat(screen.routePattern()).isEqualTo("/crm/customers/:customerId");
+            assertThat(screen.componentSelectors()).containsExactly("crm-customer-profile");
             assertThat(screen.guards()).containsExactly("CrmAgentGuard");
         });
         assertThat(result.boundary().maxRouteNodes()).isEqualTo(400);

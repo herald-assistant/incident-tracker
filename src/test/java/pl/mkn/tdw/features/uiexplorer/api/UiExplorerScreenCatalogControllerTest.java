@@ -45,6 +45,7 @@ class UiExplorerScreenCatalogControllerTest {
                 .andExpect(jsonPath("$.status").value("READY"))
                 .andExpect(jsonPath("$.screens[0].screenId").value("crm-customer-profile"))
                 .andExpect(jsonPath("$.screens[0].routePattern").value("/crm/customers/:customerId"))
+                .andExpect(jsonPath("$.screens[0].componentSelectors[0]").value("crm-customer-profile"))
                 .andExpect(jsonPath("$.boundary.maxRouteNodes").value(400))
                 .andExpect(jsonPath("$.boundary.sourceReadCount").value(7))
                 .andExpect(jsonPath("$.repositoryId").doesNotExist())
@@ -98,6 +99,7 @@ class UiExplorerScreenCatalogControllerTest {
                         "Customer profile",
                         "/crm/customers/:customerId",
                         "/crm/customers",
+                        List.of("crm-customer-profile"),
                         "RESOLVED",
                         true,
                         List.of("CrmAgentGuard"),
