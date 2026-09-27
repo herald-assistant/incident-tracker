@@ -2,7 +2,7 @@ package pl.mkn.tdw.api.workspacesettings;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatInvalidException;
 import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
 import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.config.ElasticProperties;
@@ -16,6 +16,7 @@ import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsStore;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsConfluenceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotUpdate;
@@ -30,6 +31,18 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 class WorkspaceSettingsServiceTest {
 
     @Test
+    void shouldRejectClassicPatWithoutSavingWorkspaceSettings() {
+        var fixture = fixture();
+        fixture.service.initialize();
+
+        assertThrows(CopilotPatInvalidException.class, () -> fixture.service.saveSettings(
+                new WorkspaceSettingsUpdateRequest(null, new WorkspaceSettingsCopilotUpdate("ghp_crm_classic_token"),
+                        null, null, null, null, null, null)));
+
+        assertThat(fixture.store.saved).isEqualTo(LocalWorkspaceSettingsFile.empty());
+    }
+
+    @Test
     void shouldExposeApplicationPropertiesWhenWorkspaceSettingsAreEmpty() {
         var fixture = fixture();
 
@@ -39,7 +52,7 @@ class WorkspaceSettingsServiceTest {
 
         assertThat(response.values().appUi().title().value()).isEqualTo("App workspace");
         assertThat(response.values().appUi().title().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
-        assertThat(response.values().copilot().localGithubToken().value()).isEqualTo("copilot-app-token");
+        assertThat(response.values().copilot().localGithubToken().value()).isEmpty();
         assertThat(response.values().copilot().localGithubToken().secret()).isTrue();
         assertThat(response.values().jira().baseUrl().value()).isEqualTo("https://jira.crm.example.invalid");
         assertThat(response.values().jira().token().value()).isEqualTo("jira-app-token");
@@ -63,7 +76,6 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().dynatrace().baseUrl().value()).isEqualTo("https://dynatrace.crm.example.invalid");
         assertThat(response.values().dynatrace().apiToken().value()).isEqualTo("dt0c01.app-token");
         assertThat(response.values().dynatrace().apiToken().secret()).isTrue();
-        assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken()).isEqualTo("copilot-app-token");
         assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.crm.example.invalid");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
         assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.crm.example.invalid");
@@ -113,7 +125,7 @@ class WorkspaceSettingsServiceTest {
 
         var response = fixture.service.saveSettings(new WorkspaceSettingsUpdateRequest(
                 new WorkspaceSettingsAppUiUpdate("Workspace override"),
-                new WorkspaceSettingsCopilotUpdate("copilot-workspace-token"),
+                new WorkspaceSettingsCopilotUpdate("github_pat_crm_workspace_token"),
                 new WorkspaceSettingsJiraUpdate(
                         "https://jira.crm.example.invalid",
                         "jira-workspace-token"
@@ -143,7 +155,7 @@ class WorkspaceSettingsServiceTest {
                 )
         ));
 
-        assertThat(fixture.store.saved.copilot().localGithubToken()).isEqualTo("copilot-workspace-token");
+        assertThat(fixture.store.saved.copilot().localGithubToken()).isEqualTo("github_pat_crm_workspace_token");
         assertThat(fixture.store.saved.jira().baseUrl()).isNull();
         assertThat(fixture.store.saved.jira().token()).isEqualTo("jira-workspace-token");
         assertThat(fixture.store.saved.confluence().baseUrl()).isEqualTo("https://confluence.workspace.example.invalid");
@@ -183,8 +195,6 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().dynatrace().apiToken().source())
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("Workspace override");
-        assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
-                .isEqualTo("copilot-workspace-token");
         assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.crm.example.invalid");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-workspace-token");
         assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace.example.invalid");
@@ -210,7 +220,7 @@ class WorkspaceSettingsServiceTest {
         fixture.service.initialize();
         fixture.service.saveSettings(new WorkspaceSettingsUpdateRequest(
                 new WorkspaceSettingsAppUiUpdate("Workspace override"),
-                new WorkspaceSettingsCopilotUpdate("copilot-workspace-token"),
+                new WorkspaceSettingsCopilotUpdate("github_pat_crm_workspace_token"),
                 new WorkspaceSettingsJiraUpdate(
                         "https://jira.workspace.example.invalid",
                         "jira-workspace-token"
@@ -238,7 +248,7 @@ class WorkspaceSettingsServiceTest {
 
         var response = fixture.service.saveSettings(new WorkspaceSettingsUpdateRequest(
                 new WorkspaceSettingsAppUiUpdate("App workspace"),
-                new WorkspaceSettingsCopilotUpdate("copilot-app-token"),
+                new WorkspaceSettingsCopilotUpdate(""),
                 new WorkspaceSettingsJiraUpdate(
                         "https://jira.crm.example.invalid",
                         "jira-app-token"
@@ -293,8 +303,6 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().elasticsearch().indexPattern().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("App workspace");
-        assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
-                .isEqualTo("copilot-app-token");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
         assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.crm.example.invalid");
         assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-app-token");
@@ -308,8 +316,6 @@ class WorkspaceSettingsServiceTest {
     private Fixture fixture() {
         var uiConfigProperties = new UiConfigProperties();
         uiConfigProperties.setTitle("App workspace");
-        var copilotSdkProperties = new CopilotSdkProperties();
-        copilotSdkProperties.getAuth().getLocal().setGithubToken("copilot-app-token");
         var jiraProperties = new JiraProperties();
         jiraProperties.setBaseUrl("https://jira.crm.example.invalid");
         jiraProperties.setToken("jira-app-token");
@@ -336,7 +342,6 @@ class WorkspaceSettingsServiceTest {
         var store = new InMemoryLocalWorkspaceSettingsStore();
         return new Fixture(
                 uiConfigProperties,
-                copilotSdkProperties,
                 jiraProperties,
                 confluenceProperties,
                 gitLabProperties,
@@ -347,7 +352,6 @@ class WorkspaceSettingsServiceTest {
                 new WorkspaceSettingsService(
                         store,
                         uiConfigProperties,
-                        copilotSdkProperties,
                         jiraProperties,
                         confluenceProperties,
                         gitLabProperties,
@@ -360,7 +364,6 @@ class WorkspaceSettingsServiceTest {
 
     private record Fixture(
             UiConfigProperties uiConfigProperties,
-            CopilotSdkProperties copilotSdkProperties,
             JiraProperties jiraProperties,
             ConfluenceProperties confluenceProperties,
             GitLabProperties gitLabProperties,

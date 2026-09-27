@@ -71,7 +71,7 @@ podpakietami):
 | Jira | 19 / 19 | trzy porty: issue, search, status history; API, Change Verification, dwa feature'y Delivery |
 | Elasticsearch | 28 / 28 | `ElasticLogPort` oraz konkretne search/import/availability services; API, MCP, Incident Analysis |
 | Database | 17 / 17 | brak publicznego portu; `DatabaseToolService` w API i MCP, scope w Incident Analysis |
-| GitHub | 0 / 16 | kod w `github.auth`; API auth i token provider uzywaja konkretnych klientow |
+| GitHub | 0 / 16 | historyczny baseline OAuth; integracja usunieta przez plan `copilot-fine-grained-pat-auth.md` |
 | Operational Context | 55 / 55 | `OperationalContextPort` dla odczytu, konkretne maintenance/validation; API, tools i wiele feature'ow |
 | GitLab | 47 / 209 | `GitLabRepositoryPort` i `GitLabExactRepositoryPort`, wiele konkretnych service; API, tools, katalog frontendow i wiele feature'ow |
 | Wspolne HTTP | 2 / 2 | `integrations.http`; konfiguracja klientow REST, nie port systemowy |
@@ -221,15 +221,10 @@ Nie uruchamiamy frontendu dla czysto backendowej zmiany pakietow.
   zakonczyl sie powodzeniem: 1733 testy, 0 failures, 0 errors, 1 skipped.
   `git diff --check` jest czysty; brak globalnego `spring.datasource`.
   Brak pozostalego driftu Database.
-- [ ] Krok 6 — GitHub: utworzyc root `github` z waskimi portami OAuth, profile
-  i token refresh zgodnie z faktycznymi konsumentami; rozdzielic publiczne
-  modele/bledy do `contract`, klientow REST do `adapter.rest`, lokalny stan
-  auth do `adapter.local`, properties do `config`, koordynacje do `service`.
-  Przelaczyc `api.githubauth` i token provider. Dowod: testy OAuth/profile/
-  refresh, `GitHubAuthServiceTest`, guard i protokol; root `github` zawiera
-  tylko porty.
-  Kolejnosc zmieniona na prosbe uzytkownika: GitHub pozostaje odlozony;
-  Operational Context wykonujemy przed nim.
+- [x] Krok 6 — GitHub: odstapiono od migracji adaptera OAuth, bo operator
+  uzywa juz tylko fine-grained PAT z Workspace Settings. Usunieto caly
+  `integrations.github.auth`; aktualny status i odczyt PAT opisuje plan
+  `copilot-fine-grained-pat-auth.md`. Root integracji GitHub nie jest potrzebny.
 - [x] Krok 7a — Operational Context read: zachowac waski port odczytu,
   przeniesc publiczny katalog, snapshot i query do `contract`, adapter/local
   store do `adapter.local`, query/search/ownership/read models do `service`

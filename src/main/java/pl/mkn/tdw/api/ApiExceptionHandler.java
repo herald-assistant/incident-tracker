@@ -5,14 +5,11 @@ import pl.mkn.tdw.api.database.DatabaseToolApiException;
 import pl.mkn.tdw.api.jira.JiraSourceApiException;
 import pl.mkn.tdw.api.operationalcontext.OperationalContextEntityNotFoundException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatInvalidException;
 import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticHttpCallDiagnosticError;
 import pl.mkn.tdw.integrations.elasticsearch.contract.ElasticLogSearchResult;
 import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticHttpCallSearchException;
 import pl.mkn.tdw.integrations.elasticsearch.contract.error.ElasticLogSearchException;
-import pl.mkn.tdw.integrations.github.auth.GitHubOAuthExchangeException;
-import pl.mkn.tdw.integrations.github.auth.GitHubOAuthStateInvalidException;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchException;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchResponse;
 import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
@@ -110,38 +107,10 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(status).body(response);
     }
 
-    @ExceptionHandler(GitHubCopilotAuthRequiredException.class)
-    public ResponseEntity<ApiErrorResponse> handleGitHubCopilotAuthRequired(
-            GitHubCopilotAuthRequiredException exception
-    ) {
-        var response = new ApiErrorResponse(
-                "GITHUB_COPILOT_AUTH_REQUIRED",
-                exception.getMessage(),
-                List.of(),
-                exception.authStartUrl()
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
-    @ExceptionHandler(GitHubCopilotReauthRequiredException.class)
-    public ResponseEntity<ApiErrorResponse> handleGitHubCopilotReauthRequired(
-            GitHubCopilotReauthRequiredException exception
-    ) {
-        var response = new ApiErrorResponse(
-                "GITHUB_COPILOT_REAUTH_REQUIRED",
-                exception.getMessage(),
-                List.of(),
-                exception.authStartUrl()
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-
     @ExceptionHandler(CopilotLocalTokenMissingException.class)
     public ResponseEntity<ApiErrorResponse> handleCopilotLocalTokenMissing(CopilotLocalTokenMissingException exception) {
         var response = new ApiErrorResponse(
-                "COPILOT_LOCAL_TOKEN_MISSING",
+                "COPILOT_PAT_REQUIRED",
                 exception.getMessage(),
                 List.of()
         );
@@ -149,26 +118,15 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
-    @ExceptionHandler(GitHubOAuthStateInvalidException.class)
-    public ResponseEntity<ApiErrorResponse> handleGitHubOAuthStateInvalid(GitHubOAuthStateInvalidException exception) {
+    @ExceptionHandler(CopilotPatInvalidException.class)
+    public ResponseEntity<ApiErrorResponse> handleCopilotPatInvalid(CopilotPatInvalidException exception) {
         var response = new ApiErrorResponse(
-                "GITHUB_OAUTH_STATE_INVALID",
+                "COPILOT_PAT_INVALID",
                 exception.getMessage(),
                 List.of()
         );
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-    }
-
-    @ExceptionHandler(GitHubOAuthExchangeException.class)
-    public ResponseEntity<ApiErrorResponse> handleGitHubOAuthExchange(GitHubOAuthExchangeException exception) {
-        var response = new ApiErrorResponse(
-                "GITHUB_OAUTH_EXCHANGE_FAILED",
-                exception.getMessage(),
-                List.of()
-        );
-
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(response);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
 
     @ExceptionHandler(GitLabSourceResolveException.class)

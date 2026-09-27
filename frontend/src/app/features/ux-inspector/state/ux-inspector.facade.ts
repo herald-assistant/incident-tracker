@@ -61,7 +61,7 @@ export class UxInspectorFacade {
   readonly isSubmitting = signal(false);
   readonly pollingActive = signal(false);
   readonly jobError = signal('');
-  readonly authStartUrl = signal('');
+  readonly authSettingsUrl = signal('');
   readonly resultSource = signal<UxInspectorResultSource | null>(null);
   readonly portabilityBusy = signal(false);
   readonly portabilityError = signal('');
@@ -70,7 +70,7 @@ export class UxInspectorFacade {
   readonly editingReport = signal(false);
   readonly reportSaving = signal(false);
   readonly reportEditError = signal('');
-  readonly chatAuthStartUrl = signal('');
+  readonly chatAuthSettingsUrl = signal('');
 
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
@@ -342,7 +342,7 @@ export class UxInspectorFacade {
     if (!snapshot || !normalized || !this.canUseChat() || this.chatSubmitting()) return;
     const previous = snapshot;
     this.chatError.set('');
-    this.chatAuthStartUrl.set('');
+    this.chatAuthSettingsUrl.set('');
     this.chatSubmitting.set(true);
     this.job.set(appendOptimisticChatTurn({ ...snapshot, chatMessages: snapshot.chatMessages ?? [] }, normalized));
     const request$: Observable<UxInspectorJobStateSnapshot | LocalAnalysisRunDetailResponse> =
@@ -359,7 +359,7 @@ export class UxInspectorFacade {
         this.job.set(previous);
         const payload = error.error as Partial<ApiErrorResponse> | null;
         this.chatError.set(readApiError(error, 'Nie udało się wysłać pytania do UX Inspectora.'));
-        this.chatAuthStartUrl.set(typeof payload?.authStartUrl === 'string' ? payload.authStartUrl.trim() : '');
+        this.chatAuthSettingsUrl.set(isCopilotPatError(payload?.code) ? '/workspace-settings' : '');
       }
     });
   }
@@ -384,7 +384,7 @@ export class UxInspectorFacade {
     });
   }
 
-  clearChatError(): void { this.chatError.set(''); this.chatAuthStartUrl.set(''); }
+  clearChatError(): void { this.chatError.set(''); this.chatAuthSettingsUrl.set(''); }
 
   setPortabilityError(value: string): void { this.portabilityError.set(value); }
   retryPolling(): void {
@@ -445,7 +445,7 @@ export class UxInspectorFacade {
   private applyJobError(error: HttpErrorResponse, fallback: string): void {
     const payload = error.error as Partial<ApiErrorResponse> | null;
     this.jobError.set(readApiError(error, fallback));
-    this.authStartUrl.set(typeof payload?.authStartUrl === 'string' ? payload.authStartUrl.trim() : '');
+    this.authSettingsUrl.set(isCopilotPatError(payload?.code) ? '/workspace-settings' : '');
   }
 
   private clearViewSelection(): void {
@@ -500,4 +500,8 @@ function isUxInspectorExport(value: unknown): value is UxInspectorExportEnvelope
 function readApiError(error: HttpErrorResponse, fallback: string): string {
   const payload = error.error as Partial<ApiErrorResponse> | null;
   return typeof payload?.message === 'string' && payload.message.trim() ? payload.message.trim() : fallback;
+}
+
+function isCopilotPatError(code: string | undefined): boolean {
+  return code === 'COPILOT_PAT_REQUIRED' || code === 'COPILOT_PAT_INVALID';
 }

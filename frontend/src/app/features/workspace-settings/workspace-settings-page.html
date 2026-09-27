@@ -103,7 +103,8 @@
         <div class="workspace-settings-panel__header">
           <div>
             <p class="section-eyebrow">Copilot</p>
-            <h2 id="workspaceSettingsCopilotTitle">Local token</h2>
+            <h2 id="workspaceSettingsCopilotTitle">GitHub Copilot</h2>
+            <p>Wprowadź własny fine-grained PAT zaczynający się od <code>github_pat_</code> z uprawnieniem <code>Copilot Requests</code>.</p>
           </div>
         </div>
 
@@ -118,7 +119,7 @@
                     matTooltipPosition="above"
                     [matTooltipShowDelay]="120"
                   >
-                    GitHub token
+                    Fine-grained PAT
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
@@ -130,7 +131,7 @@
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
                       type="button"
-                      aria-label="Restore default for GitHub token"
+                      aria-label="Clear fine-grained PAT"
                       matTooltip="Restore default"
                       matTooltipPosition="above"
                       [matTooltipShowDelay]="120"
@@ -154,8 +155,8 @@
                 <button
                   class="secondary-button workspace-settings-icon-button"
                   type="button"
-                  [attr.aria-label]="showCopilotGithubToken() ? 'Hide GitHub token' : 'Show GitHub token'"
-                  [matTooltip]="showCopilotGithubToken() ? 'Hide GitHub token' : 'Show GitHub token'"
+                  [attr.aria-label]="showCopilotGithubToken() ? 'Hide fine-grained PAT' : 'Show fine-grained PAT'"
+                  [matTooltip]="showCopilotGithubToken() ? 'Hide fine-grained PAT' : 'Show fine-grained PAT'"
                   matTooltipPosition="above"
                   [matTooltipShowDelay]="120"
                   (click)="toggleCopilotGithubTokenVisibility()"

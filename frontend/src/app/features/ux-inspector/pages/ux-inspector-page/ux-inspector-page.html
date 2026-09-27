@@ -343,6 +343,15 @@
       <div class="analysis-card ux-inspector-message ux-inspector-message--error" role="alert"><p>{{ facade.portabilityError() }}</p></div>
     }
 
+    @if (!facade.job() && facade.jobError()) {
+      <div class="analysis-card ux-inspector-message ux-inspector-message--error" role="alert">
+        <p>{{ facade.jobError() }}</p>
+        @if (facade.authSettingsUrl()) {
+          <a class="secondary-button secondary-button--compact" [href]="facade.authSettingsUrl()">Workspace Settings</a>
+        }
+      </div>
+    }
+
     @if (facade.job(); as snapshot) {
       <section class="analysis-card ux-inspector-run" [class.ux-inspector-run--with-report]="!!snapshot.report" aria-live="polite">
         <header>
@@ -361,6 +370,9 @@
         @if (facade.jobError()) {
           <div class="ux-inspector-message ux-inspector-message--error" role="alert">
             <p>{{ facade.jobError() }}</p>
+            @if (facade.authSettingsUrl()) {
+              <a class="secondary-button secondary-button--compact" [href]="facade.authSettingsUrl()">Workspace Settings</a>
+            }
             @if (facade.canRetryPolling()) { <button class="secondary-button secondary-button--compact" type="button" (click)="facade.retryPolling()">Ponów status</button> }
           </div>
         }
@@ -409,7 +421,7 @@
             [error]="facade.chatError()"
             [canUseChat]="facade.canUseChat()"
             [isSubmitting]="facade.chatSubmitting()"
-            [needsAuth]="!!facade.chatAuthStartUrl()"
+            [needsAuth]="!!facade.chatAuthSettingsUrl()"
             [openByDefault]="facade.resultSource()?.origin === 'live'"
             [staticPanel]="true"
             eyebrow="Follow-up chat"

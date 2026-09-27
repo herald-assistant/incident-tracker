@@ -1,24 +1,28 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.options;
 
 import com.github.copilot.generated.rpc.Model;
+import com.github.copilot.generated.rpc.ModelBillingTokenPrices;
+import com.github.copilot.generated.rpc.ModelBillingTokenPricesLongContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotFineGrainedPat;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatInvalidException;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatSource;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedHashMap;
+import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -28,24 +32,31 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
 
     private final CopilotSdkModelLister modelLister;
     private final CopilotSdkProperties properties;
+    private final CopilotPatSource patSource;
 
-    private final Map<String, CacheEntry> cache = new LinkedHashMap<>();
+    private String cachedPatDigest;
+    private CacheEntry cached;
 
     @Override
     public synchronized CopilotModelOptionsResponse modelOptions(CopilotRunAuth auth) {
-        var cacheKey = cacheKey(auth);
-        var cached = cache.get(cacheKey);
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+        var pat = patSource.currentPat();
+        if (!StringUtils.hasText(pat)) {
+            throw new CopilotLocalTokenMissingException();
+        }
+        if (!CopilotFineGrainedPat.valid(pat)) {
+            throw new CopilotPatInvalidException();
+        }
+        var patDigest = digest(pat.trim());
+        if (patDigest.equals(cachedPatDigest) && cached != null && cached.expiresAt().isAfter(Instant.now())) {
             return cached.response();
         }
 
         try {
             var response = responseFrom(modelLister.listModels(auth));
-            cache.put(cacheKey, new CacheEntry(response, Instant.now().plus(cacheTtl())));
+            cachedPatDigest = patDigest;
+            cached = new CacheEntry(response, Instant.now().plus(cacheTtl()));
             return response;
-        } catch (CopilotLocalTokenMissingException
-                 | GitHubCopilotAuthRequiredException
-                 | GitHubCopilotReauthRequiredException exception) {
+        } catch (CopilotLocalTokenMissingException | CopilotPatInvalidException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             log.warn(
@@ -54,6 +65,15 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
             );
             log.debug("Copilot model options lookup failure details.", exception);
             return fallbackResponse();
+        }
+    }
+
+    private String digest(String value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
     }
 
@@ -85,8 +105,50 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
                 supportsReasoningEffort ? efforts : List.of(),
                 null,
                 contextWindows.defaultWindowTokens(),
-                contextWindows.longContextWindowTokens()
+                contextWindows.longContextWindowTokens(),
+                modelInfo.modelPickerCategory() != null ? modelInfo.modelPickerCategory().getValue() : "",
+                pricing(modelInfo)
         );
+    }
+
+    private CopilotModelPricing pricing(Model modelInfo) {
+        var tokenPrices = modelInfo.billing() != null ? modelInfo.billing().tokenPrices() : null;
+        if (tokenPrices == null || tokenPrices.batchSize() == null || tokenPrices.batchSize() <= 0) {
+            return null;
+        }
+        var batchSize = tokenPrices.batchSize();
+        var longContext = tokenPrices.longContext();
+        return new CopilotModelPricing(
+                rates(tokenPrices, batchSize),
+                longContext != null ? rates(longContext, batchSize) : null,
+                longContext != null ? positive(tokenPrices.contextMax()) : null
+        );
+    }
+
+    private CopilotModelTokenRates rates(ModelBillingTokenPrices prices, long batchSize) {
+        return new CopilotModelTokenRates(
+                perMillion(prices.inputPrice(), batchSize),
+                perMillion(prices.cacheReadPrice() != null ? prices.cacheReadPrice() : prices.cachePrice(), batchSize),
+                perMillion(prices.cacheWritePrice(), batchSize),
+                perMillion(prices.outputPrice(), batchSize)
+        );
+    }
+
+    private CopilotModelTokenRates rates(ModelBillingTokenPricesLongContext prices, long batchSize) {
+        return new CopilotModelTokenRates(
+                perMillion(prices.inputPrice(), batchSize),
+                perMillion(prices.cacheReadPrice() != null ? prices.cacheReadPrice() : prices.cachePrice(), batchSize),
+                perMillion(prices.cacheWritePrice(), batchSize),
+                perMillion(prices.outputPrice(), batchSize)
+        );
+    }
+
+    private Double perMillion(Double price, long batchSize) {
+        if (price == null || !Double.isFinite(price) || price < 0) {
+            return null;
+        }
+        var normalized = price * 1_000_000D / batchSize;
+        return Double.isFinite(normalized) ? normalized : null;
     }
 
     private String modelName(Model modelInfo) {
@@ -190,15 +252,6 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
 
     private String normalized(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
-    }
-
-    private String cacheKey(CopilotRunAuth auth) {
-        var mode = auth != null && auth.mode() != null ? auth.mode() : CopilotAuthMode.LOCAL_TOKEN;
-        if (mode == CopilotAuthMode.GITHUB_APP) {
-            return mode.name() + ":" + (auth.principalId() != null ? auth.principalId() : "");
-        }
-
-        return mode.name();
     }
 
     private record CacheEntry(

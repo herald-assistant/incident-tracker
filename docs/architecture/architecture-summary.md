@@ -59,7 +59,7 @@ Skills sa packaged runtime resources w `src/main/resources/copilot/skills`. Przy
 
 Copilot otrzymuje evidence jako logical artifacts osadzone inline w prompcie, nie jako SDK attachments. Wynik initial analysis jest report-first: model aktualizuje session-bound `AnalysisReport` przez platformowe report tools, a feature waliduje raport wobec evidence i mapuje go na wlasny kontrakt HTTP. Finalna odpowiedz tekstowa modelu nie jest kanonicznym wynikiem.
 
-Autoryzacja Copilota dziala w trybie lokalnego tokena albo GitHub App user access tokena. Token nie jest elementem requestu feature'a ani stanu joba; runtime rozwiazuje go tuz przed utworzeniem klienta SDK.
+Autoryzacja Copilota korzysta z fine-grained PAT (`github_pat_`) zapisanego w Workspace Settings. Token nie jest elementem requestu feature'a ani stanu joba; runtime odczytuje aktualny PAT tuz przed utworzeniem klienta SDK.
 
 ## Incident Analysis
 

@@ -235,7 +235,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
         && this.aiModelControl.value
         && !this.submitting()
         && !this.portabilityBusy()
-        && !(auth?.mode === 'GITHUB_APP' && (!auth.connected || auth.reauthRequired))
+        && auth?.configured === true
     );
   });
 
@@ -305,8 +305,8 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
       });
   }
 
-  protected connectGithub(): void {
-    this.githubAuth.connect();
+  protected openCopilotSettings(): void {
+    this.githubAuth.openSettings();
   }
 
   protected triggerImport(input: HTMLInputElement): void {
@@ -718,15 +718,12 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
 
   private applyGithubAuthError(error: HttpErrorResponse): void {
     const response = error.error as Partial<ApiErrorResponse> | null;
-    if (!['GITHUB_COPILOT_AUTH_REQUIRED', 'GITHUB_COPILOT_REAUTH_REQUIRED'].includes(response?.code ?? '')) {
+    if (!['COPILOT_PAT_REQUIRED', 'COPILOT_PAT_INVALID'].includes(response?.code ?? '')) {
       return;
     }
     this.githubAuthStatus.set({
-      mode: 'GITHUB_APP',
-      required: true,
-      connected: false,
-      reauthRequired: response?.code === 'GITHUB_COPILOT_REAUTH_REQUIRED',
-      authStartUrl: null
+      configured: false,
+      settingsUrl: '/workspace-settings'
     });
   }
 

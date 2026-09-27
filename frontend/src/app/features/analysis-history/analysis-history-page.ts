@@ -440,8 +440,6 @@ function normalizeApiErrorPayload(payload: unknown): ApiErrorResponse | null {
   return {
     code: typeof payloadRecord['code'] === 'string' ? payloadRecord['code'] : '',
     message: typeof payloadRecord['message'] === 'string' ? payloadRecord['message'] : '',
-    authStartUrl:
-      typeof payloadRecord['authStartUrl'] === 'string' ? payloadRecord['authStartUrl'] : null,
     fieldErrors: Array.isArray(payloadRecord['fieldErrors'])
       ? payloadRecord['fieldErrors']
           .filter(

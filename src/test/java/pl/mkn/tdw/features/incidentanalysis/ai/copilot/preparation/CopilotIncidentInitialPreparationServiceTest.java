@@ -100,7 +100,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertEquals("C:\\tools\\copilot.exe", prepared.session().clientOptions().getCliPath());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().clientOptions().getCwd());
             assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
-            assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
+            assertEquals("github_pat_crm_test_token", prepared.session().clientOptions().getGithubToken());
 
             assertEquals("incidenttracker-test", prepared.session().sessionConfig().getClientName());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
@@ -437,7 +437,6 @@ class CopilotIncidentInitialPreparationServiceTest {
     @Test
     void shouldUsePatWhenGithubTokenIsProvided() {
         var properties = baseProperties();
-        properties.setGithubToken("ghp_test_token");
 
         var service = createService(properties);
         var request = new InitialAnalysisRequest(
@@ -449,7 +448,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals("ghp_test_token", prepared.session().clientOptions().getGithubToken());
+            assertEquals("github_pat_crm_test_token", prepared.session().clientOptions().getGithubToken());
             assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
         }
     }
@@ -492,7 +491,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertEquals("incidenttracker", prepared.session().sessionConfig().getClientName());
             assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
             assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
-            assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
+            assertEquals("github_pat_crm_test_token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
             assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());
             assertPlatformSkillRoot(prepared.session().sessionConfig().getSkillDirectories(), properties);

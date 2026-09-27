@@ -7,6 +7,7 @@ import com.github.copilot.generated.rpc.ModelBillingTokenPricesLongContext;
 import com.github.copilot.generated.rpc.ModelCapabilities;
 import com.github.copilot.generated.rpc.ModelCapabilitiesLimits;
 import com.github.copilot.generated.rpc.ModelCapabilitiesSupports;
+import com.github.copilot.generated.rpc.ModelPickerCategory;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
@@ -14,6 +15,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,7 +37,8 @@ class CopilotSdkModelOptionsProviderTest {
                         ),
                         plainModel("crm-basic-model", "Synthetic CRM Basic Model")
                 ),
-                properties
+                properties,
+                () -> "github_pat_crm_test_token"
         );
 
         var response = provider.modelOptions(CopilotRunAuth.localToken());
@@ -52,6 +55,13 @@ class CopilotSdkModelOptionsProviderTest {
         assertEquals(100, response.models().get(0).defaultContextWindowTokens());
         assertEquals(1_000, response.models().get(0).longContextWindowTokens());
         assertTrue(response.models().get(0).supportsLongContext());
+        assertEquals("versatile", response.models().get(0).modelPickerCategory());
+        assertEquals(200D, response.models().get(0).pricing().defaultRates().input());
+        assertEquals(20D, response.models().get(0).pricing().defaultRates().cachedInput());
+        assertEquals(250D, response.models().get(0).pricing().defaultRates().cacheWrite());
+        assertEquals(1_200D, response.models().get(0).pricing().defaultRates().output());
+        assertEquals(400D, response.models().get(0).pricing().longContextRates().input());
+        assertEquals(80L, response.models().get(0).pricing().longContextThresholdTokens());
         assertFalse(response.models().get(1).supportsReasoningEffort());
         assertEquals(List.of(), response.models().get(1).reasoningEfforts());
         assertFalse(response.models().get(1).supportsLongContext());
@@ -66,7 +76,8 @@ class CopilotSdkModelOptionsProviderTest {
                 auth -> {
                     throw new IllegalStateException("CLI unavailable");
                 },
-                properties
+                properties,
+                () -> "github_pat_crm_test_token"
         );
 
         var response = provider.modelOptions(CopilotRunAuth.localToken());
@@ -82,12 +93,17 @@ class CopilotSdkModelOptionsProviderTest {
         var properties = new CopilotSdkProperties();
         properties.setModelOptionsCacheTtl(Duration.ofMinutes(5));
         var lister = new CountingModelLister();
-        var provider = new CopilotSdkModelOptionsProvider(lister, properties);
+        var pat = new AtomicReference<>("github_pat_crm_test_token");
+        var provider = new CopilotSdkModelOptionsProvider(lister, properties, pat::get);
 
         provider.modelOptions(CopilotRunAuth.localToken());
         provider.modelOptions(CopilotRunAuth.localToken());
 
         assertEquals(1, lister.calls);
+
+        pat.set("github_pat_crm_rotated_token");
+        provider.modelOptions(CopilotRunAuth.localToken());
+        assertEquals(2, lister.calls);
     }
 
     private static Model reasoningModel(
@@ -99,23 +115,23 @@ class CopilotSdkModelOptionsProviderTest {
                 id,
                 name,
                 new ModelCapabilities(
-                        new ModelCapabilitiesSupports(false, true, null),
+                        new ModelCapabilitiesSupports(true, true, null),
                         new ModelCapabilitiesLimits(980L, 20L, 1_000L, null)
                 ),
                 null,
                 new ModelBilling(1D, new ModelBillingTokenPrices(
-                        1D,
-                        1D,
-                        1D,
+                        0.2D,
+                        1.2D,
+                        0.02D,
                         null,
-                        null,
-                        null,
+                        0.25D,
+                        1_000L,
                         80L,
                         null,
-                        new ModelBillingTokenPricesLongContext(2D, 2D, 2D, null, null, 980L, null)
+                        new ModelBillingTokenPricesLongContext(0.4D, 1.8D, 0.04D, null, 0.5D, 980L, null)
                 ), null, null),
                 reasoningEfforts,
-                null,
+                ModelPickerCategory.VERSATILE,
                 null
         );
     }

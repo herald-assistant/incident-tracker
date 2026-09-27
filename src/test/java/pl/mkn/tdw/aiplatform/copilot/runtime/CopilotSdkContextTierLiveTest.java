@@ -7,11 +7,14 @@ import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.PermissionHandler;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierActivator;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.WorkspaceCopilotAccessTokenResolver;
 
 import java.nio.file.Path;
 import java.util.UUID;
@@ -35,13 +38,17 @@ class CopilotSdkContextTierLiveTest {
         var options = new CopilotClientOptions()
                 .setCliPath(cliPath)
                 .setCwd(System.getProperty("user.dir"))
-                .setCopilotHome(copilotHome.toString());
-        var token = System.getenv("COPILOT_GITHUB_TOKEN");
-        if (StringUtils.hasText(token)) {
-            options.setUseLoggedInUser(false).setGitHubToken(token);
-        } else {
-            options.setUseLoggedInUser(true);
-        }
+                .setCopilotHome(copilotHome.toString())
+                .setUseLoggedInUser(false)
+                .setGitHubToken(new WorkspaceCopilotAccessTokenResolver(() -> {
+                    try {
+                        var workspaceDirectory = System.getenv().getOrDefault("TDW_WORKSPACE_DIRECTORY", "tdw-data");
+                        var settings = new ObjectMapper().readTree(Path.of(workspaceDirectory, "settings.json").toFile());
+                        return settings.path("copilot").path("localGithubToken").asText("");
+                    } catch (Exception exception) {
+                        throw new IllegalStateException("Cannot read Copilot PAT from Workspace Settings", exception);
+                    }
+                }).resolve(CopilotRunAuth.localToken()).value());
 
         try (var client = new CopilotClient(options)) {
             client.start().join();

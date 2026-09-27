@@ -64,7 +64,7 @@ export class UiExplorerFacade {
   readonly isSubmitting = signal(false);
   readonly pollingActive = signal(false);
   readonly jobError = signal('');
-  readonly authStartUrl = signal('');
+  readonly authSettingsUrl = signal('');
   readonly resultSource = signal<UiExplorerResultSource | null>(null);
   readonly portabilityBusy = signal(false);
   readonly portabilityError = signal('');
@@ -73,7 +73,7 @@ export class UiExplorerFacade {
   readonly editingReport = signal(false);
   readonly reportSaving = signal(false);
   readonly reportEditError = signal('');
-  readonly chatAuthStartUrl = signal('');
+  readonly chatAuthSettingsUrl = signal('');
 
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
@@ -374,7 +374,7 @@ export class UiExplorerFacade {
     this.isSubmitting.set(true);
     this.jobError.set('');
     this.portabilityError.set('');
-    this.authStartUrl.set('');
+    this.authSettingsUrl.set('');
     this.job.set(null);
     this.resultSource.set(null);
 
@@ -473,7 +473,7 @@ export class UiExplorerFacade {
     }
     const previous = snapshot;
     this.chatError.set('');
-    this.chatAuthStartUrl.set('');
+    this.chatAuthSettingsUrl.set('');
     this.chatSubmitting.set(true);
     this.job.set(appendOptimisticChatTurn({ ...snapshot, chatMessages: snapshot.chatMessages ?? [] }, normalized));
 
@@ -501,9 +501,7 @@ export class UiExplorerFacade {
           this.job.set(previous);
           const apiError = error.error as Partial<ApiErrorResponse> | null;
           this.chatError.set(readApiError(error, 'Nie udało się wysłać pytania do UI Explorer.'));
-          this.chatAuthStartUrl.set(
-            typeof apiError?.authStartUrl === 'string' ? apiError.authStartUrl.trim() : ''
-          );
+          this.chatAuthSettingsUrl.set(isCopilotPatError(apiError?.code) ? '/workspace-settings' : '');
         }
       });
   }
@@ -530,7 +528,7 @@ export class UiExplorerFacade {
 
   clearChatError(): void {
     this.chatError.set('');
-    this.chatAuthStartUrl.set('');
+    this.chatAuthSettingsUrl.set('');
   }
 
   setPortabilityError(message: string): void {
@@ -569,7 +567,7 @@ export class UiExplorerFacade {
   private startPolling(jobId: string): void {
     this.stopPolling();
     this.jobError.set('');
-    this.authStartUrl.set('');
+    this.authSettingsUrl.set('');
     this.pollingActive.set(true);
     this.pollingSubscription = this.pollingService
       .poll({
@@ -621,9 +619,7 @@ export class UiExplorerFacade {
   private applyJobError(error: HttpErrorResponse, fallback: string): void {
     const response = error.error as Partial<ApiErrorResponse> | null;
     this.jobError.set(readApiError(error, fallback));
-    this.authStartUrl.set(
-      typeof response?.authStartUrl === 'string' ? response.authStartUrl.trim() : ''
-    );
+    this.authSettingsUrl.set(isCopilotPatError(response?.code) ? '/workspace-settings' : '');
   }
 
   private clearScreenSelection(): void {
@@ -650,6 +646,10 @@ function readApiError(error: HttpErrorResponse, fallback: string): string {
   return typeof response?.message === 'string' && response.message.trim()
     ? response.message.trim()
     : fallback;
+}
+
+function isCopilotPatError(code: string | undefined): boolean {
+  return code === 'COPILOT_PAT_REQUIRED' || code === 'COPILOT_PAT_INVALID';
 }
 
 function isReadableResult(snapshot: UiExplorerJobStateSnapshot): boolean {

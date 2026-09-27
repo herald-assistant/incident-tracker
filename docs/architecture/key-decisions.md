@@ -99,10 +99,8 @@ Decyzje:
   `analysis.elasticsearch.kibana-space-id`,
   `analysis.elasticsearch.index-pattern`,
   `analysis.elasticsearch.authorization-header`) oraz Dynatrace
-  (`analysis.dynatrace.base-url`, `analysis.dynatrace.api-token`) oraz lokalny
-  token Copilota (`analysis.ai.copilot.auth.local.github-token`). MVP nie
-  wystawia `analysis.ai.copilot.auth.mode`,
-  `analysis.ai.copilot.auth.local.display-name`, flag SSL ani technicznych
+  (`analysis.dynatrace.base-url`, `analysis.dynatrace.api-token`) oraz
+  fine-grained PAT Copilota zapisany w workspace. Ekran nie wystawia flag SSL ani technicznych
   limitow odpowiedzi integracji. W szczegolnosci Workspace Settings nie
   wystawia `analysis.confluence.url-pattern` ani
   `analysis.confluence.max-text-characters`.
@@ -143,12 +141,16 @@ konfiguracja Elasticsearch/Kibana jest niekompletna, sciezka
 dostepne.
 
 Lista dostepnych modeli dla UI pochodzi z shared/operator endpointu
-`GET /analysis/ai/options`. Endpoint mapuje metadane Copilot SDK na generyczny
-kontrakt aplikacji i zwraca `reasoningEffort` tylko tam, gdzie SDK wystawia
-support albo liste wartosci dla danego modelu. Ten sam cache'owany katalog
-typed RPC `models.list` zachowuje wewnetrznie limity capability i metadata
-billing potrzebne polityce context tier; publiczny kontrakt UI ich nie
-duplikuje.
+`GET /api/analysis/ai/options` (`/analysis/ai/options` pozostaje aliasem).
+Endpoint mapuje metadane Copilot SDK na generyczny kontrakt aplikacji i zwraca
+`reasoningEffort` tylko tam, gdzie SDK wystawia support albo liste wartosci.
+Katalog informacyjny `Platform / AI Models` korzysta z tego samego endpointu:
+widoczne sa stawki tokenowe z `models.list`, przeliczone z AI credits na paczke
+SDK na AI credits za milion tokenow. Widok pokazuje koszt wejscia, odczytu i
+zapisu cache oraz odpowiedzi, a osobny wariant dlugiego kontekstu tylko wtedy,
+gdy SDK zwraca jego stawki. Nie utrzymuje cennika ani opisow per model w kodzie.
+Brak stawek jest jawny i prowadzi do oficjalnego cennika GitHub Copilot.
+Limity capability pozostaja wewnetrznym zrodlem dla polityki context tier.
 
 Runtime nie przywraca `branch`, `environment`, `gitLabGroup` ani innych pol
 sterujacych evidence scope'em do publicznego requestu.
@@ -245,25 +247,16 @@ resume tego samego `sessionId`, ponowna weryfikacje tieru oraz rzeczywisty limit
 po resume. Gdy rozszerzone okno nadal nie jest wieksze, platforma nie tworzy
 petli kolejnych resume; rozbieznosc pozostaje jawna dla operatora.
 
-## 1b. Copilot authentication ma dwa tryby
+## 1b. Copilot korzysta z fine-grained PAT w Workspace Settings
 
-Copilot authentication has two modes:
+Operator zapisuje własny token `github_pat_` z uprawnieniem `Copilot Requests`
+w Workspace Settings. To jedyne źródło tokena dla nowych analiz i kontynuacji
+lokalnych runów. Publiczne requesty analizy i chatu nie przenoszą tokena.
+Flow przechowuje tylko niesekretną referencję auth, a runtime odczytuje
+aktualny PAT tuż przed utworzeniem klienta SDK.
 
-- `LOCAL_TOKEN` for local/dev runs, using a configured GitHub token from
-  `analysis.ai.copilot.auth.local.github-token` albo `COPILOT_GITHUB_TOKEN`.
-- `GITHUB_APP` for operator-facing runs, using a GitHub App user access token
-  zwiazany z backendowa operator session cookie.
-
-Public analysis and chat requests never carry GitHub tokens or OAuth codes.
-The job flow carries only a non-secret AI auth reference. The actual token is
-resolved inside `aiplatform.copilot.runtime.auth` immediately before
-`CopilotClientOptions` are created.
-
-`CopilotClientOptions` must always receive `githubToken` explicitly and
-`useLoggedInUser=false`, so the backend never falls back to locally cached CLI
-credentials. GitHub App installation tokens are not used for Copilot SDK,
-because Copilot usage should belong to the GitHub user account in
-operator-facing mode.
+`CopilotClientOptions` zawsze dostaje jawny `githubToken` i
+`useLoggedInUser=false`, więc backend nie używa zapisanych poświadczeń CLI.
 
 Konsekwencje:
 
@@ -271,10 +264,8 @@ Konsekwencje:
   `GET /analysis/ai/options`,
 - `GET /analysis/ai/options`, `POST /api/analysis/jobs` i follow-up chat sa
   auth-aware, ale ich publiczne payloady pozostaja minimalne,
-- GitHub App access/refresh tokens pozostaja po stronie backendu, w store sa
-  zaszyfrowane, a refresh token rotation jest zapisywana atomowo,
-- missing local token, missing GitHub auth i reauth sa kontrolowanymi bledami
-  API, nie fallbackiem do lokalnie zalogowanego uzytkownika.
+- brak lub nieprawidłowy prefiks PAT daje kontrolowany błąd API i odsyła do
+  Workspace Settings; ważność tokena i uprawnienia sprawdza GitHub przy użyciu SDK.
 
 ## 2. Flow pozostaje AI-first
 

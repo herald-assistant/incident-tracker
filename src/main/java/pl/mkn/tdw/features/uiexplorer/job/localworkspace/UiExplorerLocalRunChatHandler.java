@@ -215,21 +215,7 @@ public class UiExplorerLocalRunChatHandler implements LocalAnalysisRunChatHandle
     }
 
     private AnalysisAiAuthRef authRef(LocalAnalysisRunContinuation continuation) {
-        if (!StringUtils.hasText(continuation.authMode())
-                || AnalysisAiAuthRef.MODE_LOCAL_TOKEN.equalsIgnoreCase(continuation.authMode())) {
-            return AnalysisAiAuthRef.localToken(null);
-        }
-        if (AnalysisAiAuthRef.MODE_GITHUB_APP.equalsIgnoreCase(continuation.authMode())) {
-            return new AnalysisAiAuthRef(
-                    AnalysisAiAuthRef.PROVIDER_GITHUB,
-                    AnalysisAiAuthRef.MODE_GITHUB_APP,
-                    continuation.authPrincipalRef(),
-                    null,
-                    true
-            );
-        }
-        throw LocalAnalysisRunContinuationException.corrupted(
-                "Local UI Explorer run has an unsupported auth mode.", null);
+        return AnalysisAiAuthRef.localToken(null);
     }
 
     private UiExplorerJobStateSnapshot appendCompletedChat(

@@ -34,7 +34,13 @@ class AnalysisAiOptionsControllerTest {
                                 "GPT-5.4",
                                 true,
                                 List.of("low", "medium", "high"),
-                                "medium"
+                                "medium",
+                                "versatile",
+                                new AnalysisAiModelPricing(
+                                        new AnalysisAiModelTokenRates(200D, 20D, 250D, 1_200D),
+                                        null,
+                                        null
+                                )
                         ),
                         new AnalysisAiModelOption(
                                 "gpt-5.4-mini",
@@ -54,6 +60,9 @@ class AnalysisAiOptionsControllerTest {
                 .andExpect(jsonPath("$.models[0].id").value("gpt-5.4"))
                 .andExpect(jsonPath("$.models[0].supportsReasoningEffort").value(true))
                 .andExpect(jsonPath("$.models[0].reasoningEfforts[2]").value("high"))
+                .andExpect(jsonPath("$.models[0].modelPickerCategory").value("versatile"))
+                .andExpect(jsonPath("$.models[0].pricing.defaultRates.input").value(200.0))
+                .andExpect(jsonPath("$.models[0].pricing.defaultRates.output").value(1200.0))
                 .andExpect(jsonPath("$.models[1].supportsReasoningEffort").value(false));
     }
 

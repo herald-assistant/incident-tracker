@@ -1,0 +1,105 @@
+<div class="page-shell ai-models-page">
+  <main class="ai-models-workspace">
+    <section class="ai-models-intro" aria-labelledby="aiModelsIntroTitle">
+      <p class="section-eyebrow">Bieżący katalog Copilot</p>
+      <h2 id="aiModelsIntroTitle">Modele i stawki</h2>
+      <p>Porównaj koszt tokenów modeli dostępnych w Twoim katalogu Copilot. Stawki pochodzą
+        z bieżących danych Copilot SDK.</p>
+    </section>
+
+    <section class="ai-models-catalog" aria-labelledby="aiModelsCatalogTitle">
+      <div class="ai-models-catalog__heading">
+        <div>
+          <h3 id="aiModelsCatalogTitle">Cennik modeli</h3>
+          <p>Wejście to tekst przekazany modelowi, odpowiedź to tekst przez niego wygenerowany.
+            Odczyt z cache i zapis do cache są rozliczane osobno, jeśli model podaje takie stawki.</p>
+        </div>
+        @if (!loading() && !error()) {
+          <span class="ai-models-catalog__count">{{ modelCount() }} modeli</span>
+        }
+      </div>
+
+      @if (error()) {
+        <div class="ai-models-state" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">cloud_off</span>
+          <h4>Nie udało się pobrać modeli</h4>
+          <p>Sprawdź połączenie i token Copilot w ustawieniach workspace, a potem spróbuj ponownie.</p>
+          <div class="ai-models-state__actions">
+            <button class="secondary-button" type="button" (click)="load()">Spróbuj ponownie</button>
+            <a class="secondary-button" routerLink="/workspace-settings">Ustawienia workspace</a>
+          </div>
+        </div>
+      } @else if (loading()) {
+        <div class="ai-models-state" aria-live="polite">
+          <span class="material-symbols-outlined" aria-hidden="true">hourglass_top</span>
+          <p>Pobieranie aktualnych stawek...</p>
+        </div>
+      } @else if (modelCount() === 0) {
+        <div class="ai-models-state">
+          <span class="material-symbols-outlined" aria-hidden="true">model_training</span>
+          <h4>Brak modeli w katalogu</h4>
+          <p>Sprawdź konfigurację Copilot w ustawieniach workspace.</p>
+          <a class="secondary-button" routerLink="/workspace-settings">Otwórz ustawienia</a>
+        </div>
+      } @else if (pricedCount() === 0) {
+        <div class="ai-models-state">
+          <span class="material-symbols-outlined" aria-hidden="true">price_check</span>
+          <h4>Katalog nie zwrócił stawek</h4>
+          <p>Stawki tokenowe nie są dostępne w bieżącej odpowiedzi Copilot SDK. Zobacz aktualny
+            <a href="https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing"
+              target="_blank" rel="noopener noreferrer">cennik GitHub Copilot</a>.</p>
+        </div>
+      } @else {
+        <label class="field-control ai-models-search" for="aiModelsSearch">
+          <span class="field-label">Szukaj modelu</span>
+          <input id="aiModelsSearch" class="text-input" type="search" autocomplete="off"
+            placeholder="Nazwa modelu" [value]="query()" (input)="updateSearch($event)" />
+        </label>
+
+        @if (pricedCount() < modelCount()) {
+          <p class="ai-models-notice">Dla części modeli katalog nie podaje stawek. Znak „—” oznacza brak danych.</p>
+        }
+        <div class="ai-models-table-scroll">
+          <table class="ai-models-table">
+            <caption>Jednostka stawek: <strong>AI credits za 1 mln tokenów</strong></caption>
+            <thead>
+              <tr>
+                <th scope="col">Model</th>
+                <th scope="col">Wariant</th>
+                <th scope="col">Wejście</th>
+                <th scope="col">Odczyt z cache</th>
+                <th scope="col">Zapis do cache</th>
+                <th scope="col">Odpowiedź</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.model.id + row.tier) {
+                <tr>
+                  <th scope="row">
+                    <strong>{{ row.model.name }}</strong>
+                    @if (category(row.model); as categoryLabel) {
+                      <span class="ai-models-table__category">{{ categoryLabel }}</span>
+                    }
+                  </th>
+                  <td class="ai-models-table__tier">{{ row.tier }}</td>
+                  <td class="ai-models-table__key-price">{{ price(row.rates, 'input') }}</td>
+                  <td>{{ price(row.rates, 'cachedInput') }}</td>
+                  <td>{{ price(row.rates, 'cacheWrite') }}</td>
+                  <td class="ai-models-table__key-price">{{ price(row.rates, 'output') }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="ai-models-table__empty">Nie znaleziono modelu.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <p class="ai-models-footnote">
+      Ceny są informacją z katalogu Twojego konta Copilot, a faktyczny koszt zależy od liczby
+      zużytych tokenów. Zobacz <a href="https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing"
+        target="_blank" rel="noopener noreferrer">zasady rozliczania i cennik GitHub Copilot</a>.
+    </p>
+  </main>
+</div>

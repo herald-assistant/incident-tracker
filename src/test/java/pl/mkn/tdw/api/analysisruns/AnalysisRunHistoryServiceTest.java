@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
@@ -288,9 +287,7 @@ class AnalysisRunHistoryServiceTest {
         service.deleteRun("analysis-1");
 
         assertEquals("copilot-session-123", cleanup.sessionId);
-        assertEquals(CopilotAuthMode.GITHUB_APP, cleanup.auth.mode());
-        assertEquals("operator-session-1", cleanup.auth.principalId());
-        assertTrue(cleanup.auth.userBilling());
+        assertEquals(CopilotRunAuth.localToken(), cleanup.auth);
         assertEquals("analysis-1", store.deletedAnalysisId);
     }
 

@@ -29,9 +29,8 @@ Katalog roboczy CLI jest domyslnie poza repozytorium TDW, aby jego root
 sesji sprawdz `gen_ai.system_instructions`: instrukcje repozytorium hostujacego
 nie powinny tam wystapic. Jawne ustawienie `TDW_COPILOT_WORKING_DIRECTORY`
 wewnatrz repo przywraca to zachowanie.
-Run wymaga takze dzialajacego uwierzytelnienia Copilota (np. lokalnie
-ustawionego `COPILOT_GITHUB_TOKEN` w trybie `LOCAL_TOKEN`); nie zapisuj tokena
-w repo ani w danych telemetrycznych.
+Run wymaga takze fine-grained PAT Copilota skonfigurowanego w Workspace
+Settings; nie zapisuj tokena w repo ani w danych telemetrycznych.
 `TDW_COPILOT_OTLP_ENDPOINT` jest adresem bazowym OTLP/HTTP, bez `/v1/traces`;
 CLI wybiera sciezke sygnalu. Protokol CLI moze byc JSON lub protobuf; Scanner
 przyjmuje oba. Opcjonalny `TDW_COPILOT_OTLP_SOURCE_NAME` domyslnie ma wartosc

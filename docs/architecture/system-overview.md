@@ -338,10 +338,8 @@ Na dzisiaj projekt ma:
   `GET /api/ai/skills/{skillName}` dla metadanych oraz tresci efektywnego
   katalogu runtime; lookup uzywa dokladnej zwalidowanej nazwy i nie rozwiazuje
   model-facing ani operator-facing sciezki pliku,
-- shared/operator API `GET /api/auth/github/status`,
-  `GET /api/auth/github/start`, `GET /api/auth/github/callback` i
-  `POST /api/auth/github/logout` dla autoryzacji Copilot SDK w trybach
-  `LOCAL_TOKEN` oraz `GITHUB_APP`,
+- shared/operator API `GET /api/auth/github/status` zwracajace, czy
+  fine-grained PAT Copilota jest skonfigurowany w Workspace Settings,
 - shared/operator API `/api/operational-context/*` dla operator-facing odczytu
   curated operational context oraz capability-gated maintenance dziewieciu
   typow YAML w lokalnym workspace,
@@ -390,8 +388,7 @@ Starsze `analysis.gitlab.ignore-ssl-errors` i
 `integrations.gitlab.named.connections.<id>.ignore-ssl-errors` nie sa juz
 odczytywane. Ich konfiguracje trzeba zastapic wspolna flaga. Domyslne `false`
 zmienia dotychczasowe zachowanie Dynatrace, ktory wczesniej zawsze pomijal
-walidacje. Elasticsearch nadal ma osobny lokalny wyjatek, a GitHub OAuth/profil
-uzywa standardowej walidacji.
+walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
 
 ## Glowne entrypointy HTTP
 
@@ -512,8 +509,7 @@ uzywa standardowej walidacji.
   workspace'u. Ekran pokazuje efektywne wartosci z `application.properties`
   oraz zrodlo kazdego pola; zapis trafia do
   `${tdw.workspace.directory}/settings.json`. Aktualny zakres obejmuje
-  `app.ui.title`, lokalny token Copilota
-  (`analysis.ai.copilot.auth.local.github-token`), podstawowe connection
+  `app.ui.title`, fine-grained PAT Copilota, podstawowe connection
   settings Jiry (`analysis.jira.base-url`, `analysis.jira.token`), Confluence
   (`analysis.confluence.base-url`, `analysis.confluence.token`), głównego
   GitLaba i named connection `runtime-config`, Elasticsearch i Dynatrace oraz
@@ -629,17 +625,8 @@ uzywa standardowej walidacji.
   `analysis.confluence.url-pattern` i
   `analysis.confluence.max-text-characters`.
 - `GET /api/auth/github/status`
-  Shared/operator API statusu autoryzacji Copilota. W `LOCAL_TOKEN` pokazuje
-  lokalny token jako backendowy tryb dev, a w `GITHUB_APP` tworzy backendowa
-  operator session cookie i raportuje, czy konto GitHub jest polaczone.
-- `GET /api/auth/github/start`
-  Start GitHub App OAuth web flow. Akceptuje tylko lokalny `returnUrl`, tworzy
-  jednorazowy `state` powiazany z operator session i redirectuje do GitHuba.
-- `GET /api/auth/github/callback`
-  Callback OAuth: wymienia code na GitHub App user access token, pobiera profil
-  i zapisuje zaszyfrowane tokeny po stronie backendu.
-- `POST /api/auth/github/logout`
-  Odlacza autoryzacje GitHub App dla biezacej operator session.
+  Shared/operator API statusu PAT Copilota. Zwraca `configured` i
+  `settingsUrl` wskazujacy Workspace Settings, bez ujawniania tokena.
 - `POST /api/gitlab/source/resolve`
   Narzedzie pomocnicze do znalezienia pliku po symbolu.
 - `POST /api/gitlab/source/resolve/preview`
@@ -826,8 +813,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Platformowy provider cache'owanego katalogu modeli Copilota i neutralne DTO.
   Pobiera pelny typed wynik `models.list`, zachowujac reasoning metadata oraz
   billing/capability potrzebne do dynamicznego rozpoznania context tier.
-  `api.aioptions` jest waska fasada mapujaca tylko pola UI na endpoint
-  `GET /analysis/ai/options`.
+  `api.aioptions` jest waska fasada mapujaca pola potrzebne UI na kanoniczny
+  endpoint `GET /api/analysis/ai/options` (z kompatybilnym aliasem
+  `/analysis/ai/options`). Publiczny katalog zawiera tez kategorie modelu,
+  mnoznik kosztu zapytania premium oraz informacje o obsludze obrazow.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz
   `CopilotExecutionResult` z trescia odpowiedzi i user-visible
@@ -887,9 +876,6 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Krok pipeline publikujacy runtime signals Dynatrace jako evidence.
 - `pl.mkn.tdw.integrations.gitlab`
   Konfiguracja, porty, adapter REST oraz modele/search service GitLaba.
-- `pl.mkn.tdw.integrations.github.auth`
-  Integracja GitHub App OAuth: properties, klient exchange/refresh, profil
-  uzytkownika, state store, zaszyfrowany authorization store i AES-GCM cipher.
 - `pl.mkn.tdw.api.gitlab`
   Shared/operator endpoint repository search GitLaba delegujacy do integracji.
 - `pl.mkn.tdw.api.gitlab.source`
@@ -969,9 +955,12 @@ Znaczenie grup UI:
   analysis-independent i nie eksponuja incidentowego `analysisRunId`;
   DB/GitLab scope dla AI pozostaje feature-owned hidden `ToolContext`.
 - `Platform` - overview, konfiguracja i podglad zasobow samego Team Delivery
-  Workspace: workspace settings, editable AI Skills, personalizacja,
-  autentykacja i modele AI. Pozycje bez dedykowanych widokow pozostaja
-  disabled placeholders.
+  Workspace: workspace settings, editable AI Skills i informacyjny katalog
+  AI Models. Ten ostatni czyta aktualne modele i stawki tokenowe z
+  `api.aioptions`, pokazuje tabele kosztow w AI credits za milion tokenow,
+  w tym osobne stawki dla dlugiego kontekstu, gdy SDK je zwraca. Brak danych
+  cenowych jest jawny i odsyla do oficjalnego cennika GitHub Copilot.
+  Personalizacja i autentykacja pozostaja disabled placeholders.
 
 ## Aktualny model runtime
 

@@ -1,7 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
@@ -82,12 +81,7 @@ class CopilotRunPreparationServiceTest {
                 new CopilotModelSelection("gpt-5.4", "medium"),
                 "Denied"
         ).withContextTierPreference(CopilotContextTierPreference.LONG_CONTEXT_REQUIRED);
-        var runAuth = new CopilotRunAuth(
-                CopilotAuthMode.GITHUB_APP,
-                "synthetic-crm-analyst-session",
-                "crm-analyst",
-                false
-        );
+        var runAuth = CopilotRunAuth.localToken();
         var runRequest = new CopilotRunRequest(
                 "run-456",
                 runAuth,

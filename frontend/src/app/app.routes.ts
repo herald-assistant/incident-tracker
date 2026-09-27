@@ -98,6 +98,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'ai-models',
+        loadComponent: () =>
+          import('./features/ai-models/ai-models-page').then(
+            (module) => module.AiModelsPageComponent
+          ),
+        data: {
+          section: 'Platform',
+          title: 'AI Models'
+        }
+      },
+      {
         path: 'ux-inspector',
         loadComponent: () =>
           import('./features/ux-inspector/pages/ux-inspector-page/ux-inspector-page').then(

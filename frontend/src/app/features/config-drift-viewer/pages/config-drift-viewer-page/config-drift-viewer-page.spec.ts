@@ -36,7 +36,7 @@ describe('ConfigDriftViewerPageComponent', () => {
   let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let githubAuth: {
     getStatus: ReturnType<typeof vi.fn>;
-    connect: ReturnType<typeof vi.fn>;
+    openSettings: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -54,7 +54,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     routeParams = new BehaviorSubject(convertToParamMap({}));
     githubAuth = {
       getStatus: vi.fn(() => of(localTokenAuthStatus())),
-      connect: vi.fn()
+      openSettings: vi.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -325,27 +325,26 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(compiled.querySelector('select[aria-label="Filtr rodzaju zmiany"]')).toBeNull();
   });
 
-  it('should block the run and offer GitHub connection or reauthentication', () => {
-    fixture.componentInstance.githubAuthStatus.set(githubAppAuthStatus(false, false));
+  it('should block only DEEP runs when the PAT is missing', () => {
+    fixture.componentInstance.githubAuthStatus.set(missingPatAuthStatus());
     fixture.detectChanges();
 
     let compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).not.toContain('Połącz GitHub przed analizą');
+    expect(compiled.textContent).not.toContain('Dodaj fine-grained PAT przed analizą');
     expect(buttonContaining(compiled, 'Run verification')?.disabled).toBe(false);
 
     fixture.componentInstance.modeControl.setValue('DEEP');
     fixture.detectChanges();
     compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Połącz GitHub przed analizą');
+    expect(compiled.textContent).toContain('Dodaj fine-grained PAT przed analizą');
     expect(buttonContaining(compiled, 'Run verification')?.disabled).toBe(true);
-    buttonContaining(compiled, 'Połącz GitHub')?.click();
-    expect(githubAuth.connect).toHaveBeenCalledTimes(1);
+    buttonContaining(compiled, 'Workspace Settings')?.click();
+    expect(githubAuth.openSettings).toHaveBeenCalledTimes(1);
 
-    fixture.componentInstance.githubAuthStatus.set(githubAppAuthStatus(false, true));
+    fixture.componentInstance.githubAuthStatus.set(localTokenAuthStatus());
     fixture.detectChanges();
     compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Wymagane ponowne połączenie GitHub');
-    expect(compiled.textContent).toContain('Połącz ponownie GitHub');
+    expect(compiled.textContent).toContain('GitHub Copilot gotowy');
   });
 
   it('should start DEEP verification and render partial deterministic and AI results', () => {
@@ -640,27 +639,15 @@ function aiOptions(): AnalysisAiModelOptionsResponse {
 
 function localTokenAuthStatus(): GitHubAuthStatus {
   return {
-    mode: 'LOCAL_TOKEN',
-    required: false,
-    connected: false,
-    githubLogin: null,
-    displayName: null,
-    tokenExpiresAt: null,
-    reauthRequired: false,
-    authStartUrl: null
+    configured: true,
+    settingsUrl: '/workspace-settings'
   };
 }
 
-function githubAppAuthStatus(connected: boolean, reauthRequired: boolean): GitHubAuthStatus {
+function missingPatAuthStatus(): GitHubAuthStatus {
   return {
-    mode: 'GITHUB_APP',
-    required: true,
-    connected,
-    githubLogin: connected ? 'operator' : null,
-    displayName: null,
-    tokenExpiresAt: null,
-    reauthRequired,
-    authStartUrl: '/api/auth/github/start'
+    configured: false,
+    settingsUrl: '/workspace-settings'
   };
 }
 

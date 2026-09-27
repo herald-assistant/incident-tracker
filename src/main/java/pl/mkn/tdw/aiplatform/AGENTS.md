@@ -142,6 +142,7 @@ Nie obejmuje:
   warstw aplikacyjnych ani feature'ow.
 - Rzeczywisty test pary SDK/CLI uruchamia sie jawnie przez
   `COPILOT_SDK_LIVE_TEST=true` oraz opcjonalne `COPILOT_CLI_PATH`,
-  `COPILOT_GITHUB_TOKEN` i `COPILOT_TEST_MODEL`; pokrywa sekwencje
+  `TDW_WORKSPACE_DIRECTORY` (domyslnie `tdw-data`, z PAT w `settings.json`)
+  i `COPILOT_TEST_MODEL`; pokrywa sekwencje
   `create + send -> abort -> resume(long_context) -> options.update ->
   model.getCurrent -> continuation` oraz potwierdza wzrost `tokenLimit`.

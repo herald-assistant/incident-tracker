@@ -137,7 +137,7 @@ class FlowExplorerLocalRunChatHandlerTest {
                 "Gdzie jest walidacja?"
         );
 
-        assertEquals("LOCAL_TOKEN", tokenResolver.auth.mode().name());
+        assertEquals(CopilotRunAuth.localToken(), tokenResolver.auth);
         assertEquals("Uzyj skilla `flow-explorer-follow-up-chat` przed odpowiedzia.\n\nGdzie jest walidacja?",
                 promptCaptor.getValue().prompt());
         assertEquals("crm-service", requestCaptor.getValue().systemId());

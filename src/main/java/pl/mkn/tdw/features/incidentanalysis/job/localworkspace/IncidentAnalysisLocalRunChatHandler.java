@@ -8,8 +8,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatInvalidException;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatAnalysisSnapshot;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
@@ -177,25 +176,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
     }
 
     private AnalysisAiAuthRef authRef(LocalAnalysisRunContinuation continuation) {
-        var authMode = continuation != null ? continuation.authMode() : null;
-        if (!StringUtils.hasText(authMode)
-                || AnalysisAiAuthRef.MODE_LOCAL_TOKEN.equalsIgnoreCase(authMode.trim())) {
-            return AnalysisAiAuthRef.localToken(null);
-        }
-        if (AnalysisAiAuthRef.MODE_GITHUB_APP.equalsIgnoreCase(authMode.trim())) {
-            return new AnalysisAiAuthRef(
-                    AnalysisAiAuthRef.PROVIDER_GITHUB,
-                    AnalysisAiAuthRef.MODE_GITHUB_APP,
-                    continuation.authPrincipalRef(),
-                    null,
-                    true
-            );
-        }
-
-        throw LocalAnalysisRunContinuationException.corrupted(
-                "Local incident analysis run has an unsupported auth mode.",
-                null
-        );
+        return AnalysisAiAuthRef.localToken(null);
     }
 
     private AnalysisAiChatRequest chatRequest(
@@ -231,9 +212,7 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                     captured::addToolEvidence,
                     captured::addActivity
             );
-        } catch (CopilotLocalTokenMissingException
-                 | GitHubCopilotAuthRequiredException
-                 | GitHubCopilotReauthRequiredException exception) {
+        } catch (CopilotLocalTokenMissingException | CopilotPatInvalidException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             throw LocalAnalysisRunContinuationException.chatFailed(

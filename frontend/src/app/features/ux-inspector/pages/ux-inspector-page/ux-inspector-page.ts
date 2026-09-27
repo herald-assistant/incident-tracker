@@ -227,7 +227,7 @@ export class UxInspectorPageComponent implements OnInit {
   }
 
   connectChatAuth(): void {
-    const url = this.facade.chatAuthStartUrl();
+    const url = this.facade.chatAuthSettingsUrl();
     if (url) window.location.assign(url);
   }
 }

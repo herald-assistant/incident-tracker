@@ -44,7 +44,7 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.settingsPath").value("tdw-data/settings.json"))
                 .andExpect(jsonPath("$.values.appUi.title.value").value("CRM workspace"))
-                .andExpect(jsonPath("$.values.copilot.localGithubToken.value").value("ghu_secret"))
+                .andExpect(jsonPath("$.values.copilot.localGithubToken.value").value("github_pat_crm_secret"))
                 .andExpect(jsonPath("$.values.jira.baseUrl.value").value("https://jira.example.com"))
                 .andExpect(jsonPath("$.values.confluence.baseUrl.value")
                         .value("https://confluence.example.com"))
@@ -73,7 +73,7 @@ class WorkspaceSettingsControllerTest {
                                     "title": "CRM workspace"
                                   },
                                   "copilot": {
-                                    "localGithubToken": "ghu_secret"
+                                    "localGithubToken": "github_pat_crm_secret"
                                   },
                                   "jira": {
                                     "baseUrl": "https://jira.example.com",
@@ -134,10 +134,10 @@ class WorkspaceSettingsControllerTest {
                                 false
                         )),
                         new WorkspaceSettingsCopilotResponse(new WorkspaceSettingsFieldResponse(
-                                "analysis.ai.copilot.auth.local.github-token",
-                                "ghu_secret",
+                                "workspace.copilot.fine-grained-pat",
+                                "github_pat_crm_secret",
                                 "",
-                                "ghu_secret",
+                                "github_pat_crm_secret",
                                 WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                 true
                         )),

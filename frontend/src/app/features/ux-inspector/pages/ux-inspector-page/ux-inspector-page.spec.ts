@@ -58,6 +58,10 @@ describe('UxInspectorPageComponent', () => {
     expect(page.querySelector<HTMLInputElement>('input[type="file"]')?.getAttribute('aria-label'))
       .toBe('Importuj wynik UX Inspectora');
     expect(page.querySelector<HTMLButtonElement>('button.primary-button')?.disabled).toBe(true);
+    fixture.componentInstance.facade.jobError.set('Dodaj fine-grained PAT.');
+    fixture.componentInstance.facade.authSettingsUrl.set('/workspace-settings');
+    fixture.detectChanges();
+    expect(page.querySelector('a[href="/workspace-settings"]')?.textContent).toContain('Workspace Settings');
     expect(Array.from(page.querySelectorAll<HTMLButtonElement>('button'))
       .every((button) => Boolean(button.textContent?.trim() || button.getAttribute('aria-label')))).toBe(true);
     expect(harness.replaceState).toHaveBeenCalledWith(null, '', '/ux-inspector');

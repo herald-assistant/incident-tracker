@@ -74,19 +74,15 @@ preferencje requestu mieszkaja w `shared.ai`.
 (`correlationId`, `environment`, `gitLabBranch`, `gitLabGroup`) pochodzi z
 zakonczonego joba i ukrytego requestu AI zapisanego po finalnej analizie.
 
-Copilot auth jest osobnym shared/operator flow:
+Status PAT Copilota jest dostepny przez shared/operator API:
 
 ```http
 GET /api/auth/github/status
-GET /api/auth/github/start?returnUrl=/...
-GET /api/auth/github/callback?code=...&state=...
-POST /api/auth/github/logout
 ```
 
-W `LOCAL_TOKEN` backend uzywa skonfigurowanego tokena lokalnego. W
-`GITHUB_APP` UI laczy konto przez GitHub App OAuth, a backend zapisuje
-zaszyfrowany GitHub App user access token dla backendowej operator session.
-Frontend nigdy nie dostaje tokena, OAuth code ani SDK-specific typu.
+Operator zapisuje fine-grained PAT (`github_pat_`) w Workspace Settings.
+Backend odczytuje go stamtad przy kazdym nowym uruchomieniu i kontynuacji.
+Frontend nie dostaje tokena poza ekranem ustawien ani SDK-specific typu.
 
 `AnalysisJobFacade` przed utworzeniem joba rozwiązuje non-secret
 `AnalysisAiAuthRef` dla aktualnego requestu i sprawdza, czy token da sie
@@ -224,9 +220,8 @@ credentiali GitHub CLI/Copilot CLI.
 `CopilotSdkModelOptionsProvider` mieszka w
 `aiplatform.copilot.runtime.options`. Uzywa zaleznosci runtime do pobrania
 katalogu modeli przez SDK, ale nie miesza tej metadanej z evidence ani
-promptem incydentu. Provider jest auth-aware: w `LOCAL_TOKEN` moze cache'owac
-globalnie, a w `GITHUB_APP` cache key zawiera auth principal, zeby nie mieszac
-katalogow miedzy operatorami. Endpoint `GET /analysis/ai/options` jest
+promptem incydentu. Cache katalogu jest powiazany ze skrotem aktualnego PAT,
+aby po jego zmianie pobrac katalog ponownie. Endpoint `GET /analysis/ai/options` jest
 shared/operator API w `api.aioptions`, mapujacym platformowe DTO na kontrakt
 UI.
 

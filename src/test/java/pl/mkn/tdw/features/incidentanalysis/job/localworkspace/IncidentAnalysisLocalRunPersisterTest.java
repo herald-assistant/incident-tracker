@@ -59,8 +59,8 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals(LocalAnalysisRunRecord.VERSION, store.savedRecord.version());
         assertTrue(store.savedRecord.continuation().enabled());
         assertEquals("CRM/runtime", store.savedRecord.continuation().gitLabGroup());
-        assertEquals("GITHUB_APP", store.savedRecord.continuation().authMode());
-        assertEquals("operator-session-1", store.savedRecord.continuation().authPrincipalRef());
+        assertEquals("LOCAL_TOKEN", store.savedRecord.continuation().authMode());
+        assertEquals("local-token", store.savedRecord.continuation().authPrincipalRef());
         assertEquals("copilot-session-1", store.savedRecord.continuation().copilotSessionId());
         assertEquals("github-copilot-sdk", store.savedRecord.continuation().copilotRuntime());
         assertEquals("copilot-session", store.savedRecord.continuation().continuationMode());
@@ -75,7 +75,7 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals("incident-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
         assertEquals("DOWNSTREAM_TIMEOUT", exportEnvelope.at("/payload/job/report/header").asText());
         assertEquals("Prepared prompt", exportEnvelope.at("/payload/job/preparedPrompt").asText());
-        assertFalse(exportEnvelope.toString().contains("operator-session-1"));
+        assertFalse(exportEnvelope.toString().contains("github_pat_crm_secret"));
         assertFalse(exportEnvelope.toString().contains("copilot-session-1"));
     }
 
@@ -201,7 +201,7 @@ class IncidentAnalysisLocalRunPersisterTest {
                 "CRM/runtime",
                 List.of(),
                 AnalysisAiOptions.DEFAULT,
-                AnalysisAiAuthRef.githubApp("operator-session-1", "crm-test-operator")
+                AnalysisAiAuthRef.localToken("Workspace fine-grained PAT")
         );
     }
 

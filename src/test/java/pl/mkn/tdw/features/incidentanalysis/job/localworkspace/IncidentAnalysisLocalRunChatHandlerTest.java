@@ -79,7 +79,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         assertEquals(2, provider.request.history().size());
         assertEquals("user", provider.request.history().get(0).role());
         assertEquals("assistant", provider.request.history().get(1).role());
-        assertEquals("LOCAL_TOKEN", tokenResolver.auth.mode().name());
+        assertEquals(CopilotRunAuth.localToken(), tokenResolver.auth);
 
         var updatedEnvelope = objectMapper.treeToValue(
                 result.record().exportEnvelope(),

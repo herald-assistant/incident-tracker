@@ -160,13 +160,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
     private String legacySessionId(String jobId) { return "ux-inspector-" + jobId; }
 
     private AnalysisAiAuthRef authRef(LocalAnalysisRunContinuation continuation) {
-        if (!StringUtils.hasText(continuation.authMode())
-                || AnalysisAiAuthRef.MODE_LOCAL_TOKEN.equalsIgnoreCase(continuation.authMode())) return AnalysisAiAuthRef.localToken(null);
-        if (AnalysisAiAuthRef.MODE_GITHUB_APP.equalsIgnoreCase(continuation.authMode())) {
-            return new AnalysisAiAuthRef(AnalysisAiAuthRef.PROVIDER_GITHUB, AnalysisAiAuthRef.MODE_GITHUB_APP,
-                    continuation.authPrincipalRef(), null, true);
-        }
-        throw LocalAnalysisRunContinuationException.corrupted("Local UX Inspector run has an unsupported auth mode.", null);
+        return AnalysisAiAuthRef.localToken(null);
     }
 
     private UxInspectorJobStartRequest toStartRequest(UxInspectorJobRequestSnapshot request) {

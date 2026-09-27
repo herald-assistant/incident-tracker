@@ -22,47 +22,20 @@ describe('GithubAuthService', () => {
     vi.restoreAllMocks();
   });
 
-  it('should load GitHub auth status', () => {
-    let statusMode = '';
+  it('should load fine-grained PAT status', () => {
+    let configured = false;
 
     service.getStatus().subscribe((status) => {
-      statusMode = status.mode;
+      configured = status.configured;
     });
 
     const request = http.expectOne('/api/auth/github/status');
     expect(request.request.method).toBe('GET');
     request.flush({
-      mode: 'GITHUB_APP',
-      required: true,
-      connected: true,
-      githubLogin: 'crm-test-operator',
-      displayName: 'crm-test-operator',
-      tokenExpiresAt: '2026-05-02T18:42:00Z',
-      reauthRequired: false,
-      authStartUrl: '/api/auth/github/start'
+      configured: true,
+      settingsUrl: '/workspace-settings'
     });
 
-    expect(statusMode).toBe('GITHUB_APP');
-  });
-
-  it('should build the GitHub OAuth start URL with an encoded returnUrl', () => {
-    expect(service.connectUrl('/elastic?analysisId=123')).toBe(
-      '/api/auth/github/start?returnUrl=%2Felastic%3FanalysisId%3D123'
-    );
-  });
-
-  it('should call logout endpoint', () => {
-    let completed = false;
-
-    service.logout().subscribe(() => {
-      completed = true;
-    });
-
-    const request = http.expectOne('/api/auth/github/logout');
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({});
-    request.flush(null);
-
-    expect(completed).toBe(true);
+    expect(configured).toBe(true);
   });
 });

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunChatHandler;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
@@ -162,13 +161,7 @@ public class AnalysisRunHistoryService {
     }
 
     private CopilotRunAuth copilotAuth(LocalAnalysisRunContinuation continuation) {
-        var mode = CopilotAuthMode.from(continuation.authMode());
-        return new CopilotRunAuth(
-                mode,
-                continuation.authPrincipalRef(),
-                null,
-                mode == CopilotAuthMode.GITHUB_APP
-        );
+        return CopilotRunAuth.localToken();
     }
 
     private LocalAnalysisRunIndexEntry indexEntryOrThrow(String analysisId) {

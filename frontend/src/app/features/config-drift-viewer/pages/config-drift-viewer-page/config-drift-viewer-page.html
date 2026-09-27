@@ -234,10 +234,10 @@
         </div>
       }
 
-      @if (modeControl.value === 'DEEP' && githubAuthStatus()?.mode === 'GITHUB_APP') {
+      @if (modeControl.value === 'DEEP' && githubAuthStatus()) {
         <section
           class="runtime-auth-card"
-          [class.runtime-auth-card--connected]="githubAuthStatus()?.connected && !githubAuthStatus()?.reauthRequired"
+          [class.runtime-auth-card--connected]="githubAuthStatus()?.configured"
           aria-live="polite"
         >
           <span class="material-symbols-outlined" aria-hidden="true">
@@ -246,22 +246,22 @@
           <div>
             <strong>
               @if (githubAuthBlocked()) {
-                {{ githubAuthStatus()?.reauthRequired ? 'Wymagane ponowne połączenie GitHub' : 'Połącz GitHub przed analizą' }}
+                Dodaj fine-grained PAT przed analizą
               } @else {
-                Połączono z GitHub
+                GitHub Copilot gotowy
               }
             </strong>
             <p>
               @if (githubAuthBlocked()) {
-                Copilot wymaga autoryzacji użytkownika. Token pozostaje po stronie backendu.
+                Wprowadź własny token w Workspace Settings.
               } @else {
-                {{ githubAuthStatus()?.githubLogin || githubAuthStatus()?.displayName || 'Konto gotowe do użycia przez Copilot.' }}
+                Token jest zapisany w ustawieniach workspace.
               }
             </p>
           </div>
           @if (githubAuthBlocked()) {
-            <button type="button" class="primary-button" (click)="connectGithub()">
-              {{ githubAuthActionLabel() }}
+            <button type="button" class="primary-button" (click)="openCopilotSettings()">
+              Workspace Settings
             </button>
           }
         </section>

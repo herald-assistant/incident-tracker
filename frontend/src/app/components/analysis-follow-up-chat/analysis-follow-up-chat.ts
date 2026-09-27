@@ -34,7 +34,7 @@ export class AnalysisFollowUpChatComponent {
   readonly canUseChat = input(false);
   readonly isSubmitting = input(false);
   readonly needsAuth = input(false);
-  readonly authActionLabel = input('Połącz GitHub');
+  readonly authActionLabel = input('Workspace Settings');
   readonly openByDefault = input(false);
   readonly staticPanel = input(false);
   readonly eyebrow = input('Follow-up');

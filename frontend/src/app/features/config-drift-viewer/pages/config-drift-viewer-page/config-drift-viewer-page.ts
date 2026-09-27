@@ -170,11 +170,8 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       return false;
     }
     const status = this.githubAuthStatus();
-    return status?.mode === 'GITHUB_APP' && (!status.connected || status.reauthRequired);
+    return status !== null && !status.configured;
   });
-  readonly githubAuthActionLabel = computed(() =>
-    this.githubAuthStatus()?.reauthRequired ? 'Połącz ponownie GitHub' : 'Połącz GitHub'
-  );
   readonly canStart = computed(() => {
     this.formRevision();
     return Boolean(
@@ -391,8 +388,8 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
     this.closeSystemSelect();
   }
 
-  protected connectGithub(): void {
-    this.githubAuth.connect();
+  protected openCopilotSettings(): void {
+    this.githubAuth.openSettings();
   }
 
   protected retryPolling(): void {
@@ -830,20 +827,14 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
   private applyGithubAuthError(error: HttpErrorResponse): void {
     const response = error.error as Partial<ApiErrorResponse> | null;
     if (
-      response?.code !== 'GITHUB_COPILOT_AUTH_REQUIRED'
-      && response?.code !== 'GITHUB_COPILOT_REAUTH_REQUIRED'
+      response?.code !== 'COPILOT_PAT_REQUIRED'
+      && response?.code !== 'COPILOT_PAT_INVALID'
     ) {
       return;
     }
     this.githubAuthStatus.set({
-      mode: 'GITHUB_APP',
-      required: true,
-      connected: false,
-      githubLogin: null,
-      displayName: null,
-      tokenExpiresAt: null,
-      reauthRequired: response.code === 'GITHUB_COPILOT_REAUTH_REQUIRED',
-      authStartUrl: null
+      configured: false,
+      settingsUrl: '/workspace-settings'
     });
   }
 

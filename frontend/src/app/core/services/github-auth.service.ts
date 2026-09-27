@@ -14,16 +14,7 @@ export class GithubAuthService {
     return this.http.get<GitHubAuthStatus>('/api/auth/github/status');
   }
 
-  connect(returnUrl = window.location.pathname + window.location.search): void {
-    window.location.assign(this.connectUrl(returnUrl));
-  }
-
-  connectUrl(returnUrl = window.location.pathname + window.location.search): string {
-    const encoded = encodeURIComponent(returnUrl || '/');
-    return `/api/auth/github/start?returnUrl=${encoded}`;
-  }
-
-  logout(): Observable<void> {
-    return this.http.post<void>('/api/auth/github/logout', {});
+  openSettings(): void {
+    window.location.assign('/workspace-settings');
   }
 }

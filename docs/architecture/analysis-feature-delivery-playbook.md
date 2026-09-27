@@ -563,7 +563,7 @@ Request:
 
 - zawiera tylko input use case'u oraz opcjonalne `model` i
   `reasoningEffort`,
-- nie zawiera tokenu, OAuth code, loginu ani technicznego scope'u, ktory
+- nie zawiera tokenu ani technicznego scope'u, ktory
   backend juz zna,
 - nie zawiera danych wyprowadzanych dopiero z context/evidence,
 - ma jawna walidacje pol oraz cross-field validation,
@@ -575,9 +575,8 @@ Opcje modeli i reasoning pobieraj z kanonicznego
 `GET /api/auth/github/status`. Nie hardcoduj list modeli, domyslnych effort ani
 tokenow na froncie lub w feature controllerze.
 
-Frontend najpierw pobiera status auth. Katalog modeli pobiera dopiero, gdy
-status jest connected; obsluguje tez `authStartUrl`, reauth i brak lokalnego
-tokenu. Frontend wybiera wartosci z aktualnego katalogu. Backend obecnie
+Frontend najpierw pobiera status PAT. Katalog modeli pobiera dopiero, gdy
+`configured=true`; brak PAT kieruje do Workspace Settings. Frontend wybiera wartosci z aktualnego katalogu. Backend obecnie
 waliduje ksztalt i dlugosc, ale nie ma neutralnego cross-checku wzgledem
 katalogu SDK. Jesli taki preflight jest potrzebny, dodaj go raz w
 `aiplatform` i wystaw przez shared/operator API, nie kopiuj do kazdego

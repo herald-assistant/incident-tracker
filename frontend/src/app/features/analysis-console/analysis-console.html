@@ -229,24 +229,15 @@
           </div>
         </div>
 
-        @if (githubAuthStatus()?.mode === 'GITHUB_APP') {
-          <div
-            class="github-auth-panel"
-            [class.github-auth-panel--connected]="githubAuthStatus()?.connected"
-          >
+        @if (githubAuthStatus() && !githubAuthStatus()?.configured) {
+          <div class="github-auth-panel">
             <div>
               <p class="github-auth-panel__title">{{ authPanelTitle() }}</p>
               <p class="github-auth-panel__description">{{ authPanelDescription() }}</p>
             </div>
-            @if (githubAuthStatus()?.connected) {
-              <button class="secondary-button" type="button" (click)="logoutGithub()">
-                Rozłącz
-              </button>
-            } @else {
-              <button class="primary-button" type="button" (click)="connectGithub()">
-                {{ authActionLabel() }}
-              </button>
-            }
+            <button class="primary-button" type="button" (click)="openCopilotSettings()">
+              {{ authActionLabel() }}
+            </button>
           </div>
         }
 
@@ -376,7 +367,7 @@
                 placeholder="np. Sprawdź w bazie, czy rekord dla tego procesu ma status ERROR, albo potwierdź w repo gdzie powstaje ten timeout."
                 (sendMessage)="submitChat($event)"
                 (clearError)="clearChatError()"
-                (connectAuth)="connectGithub()"
+                (connectAuth)="openCopilotSettings()"
               ></app-analysis-follow-up-chat>
             </div>
 

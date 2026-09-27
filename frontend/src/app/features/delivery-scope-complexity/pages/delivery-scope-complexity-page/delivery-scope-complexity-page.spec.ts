@@ -550,14 +550,12 @@ async function createComponent(options: {
     }))
   };
   const authStatus: GitHubAuthStatus = {
-    mode: 'LOCAL_TOKEN',
-    required: false,
-    connected: true,
-    reauthRequired: false
+    configured: true,
+    settingsUrl: '/workspace-settings'
   };
   const auth = {
     getStatus: vi.fn(() => of(authStatus)),
-    connect: vi.fn()
+    openSettings: vi.fn()
   };
   const history = {
     getRun: vi.fn<(analysisId: string) => Observable<LocalAnalysisRunDetailResponse>>(() => of({

@@ -152,7 +152,6 @@ export class AnalysisConsoleComponent {
   readonly selectedLogFile = signal<File | null>(null);
   readonly githubAuthStatus = signal<GitHubAuthStatus | null>(null);
   readonly githubAuthError = signal('');
-  readonly githubReauthRequiredByError = signal(false);
   readonly chatNeedsGithubAuth = signal(false);
   readonly copiedPreparedPrompt = signal(false);
 
@@ -209,48 +208,22 @@ export class AnalysisConsoleComponent {
   );
   readonly isAnalysisBlockedByAuth = computed(() => {
     const status = this.githubAuthStatus();
-    return status?.mode === 'GITHUB_APP' && (!status.connected || status.reauthRequired);
+    return !status?.configured;
   });
   readonly authBadgeText = computed(() => {
     const status = this.githubAuthStatus();
     if (!status) {
       return 'Copilot: sprawdzanie';
     }
-    if (status.mode === 'LOCAL_TOKEN') {
-      return 'Copilot: token lokalny';
-    }
-    if (status.connected && status.githubLogin) {
-      return `GitHub: ${status.githubLogin}`;
-    }
-    return status.reauthRequired && this.githubReauthRequiredByError()
-      ? 'GitHub: połącz ponownie'
-      : 'GitHub: wymagane połączenie';
+    return status.configured ? 'Copilot: PAT gotowy' : 'Copilot: skonfiguruj PAT';
   });
   readonly authPanelTitle = computed(() => {
-    const status = this.githubAuthStatus();
-    if (status?.mode !== 'GITHUB_APP') {
-      return '';
-    }
-    return status.connected
-      ? `Połączono jako ${status.githubLogin || status.displayName || 'GitHub'}`
-      : 'Połącz konto GitHub, aby uruchomić analizę AI przez Copilot.';
+    return 'Wprowadź fine-grained PAT, aby uruchomić analizę AI.';
   });
   readonly authPanelDescription = computed(() => {
-    const status = this.githubAuthStatus();
-    if (status?.mode === 'GITHUB_APP' && status.connected) {
-      return 'Zużycie Copilot będzie przypisane do tego konta GitHub.';
-    }
-    if (status?.mode === 'GITHUB_APP') {
-      return 'Token pozostaje wyłącznie po stronie backendu i nie trafia do requestów analizy.';
-    }
-    return '';
+    return 'Zapisz PAT z uprawnieniem Copilot Requests w Workspace Settings.';
   });
-  readonly authActionLabel = computed(() => {
-    const status = this.githubAuthStatus();
-    return status?.reauthRequired && this.githubReauthRequiredByError()
-      ? 'Połącz ponownie GitHub'
-      : 'Połącz GitHub';
-  });
+  readonly authActionLabel = computed(() => 'Otwórz Workspace Settings');
 
   readonly hasActiveState = computed(
     () =>
@@ -377,7 +350,7 @@ export class AnalysisConsoleComponent {
     }
 
     if (this.isAnalysisBlockedByAuth()) {
-      this.connectGithub();
+      this.openCopilotSettings();
       return;
     }
 
@@ -449,8 +422,8 @@ export class AnalysisConsoleComponent {
     this.chatNeedsGithubAuth.set(false);
   }
 
-  connectGithub(): void {
-    this.githubAuth.connect();
+  openCopilotSettings(): void {
+    this.githubAuth.openSettings();
   }
 
   onLogFileSelected(event: Event): void {
@@ -465,23 +438,6 @@ export class AnalysisConsoleComponent {
       input.value = '';
     }
     this.clearFormError();
-  }
-
-  logoutGithub(): void {
-    this.githubAuth
-      .logout()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.isAiModelOptionsLoading.set(false);
-          this.aiModelCatalog.set(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
-          this.loadGithubAuthStatus();
-        },
-        error: (error) => {
-          const transportError = this.toTransportError(error, 'Nie udało się rozłączyć GitHuba.');
-          this.githubAuthError.set(transportError.message);
-        }
-      });
   }
 
   triggerImport(fileInput: HTMLInputElement): void {
@@ -775,9 +731,8 @@ export class AnalysisConsoleComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (status) => {
-          this.githubReauthRequiredByError.set(false);
-          this.githubAuthStatus.set(this.normalizeGithubAuthStatus(status));
-          if (status.connected) {
+          this.githubAuthStatus.set(status);
+          if (status.configured) {
             this.loadAiModelOptions();
           } else {
             this.isAiModelOptionsLoading.set(false);
@@ -788,7 +743,7 @@ export class AnalysisConsoleComponent {
         error: (error) => {
           const transportError = this.toTransportError(
             error,
-            'Nie udało się odczytać statusu autoryzacji GitHub.'
+            'Nie udało się odczytać statusu PAT Copilota.'
           );
           this.githubAuthError.set(transportError.message);
           this.isAiModelOptionsLoading.set(false);
@@ -956,23 +911,6 @@ export class AnalysisConsoleComponent {
           : 'Nie udało się odtworzyć lokalnego runu Incident Analysis.'
       );
     }
-  }
-
-  private normalizeGithubAuthStatus(status: GitHubAuthStatus | null): GitHubAuthStatus | null {
-    if (!status) {
-      return null;
-    }
-
-    return {
-      mode: status.mode,
-      required: Boolean(status.required),
-      connected: Boolean(status.connected),
-      githubLogin: status.githubLogin || null,
-      displayName: status.displayName || null,
-      tokenExpiresAt: status.tokenExpiresAt || null,
-      reauthRequired: Boolean(status.reauthRequired),
-      authStartUrl: status.authStartUrl || null
-    };
   }
 
   private syncAiModelSelection(): void {
@@ -1219,8 +1157,7 @@ export class AnalysisConsoleComponent {
         payload?.fieldErrors.length
           ? payload.fieldErrors.map((fieldError) => `${fieldError.field}: ${fieldError.message}`)
           : [status > 0 ? `HTTP status: ${status}` : 'Brak odpowiedzi HTTP od backendu.'],
-      status,
-      authStartUrl: payload?.authStartUrl || null
+      status
     };
   }
 
@@ -1233,8 +1170,6 @@ export class AnalysisConsoleComponent {
     return {
       code: typeof payloadRecord['code'] === 'string' ? payloadRecord['code'] : '',
       message: typeof payloadRecord['message'] === 'string' ? payloadRecord['message'] : '',
-      authStartUrl:
-        typeof payloadRecord['authStartUrl'] === 'string' ? payloadRecord['authStartUrl'] : null,
       fieldErrors: Array.isArray(payloadRecord['fieldErrors'])
         ? payloadRecord['fieldErrors']
             .filter(
@@ -1250,7 +1185,7 @@ export class AnalysisConsoleComponent {
   }
 
   private isGithubAuthError(code: string): boolean {
-    return code === 'GITHUB_COPILOT_AUTH_REQUIRED' || code === 'GITHUB_COPILOT_REAUTH_REQUIRED';
+    return code === 'COPILOT_PAT_REQUIRED' || code === 'COPILOT_PAT_INVALID';
   }
 
   private applyGithubAuthError(code: string): void {
@@ -1258,20 +1193,10 @@ export class AnalysisConsoleComponent {
       return;
     }
 
-    const status = this.githubAuthStatus();
-    if (status?.mode !== 'GITHUB_APP') {
-      return;
-    }
-
     this.githubAuthStatus.set({
-      ...status,
-      connected: false,
-      githubLogin: null,
-      displayName: null,
-      reauthRequired: code === 'GITHUB_COPILOT_REAUTH_REQUIRED',
-      authStartUrl: status.authStartUrl || '/api/auth/github/start'
+      configured: false,
+      settingsUrl: '/workspace-settings'
     });
-    this.githubReauthRequiredByError.set(code === 'GITHUB_COPILOT_REAUTH_REQUIRED');
   }
 
   private showFormError(message: string): void {

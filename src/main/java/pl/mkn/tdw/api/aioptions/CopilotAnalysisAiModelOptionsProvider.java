@@ -6,6 +6,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOption;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsProvider;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsResponse;
+import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelTokenRates;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 
 @Service
@@ -43,7 +44,19 @@ class CopilotAnalysisAiModelOptionsProvider implements AnalysisAiModelOptionsPro
                 option.name(),
                 option.supportsReasoningEffort(),
                 option.reasoningEfforts(),
-                option.defaultReasoningEffort()
+                option.defaultReasoningEffort(),
+                option.modelPickerCategory(),
+                option.pricing() != null ? new AnalysisAiModelPricing(
+                        rates(option.pricing().defaultRates()),
+                        rates(option.pricing().longContextRates()),
+                        option.pricing().longContextThresholdTokens()
+                ) : null
         );
+    }
+
+    private AnalysisAiModelTokenRates rates(CopilotModelTokenRates source) {
+        return source != null ? new AnalysisAiModelTokenRates(
+                source.input(), source.cachedInput(), source.cacheWrite(), source.output()
+        ) : null;
     }
 }

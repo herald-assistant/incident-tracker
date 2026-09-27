@@ -5,7 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotFineGrainedPat;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatInvalidException;
 import pl.mkn.tdw.integrations.confluence.config.ConfluenceProperties;
 import pl.mkn.tdw.integrations.dynatrace.config.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.config.ElasticProperties;
@@ -55,7 +56,6 @@ public class WorkspaceSettingsService {
 
     private final LocalWorkspaceSettingsStore settingsStore;
     private final UiConfigProperties uiConfigProperties;
-    private final CopilotSdkProperties copilotSdkProperties;
     private final JiraProperties jiraProperties;
     private final ConfluenceProperties confluenceProperties;
     private final GitLabProperties gitLabProperties;
@@ -87,6 +87,10 @@ public class WorkspaceSettingsService {
         var copilot = request != null && request.copilot() != null
                 ? request.copilot()
                 : new WorkspaceSettingsCopilotUpdate(null);
+        if (StringUtils.hasText(copilot.localGithubToken())
+                && !CopilotFineGrainedPat.valid(copilot.localGithubToken())) {
+            throw new CopilotPatInvalidException();
+        }
         var jira = request != null && request.jira() != null
                 ? request.jira()
                 : new WorkspaceSettingsJiraUpdate(null, null);
@@ -174,7 +178,7 @@ public class WorkspaceSettingsService {
                                 false
                         )),
                         new WorkspaceSettingsCopilotResponse(field(
-                                "analysis.ai.copilot.auth.local.github-token",
+                                "workspace.copilot.fine-grained-pat",
                                 app.copilot().localGithubToken(),
                                 file.copilot().localGithubToken(),
                                 true
@@ -286,10 +290,6 @@ public class WorkspaceSettingsService {
         var file = settings == null ? LocalWorkspaceSettingsFile.empty() : settings;
 
         uiConfigProperties.setTitle(effectiveValue(file.appUi().title(), app.appUi().title()));
-        copilotLocalProperties().setGithubToken(effectiveValue(
-                file.copilot().localGithubToken(),
-                app.copilot().localGithubToken()
-        ));
         jiraProperties.setBaseUrl(effectiveValue(file.jira().baseUrl(), app.jira().baseUrl()));
         jiraProperties.setToken(effectiveValue(file.jira().token(), app.jira().token()));
         confluenceProperties.setBaseUrl(effectiveValue(
@@ -338,7 +338,7 @@ public class WorkspaceSettingsService {
                 .get(CONFIG_DRIFT_VIEWER_CONNECTION_ID);
         return new WorkspaceSettingsValues(
                 new AppUiSettings(normalize(uiConfigProperties.getTitle())),
-                new CopilotSettings(normalize(copilotLocalGithubToken())),
+                new CopilotSettings(null),
                 new JiraSettings(
                         normalize(jiraProperties.getBaseUrl()),
                         normalize(jiraProperties.getToken())
@@ -387,23 +387,6 @@ public class WorkspaceSettingsService {
     private String valueOrEmpty(String value) {
         var normalized = normalize(value);
         return normalized == null ? "" : normalized;
-    }
-
-    private String copilotLocalGithubToken() {
-        if (copilotSdkProperties.getAuth() == null || copilotSdkProperties.getAuth().getLocal() == null) {
-            return null;
-        }
-        return copilotSdkProperties.getAuth().getLocal().getGithubToken();
-    }
-
-    private CopilotSdkProperties.Local copilotLocalProperties() {
-        if (copilotSdkProperties.getAuth() == null) {
-            copilotSdkProperties.setAuth(new CopilotSdkProperties.Auth());
-        }
-        if (copilotSdkProperties.getAuth().getLocal() == null) {
-            copilotSdkProperties.getAuth().setLocal(new CopilotSdkProperties.Local());
-        }
-        return copilotSdkProperties.getAuth().getLocal();
     }
 
     private GitLabNamedConnectionsProperties.Connection configDriftViewerGitLabConnection() {

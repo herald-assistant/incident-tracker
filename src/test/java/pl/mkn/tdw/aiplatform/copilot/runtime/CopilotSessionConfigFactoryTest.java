@@ -52,7 +52,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("C:\\workspace", clientOptions.getCwd());
         assertEquals(normalized("C:\\tdw-data\\copilot"), clientOptions.getCopilotHome());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
-        assertEquals("test-token", clientOptions.getGithubToken());
+        assertEquals("github_pat_crm_test_token", clientOptions.getGithubToken());
         assertNull(clientOptions.getTelemetry());
         assertEquals("analysis-123", sessionConfig.getSessionId());
         assertEquals("incidenttracker-test", sessionConfig.getClientName());
@@ -277,12 +277,11 @@ class CopilotSessionConfigFactoryTest {
     void shouldUseGithubTokenWhenProvided() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
-        properties.setGithubToken("ghp_test_token");
-        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties, "github_pat_crm_selected_token");
 
         var clientOptions = factory.clientOptions();
 
-        assertEquals("ghp_test_token", clientOptions.getGithubToken());
+        assertEquals("github_pat_crm_selected_token", clientOptions.getGithubToken());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
     }
 

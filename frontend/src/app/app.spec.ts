@@ -97,14 +97,8 @@ describe('App', () => {
     fixture.detectChanges();
     flushUiConfig(http);
     http.expectOne('/api/auth/github/status').flush({
-      mode: 'LOCAL_TOKEN',
-      required: false,
-      connected: false,
-      githubLogin: null,
-      displayName: null,
-      tokenExpiresAt: null,
-      reauthRequired: false,
-      authStartUrl: null
+      configured: false,
+      settingsUrl: '/workspace-settings'
     });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -271,7 +265,7 @@ describe('App', () => {
       compiled.querySelectorAll<HTMLButtonElement>('.workspace-settings-field-reset-button')
     );
     expect(resetButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Restore default for GitHub token',
+      'Clear fine-grained PAT',
       'Restore default for Jira personal access token',
       'Restore default for Confluence Base URL',
       'Restore default for Confluence personal access token',
@@ -421,6 +415,38 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink?.getAttribute('aria-current')).toBe('page');
     expect(compiled.querySelector('.markdown-content')?.textContent).toContain('Runtime guidance');
+  });
+
+  it('opens the AI Models catalog from the Platform sidebar', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const navLink = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+      'a.app-shell__nav-item[aria-label="AI Models"]'
+    );
+    expect(navLink?.getAttribute('href')).toBe('/ai-models');
+    const platformGroup = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.app-shell__nav-group')]
+      .find((group) => group.querySelector('.app-shell__nav-heading')?.textContent?.trim() === 'Platform');
+    const platformItems = [...(platformGroup?.querySelectorAll('.app-shell__nav-label') ?? [])]
+      .map((label) => label.textContent?.trim());
+    expect(platformItems.slice(-4)).toEqual(['AI Skills', 'AI Models', 'Personalization', 'Authentication']);
+    navLink!.click();
+    await fixture.whenStable();
+    http.expectOne('/api/analysis/ai/options').flush({
+      defaultModel: '', defaultReasoningEffort: '', defaultReasoningEfforts: [], models: []
+    });
+    fixture.detectChanges();
+
+    expect(router.url).toBe('/ai-models');
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-ai-models-page')).not.toBeNull();
+    expect(navLink?.getAttribute('aria-current')).toBe('page');
   });
 
   it('should send Confluence overrides in the workspace settings update', async () => {
@@ -940,10 +966,10 @@ function workspaceSettingsResponse(): Record<string, unknown> {
       },
       copilot: {
         localGithubToken: {
-          propertyKey: 'analysis.ai.copilot.auth.local.github-token',
-          value: 'ghu_copilot_secret',
+          propertyKey: 'workspace.copilot.fine-grained-pat',
+          value: 'github_pat_crm_test_token',
           applicationValue: '',
-          workspaceValue: 'ghu_copilot_secret',
+          workspaceValue: 'github_pat_crm_test_token',
           source: 'WORKSPACE_SETTINGS',
           secret: true
         }

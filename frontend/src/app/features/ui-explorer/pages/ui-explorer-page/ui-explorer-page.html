@@ -165,7 +165,7 @@
             [error]="facade.chatError()"
             [canUseChat]="facade.canUseChat()"
             [isSubmitting]="facade.chatSubmitting()"
-            [needsAuth]="!!facade.chatAuthStartUrl()"
+            [needsAuth]="!!facade.chatAuthSettingsUrl()"
             [openByDefault]="facade.resultSource()?.origin === 'live'"
             [staticPanel]="true"
             eyebrow="Follow-up chat"
@@ -205,8 +205,8 @@
         @if (facade.jobError()) {
           <h2>UI Explorer could not start</h2>
           <p class="ui-explorer-placeholder__error" role="alert">{{ facade.jobError() }}</p>
-          @if (facade.authStartUrl()) {
-            <a class="primary-button" [href]="facade.authStartUrl()">Connect GitHub</a>
+          @if (facade.authSettingsUrl()) {
+            <a class="primary-button" [href]="facade.authSettingsUrl()">Workspace Settings</a>
           }
         } @else if (facade.configurationReady()) {
           <h2>Ready for the first UI Explorer run</h2>

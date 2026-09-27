@@ -84,7 +84,9 @@ function normalizeModels(models: AnalysisAiModelOption[] | null | undefined): An
       name: normalizeText(model.name) || id,
       supportsReasoningEffort: Boolean(model.supportsReasoningEffort),
       reasoningEfforts: uniqueTexts(model.reasoningEfforts),
-      defaultReasoningEffort: normalizeText(model.defaultReasoningEffort)
+      defaultReasoningEffort: normalizeText(model.defaultReasoningEffort),
+      modelPickerCategory: normalizeText(model.modelPickerCategory).toLowerCase(),
+      pricing: model.pricing ?? null
     });
   }
 

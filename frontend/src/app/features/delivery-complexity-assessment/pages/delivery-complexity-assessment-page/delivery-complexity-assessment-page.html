@@ -112,12 +112,12 @@
         </div>
       </div>
 
-      @if (githubAuthStatus()?.mode === 'GITHUB_APP' && (!githubAuthStatus()?.connected || githubAuthStatus()?.reauthRequired)) {
+      @if (githubAuthStatus() && !githubAuthStatus()?.configured) {
         <div class="runtime-message runtime-message--warning" role="status">
-          <span>{{ githubAuthStatus()?.reauthRequired ? 'Połączenie GitHub wymaga odnowienia.' : 'Połącz GitHub przed uruchomieniem analizy.' }}</span>
-          <button type="button" class="secondary-button" (click)="connectGithub()">
-            <span class="material-symbols-outlined" aria-hidden="true">login</span>
-            Połącz
+          <span>Dodaj fine-grained PAT w Workspace Settings przed analizą.</span>
+          <button type="button" class="secondary-button" (click)="openCopilotSettings()">
+            <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+            Workspace Settings
           </button>
         </div>
       }

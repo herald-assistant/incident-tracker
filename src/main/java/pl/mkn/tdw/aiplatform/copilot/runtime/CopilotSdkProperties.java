@@ -6,7 +6,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 
 import java.io.IOException;
 import java.net.URI;
@@ -39,11 +38,6 @@ public class CopilotSdkProperties {
     private Duration sessionDeleteTimeout = Duration.ofSeconds(20);
     private Duration modelOptionsTimeout = Duration.ofSeconds(20);
     private Duration modelOptionsCacheTtl = Duration.ofMinutes(10);
-    /**
-     * Legacy single-token property. Prefer analysis.ai.copilot.auth.local.github-token.
-     */
-    private String githubToken;
-    private Auth auth = new Auth();
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
     private String skillResourceRoot = "copilot/skills";
     private String skillResourceProjectDirectory = System.getProperty("user.dir");
@@ -171,22 +165,6 @@ public class CopilotSdkProperties {
                             + "analysis.ai.copilot.infinite-sessions.buffer-exhaustion-threshold"
             );
         }
-    }
-
-    @Getter
-    @Setter
-    public static class Auth {
-
-        private CopilotAuthMode mode = CopilotAuthMode.LOCAL_TOKEN;
-        private Local local = new Local();
-    }
-
-    @Getter
-    @Setter
-    public static class Local {
-
-        private String githubToken;
-        private String displayName = "Local developer token";
     }
 
     @Getter

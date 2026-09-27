@@ -12,7 +12,6 @@ public record AnalysisAiAuthRef(
 
     public static final String PROVIDER_GITHUB = "github";
     public static final String MODE_LOCAL_TOKEN = "LOCAL_TOKEN";
-    public static final String MODE_GITHUB_APP = "GITHUB_APP";
     public static final String LOCAL_TOKEN_PRINCIPAL = "local-token";
 
     public AnalysisAiAuthRef {
@@ -27,17 +26,7 @@ public record AnalysisAiAuthRef(
                 PROVIDER_GITHUB,
                 MODE_LOCAL_TOKEN,
                 LOCAL_TOKEN_PRINCIPAL,
-                StringUtils.hasText(displayName) ? displayName.trim() : "Local developer token",
-                false
-        );
-    }
-
-    public static AnalysisAiAuthRef githubApp(String operatorSessionId, String githubLogin) {
-        return new AnalysisAiAuthRef(
-                PROVIDER_GITHUB,
-                MODE_GITHUB_APP,
-                operatorSessionId,
-                githubLogin,
+                StringUtils.hasText(displayName) ? displayName.trim() : "Workspace fine-grained PAT",
                 true
         );
     }

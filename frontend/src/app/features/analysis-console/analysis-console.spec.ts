@@ -33,7 +33,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Copilot: token lokalny');
+    expect(fixture.nativeElement.textContent).toContain('Copilot: PAT gotowy');
     expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
   });
 
@@ -51,7 +51,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(compiled.querySelector('.analysis-placeholder-workspace .placeholder-kicker')).toBeNull();
   });
 
-  it('should show GitHub connect CTA and skip model options when disconnected', async () => {
+  it('should offer Workspace Settings and skip model options when PAT is missing', async () => {
     const { fixture, aiOptionsApi } = await createComponent(disconnectedStatus());
 
     fixture.detectChanges();
@@ -59,23 +59,20 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Połącz konto GitHub, aby uruchomić analizę AI przez Copilot.'
+      'Wprowadź fine-grained PAT, aby uruchomić analizę AI.'
     );
-    expect(fixture.nativeElement.textContent).toContain('Połącz GitHub');
+    expect(fixture.nativeElement.textContent).toContain('Workspace Settings');
     expect(aiOptionsApi.getOptions).not.toHaveBeenCalled();
   });
 
-  it('should show connected GitHub login and load AI model options', async () => {
+  it('should load AI model options when PAT is configured', async () => {
     const { fixture, aiOptionsApi } = await createComponent(connectedStatus());
 
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('GitHub: crm-test-operator');
-    expect(fixture.nativeElement.textContent).toContain(
-      'Zużycie Copilot będzie przypisane do tego konta GitHub.'
-    );
+    expect(fixture.nativeElement.textContent).toContain('Copilot: PAT gotowy');
     expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
   });
 
@@ -103,7 +100,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Domyślny backend (gpt-5.4)');
   });
 
-  it('should start analysis without GitHub tokens or OAuth fields', async () => {
+  it('should start analysis without sending the PAT in the request', async () => {
     const { fixture, analysisApi } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
 
@@ -585,9 +582,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
       throwError(() => new HttpErrorResponse({
         status: 401,
         error: {
-          code: 'GITHUB_COPILOT_AUTH_REQUIRED',
-          message: 'Połącz konto GitHub, aby uruchomić analizę przez Copilot.',
-          authStartUrl: '/api/auth/github/start',
+          code: 'COPILOT_PAT_REQUIRED',
+          message: 'Dodaj fine-grained PAT w Workspace Settings.',
           fieldErrors: []
         }
       }))
@@ -600,11 +596,11 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Połącz konto GitHub, aby uruchomić analizę przez Copilot.'
+      'Dodaj fine-grained PAT w Workspace Settings.'
     );
   });
 
-  it('should show reconnect CTA after chat reauth error', async () => {
+  it('should show Workspace Settings CTA after invalid PAT chat error', async () => {
     const { fixture, analysisApi } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
     component.job.set(completedJob());
@@ -613,9 +609,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
       throwError(() => new HttpErrorResponse({
         status: 401,
         error: {
-          code: 'GITHUB_COPILOT_REAUTH_REQUIRED',
-          message: 'Połącz ponownie GitHub, aby kontynuować pracę z Copilot.',
-          authStartUrl: '/api/auth/github/start',
+          code: 'COPILOT_PAT_INVALID',
+          message: 'Wymień fine-grained PAT w Workspace Settings.',
           fieldErrors: []
         }
       }))
@@ -627,9 +622,9 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Połącz ponownie GitHub, aby kontynuować pracę z Copilot.'
+      'Wymień fine-grained PAT w Workspace Settings.'
     );
-    expect(fixture.nativeElement.textContent).toContain('Połącz ponownie GitHub');
+    expect(fixture.nativeElement.textContent).toContain('Workspace Settings');
     const chatCalls = analysisApi.sendChatMessage.mock.calls as unknown as Array<[string, unknown]>;
     expect(JSON.stringify(chatCalls[0][1])).toBe(
       '{"message":"Sprawdź jeszcze repozytorium."}'
@@ -743,8 +738,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     };
     const githubAuth = {
       getStatus: vi.fn(() => of(status)),
-      connect: vi.fn(),
-      logout: vi.fn(() => of(undefined))
+      openSettings: vi.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -787,41 +781,20 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
 function localStatus(): GitHubAuthStatus {
   return {
-    mode: 'LOCAL_TOKEN',
-    required: false,
-    connected: true,
-    githubLogin: null,
-    displayName: 'Local developer token',
-    tokenExpiresAt: null,
-    reauthRequired: false,
-    authStartUrl: null
+    configured: true,
+    settingsUrl: '/workspace-settings'
   };
 }
 
 function disconnectedStatus(): GitHubAuthStatus {
   return {
-    mode: 'GITHUB_APP',
-    required: true,
-    connected: false,
-    githubLogin: null,
-    displayName: null,
-    tokenExpiresAt: null,
-    reauthRequired: true,
-    authStartUrl: '/api/auth/github/start'
+    configured: false,
+    settingsUrl: '/workspace-settings'
   };
 }
 
 function connectedStatus(): GitHubAuthStatus {
-  return {
-    mode: 'GITHUB_APP',
-    required: true,
-    connected: true,
-    githubLogin: 'crm-test-operator',
-    displayName: 'crm-test-operator',
-    tokenExpiresAt: '2026-05-02T18:42:00Z',
-    reauthRequired: false,
-    authStartUrl: '/api/auth/github/start'
-  };
+  return localStatus();
 }
 
 function modelOptions(): AnalysisAiModelOptionsResponse {

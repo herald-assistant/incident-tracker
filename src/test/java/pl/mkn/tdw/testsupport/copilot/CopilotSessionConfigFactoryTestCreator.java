@@ -1,6 +1,5 @@
 package pl.mkn.tdw.testsupport.copilot;
 
-import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotCliExecutableResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigFactory;
@@ -19,6 +18,10 @@ public final class CopilotSessionConfigFactoryTestCreator {
     }
 
     public static CopilotSessionConfigFactory create(CopilotSdkProperties properties) {
+        return create(properties, "github_pat_crm_test_token");
+    }
+
+    public static CopilotSessionConfigFactory create(CopilotSdkProperties properties, String token) {
         var skillRuntimeLoader = mock(CopilotSkillRuntimeLoader.class);
         var cliExecutableResolver = mock(CopilotCliExecutableResolver.class);
         when(skillRuntimeLoader.platformSkillDirectories()).thenAnswer(ignored ->
@@ -27,21 +30,10 @@ public final class CopilotSessionConfigFactoryTestCreator {
         when(cliExecutableResolver.resolve(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
         return new CopilotSessionConfigFactory(
                 properties,
-                auth -> new CopilotAccessToken(testCompatibleToken(properties), null, null, false),
+                auth -> new CopilotAccessToken(token, null, null, true),
                 skillRuntimeLoader,
                 cliExecutableResolver
         );
     }
 
-    private static String testCompatibleToken(CopilotSdkProperties properties) {
-        if (properties.getAuth() != null
-                && properties.getAuth().getLocal() != null
-                && StringUtils.hasText(properties.getAuth().getLocal().getGithubToken())) {
-            return properties.getAuth().getLocal().getGithubToken();
-        }
-        if (StringUtils.hasText(properties.getGithubToken())) {
-            return properties.getGithubToken();
-        }
-        return "test-token";
-    }
 }

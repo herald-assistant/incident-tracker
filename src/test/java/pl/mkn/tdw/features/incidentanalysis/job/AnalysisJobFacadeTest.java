@@ -17,7 +17,7 @@ import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextPr
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
@@ -213,8 +213,8 @@ class AnalysisJobFacadeTest {
     @Test
     void shouldResolveCopilotTokenBeforeCreatingJob() {
         var provider = new CapturingOptionsInitialAnalysisProvider();
-        var authRef = AnalysisAiAuthRef.githubApp("operator-session-1", "crm-test-operator");
-        var tokenResolver = new CapturingAccessTokenResolver("ghu_secret_operator_token");
+        var authRef = AnalysisAiAuthRef.localToken("Workspace fine-grained PAT");
+        var tokenResolver = new CapturingAccessTokenResolver("github_pat_crm_secret_token");
         var authTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobFacade(
                 provider,
@@ -226,14 +226,13 @@ class AnalysisJobFacadeTest {
 
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
 
-        assertEquals("operator-session-1", tokenResolver.lastAuth.principalId());
-        assertEquals("crm-test-operator", tokenResolver.lastAuth.githubLogin());
-        assertFalse(started.toString().contains("ghu_secret_operator_token"));
+        assertEquals(CopilotRunAuth.localToken(), tokenResolver.lastAuth);
+        assertFalse(started.toString().contains("github_pat_crm_secret_token"));
 
         authTaskExecutor.runNext();
 
         assertEquals(authRef, provider.lastPreparedRequest.authRef());
-        assertFalse(service.getAnalysis(started.analysisId()).toString().contains("ghu_secret_operator_token"));
+        assertFalse(service.getAnalysis(started.analysisId()).toString().contains("github_pat_crm_secret_token"));
     }
 
     @Test
@@ -243,14 +242,14 @@ class AnalysisJobFacadeTest {
                 new TestInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 authTaskExecutor,
-                () -> {
-                    throw new GitHubCopilotAuthRequiredException();
-                },
-                auth -> new CopilotAccessToken("unused", null, null, false)
+                () -> AnalysisAiAuthRef.localToken(null),
+                auth -> {
+                    throw new CopilotLocalTokenMissingException();
+                }
         );
 
         assertThrows(
-                GitHubCopilotAuthRequiredException.class,
+                CopilotLocalTokenMissingException.class,
                 () -> service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null))
         );
         assertTrue(authTaskExecutor.isEmpty());
@@ -985,7 +984,7 @@ class AnalysisJobFacadeTest {
         @Override
         public CopilotAccessToken resolve(CopilotRunAuth auth) {
             lastAuth = auth;
-            return new CopilotAccessToken(token, auth.githubLogin(), null, auth.userBilling());
+            return new CopilotAccessToken(token, null, null, true);
         }
     }
 

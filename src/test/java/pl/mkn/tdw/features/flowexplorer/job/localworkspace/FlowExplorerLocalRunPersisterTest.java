@@ -52,7 +52,7 @@ class FlowExplorerLocalRunPersisterTest {
 
         persister.persistCompletedInitialRun(
                 completedSnapshot("COMPLETED"),
-                AnalysisAiAuthRef.githubApp("operator-session-1", "crm-test-operator"),
+                AnalysisAiAuthRef.localToken("Workspace fine-grained PAT"),
                 "copilot-session-1"
         );
 
@@ -70,8 +70,8 @@ class FlowExplorerLocalRunPersisterTest {
         assertEquals(LocalAnalysisRunRecord.VERSION, store.savedRecord.version());
         assertTrue(store.savedRecord.continuation().enabled());
         assertNull(store.savedRecord.continuation().gitLabGroup());
-        assertEquals("GITHUB_APP", store.savedRecord.continuation().authMode());
-        assertEquals("operator-session-1", store.savedRecord.continuation().authPrincipalRef());
+        assertEquals("LOCAL_TOKEN", store.savedRecord.continuation().authMode());
+        assertEquals("local-token", store.savedRecord.continuation().authPrincipalRef());
         assertEquals("copilot-session-1", store.savedRecord.continuation().copilotSessionId());
         assertEquals("github-copilot-sdk", store.savedRecord.continuation().copilotRuntime());
         assertEquals("copilot-session", store.savedRecord.continuation().continuationMode());
@@ -87,7 +87,7 @@ class FlowExplorerLocalRunPersisterTest {
         assertEquals("flow-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
         assertEquals("Flow Explorer: GET /api/customers/{id}", exportEnvelope.at("/payload/job/report/header").asText());
         assertEquals("flow-explorer-goal-result-v1", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
-        assertFalse(exportEnvelope.toString().contains("operator-session-1"));
+        assertFalse(exportEnvelope.toString().contains("github_pat_crm_secret"));
         assertFalse(exportEnvelope.toString().contains("copilot-session-1"));
     }
 

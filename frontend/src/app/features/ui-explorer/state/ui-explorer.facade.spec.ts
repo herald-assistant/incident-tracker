@@ -240,9 +240,8 @@ describe('UiExplorerFacade', () => {
           new HttpErrorResponse({
             status: 401,
             error: {
-              code: 'GITHUB_COPILOT_AUTH_REQUIRED',
-              message: 'Connect GitHub before documenting the CRM view.',
-              authStartUrl: '/api/auth/github/start?returnUrl=%2Fui-explorer'
+              code: 'COPILOT_PAT_REQUIRED',
+              message: 'Add a fine-grained PAT before documenting the CRM view.'
             }
           })
       )
@@ -255,8 +254,8 @@ describe('UiExplorerFacade', () => {
     facade.startJob();
 
     expect(facade.job()).toBeNull();
-    expect(facade.jobError()).toBe('Connect GitHub before documenting the CRM view.');
-    expect(facade.authStartUrl()).toBe('/api/auth/github/start?returnUrl=%2Fui-explorer');
+    expect(facade.jobError()).toBe('Add a fine-grained PAT before documenting the CRM view.');
+    expect(facade.authSettingsUrl()).toBe('/workspace-settings');
     expect(polling.poll).not.toHaveBeenCalled();
   });
 

@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
 import { AiOptionsApiService } from '../../../core/services/ai-options-api.service';
@@ -95,6 +96,24 @@ describe('UxInspectorFacade', () => {
 
     expect(api.startJob).not.toHaveBeenCalled();
     expect(facade.jobError()).toContain('TDW Browser Tools');
+  });
+
+  it('points to Workspace Settings when a PAT blocks the run', () => {
+    api.startJob.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
+      status: 503,
+      error: { code: 'COPILOT_PAT_REQUIRED', message: 'Dodaj fine-grained PAT.' }
+    })));
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    facade.selectView('crm-contact-create');
+    facade.updateQuestion('Dlaczego przycisk jest zablokowany?');
+
+    facade.startJob();
+
+    expect(facade.job()).toBeNull();
+    expect(facade.jobError()).toBe('Dodaj fine-grained PAT.');
+    expect(facade.authSettingsUrl()).toBe('/workspace-settings');
   });
 
   it('loads the cached view catalog after branch confirmation and explicitly refreshes it on demand', () => {

@@ -9,8 +9,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredException;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatInvalidException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
@@ -155,9 +154,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                     .withEvidenceSink(captured::addToolEvidence)
                     .withActivitySink(captured::addActivity);
             return executionGateway.execute(preparedSession);
-        } catch (CopilotLocalTokenMissingException
-                 | GitHubCopilotAuthRequiredException
-                 | GitHubCopilotReauthRequiredException exception) {
+        } catch (CopilotLocalTokenMissingException | CopilotPatInvalidException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             throw LocalAnalysisRunContinuationException.chatFailed(
@@ -245,25 +242,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
     }
 
     private AnalysisAiAuthRef authRef(LocalAnalysisRunContinuation continuation) {
-        var authMode = continuation != null ? continuation.authMode() : null;
-        if (!StringUtils.hasText(authMode)
-                || AnalysisAiAuthRef.MODE_LOCAL_TOKEN.equalsIgnoreCase(authMode.trim())) {
-            return AnalysisAiAuthRef.localToken(null);
-        }
-        if (AnalysisAiAuthRef.MODE_GITHUB_APP.equalsIgnoreCase(authMode.trim())) {
-            return new AnalysisAiAuthRef(
-                    AnalysisAiAuthRef.PROVIDER_GITHUB,
-                    AnalysisAiAuthRef.MODE_GITHUB_APP,
-                    continuation.authPrincipalRef(),
-                    null,
-                    true
-            );
-        }
-
-        throw LocalAnalysisRunContinuationException.corrupted(
-                "Local Flow Explorer run has an unsupported auth mode.",
-                null
-        );
+        return AnalysisAiAuthRef.localToken(null);
     }
 
     private FlowExplorerJobStateSnapshot appendCompletedChat(
