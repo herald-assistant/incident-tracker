@@ -147,8 +147,9 @@ Endpoint mapuje metadane Copilot SDK na generyczny kontrakt aplikacji i zwraca
 Katalog informacyjny `Platform / AI Models` korzysta z tego samego endpointu:
 widoczne sa stawki tokenowe z `models.list`, przeliczone z AI credits na paczke
 SDK na AI credits za milion tokenow. Widok pokazuje koszt wejscia, odczytu i
-zapisu cache oraz odpowiedzi, a osobny wariant dlugiego kontekstu tylko wtedy,
-gdy SDK zwraca jego stawki. Nie utrzymuje cennika ani opisow per model w kodzie.
+zapisu cache oraz odpowiedzi. Osobny tier dlugiego kontekstu pojawia sie tylko
+wtedy, gdy SDK zwraca stawki rozne od domyslnych. Nie utrzymuje cennika ani
+opisow per model w kodzie.
 Brak stawek jest jawny i prowadzi do oficjalnego cennika GitHub Copilot.
 Limity capability pozostaja wewnetrznym zrodlem dla polityki context tier.
 

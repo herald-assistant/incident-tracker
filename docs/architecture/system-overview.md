@@ -957,9 +957,11 @@ Znaczenie grup UI:
 - `Platform` - overview, konfiguracja i podglad zasobow samego Team Delivery
   Workspace: workspace settings, editable AI Skills i informacyjny katalog
   AI Models. Ten ostatni czyta aktualne modele i stawki tokenowe z
-  `api.aioptions`, pokazuje tabele kosztow w AI credits za milion tokenow,
-  w tym osobne stawki dla dlugiego kontekstu, gdy SDK je zwraca. Brak danych
-  cenowych jest jawny i odsyla do oficjalnego cennika GitHub Copilot.
+  `api.aioptions`. Tabela pokazuje osobno kategorie modelu, tier `Default` lub
+  `Long context` oraz ceny wejscia, cache i odpowiedzi; jednostka AI credits
+  za 1 mln tokenow jest widoczna nad tabela. Tier dlugiego kontekstu pojawia
+  sie tylko przy stawkach roznych od domyslnych. Brak danych cenowych jest
+  jawny i odsyla do oficjalnego cennika GitHub Copilot.
   Personalizacja i autentykacja pozostaja disabled placeholders.
 
 ## Aktualny model runtime

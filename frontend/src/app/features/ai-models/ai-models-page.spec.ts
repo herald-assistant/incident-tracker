@@ -51,17 +51,24 @@ describe('AiModelsPageComponent', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('.ai-models-table caption strong')?.textContent)
+    expect(element.querySelector('.ai-models-toolbar .ai-models-unit strong')?.textContent)
       .toBe('AI credits za 1 mln tokenów');
+    expect([...element.querySelectorAll('.ai-models-table thead th')]
+      .map((header) => header.textContent?.trim()))
+      .toEqual(['Model', 'Kategoria', 'Tier', 'Wejście', 'Odczyt z cache', 'Zapis do cache', 'Odpowiedź']);
     const rows = element.querySelectorAll('.ai-models-table tbody tr');
     expect(rows).toHaveLength(4);
     expect([...rows].filter((row) => row.textContent?.includes('CRM Same Rates'))).toHaveLength(1);
-    const standardRow = [...rows].find((row) => row.textContent?.includes('CRM Versatile') && row.textContent?.includes('Standardowy'));
-    const longContextRow = [...rows].find((row) => row.textContent?.includes('Długi kontekst'));
+    const standardRow = [...rows].find((row) => row.textContent?.includes('CRM Versatile') && row.textContent?.includes('Default'));
+    const longContextRow = [...rows].find((row) => row.textContent?.includes('Long context'));
     const missingPriceRow = [...rows].find((row) => row.textContent?.includes('CRM New'));
-    expect(standardRow?.querySelectorAll('td')[4].textContent?.trim()).toBe('1200');
-    expect(longContextRow?.textContent?.replace(/\s/g, '')).toContain('272000');
-    expect(longContextRow?.querySelectorAll('td')[4].textContent?.trim()).toBe('1800');
+    expect(standardRow?.querySelector('.ai-models-table__category-pill')?.textContent).toBe('Uniwersalny');
+    expect(standardRow?.querySelector('.ai-models-table__tier')?.textContent).toBe('Default');
+    expect(standardRow?.querySelectorAll('td')[5].textContent?.trim()).toBe('1200');
+    expect(longContextRow?.querySelector('.ai-models-table__tier')?.textContent).toBe('Long context');
+    expect(longContextRow?.querySelector('.ai-models-table__tier')?.getAttribute('title')?.replace(/\s/g, ''))
+      .toContain('272000');
+    expect(longContextRow?.querySelectorAll('td')[5].textContent?.trim()).toBe('1800');
     expect(missingPriceRow?.textContent).toContain('—');
     expect(element.textContent).not.toContain('mnożnik premium');
 

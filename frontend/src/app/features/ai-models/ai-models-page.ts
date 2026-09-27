@@ -12,7 +12,8 @@ import { normalizeAnalysisAiModelOptions } from '../../core/utils/analysis-ai-mo
 
 type PriceRow = {
   model: AnalysisAiModelOption;
-  tier: string;
+  tier: 'Default' | 'Long context';
+  tierHint: string | null;
   rates: AnalysisAiModelTokenRates | null;
 };
 
@@ -44,13 +45,15 @@ export class AiModelsPageComponent {
         Number(this.hasRates(left.pricing?.defaultRates ?? null)) ||
         left.name.localeCompare(right.name, 'pl'))
       .flatMap((model) => {
-        const result: PriceRow[] = [{ model, tier: 'Standardowy', rates: model.pricing?.defaultRates ?? null }];
+        const result: PriceRow[] = [{ model, tier: 'Default', tierHint: null,
+          rates: model.pricing?.defaultRates ?? null }];
         if (this.hasDifferentRates(model.pricing?.defaultRates ?? null,
             model.pricing?.longContextRates ?? null)) {
           const threshold = model.pricing?.longContextThresholdTokens;
           result.push({
             model,
-            tier: threshold ? `Długi kontekst · ponad ${this.numberFormat.format(threshold)} tokenów` : 'Długi kontekst',
+            tier: 'Long context',
+            tierHint: threshold ? `Powyżej ${this.numberFormat.format(threshold)} tokenów` : null,
             rates: model.pricing?.longContextRates ?? null
           });
         }

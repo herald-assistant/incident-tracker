@@ -50,22 +50,27 @@
               target="_blank" rel="noopener noreferrer">cennik GitHub Copilot</a>.</p>
         </div>
       } @else {
-        <label class="field-control ai-models-search" for="aiModelsSearch">
-          <span class="field-label">Szukaj modelu</span>
-          <input id="aiModelsSearch" class="text-input" type="search" autocomplete="off"
-            placeholder="Nazwa modelu" [value]="query()" (input)="updateSearch($event)" />
-        </label>
+        <div class="ai-models-toolbar">
+          <label class="field-control ai-models-search" for="aiModelsSearch">
+            <span class="field-label">Szukaj modelu</span>
+            <input id="aiModelsSearch" class="text-input" type="search" autocomplete="off"
+              placeholder="Nazwa modelu" [value]="query()" (input)="updateSearch($event)" />
+          </label>
+          <p class="ai-models-unit"><span>Jednostka stawek:</span>
+            <strong>AI credits za 1 mln tokenów</strong></p>
+        </div>
 
         @if (pricedCount() < modelCount()) {
           <p class="ai-models-notice">Dla części modeli katalog nie podaje stawek. Znak „—” oznacza brak danych.</p>
         }
         <div class="ai-models-table-scroll">
           <table class="ai-models-table">
-            <caption>Jednostka stawek: <strong>AI credits za 1 mln tokenów</strong></caption>
+            <caption>Stawki modeli w AI credits za 1 mln tokenów</caption>
             <thead>
               <tr>
                 <th scope="col">Model</th>
-                <th scope="col">Wariant</th>
+                <th scope="col">Kategoria</th>
+                <th scope="col">Tier</th>
                 <th scope="col">Wejście</th>
                 <th scope="col">Odczyt z cache</th>
                 <th scope="col">Zapis do cache</th>
@@ -77,18 +82,20 @@
                 <tr>
                   <th scope="row">
                     <strong>{{ row.model.name }}</strong>
-                    @if (category(row.model); as categoryLabel) {
-                      <span class="ai-models-table__category">{{ categoryLabel }}</span>
-                    }
                   </th>
-                  <td class="ai-models-table__tier">{{ row.tier }}</td>
+                  <td class="ai-models-table__category">
+                    @if (category(row.model); as categoryLabel) {
+                      <span class="ai-models-table__category-pill">{{ categoryLabel }}</span>
+                    } @else { — }
+                  </td>
+                  <td class="ai-models-table__tier" [attr.title]="row.tierHint">{{ row.tier }}</td>
                   <td class="ai-models-table__key-price">{{ price(row.rates, 'input') }}</td>
                   <td>{{ price(row.rates, 'cachedInput') }}</td>
                   <td>{{ price(row.rates, 'cacheWrite') }}</td>
                   <td class="ai-models-table__key-price">{{ price(row.rates, 'output') }}</td>
                 </tr>
               } @empty {
-                <tr><td colspan="6" class="ai-models-table__empty">Nie znaleziono modelu.</td></tr>
+                <tr><td colspan="7" class="ai-models-table__empty">Nie znaleziono modelu.</td></tr>
               }
             </tbody>
           </table>
