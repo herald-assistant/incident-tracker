@@ -235,14 +235,15 @@
     return result;
   }
 
-  function componentBoundaryTags(ancestryElements) {
-    return Array.from(
+  function componentBoundaryTags(ancestryElements, maxTags = MAX_COMPONENT_BOUNDARIES) {
+    const tags = Array.from(
       new Set(
         ancestryElements
           .map((candidate) => candidate.tagName.toLowerCase())
           .filter((tag) => tag.includes('-'))
       )
-    ).slice(0, MAX_COMPONENT_BOUNDARIES);
+    );
+    return maxTags === null ? tags : tags.slice(0, maxTags);
   }
 
   function routedComponentBoundaryTags() {
@@ -326,7 +327,7 @@
     return {
       stableAttributes: attributes,
       selectorCandidates: selectorCandidates(element, attributes),
-      componentBoundaryTags: componentBoundaryTags(ancestryElements),
+      componentBoundaryTags: componentBoundaryTags(ancestryElements, null),
       labelFor: labelFor(element)
     };
   }
@@ -773,13 +774,15 @@
       selectedIndices.add(index);
     }
     elements.forEach((candidate, index) => {
+      if (candidate.tagName.toLowerCase().includes('-')) selectedIndices.add(index);
+    });
+    elements.forEach((candidate, index) => {
       if (selectedIndices.size < MAX_ANCESTORS && isSemanticAncestor(candidate)) {
         selectedIndices.add(index);
       }
     });
     return Array.from(selectedIndices)
       .sort((left, right) => left - right)
-      .slice(0, MAX_ANCESTORS)
       .map((index) => describeAncestor(elements[index], index + 1));
   }
 
@@ -849,7 +852,7 @@
       role: targetDescriptor.role,
       accessibleName: targetDescriptor.accessibleName,
       text: targetDescriptor.text,
-      domFingerprint: domFingerprint(element, ancestry.elements.slice(1)),
+      domFingerprint: domFingerprint(element, ancestry.elements),
       state: targetDescriptor.state
     };
     target.bounds = {
@@ -1004,9 +1007,9 @@
       .slice(0, MAX_SELECTOR_CANDIDATES);
     if (candidates.length !== Math.min(value.selectorCandidates.length, MAX_SELECTOR_CANDIDATES)) return null;
     const boundaries = value.componentBoundaryTags
-      .filter((tag) => typeof tag === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(tag) && tag.includes('-'))
-      .slice(0, MAX_COMPONENT_BOUNDARIES);
-    if (boundaries.length !== Math.min(value.componentBoundaryTags.length, MAX_COMPONENT_BOUNDARIES)) return null;
+      .filter((tag) => typeof tag === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(tag) && tag.includes('-'));
+    if (boundaries.length !== value.componentBoundaryTags.length ||
+        new Set(boundaries).size !== boundaries.length) return null;
     const normalizedLabelFor = value.labelFor === null
       ? null
       : (isSafeIdentifier(value.labelFor) ? value.labelFor.trim() : null);
@@ -1275,7 +1278,7 @@
       width: Math.max(0, safeNumber(boundsInput.width)),
       height: Math.max(0, safeNumber(boundsInput.height))
     };
-    const ancestorsInput = input.ancestors.slice(0, MAX_ANCESTORS);
+    const ancestorsInput = input.ancestors;
     const ancestors = [];
     for (const candidate of ancestorsInput) {
       if (!hasExactKeys(candidate, ['depth', 'tag', 'role', 'accessibleName', 'text', 'stableAttributes'])) {
@@ -1343,7 +1346,7 @@
       formSnapshot,
       traversal: {
         observedDepth: safeInteger(traversalInput.observedDepth, ancestors.length + 1, 4096),
-        emittedNodeCount: safeInteger(traversalInput.emittedNodeCount, ancestors.length + 1, MAX_ANCESTORS + 1),
+        emittedNodeCount: safeInteger(traversalInput.emittedNodeCount, ancestors.length + 1, 4096),
         omittedNodeCount: safeInteger(traversalInput.omittedNodeCount, 0, 4096),
         reachedDocumentRoot: traversalInput.reachedDocumentRoot === true
       },

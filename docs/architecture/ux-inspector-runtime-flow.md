@@ -127,7 +127,9 @@ Kanoniczny kontrakt ma `schema=tdw.ux-inspector-capture`, `version=1`, klienta
 - `domFingerprint`: allowlistowane stabilne atrybuty, selector candidates,
   label linkage i lancuch custom-element boundaries,
 - obserwowalny stan boolean/ARIA i bounds do preview,
-- maksymalnie 24 istotnych przodkow,
+- skompaktowanych zwyklych przodkow i wszystkich rozpoznanych przodkow
+  custom-element; pelny lancuch unikalnych `componentBoundaryTags` nie ma
+  osobnego limitu liczby tagow,
 - informacje o truncation, Shadow DOM, ramce i redakcji,
 - `captureProfile` oraz opcjonalny `formSnapshot`.
 
@@ -207,7 +209,7 @@ Rezultat ma jeden ze stanow:
   ograniczone evidence maksymalnie trzech najlepszych kandydatow wraz z ich
   bindingami, odpowiedz zachowuje niejednoznacznosc i moze uzyc target tools,
 - `NOT_FOUND` - brak zweryfikowanego celu pozostaje jawna luka; sesja dostaje
-  pelne zrodlo komponentu widoku, jawny licznik pominietego grafu oraz
+  pelne zrodlo komponentu widoku i odkrytych runtime selector matches, jawny licznik pominietego grafu oraz
   repository tools i kontynuuje celowany research.
 
 Zmiana source revision, brak refa albo nieaktualny View sa jawnym bledem.
@@ -220,10 +222,12 @@ Prompt oddziela pytanie operatora, `UNTRUSTED_RUNTIME_OBSERVATION` oraz
 focused source slice, procedure dla pytan precyzyjnych i ogolnych oraz
 kontrakt raportu.
 
-Osobny, nieblokujacy logical artifact zawiera tylko komponenty odkryte przez
+Osobny, nieblokujacy logical artifact zawiera komponenty odkryte przez
 target-first preflight i nalezace do deterministycznie wybranych sciezek target -> komponent widoku: jednej dla
 `RESOLVED`, unii maksymalnie trzech sciezek dla `AMBIGUOUS`, a dla `NOT_FOUND`
-tylko komponentu widoku. Przekazuje ich symbol, selector, status discovery,
+komponentu widoku. Dodatkowo dolacza kazdy odkryty komponent, ktorego
+selector odpowiada runtime `componentBoundaryTags`, takze gdy lezy poza
+wybrana statyczna sciezka. Przekazuje ich symbol, selector, status discovery,
 sciezki i ograniczenia, relacje ktorych oba konce naleza do focused zbioru oraz
 pelna tresc unikalnych plikow TS i zewnetrznych HTML. Pozostaly graf nie jest
 budowany przed AI; liczniki artifactu opisuja tylko focused discovery.
@@ -395,9 +399,10 @@ Minimalna macierz obejmuje:
 
 - oba profile capture, shape, limity, redakcje, form values i wykluczenia,
 - target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
-- component source pack: tylko komponenty i relacje wybranych sciezek target ->
-  komponent widoku, jawne liczniki pominietego grafu, deduplikacja pelnych
-  plikow tych sciezek, kompaktowy effective route chain, jednopoziomowy direct
+- component source pack: komponenty wybranych sciezek target -> komponent
+  widoku i wszystkie odkryte runtime selector matches, relacje miedzy nimi,
+  jawne liczniki pominietego grafu, deduplikacja ich pelnych plikow,
+  kompaktowy effective route chain, jednopoziomowy direct
   base slice oraz nieblokujace braki,
 - origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,

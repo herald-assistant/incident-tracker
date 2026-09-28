@@ -48,12 +48,11 @@ public class UxInspectorCaptureNormalizer {
         var redactions = new LinkedHashSet<String>();
         if (capture.signals() != null) redactions.addAll(limitCodes(capture.signals().redactions(), 24));
         var target = normalizeTarget(capture.target(), redactions);
-        var ancestors = capture.ancestors().stream().limit(24).map(value -> normalizeAncestor(value, redactions)).toList();
+        var ancestors = capture.ancestors().stream().map(value -> normalizeAncestor(value, redactions)).toList();
         var limits = new LinkedHashSet<>(limitCodes(capture.limits(), 32));
         var formSnapshot = normalizeFormSnapshot(capture.captureProfile(), capture.formSnapshot(), redactions, limits);
         var traversal = normalizeTraversal(capture.traversal(), ancestors.size());
         var signals = normalizeSignals(capture.signals(), redactions);
-        if (capture.ancestors().size() > 24) limits.add("ANCESTORS_TRUNCATED");
         var normalized = new UxInspectorCapture(UxInspectorCapture.SCHEMA, UxInspectorCapture.VERSION,
                 capture.captureId(), capture.capturedAt(), capture.captureProfile(), page, target, ancestors,
                 formSnapshot, traversal, signals,
@@ -97,7 +96,7 @@ public class UxInspectorCaptureNormalizer {
         var boundaries = value.componentBoundaryTags().stream()
                 .map(tag -> tag != null ? tag.toLowerCase(Locale.ROOT) : null)
                 .filter(tag -> tag != null && tag.contains("-") && tag.matches("^[a-z][a-z0-9-]{0,39}$"))
-                .distinct().limit(8).toList();
+                .distinct().toList();
         require(boundaries.size() == value.componentBoundaryTags().size(), "domFingerprint.componentBoundaryTags are invalid");
         var labelFor = nullableIdentifier(value.labelFor());
         require(value.labelFor() == null || labelFor != null, "domFingerprint.labelFor is invalid");
@@ -271,7 +270,7 @@ public class UxInspectorCaptureNormalizer {
     private UxInspectorCapture.Traversal normalizeTraversal(UxInspectorCapture.Traversal value, int emittedAncestors) {
         require(value != null, "traversal is required");
         var depth = boundedInt(value.observedDepth(), 1, 4096);
-        var emitted = boundedInt(value.emittedNodeCount(), 1, 25);
+        var emitted = boundedInt(value.emittedNodeCount(), 1, 4096);
         require(emitted == emittedAncestors + 1, "traversal.emittedNodeCount is inconsistent");
         return new UxInspectorCapture.Traversal(depth, emitted, boundedInt(value.omittedNodeCount(), 0, 4096),
                 value.reachedDocumentRoot());

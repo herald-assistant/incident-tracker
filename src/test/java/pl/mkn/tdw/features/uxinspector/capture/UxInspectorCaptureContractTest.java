@@ -58,7 +58,7 @@ class UxInspectorCaptureContractTest {
                                 List.of("input[data-testid=\"contact-save\"]"), List.of("crm-contact-form"), null),
                         new UxInspectorCapture.TargetState(false, false, false, true, true, null, null, false),
                         new UxInspectorCapture.Bounds(10, 20, 200, 40)),
-                ancestors, null, new UxInspectorCapture.Traversal(31, 25, 6, true),
+                ancestors, null, new UxInspectorCapture.Traversal(31, 31, 0, true),
                 new UxInspectorCapture.Signals(0, "TOP_LEVEL", List.of("FORM_VALUES_NOT_REQUESTED")),
                 List.of(), new UxInspectorCapture.Client("TDW UX Inspector", "1.0.0", "ux-inspector"));
 
@@ -70,8 +70,8 @@ class UxInspectorCaptureContractTest {
         assertEquals(Map.of("data-testid", "contact-save", "formcontrolname", "contactName"),
                 normalized.target().domFingerprint().stableAttributes());
         assertEquals(List.of("view"), normalized.page().queryParameterNames());
-        assertEquals(24, normalized.ancestors().size());
-        assertTrue(normalized.limits().contains("ANCESTORS_TRUNCATED"));
+        assertEquals(30, normalized.ancestors().size());
+        assertFalse(normalized.limits().contains("ANCESTORS_TRUNCATED"));
         assertTrue(normalized.signals().redactions().contains("BACKEND_TEXT_REDACTED"));
         assertTrue(normalized.signals().redactions().contains("BACKEND_SENSITIVE_TEXT_REMOVED"));
         assertFalse(json.contains("FORM_VALUE_MUST_NOT_SURVIVE"));
@@ -90,6 +90,20 @@ class UxInspectorCaptureContractTest {
 
         assertEquals(List.of("button[class~=\"crm-primary-action\"]"),
                 normalized.target().domFingerprint().selectorCandidates());
+    }
+
+    @Test
+    void shouldKeepAllRuntimeComponentBoundaries() throws Exception {
+        ObjectNode node = objectMapper.valueToTree(capture());
+        node.put("capturedAt", "2026-09-15T10:00:00Z");
+        var boundaries = node.withObject("target").withObject("domFingerprint")
+                .withArray("componentBoundaryTags").removeAll();
+        for (var index = 1; index <= 30; index++) boundaries.add("crm-layer-" + index);
+
+        var normalized = normalizer.normalize(objectMapper.treeToValue(node, UxInspectorCapture.class));
+
+        assertEquals(30, normalized.target().domFingerprint().componentBoundaryTags().size());
+        assertEquals("crm-layer-30", normalized.target().domFingerprint().componentBoundaryTags().get(29));
     }
 
     @Test

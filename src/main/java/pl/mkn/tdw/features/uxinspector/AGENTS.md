@@ -81,9 +81,12 @@ report, historie oraz import/export.
   wygenerowanej metody klienta i nie wyprowadzaj uslugi backendowej,
   autoryzacji, walidacji ani persistence bez potwierdzajacego evidence.
 - Brak dopasowanego targetu nie blokuje sesji: initial component source pack
-  przekazuje komponenty wybranych sciezek target -> komponent widoku, relacje
-  tylko pomiedzy nimi i ich pelne pliki. Dolacza kompaktowy effective route
-  chain wybranego widoku oraz maksymalnie jeden ograniczony slice
+  przekazuje komponenty wybranych sciezek target -> komponent widoku oraz
+  wszystkie odkryte komponenty dopasowane selectorem do runtime
+  `componentBoundaryTags`, relacje tylko pomiedzy nimi i ich pelne pliki.
+  Capture nie ucina lancucha custom-element boundaries przy 8 tagach ani 24
+  przodkach; zwykle wezly DOM moga pozostac skompaktowane. Pack dolacza
+  kompaktowy effective route chain wybranego widoku oraz maksymalnie jeden ograniczony slice
   bezposredniej klasy bazowej komponentu widoku. Pelny route subtree, pelny
   plik klasy bazowej, dalsze dziedziczenie i pozostaly graph nie trafiaja do
   initial promptu; prompt oznacza jego rozmiar i wymaga celowanego researchu przez

@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.uxinspector.ai;
 import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
 import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetCandidate;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
@@ -67,9 +68,9 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 "src/app/app.routes.ts");
         assertThat(artifact.markdown())
                 .contains("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY")
-                .contains("version: 3", "scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY")
+                .contains("version: 3", "scope: SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES")
                 .contains("graphComponentCount: 3", "focusedComponentCount: 2", "omittedGraphComponentCount: 1")
-                .contains("fullSourceStrategy: RESOLVED_SHORTEST_TARGET_TO_VIEW_PATH")
+                .contains("fullSourceStrategy: RESOLVED_PATH_AND_RUNTIME_SELECTOR_MATCHES")
                 .contains("targetToView=contact-editor -> contact-create")
                 .contains("## Effective route context", "routeSegmentCount: 1")
                 .contains("route=/contacts/new", "source=src/app/app.routes.ts#L10-L18")
@@ -88,6 +89,36 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .isLessThan(artifact.markdown().indexOf("| 2 | contact-editor |"));
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.sourcePath());
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.templatePath());
+    }
+
+    @Test
+    void shouldEmbedEveryRuntimeSelectorMatchEvenOutsideTheSelectedStaticPath() {
+        var root = component("contact-create", "contact-form", "Formularz", 1);
+        var target = component("contact-editor", "contact-save", "Zapisz", 2);
+        var runtimeMatch = withSelector(component("contact-panel", "contact-panel", "Panel", 3),
+                "crm-panel-alias, crm-contact-panel[mode]");
+        var unrelated = component("contact-summary", "contact-summary", "Podsumowanie", 4);
+        var context = contextWithGraph(List.of(root, target, runtimeMatch, unrelated), List.of(
+                edge(root, target, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD),
+                edge(root, runtimeMatch, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD)), target,
+                UxInspectorTargetResolutionStatus.RESOLVED);
+        var contents = new LinkedHashMap<String, String>();
+        for (var component : List.of(root, target, runtimeMatch, unrelated)) {
+            contents.put(component.sourcePath(), "export class " + component.symbol() + " {}");
+            contents.put(component.templatePath(), "<p>" + component.componentId() + "</p>");
+        }
+        stubFiles(contents);
+
+        var artifact = service.prepare(context, withBoundaries("crm-contact-editor", "crm-contact-panel"));
+
+        assertThat(artifact.focusedComponentCount()).isEqualTo(3);
+        assertThat(artifact.availableSourcePaths()).contains(runtimeMatch.sourcePath(), runtimeMatch.templatePath());
+        assertThat(artifact.markdown())
+                .contains("tag=crm-contact-panel status=MATCHED components=contact-panel")
+                .contains("contact-create --TEMPLATE_CHILD--> contact-panel")
+                .contains("BEGIN_UNTRUSTED_COMPONENT_FILE " + runtimeMatch.sourcePath())
+                .doesNotContain(unrelated.sourcePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, unrelated.sourcePath());
     }
 
     @Test
@@ -310,7 +341,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
         assertThat(artifact.focusedComponentCount()).isEqualTo(3);
         assertThat(artifact.omittedGraphComponentCount()).isEqualTo(1);
         assertThat(artifact.markdown())
-                .contains("fullSourceStrategy: AMBIGUOUS_UNION_OF_UP_TO_THREE_TARGET_TO_VIEW_PATHS")
+                .contains("fullSourceStrategy: AMBIGUOUS_PATHS_AND_RUNTIME_SELECTOR_MATCHES")
                 .contains("targetToView=contact-editor -> contact-create")
                 .contains("targetToView=contact-owner -> contact-create")
                 .doesNotContain(unrelated.componentId(), unrelated.sourcePath(), "INDEX_ONLY");
@@ -338,10 +369,28 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
         assertThat(artifact.availableSourcePaths()).containsExactlyInAnyOrder(
                 root.sourcePath(), root.templatePath(), "src/app/app.routes.ts");
         assertThat(artifact.markdown())
-                .contains("fullSourceStrategy: NOT_FOUND_VIEW_COMPONENT_ONLY")
+                .contains("fullSourceStrategy: NOT_FOUND_VIEW_AND_RUNTIME_SELECTOR_MATCHES")
                 .contains("targetToView=contact-create")
                 .contains("complete: false")
                 .doesNotContain("| contact-editor |", child.sourcePath(), "INDEX_ONLY");
+    }
+
+    @Test
+    void shouldIncludeRuntimeSelectorMatchWhenTargetWasNotFound() {
+        var root = component("contact-create", "contact-form", "Formularz", 1);
+        var child = component("contact-editor", "contact-save", "Zapisz", 2);
+        var context = contextWithGraph(List.of(root, child), List.of(), child,
+                UxInspectorTargetResolutionStatus.NOT_FOUND);
+        stubFiles(Map.of(
+                root.sourcePath(), "export class " + root.symbol() + " {}",
+                root.templatePath(), "<crm-contact-editor></crm-contact-editor>",
+                child.sourcePath(), "export class " + child.symbol() + " {}",
+                child.templatePath(), "<button>Zapisz</button>"));
+
+        var artifact = service.prepare(context, withBoundaries("crm-contact-editor"));
+
+        assertThat(artifact.focusedComponentCount()).isEqualTo(2);
+        assertThat(artifact.markdown()).contains("BEGIN_UNTRUSTED_COMPONENT_FILE " + child.sourcePath());
     }
 
     @Test
@@ -357,7 +406,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
         assertThat(artifact.fileCount()).isZero();
         assertThat(artifact.markdown())
                 .contains("fullSourceStrategy: VIEW_COMPONENT_NOT_FOUND")
-                .contains("no arbitrary graph component was promoted to full source")
+                .contains("only runtime selector matches can be promoted to full source")
                 .doesNotContain(child.componentId(), child.sourcePath(), "INDEX_ONLY")
                 .contains("complete: false");
         verify(repositoryPort, never()).readFileMetadata(anyString(), anyString(), anyString(), anyString());
@@ -387,6 +436,18 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
             UxInspectorTargetResolutionStatus status
     ) {
         return contextWithGraph(components, edges, List.of(), target, status);
+    }
+
+    private UxInspectorCapture withBoundaries(String... tags) {
+        var original = capture();
+        var fingerprint = original.target().domFingerprint();
+        var target = new UxInspectorCapture.Target(original.target().tag(), original.target().role(),
+                original.target().accessibleName(), original.target().text(),
+                new UxInspectorCapture.DomFingerprint(fingerprint.stableAttributes(), fingerprint.selectorCandidates(),
+                        List.of(tags), fingerprint.labelFor()), original.target().state(), original.target().bounds());
+        return new UxInspectorCapture(original.schema(), original.version(), original.captureId(),
+                original.capturedAt(), original.captureProfile(), original.page(), target, original.ancestors(),
+                original.formSnapshot(), original.traversal(), original.signals(), original.limits(), original.client());
     }
 
     private UxInspectorTargetContext contextWithGraph(
@@ -458,6 +519,19 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 component.status(), component.templateBindings(), component.entrySymbols(), component.includedSymbols(),
                 dependencyIds, childComponentIds, component.sliceContent(), component.sourceCharacters(),
                 component.returnedCharacters(), component.truncated(), component.limitations());
+    }
+
+    private GitLabFrontendReachabilityComponent withSelector(
+            GitLabFrontendReachabilityComponent component, String selector
+    ) {
+        return new GitLabFrontendReachabilityComponent(
+                component.componentId(), component.breadthFirstOrder(), component.depth(),
+                component.connectedToSelectedScreen(), component.discoveryKind(), component.symbol(),
+                selector, component.sourcePath(), component.templatePath(), component.templateContent(),
+                component.status(), component.templateBindings(), component.entrySymbols(), component.includedSymbols(),
+                component.dependencyIds(), component.childComponentIds(), component.sliceContent(),
+                component.sourceCharacters(), component.returnedCharacters(), component.truncated(),
+                component.limitations());
     }
 
     private void stubFiles(Map<String, String> contents) {

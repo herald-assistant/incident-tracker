@@ -97,7 +97,7 @@ class UxInspectorPromptAndSkillsTest {
                         schema: tdw.ux-inspector-component-source-pack
                         version: 3
                         semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY
-                        scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY
+                        scope: SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES
                         graphComponentCount: 1
                         focusedComponentCount: 1
                         omittedGraphComponentCount: 0
@@ -148,7 +148,7 @@ class UxInspectorPromptAndSkillsTest {
                         "pinnedCommit: " + REVISION)
                 .contains("DETERMINISTIC_SOURCE_BINDING", "sourceReference", "Selector jest tylko sygnalem lokalizacji")
                 .contains("tdw.ux-inspector-component-source-pack", "STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY",
-                        "SELECTED_TARGET_TO_VIEW_PATHS_ONLY", "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH",
+                        "SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES", "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH",
                         "najkrotsza deterministyczna sciezka", "nie przedstawiaj statycznej relacji")
                 .contains("Effective route context", "kompletnym deterministycznym route chain")
                 .contains("Direct view inheritance slice", "sourceMode=AVAILABLE_SLICE", "maksymalnie jeden poziom")

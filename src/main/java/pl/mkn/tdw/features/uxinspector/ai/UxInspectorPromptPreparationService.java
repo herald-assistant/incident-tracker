@@ -87,8 +87,9 @@ public class UxInspectorPromptPreparationService {
                 ## Initial component source pack
                 `%s`
                 %s
-                To nieblokujacy focused pack wybranych sciezek target -> komponent widoku. Zawiera tylko komponenty
-                tych sciezek, relacje miedzy nimi oraz ich pelne zweryfikowane pliki TS/HTML. Szerszy statyczny graph
+                To nieblokujacy focused pack wybranych sciezek target -> komponent widoku oraz wszystkich
+                odkrytych komponentow, ktorych selector odpowiada runtime `componentBoundaryTags` z capture.
+                Zawiera relacje miedzy tymi komponentami oraz ich pelne zweryfikowane pliki TS/HTML. Szerszy statyczny graph
                 nie jest serializowany do initial context; jego rozmiar i liczba pominietych komponentow pozostaja jawne.
                 `UNAVAILABLE`, `NOT_DISCOVERED`, nierozwiazane diagnostics i brak boundary w grafie sa
                 informacja do dalszego researchu, a nie powodem przerwania analizy. Pakiet nie jest dowodem runtime
@@ -230,7 +231,8 @@ public class UxInspectorPromptPreparationService {
                   Uzyj `depth`, `breadthFirstOrder`, jawnych edge kinds i runtime component boundaries do ustalenia
                   mozliwego lancucha komponentow, ale nie przedstawiaj statycznej relacji jako pewnego runtime stacku.
                   Dla `RESOLVED` sekcja `Selected full-source paths` jest najkrotsza deterministyczna sciezka od targetu
-                  do komponentu wybranego widoku. Nie jest to sciezka do bootstrap root calej aplikacji. Relacja
+                  do komponentu wybranego widoku. Dodatkowe komponenty dopasowane po runtime selectorze moga lezec
+                  poza ta sciezka; sam selector nie potwierdza statycznego ani runtime rodzicielstwa. Nie jest to sciezka do bootstrap root calej aplikacji. Relacja
                   `COMPONENT_REFERENCE` nie dowodzi rodzicielstwa i nie jest uzywana do skrocenia tej sciezki.
                   Dla `AMBIGUOUS` porownaj dolaczone, ograniczone evidence 2-3
                   najlepszych kandydatow wraz z bindingami i nie traktuj pierwszego jako rozstrzygnietego targetu.
@@ -239,7 +241,7 @@ public class UxInspectorPromptPreparationService {
                 - Dla `RESOLVED` zacznij od deterministycznego `sourceBinding`: owning component,
                   element bindings, referenced symbols i form submit binding. Selector jest tylko sygnalem lokalizacji.
                 - Dla `NOT_FOUND` nie przerywaj analizy. Potraktuj brak dopasowania jako jawna hipoteze/luke,
-                  zacznij od pelnego zrodla komponentu widoku w component source pack, a nastepnie wykonaj celowane
+                  zacznij od pelnych zrodel komponentu widoku i dopasowan runtime selectorow w component source pack, a nastepnie wykonaj celowane
                   wyszukiwanie po sygnalach capture w calym przypietym repozytorium. Nie twierdz, ze znaleziony pozniej
                   komponent jest runtime ownerem bez potwierdzajacego evidence.
                 - `uxi_read_target_slice` przyjmuje tylko `targetRef` z tej sesji.
@@ -249,7 +251,7 @@ public class UxInspectorPromptPreparationService {
                   kontekscie. `Direct view inheritance slice` ma maksymalnie jeden poziom; gdy ma
                   `sourceMode=AVAILABLE_SLICE`, nie czytaj ponownie klasy bazowej, chyba ze slice jest obciety,
                   niedostepny albo nie zawiera materialnego odziedziczonego membera wymaganego przez pytanie.
-                  Komponent lub zaleznosc spoza focused sciezki wyszukaj i doczytaj neutralnym repository toolem tylko
+                  Komponent lub zaleznosc spoza focused packu wyszukaj i doczytaj neutralnym repository toolem tylko
                   wtedy, gdy sa materialne dla pytania. Dla pliku lub component boundary oznaczonego jako `UNAVAILABLE`,
                   `NOT_DISCOVERED` albo
                   `NOT_FOUND_IN_STATIC_GRAPH` wykonaj celowany research neutralnymi repository tools, jezeli jest

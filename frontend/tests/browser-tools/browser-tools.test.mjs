@@ -294,6 +294,24 @@ test('capture exposes useful button state and compacts ancestry to safe bounds',
   dom.window.close();
 });
 
+test('UX capture keeps every custom-element boundary beyond the compact ancestor budget', () => {
+  const tags = Array.from({ length: 30 }, (_, index) => `crm-layer-${index + 1}`);
+  const openings = tags.map((tag) => `<${tag}>`).join('');
+  const closings = [...tags].reverse().map((tag) => `</${tag}>`).join('');
+  const dom = createDom(
+    `<!doctype html><html><body>${openings}<button data-testid="contact-save">Zapisz</button>${closings}</body></html>`,
+    'https://crm.example.com/contacts/new'
+  );
+  const capture = protocolFor(dom).captureElement(dom.window.document.querySelector('button'), {});
+
+  assert.deepEqual(Array.from(capture.target.domFingerprint.componentBoundaryTags), [...tags].reverse());
+  assert.equal(capture.ancestors.filter((ancestor) => ancestor.tag.startsWith('crm-layer-')).length, 30);
+  assert.ok(capture.ancestors.length > 24);
+  assert.equal(capture.traversal.emittedNodeCount, capture.ancestors.length + 1);
+  assert.equal(capture.limits.includes('ANCESTORS_TRUNCATED'), false);
+  dom.window.close();
+});
+
 test('protocol rejects forged, unknown-field or oversized captures', () => {
   const dom = createDom('<!doctype html><html><body></body></html>', 'https://tdw.example.com/');
   const protocol = protocolFor(dom);

@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
- * Builds a best-effort, pinned source pack limited to selected target-to-view
- * paths. The wider static graph remains available through repository tools but
- * is not serialized into the initial model context.
+ * Builds a best-effort, pinned source pack for selected target-to-view paths
+ * and every discovered component whose selector matches a runtime boundary.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,6 +39,7 @@ public class UxInspectorComponentSourcePackArtifactService {
     static final String SCHEMA = "tdw.ux-inspector-component-source-pack";
     static final int VERSION = 3;
     private static final int MAX_INHERITED_SLICE_CHARACTERS = 12_000;
+    private static final Pattern ELEMENT_SELECTOR_PREFIX = Pattern.compile("^([A-Za-z][A-Za-z0-9_.:-]*)");
     private static final String INHERITED_SLICE_BOUNDARY_MARKER =
             "\n// ... direct inherited slice bounded by UX Inspector ...";
 
@@ -50,7 +51,7 @@ public class UxInspectorComponentSourcePackArtifactService {
             UxInspectorCapture capture
     ) {
         var components = orderedComponents(context);
-        var selection = selectFullSourceComponents(context, components);
+        var selection = selectFullSourceComponents(context, capture, components);
         var focusedComponents = components.stream()
                 .filter(component -> selection.componentIds().contains(component.componentId()))
                 .toList();
@@ -75,6 +76,7 @@ public class UxInspectorComponentSourcePackArtifactService {
 
     private SourceSelection selectFullSourceComponents(
             UxInspectorTargetContext context,
+            UxInspectorCapture capture,
             List<GitLabFrontendReachabilityComponent> components
     ) {
         if (components.isEmpty()) {
@@ -83,15 +85,27 @@ public class UxInspectorComponentSourcePackArtifactService {
         }
         var byId = new LinkedHashMap<String, GitLabFrontendReachabilityComponent>();
         components.forEach(component -> byId.put(component.componentId(), component));
+        var runtimeBoundaries = capture != null && capture.target() != null && capture.target().domFingerprint() != null
+                ? capture.target().domFingerprint().componentBoundaryTags() : List.<String>of();
+        var runtimeMatchedIds = new LinkedHashSet<String>();
+        if (runtimeBoundaries != null) {
+            for (var boundary : runtimeBoundaries) {
+                components.stream()
+                        .filter(component -> selectorMatchesBoundary(component.selector(), boundary))
+                        .map(GitLabFrontendReachabilityComponent::componentId)
+                        .forEach(runtimeMatchedIds::add);
+            }
+        }
         var limitations = new ArrayList<String>();
         var viewComponent = findViewComponent(context, components);
         if (viewComponent == null) {
-            limitations.add("Selected view component was not identified from the route target; no arbitrary graph component was promoted to full source.");
-            return new SourceSelection("VIEW_COMPONENT_NOT_FOUND", Set.of(), List.of(), List.copyOf(limitations));
+            limitations.add("Selected view component was not identified from the route target; only runtime selector matches can be promoted to full source.");
+            return new SourceSelection("VIEW_COMPONENT_NOT_FOUND", Set.copyOf(runtimeMatchedIds), List.of(), List.copyOf(limitations));
         }
 
         if (context == null || context.status() == UxInspectorTargetResolutionStatus.NOT_FOUND) {
-            return new SourceSelection("NOT_FOUND_VIEW_COMPONENT_ONLY", Set.of(viewComponent.componentId()),
+            runtimeMatchedIds.add(viewComponent.componentId());
+            return new SourceSelection("NOT_FOUND_VIEW_AND_RUNTIME_SELECTOR_MATCHES", Set.copyOf(runtimeMatchedIds),
                     List.of(new SelectedPath("unresolved-target", List.of(viewComponent.componentId()), 0, false)), limitations);
         }
 
@@ -122,11 +136,12 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (selectedIds.isEmpty()) {
             selectedIds.add(viewComponent.componentId());
             selectedPaths.add(new SelectedPath("unresolved-candidate", List.of(viewComponent.componentId()), 0, false));
-            limitations.add("No resolved candidate could seed a component path; only the selected view component source was included.");
+            limitations.add("No resolved candidate could seed a component path; the selected view and runtime selector matches were included.");
         }
+        selectedIds.addAll(runtimeMatchedIds);
         var strategy = context.status() == UxInspectorTargetResolutionStatus.AMBIGUOUS
-                ? "AMBIGUOUS_UNION_OF_UP_TO_THREE_TARGET_TO_VIEW_PATHS"
-                : "RESOLVED_SHORTEST_TARGET_TO_VIEW_PATH";
+                ? "AMBIGUOUS_PATHS_AND_RUNTIME_SELECTOR_MATCHES"
+                : "RESOLVED_PATH_AND_RUNTIME_SELECTOR_MATCHES";
         return new SourceSelection(strategy, Set.copyOf(selectedIds), List.copyOf(selectedPaths), List.copyOf(limitations));
     }
 
@@ -277,7 +292,7 @@ public class UxInspectorComponentSourcePackArtifactService {
         builder.append("schema: ").append(SCHEMA).append('\n');
         builder.append("version: ").append(VERSION).append('\n');
         builder.append("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY\n");
-        builder.append("scope: SELECTED_TARGET_TO_VIEW_PATHS_ONLY\n");
+        builder.append("scope: SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES\n");
         builder.append("ordering: selected components in graph depth and breadth-first discovery order\n");
         builder.append("fullSourceStrategy: ").append(selection.strategy()).append('\n');
         builder.append("graphComponentCount: ").append(components.size()).append('\n');
@@ -289,7 +304,7 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (context != null && context.sourceRevision() != null) {
             builder.append("pinnedCommit: ").append(context.sourceRevision().revision()).append('\n');
         }
-        var complete = !focusedComponents.isEmpty()
+        var complete = !focusedComponents.isEmpty() && !selection.paths().isEmpty()
                 && selection.paths().stream().allMatch(SelectedPath::complete)
                 && focusedComponents.stream().allMatch(component ->
                     StringUtils.hasText(component.sourcePath())
@@ -315,8 +330,7 @@ public class UxInspectorComponentSourcePackArtifactService {
             for (var index = 0; index < boundaries.size(); index++) {
                 var boundary = boundaries.get(index);
                 var matches = components.stream()
-                        .filter(component -> StringUtils.hasText(component.selector())
-                                && component.selector().equalsIgnoreCase(boundary))
+                        .filter(component -> selectorMatchesBoundary(component.selector(), boundary))
                         .map(GitLabFrontendReachabilityComponent::componentId).toList();
                 builder.append("- distance=").append(index + 1).append(" tag=").append(boundary)
                         .append(" status=").append(matches.isEmpty() ? "NOT_FOUND_IN_STATIC_GRAPH" : "MATCHED")
@@ -333,7 +347,7 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (unresolved.isEmpty()) builder.append("- none reported by static discovery\n");
         else unresolved.forEach(value -> builder.append("- ").append(value).append('\n'));
 
-        builder.append("\n## Full verified files for selected paths\n");
+        builder.append("\n## Full verified files for focused components\n");
         if (files.isEmpty()) builder.append("- none selected or discovered\n");
         var fileIndex = 0;
         for (var file : files.values()) {
@@ -534,7 +548,7 @@ public class UxInspectorComponentSourcePackArtifactService {
             List<GitLabFrontendReachabilityComponent> components,
             Map<String, PackFile> files
     ) {
-        builder.append("\n## Focused path components\n");
+        builder.append("\n## Focused components\n");
         if (components.isEmpty()) {
             builder.append("- none selected from the static graph\n");
             return;
@@ -649,6 +663,14 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (!StringUtils.hasText(path)) return false;
         var file = files.get(path.trim().replace('\\', '/'));
         return file != null && file.available();
+    }
+
+    private boolean selectorMatchesBoundary(String selectors, String boundary) {
+        if (!StringUtils.hasText(selectors) || !StringUtils.hasText(boundary)) return false;
+        return java.util.Arrays.stream(selectors.split(","))
+                .map(String::trim)
+                .map(ELEMENT_SELECTOR_PREFIX::matcher)
+                .anyMatch(matcher -> matcher.find() && matcher.group(1).equalsIgnoreCase(boundary));
     }
 
     private String text(String value) {
