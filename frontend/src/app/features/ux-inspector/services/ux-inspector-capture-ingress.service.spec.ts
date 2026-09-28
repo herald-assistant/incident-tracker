@@ -46,6 +46,51 @@ describe('UxInspectorCaptureIngressService', () => {
     expect(harness.listener).toBeNull();
   });
 
+  it('receives a bounded store after capture and keeps capture when a chunk is invalid', () => {
+    const harness = createWindowHarness();
+    const service = createService(harness.window);
+    service.start();
+    const capture = captureFixture();
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, capture, storeStatus: 'AVAILABLE', storeChunks: 2
+    });
+    expect(service.capture()).toEqual(capture);
+    expect(service.storeStatus()).toBe('receiving');
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, index: 0, total: 2, chunk: '{"feature":'
+    });
+    expect(harness.posted.at(-1)?.message).toMatchObject({ type: 'TDW_UX_INSPECTOR_STORE_ACK', index: 0 });
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, index: 1, total: 2, chunk: '{"enabled":true}}'
+    });
+    expect(service.storeState()).toEqual({ feature: { enabled: true } });
+    expect(service.storeStatus()).toBe('available');
+    expect(harness.listener).toBeNull();
+    service.consumeCapture();
+    expect(service.storeState()).toBeNull();
+  });
+
+  it('retains capture when store transfer has an invalid chunk', () => {
+    const harness = createWindowHarness();
+    const service = createService(harness.window);
+    service.start();
+    const capture = captureFixture();
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, capture, storeStatus: 'AVAILABLE', storeChunks: 1
+    });
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, index: 1, total: 1, chunk: '{}'
+    });
+    expect(service.capture()).toEqual(capture);
+    expect(service.storeStatus()).toBe('unavailable');
+    expect(harness.listener).toBeNull();
+  });
+
   it('ignores a foreign source and rejects a nonce mismatch from the expected source', () => {
     const harness = createWindowHarness();
     const service = createService(harness.window);

@@ -12,11 +12,17 @@ public record UxInspectorFollowUpChatRequest(
         String message,
         String copilotSessionId,
         AnalysisAiAuthRef authRef,
-        AnalysisReport report
+        AnalysisReport report,
+        String storeRunId
 ) {
     public UxInspectorFollowUpChatRequest(String runReference, UxInspectorJobStartRequest initialRequest,
                                           UxInspectorTargetContext context, String message,
+                                          String copilotSessionId, AnalysisAiAuthRef authRef, AnalysisReport report) {
+        this(runReference, initialRequest, context, message, copilotSessionId, authRef, report, null);
+    }
+    public UxInspectorFollowUpChatRequest(String runReference, UxInspectorJobStartRequest initialRequest,
+                                          UxInspectorTargetContext context, String message,
                                           String copilotSessionId, AnalysisAiAuthRef authRef) {
-        this(runReference, initialRequest, context, message, copilotSessionId, authRef, null);
+        this(runReference, initialRequest, context, message, copilotSessionId, authRef, null, null);
     }
 }

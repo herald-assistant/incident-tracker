@@ -19,6 +19,9 @@ const READY = 'TDW_UX_INSPECTOR_READY';
 const CAPTURE = 'TDW_UX_INSPECTOR_CAPTURE';
 const RECEIVED = 'TDW_UX_INSPECTOR_RECEIVED';
 const ERROR = 'TDW_UX_INSPECTOR_ERROR';
+const STORE_CHUNK = 'TDW_UX_INSPECTOR_STORE_CHUNK';
+const STORE_ACK = 'TDW_UX_INSPECTOR_STORE_ACK';
+const MAX_STORE_BYTES = 16 * 1024 * 1024;
 const NONCE_PATTERN = /^[A-Za-z0-9_-]{22,128}$/;
 const HANDSHAKE_TIMEOUT_MS = 12_000;
 
@@ -30,10 +33,16 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
   private sourceOrigin = '';
   private timeoutHandle: number | null = null;
   private listening = false;
+  private expectedStoreChunks = 0;
+  private storeChunks: string[] = [];
+  private storeCharacters = 0;
+  private storeCaptureId = '';
 
   readonly capture = signal<UxInspectorCapture | null>(null);
   readonly status = signal<UxInspectorIngressStatus>('idle');
   readonly error = signal('');
+  readonly storeState = signal<Record<string, unknown> | unknown[] | null>(null);
+  readonly storeStatus = signal<'unavailable' | 'receiving' | 'available'>('unavailable');
 
   start(): void {
     if (this.listening || this.capture()) {
@@ -93,6 +102,8 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
 
   consumeCapture(): void {
     this.capture.set(null);
+    this.storeState.set(null);
+    this.storeStatus.set('unavailable');
     this.status.set('idle');
     this.error.set('');
   }
@@ -100,17 +111,25 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
   ngOnDestroy(): void {
     this.cleanup();
     this.capture.set(null);
+    this.storeState.set(null);
   }
 
   private readonly receiveMessage = (event: MessageEvent<unknown>): void => {
     if (event.source !== this.opener || event.origin !== this.sourceOrigin) {
       return;
     }
+    if (this.expectedStoreChunks > 0) {
+      if (isPlainObject(event.data) && event.data['type'] === STORE_CHUNK) this.receiveStoreChunk(event.data);
+      else this.finishStoreTransfer(null);
+      return;
+    }
     if (!isPlainObject(event.data) || event.data['type'] !== CAPTURE) {
       this.rejectExpectedSource('MESSAGE_TYPE_INVALID', 'Browser Tools przesłał nieobsługiwany komunikat.');
       return;
     }
-    if (!hasExactKeys(event.data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture'])) {
+    const legacyShape = hasExactKeys(event.data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture']);
+    const storeShape = hasExactKeys(event.data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture', 'storeStatus', 'storeChunks']);
+    if (!legacyShape && !storeShape) {
       this.rejectExpectedSource('MESSAGE_SHAPE_INVALID', 'Komunikat capture ma niepoprawny kontrakt.');
       return;
     }
@@ -153,8 +172,59 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
       },
       this.sourceOrigin
     );
-    this.cleanup();
+    const count = event.data['storeChunks'];
+    if (storeShape && event.data['storeStatus'] === 'AVAILABLE' &&
+        Number.isInteger(count) && typeof count === 'number' && count > 0 && count <= 600) {
+      this.expectedStoreChunks = count;
+      this.storeCaptureId = candidate.captureId;
+      this.storeChunks = [];
+      this.storeCharacters = 0;
+      this.storeStatus.set('receiving');
+      this.resetStoreTimeout();
+    } else {
+      this.cleanup();
+    }
   };
+
+  private receiveStoreChunk(data: Record<string, unknown>): void {
+    if (!hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk']) ||
+        data['protocolVersion'] !== UX_INSPECTOR_PROTOCOL_VERSION || data['nonce'] !== this.nonce ||
+        data['captureId'] !== this.storeCaptureId || data['total'] !== this.expectedStoreChunks ||
+        data['index'] !== this.storeChunks.length || typeof data['chunk'] !== 'string' ||
+        data['chunk'].length > 32000 ||
+        this.storeCharacters + data['chunk'].length > MAX_STORE_BYTES) {
+      this.finishStoreTransfer(null);
+      return;
+    }
+    this.storeChunks.push(data['chunk']);
+    this.storeCharacters += data['chunk'].length;
+    this.opener?.postMessage({ type: STORE_ACK, protocolVersion: UX_INSPECTOR_PROTOCOL_VERSION,
+      nonce: this.nonce, captureId: this.storeCaptureId, index: data['index'] }, this.sourceOrigin);
+    if (this.storeChunks.length === this.expectedStoreChunks) {
+      let parsed: unknown = null;
+      const json = this.storeChunks.join('');
+      try { parsed = JSON.parse(json); } catch { /* unavailable */ }
+      this.finishStoreTransfer(parsed && typeof parsed === 'object' &&
+        new TextEncoder().encode(json).byteLength <= MAX_STORE_BYTES
+        ? parsed as Record<string, unknown> : null);
+    } else {
+      this.resetStoreTimeout();
+    }
+  }
+
+  private finishStoreTransfer(state: Record<string, unknown> | unknown[] | null): void {
+    this.storeState.set(state);
+    this.storeStatus.set(state ? 'available' : 'unavailable');
+    this.expectedStoreChunks = 0;
+    this.storeChunks = [];
+    this.storeCharacters = 0;
+    this.cleanup();
+  }
+
+  private resetStoreTimeout(): void {
+    if (this.timeoutHandle !== null) this.browserWindow.clearTimeout(this.timeoutHandle);
+    this.timeoutHandle = this.browserWindow.setTimeout(() => this.finishStoreTransfer(null), HANDSHAKE_TIMEOUT_MS);
+  }
 
   private rejectExpectedSource(code: string, message: string): void {
     this.sendError(code);
@@ -174,6 +244,8 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
   private fail(message: string): void {
     this.cleanup();
     this.capture.set(null);
+    this.storeState.set(null);
+    this.storeStatus.set('unavailable');
     this.status.set('invalid');
     this.error.set(message);
   }

@@ -35,6 +35,10 @@ export class UxInspectorApiService {
     return this.http.post<UxInspectorJobStateSnapshot>('/api/ux-inspector/jobs', request);
   }
 
+  uploadStoreSnapshot(request: { captureId: string; origin: string; state: Record<string, unknown> | unknown[] }): Observable<{ storeSnapshotRef: string }> {
+    return this.http.post<{ storeSnapshotRef: string }>('/api/ux-inspector/store-snapshots', request);
+  }
+
   getJob(jobId: string): Observable<UxInspectorJobStateSnapshot> {
     return this.http.get<UxInspectorJobStateSnapshot>(
       `/api/ux-inspector/jobs/${encodeURIComponent(jobId)}`

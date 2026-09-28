@@ -104,7 +104,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
         var startedAt = Instant.now();
         var request = new UxInspectorFollowUpChatRequest(
                 "ux-inspector-follow-up-" + assistantId, startRequest, context, message,
-                continuation.copilotSessionId(), auth, snapshot.report());
+                continuation.copilotSessionId(), auth, snapshot.report(), indexEntry.analysisId());
         var capture = new AnalysisChatAssistantCapture();
         var prompt = promptService.prepare(request);
         final pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult response;
@@ -121,7 +121,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
                 response.content(), prompt, response.usage(), capture, startedAt, completedAt, mapping);
         var updatedRecord = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(UxInspectorExportEnvelope.from(updated, completedAt)),
-                continuation.withLatestCopilotSession(response.sessionId()));
+                continuation.withLatestCopilotSession(response.sessionId())).withStoreSnapshot(record.storeSnapshot());
         return new LocalAnalysisRunChatResult(updatedRecord, completedAt);
     }
 

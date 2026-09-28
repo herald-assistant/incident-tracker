@@ -397,6 +397,11 @@ queue.
 `localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter` buduje neutralny
 rekord v1 i wpis indeksu z metadanych dostarczonych przez feature. Feature nadal
 tworzy koperte eksportu, nazwe runu i stan kontynuacji.
+Opcjonalne `LocalAnalysisRunStoreSnapshot` jest wspolnym polem `run.json`
+oddzielonym od koperty eksportu. `localworkspace.analysisruns.tools` udostepnia
+neutralne narzedzia `run_store_list_paths` i `run_store_read_value`, ktore
+czytaja to pole po ID runu i JSON Pointer. Feature decyduje, kiedy snapshot
+zapisac i czy dolaczyc tools do swojej sesji AI.
 
 ## Docelowy graf importow backendu
 

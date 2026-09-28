@@ -91,7 +91,57 @@ class UxInspectorJobServiceTest {
         assertThat(service.getJob(second.jobId()).jobId()).isEqualTo(second.jobId());
     }
 
+    @Test
+    void shouldClaimOpaqueStoreReferenceBeforeDispatchWithoutExposingItInSnapshot() {
+        var tasks = new ArrayList<Runnable>();
+        var stores = mock(pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService.class);
+        var persistence = mock(UxInspectorLocalRunPersistence.class);
+        var storeSnapshot = new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot(
+                new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode().put("ready", true),
+                java.time.Instant.parse("2026-09-15T10:00:00Z"), "https://crm.example.com", 0);
+        when(stores.claim(eq("opaque-crm-ref"), any(), any())).thenReturn(storeSnapshot);
+        var service = service(tasks::add, persistence, stores);
+        var input = request();
+        var withStore = new UxInspectorJobStartRequest(input.systemId(), input.branch(), input.viewId(),
+                input.sourceRevision(), input.question(), input.capture(), input.model(),
+                input.reasoningEffort(), "opaque-crm-ref");
+        var accepted = service.startJob(withStore);
+        verify(stores).claim(eq("opaque-crm-ref"), any(), any());
+        verify(persistence).persistStoreSnapshot(accepted.jobId(), storeSnapshot);
+        var order = inOrder(persistence);
+        order.verify(persistence).persistRunSnapshot(any(), any(), isNull());
+        order.verify(persistence).persistStoreSnapshot(accepted.jobId(), storeSnapshot);
+        assertThat(accepted.request().toString()).doesNotContain("opaque-crm-ref");
+        assertThat(tasks).hasSize(1);
+    }
+
+    @Test
+    void shouldContinueWithoutStoreWhenRunJsonUpdateFails() {
+        var tasks = new ArrayList<Runnable>();
+        var stores = mock(pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService.class);
+        var persistence = mock(UxInspectorLocalRunPersistence.class);
+        var storeSnapshot = new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot(
+                new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode(),
+                java.time.Instant.parse("2026-09-15T10:00:00Z"), "https://crm.example.com", 0);
+        when(stores.claim(any(), any(), any())).thenReturn(storeSnapshot);
+        doThrow(new IllegalStateException("CRM test storage failure"))
+                .when(persistence).persistStoreSnapshot(anyString(), any());
+        var service = service(tasks::add, persistence, stores);
+
+        var accepted = service.startJob(request());
+        assertThat(accepted.status()).isEqualTo(UxInspectorJobStatus.QUEUED);
+        assertThat(tasks).hasSize(1);
+        tasks.get(0).run();
+        assertThat(service.getJob(accepted.jobId()).status()).isEqualTo(UxInspectorJobStatus.COMPLETED);
+    }
+
     private UxInspectorJobService service(TaskExecutor executor, UxInspectorLocalRunPersistence persistence) {
+        return service(executor, persistence,
+                mock(pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService.class));
+    }
+
+    private UxInspectorJobService service(TaskExecutor executor, UxInspectorLocalRunPersistence persistence,
+                                          pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService stores) {
         var normalizer = mock(UxInspectorCaptureNormalizer.class);
         when(normalizer.normalize(any())).thenReturn(capture());
         var selection = mock(UxInspectorAiSelectionValidator.class);
@@ -100,7 +150,7 @@ class UxInspectorJobServiceTest {
         var evidence = mock(UxInspectorTargetEvidenceMapper.class);
         when(evidence.map(any())).thenReturn(List.of());
         var preparation = mock(UxInspectorPromptPreparationService.class);
-        when(preparation.prepare(any(), any())).thenReturn(new UxInspectorPromptPreparation(
+        when(preparation.prepare(any(), any(), anyString(), nullable(pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot.class))).thenReturn(new UxInspectorPromptPreparation(
                 "Focused CRM prompt", java.util.Map.of("target", "CRM target")));
         var provider = mock(UxInspectorAnalysisProvider.class);
         when(provider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
@@ -110,7 +160,8 @@ class UxInspectorJobServiceTest {
         return new UxInspectorJobService(normalizer, selection, resolver, evidence, preparation, provider,
                 executor, auth, persistence, mock(UxInspectorFollowUpChatService.class),
                 new UxInspectorFollowUpReportProjection(new pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper()),
-                mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard());
+                mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard(),
+                stores);
     }
 
     private UxInspectorAiAnalysis completedAnalysis() {

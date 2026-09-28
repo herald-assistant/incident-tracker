@@ -5,6 +5,7 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorToolNames;
+import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreTools;
 
 import java.util.List;
 import java.util.Set;
@@ -12,6 +13,7 @@ import java.util.Set;
 public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledTools, List<String> availableToolNames) {
     private static final Set<String> ALLOWED = Set.of(
             UxInspectorToolNames.LIST_TARGET_CANDIDATES, UxInspectorToolNames.READ_TARGET_SLICE,
+            RunStoreTools.LIST, RunStoreTools.READ,
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
             GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
             GitLabToolNames.LIST_REPOSITORY_TREE,
@@ -26,6 +28,7 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
     );
     private static final Set<String> FOLLOW_UP_ALLOWED = Set.of(
             UxInspectorToolNames.LIST_TARGET_CANDIDATES, UxInspectorToolNames.READ_TARGET_SLICE,
+            RunStoreTools.LIST, RunStoreTools.READ,
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
             GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
             GitLabToolNames.LIST_REPOSITORY_TREE,

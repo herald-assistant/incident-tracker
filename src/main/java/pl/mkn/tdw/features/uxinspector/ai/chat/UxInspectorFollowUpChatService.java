@@ -11,6 +11,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.features.uxinspector.ai.copilot.*;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
+import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 
@@ -25,6 +26,7 @@ public class UxInspectorFollowUpChatService {
     private final UxInspectorFollowUpPromptService promptService;
     private final UxInspectorCopilotToolSessionContextFactory contextFactory;
     private final UxInspectorTargetToolSetFactory targetToolSetFactory;
+    private final RunStoreToolSetFactory storeToolSetFactory;
     private final CopilotSdkToolFactory toolFactory;
     private final CopilotRunAuthMapper authMapper;
     private final CopilotRunPreparationService preparationService;
@@ -37,7 +39,11 @@ public class UxInspectorFollowUpChatService {
         var context = contextFactory.createFollowUp(request.runReference(), request.copilotSessionId(),
                 request.context(), request.report());
         var targetTools = targetToolSetFactory.create(context.analysisRunId(), request.context());
-        var registered = toolFactory.createToolDefinitions(context, DESCRIPTION_CONTEXT, targetTools.callbacks());
+        var callbacks = new java.util.ArrayList<>(targetTools.callbacks());
+        var storeCallbacks = request.storeRunId() != null
+                ? storeToolSetFactory.create(request.storeRunId()) : java.util.List.<org.springframework.ai.tool.ToolCallback>of();
+        callbacks.addAll(storeCallbacks);
+        var registered = toolFactory.createToolDefinitions(context, DESCRIPTION_CONTEXT, callbacks);
         var policy = UxInspectorCopilotToolAccessPolicy.forFollowUp(registered);
         if (!policy.followUpResearchAvailable()) {
             throw new IllegalStateException("UX Inspector follow-up research tools are unavailable.");
@@ -45,8 +51,8 @@ public class UxInspectorFollowUpChatService {
         var config = new CopilotSessionConfigRequest(
                 context.copilotSessionId(), policy.enabledTools(), policy.availableToolNames(),
                 new CopilotModelSelection(request.initialRequest().model(), request.initialRequest().reasoningEffort()),
-                "Use only scoped UX Inspector research and report tools.", false
-        ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp());
+                "Use only scoped UX Inspector research, store and report tools.", !storeCallbacks.isEmpty()
+        ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp(!storeCallbacks.isEmpty(), request.storeRunId()));
         var run = new CopilotRunRequest(
                 context.analysisRunId(), authMapper.toRunAuth(request.authRef()),
                 CopilotSessionTarget.existing(context.copilotSessionId()), prompt, config, Map.of(), null

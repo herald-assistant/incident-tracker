@@ -410,7 +410,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.1.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.2.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -754,6 +754,49 @@ test('relaunch reuses the shell, Escape exits only the tool and menu X cleans ev
   assert.equal(removeButton.getAttribute('aria-label'), 'Usuń Browser Tools ze strony');
   removeButton.click();
   assert.equal(window.document.querySelectorAll('[data-tdw-browser-tool-root]').length, 0);
+  dom.window.close();
+});
+
+test('UX Inspector transfers a frozen, redacted store after capture receipt', async () => {
+  const dom = createDom('<!doctype html><html><body><button data-testid="crm-save">Save</button></body></html>', 'https://crm.example.com/contacts/new');
+  const { window } = dom;
+  const protocol = protocolFor(dom);
+  const posted = [];
+  let openedUrl = '';
+  const bridgeWindow = { closed: false, location: { set href(value) { openedUrl = value; } },
+    postMessage(message) { posted.push(message); } };
+  window.open = (url) => { openedUrl = String(url); return bridgeWindow; };
+  window.getStoreState = () => ({ contacts: { editable: false }, accessToken: 'crm-private' });
+  window.__TDW_BROWSER_TOOLS_TEST_MODE__ = true;
+  window.__TDW_BROWSER_TOOL_CONFIG__ = config();
+  window.eval(runtimeSource);
+  const shell = window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]');
+  shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
+  shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]').click();
+  shell.shadowRoot.querySelector('.tdw-capture-profile__start').click();
+  const host = window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]');
+  const target = window.document.querySelector('button');
+  target.getBoundingClientRect = () => ({ x: 10, y: 10, left: 10, top: 10, right: 100, bottom: 40,
+    width: 90, height: 30, toJSON() {} });
+  window.document.elementsFromPoint = () => [host, shell, target];
+  const shield = host.shadowRoot.querySelector('.tdw-selection-shield');
+  shield.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true, clientX: 20, clientY: 20 }));
+  await new Promise((resolve) => window.setTimeout(resolve, 25));
+  shield.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+  const nonce = new URLSearchParams(new URL(openedUrl).hash.slice(1)).get('nonce');
+  const send = (type, extra = {}) => window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: bridgeWindow, data: protocol.createMessage(type, nonce, extra)
+  }));
+  send('TDW_UX_INSPECTOR_READY');
+  assert.equal(posted[0].storeStatus, 'AVAILABLE');
+  assert.equal(posted[0].storeChunks, 1);
+  send('TDW_UX_INSPECTOR_RECEIVED', { captureId: posted[0].captureId });
+  assert.equal(posted[1].type, 'TDW_UX_INSPECTOR_STORE_CHUNK');
+  assert.deepEqual(JSON.parse(posted[1].chunk), { contacts: { editable: false }, accessToken: '[redacted]' });
+  send('TDW_UX_INSPECTOR_STORE_ACK', { captureId: posted[0].captureId, index: 0 });
+  await new Promise((resolve) => window.setTimeout(resolve, 5));
+  assert.equal(window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'), null);
   dom.window.close();
 });
 

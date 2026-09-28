@@ -16,6 +16,7 @@ import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportFactory;
+import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 @Component
@@ -27,6 +28,7 @@ public class UxInspectorCopilotRunRequestAssembler {
     private final UxInspectorTargetToolSetFactory targetToolSetFactory;
     private final CopilotRunAuthMapper authMapper;
     private final UxInspectorReportFactory reportFactory;
+    private final RunStoreToolSetFactory storeToolSetFactory;
 
     public UxInspectorCopilotRunAssembly assemble(String runReference, UxInspectorJobStartRequest request,
                                                   UxInspectorTargetContext context,
@@ -34,11 +36,15 @@ public class UxInspectorCopilotRunRequestAssembler {
                                                   AnalysisAiAuthRef authRef) {
         var toolContext = contextFactory.create(runReference, context);
         var targetTools = targetToolSetFactory.create(toolContext.analysisRunId(), context);
-        var registered = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT, targetTools.callbacks());
+        var storeCallbacks = storeToolSetFactory.create(runReference);
+        var callbacks = new java.util.ArrayList<>(targetTools.callbacks());
+        callbacks.addAll(storeCallbacks);
+        var registered = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT, callbacks);
         var access = UxInspectorCopilotToolAccessPolicy.from(registered);
         var sessionConfig = new CopilotSessionConfigRequest(toolContext.copilotSessionId(), access.enabledTools(),
                 access.availableToolNames(), new CopilotModelSelection(request.model(), request.reasoningEffort()),
-                "Use only UX Inspector target/source/report tools in the pinned scope.", false)
+                "Use only UX Inspector target/source/store/report tools in the pinned scope.",
+                !storeCallbacks.isEmpty())
                 .withDurableSystemInstructions(UxInspectorDurableSystemInstructions.render(preparation));
         var initialReport = reportFactory.create((String) toolContext.hiddenContext().get(AgentToolContextKeys.REPORT_ID), context);
         var run = new CopilotRunRequest(toolContext.analysisRunId(), authMapper.toRunAuth(authRef),

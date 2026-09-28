@@ -39,9 +39,17 @@ usuwa Browser Tools i wszystkie jego listenery z badanej strony.
   dozwolone wartosci najblizszego formularza i jego `ValidityState`, wlacznie
   z kontrolkami `type=hidden`. Nadal wyklucza hasla, tokeny, pliki, cookies i
   storage.
+- Dla UX Inspectora runtime po wskazaniu elementu wywoluje jednokrotnie
+  aplikacyjny `globalThis.getStoreState()`. Dostepny stan JSON (do 16 MiB)
+  przechodzi porcjami do karty TDW i jest dolaczany do recznie uruchomionego
+  joba. Aplikacja powinna wystawiac do tej funkcji stan odpowiedni do
+  analizy AI; znane pola sekretow sa redagowane. Blad, timeout lub brak
+  funkcji pozostawia capture bez store'a.
 - Runtime nie czyta requestow ani screenshotow.
 - Oba transfery wymagaja zgodnosci `event.origin`, `event.source`, nonce i
   protokolu v1. UX capture ma limit 128 KiB, a wskazowka UI Explorera 4 KiB.
+- UI Explorer nie pobiera store'a i przekazuje tylko dotychczasowa wskazowke
+  widoku.
 - UX Inspector ponownie waliduje capture na zaufanym originie. UI Explorer
   odbiera osobny kontekst: zredagowany route path oraz tagi glownego
   routowanego komponentu. Nie zawiera elementu ani wartosci formularzy.

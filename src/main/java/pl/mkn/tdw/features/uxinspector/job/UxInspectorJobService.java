@@ -17,6 +17,7 @@ import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobException;
 import pl.mkn.tdw.features.uxinspector.job.localworkspace.UxInspectorLocalRunPersistence;
 import pl.mkn.tdw.features.uxinspector.job.state.UxInspectorJobState;
+import pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
@@ -50,6 +51,7 @@ public class UxInspectorJobService {
     private final UxInspectorFollowUpReportProjection followUpReportProjection;
     private final UxInspectorFollowUpPromptService followUpPromptService;
     private final LocalAnalysisRunOperationGuard operationGuard;
+    private final UxInspectorStoreSnapshotService storeSnapshots;
 
     public UxInspectorJobStateSnapshot startJob(UxInspectorJobStartRequest request) {
         var auth = authRefResolver.resolveForCurrentRequest();
@@ -58,10 +60,24 @@ public class UxInspectorJobService {
         var normalizedRequest = new UxInspectorJobStartRequest(request.systemId(), request.branch(), request.viewId(),
                 request.sourceRevision(), request.question(), normalizedCapture, request.model(), request.reasoningEffort());
         var id = UUID.randomUUID().toString();
+        var claimedStore = storeSnapshots.claim(request.storeSnapshotRef(), normalizedCapture, auth);
         var state = new UxInspectorJobState(id, normalizedRequest);
         jobs.put(id, state);
         authRefs.put(id, auth);
-        persistRequired(state);
+        try {
+            persistRequired(state);
+            if (claimedStore != null) {
+                try {
+                    localRunPersistence.persistStoreSnapshot(id, claimedStore);
+                } catch (RuntimeException exception) {
+                    log.warn("UX Inspector store snapshot unavailable jobId={}", id, exception);
+                }
+            }
+        } catch (RuntimeException exception) {
+            jobs.remove(id);
+            authRefs.remove(id);
+            throw exception;
+        }
         var accepted = state.snapshot();
         try {
             applicationTaskExecutor.execute(() -> runJob(id, state, normalizedRequest, auth));
@@ -85,7 +101,7 @@ public class UxInspectorJobService {
             persist(state);
             state.preparationStarted();
             persist(state);
-            var preparation = promptPreparationService.prepare(request, context);
+            var preparation = promptPreparationService.prepare(request, context, id, storeSnapshots.find(id).orElse(null));
             state.preparationCompleted(preparation.prompt(), preparation.artifactContents().size());
             persist(state);
             state.analysisStarted();
@@ -161,7 +177,7 @@ public class UxInspectorJobService {
         catch (RuntimeException exception) { lease.close(); throw exception; }
         var chatRequest = new UxInspectorFollowUpChatRequest(
                 "ux-inspector-follow-up-" + assistantId, state.initialRequest(), context,
-                request.message(), sessionId, auth, state.currentReport());
+                request.message(), sessionId, auth, state.currentReport(), normalized);
         persist(state);
         try {
             applicationTaskExecutor.execute(() -> runChat(state, assistantId, chatRequest, lease));

@@ -17,8 +17,14 @@ public record UxInspectorJobStartRequest(
         @NotBlank @Size(max = 4000) String question,
         @NotNull @Valid UxInspectorCapture capture,
         @NotBlank @Size(max = 80) String model,
-        @Size(max = 40) String reasoningEffort
+        @Size(max = 40) String reasoningEffort,
+        @Size(max = 80) String storeSnapshotRef
 ) {
+    public UxInspectorJobStartRequest(String systemId, String branch, String viewId, String sourceRevision,
+                                      String question, UxInspectorCapture capture, String model, String reasoningEffort) {
+        this(systemId, branch, viewId, sourceRevision, question, capture, model, reasoningEffort, null);
+    }
+
     public UxInspectorJobStartRequest {
         systemId = normalize(systemId);
         branch = normalize(branch);
@@ -27,6 +33,7 @@ public record UxInspectorJobStartRequest(
         question = normalize(question);
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
+        storeSnapshotRef = normalize(storeSnapshotRef);
     }
 
     public AnalysisAiOptions aiOptions() { return new AnalysisAiOptions(model, reasoningEffort); }

@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, Subscription, finalize } from 'rxjs';
+import { Observable, Subscription, catchError, finalize, of, switchMap } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -84,6 +84,7 @@ export class UxInspectorFacade {
     () => this.job()?.request.capture ?? this.ingress.capture()
   );
   readonly captureStatus = this.ingress.status;
+  readonly storeStatus = this.ingress.storeStatus;
   readonly captureError = this.ingress.error;
   readonly selectedSystem = computed(
     () => this.inputOptions()?.systems.find((item) => item.systemId === this.selectedSystemId()) ?? null
@@ -115,6 +116,7 @@ export class UxInspectorFacade {
   readonly configurationReady = computed(
     () => Boolean(
       this.ingress.capture() &&
+        this.ingress.storeStatus() !== 'receiving' &&
         this.selectedSystemId() &&
         this.branch().trim() &&
         this.selectedViewId() &&
@@ -280,7 +282,14 @@ export class UxInspectorFacade {
     this.isSubmitting.set(true);
     this.jobError.set('');
     this.portabilityError.set('');
-    this.api.startJob(request).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const store = this.ingress.storeState();
+    const start = store && this.ingress.capture()
+      ? this.api.uploadStoreSnapshot({ captureId: request.capture.captureId, origin: request.capture.page.origin, state: store }).pipe(
+          catchError(() => of(null)),
+          switchMap((receipt) => this.api.startJob(receipt ? { ...request, storeSnapshotRef: receipt.storeSnapshotRef } : request))
+        )
+      : this.api.startJob(request);
+    start.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (snapshot) => {
         this.isSubmitting.set(false);
         this.job.set(snapshot);

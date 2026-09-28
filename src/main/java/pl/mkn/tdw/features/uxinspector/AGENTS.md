@@ -17,6 +17,16 @@ report, historie oraz import/export.
   formularza, wlacznie z kontrolkami `type=hidden`. Hasla, tokeny, pliki,
   cookies i storage sa zawsze poza kontraktem, a wartosci pozostaja
   niezaufanym runtime evidence.
+- Opcjonalny zrzut `globalThis.getStoreState()` jest zamrozona obserwacja
+  sesji UX. Ref uploadu jest jednorazowy i scope'owany do capture, originu i
+  operatora. Zredagowany JSON jest w neutralnym polu `storeSnapshot` w
+  `run.json`; publiczne snapshoty i portable export nie zawieraja store'a.
+  Brak zrzutu ani blad transferu, uploadu lub storage nie blokuje analizy.
+- Initial prompt przekazuje najwyzej dwa poziomy mapy store'a bez wartosci.
+  Odczyt wartosci jest dozwolony przez neutralne `run_store_list_paths` i
+  `run_store_read_value` z jawnym `runId`. Skill
+  `ux-inspector-store-grounding` sluzy wylacznie laczeniu kodowego warunku z
+  konkretnym stanem; nie przenosi kanonicznej procedury raportu.
 - Selector candidates z `domFingerprint` sa sygnalem dla deterministycznego
   resolvera; model nie dostaje arbitrary-selector toola ani prawa do
   traktowania selectora jako dowodu ownership w kodzie.
@@ -60,7 +70,8 @@ report, historie oraz import/export.
   feature flags i konfiguracje; ich braku nie wolno zalozyc po samym focused
   slice.
 - Canonical initial prompt posiada staly business-first answer contract; UX
-  Inspector nie wlacza w tym celu runtime skilli ani dodatkowego turnu.
+  Inspector nie wlacza w tym celu dodatkowego turnu ani skilla raportowego.
+  Dla sesji ze store'em wlacza built-in `skill` dla waskiego grounding skilla.
   Glowna narracja rozdziela `frontend` i `backend`, nie uzywa ogolnego slowa
   "system" jako wykonawcy, traktuje kod jako dowod zachowania `as-is`, a nie
   zatwierdzonego wymagania, a nazwy implementacyjne pokazuje tylko wtedy, gdy

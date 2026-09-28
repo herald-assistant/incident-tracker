@@ -6,7 +6,8 @@ public record LocalAnalysisRunRecord(
         String schema,
         int version,
         JsonNode exportEnvelope,
-        LocalAnalysisRunContinuation continuation
+        LocalAnalysisRunContinuation continuation,
+        LocalAnalysisRunStoreSnapshot storeSnapshot
 ) {
     public static final String SCHEMA = "tdw.local-analysis-run";
     public static final int VERSION = 1;
@@ -30,6 +31,10 @@ public record LocalAnalysisRunRecord(
             JsonNode exportEnvelope,
             LocalAnalysisRunContinuation continuation
     ) {
-        return new LocalAnalysisRunRecord(SCHEMA, VERSION, exportEnvelope, continuation);
+        return new LocalAnalysisRunRecord(SCHEMA, VERSION, exportEnvelope, continuation, null);
+    }
+
+    public LocalAnalysisRunRecord withStoreSnapshot(LocalAnalysisRunStoreSnapshot snapshot) {
+        return new LocalAnalysisRunRecord(schema, version, exportEnvelope, continuation, snapshot);
     }
 }

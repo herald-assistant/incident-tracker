@@ -62,6 +62,9 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- `needs/ux-inspector-store-context.md` i
+  `plans/ux-inspector-store-context.md` opisuja wdrozony kontekst
+  zamrozonego store'a tylko dla UX Inspectora; plan jest zrealizowany.
 - UI Explorer oraz UX Inspector nie utrzymuja zakonczonych potrzeb i planow
   jako archiwum. Ich aktualne kontrakty, runtime, follow-up chat, historia,
   import/export i granice bezpieczenstwa opisuja odpowiednio

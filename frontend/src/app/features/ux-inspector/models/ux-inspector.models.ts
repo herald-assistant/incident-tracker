@@ -199,6 +199,7 @@ export interface UxInspectorViewCatalogResponse {
 }
 
 export interface UxInspectorJobStartRequest {
+  storeSnapshotRef?: string;
   systemId: string;
   branch: string;
   viewId: string;

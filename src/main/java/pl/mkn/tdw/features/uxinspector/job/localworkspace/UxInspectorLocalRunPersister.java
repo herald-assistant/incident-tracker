@@ -17,6 +17,11 @@ public class UxInspectorLocalRunPersister implements UxInspectorLocalRunPersiste
     private final LocalAnalysisRunStore store;
 
     @Override
+    public void persistStoreSnapshot(String runId, LocalAnalysisRunStoreSnapshot snapshot) {
+        store.updateStoreSnapshot(runId, snapshot);
+    }
+
+    @Override
     public void persistRunSnapshot(UxInspectorJobStateSnapshot snapshot) {
         persistRunSnapshot(snapshot, null, null);
     }

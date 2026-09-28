@@ -39,6 +39,10 @@
               <span class="field-label">Element z Browser Tools</span>
               <h3>{{ targetLabel() }}</h3>
               <p><code>&lt;{{ capture.target.tag }}&gt;</code> · {{ capture.page.origin }}{{ capture.page.path }}</p>
+              @if (facade.captureStatus() === 'received') {
+                <p>Store: {{ facade.storeStatus() === 'available' ? 'dostępny dla tej analizy' :
+                  facade.storeStatus() === 'receiving' ? 'pobieranie…' : 'niedostępny w tej sesji' }}</p>
+              }
               <div class="ux-inspector-capture__chips">
                 <span class="panel-chip">
                   {{ capture.captureProfile === 'FORM_DIAGNOSTICS' ? 'diagnostyka formularza' : 'kontekst elementu' }}

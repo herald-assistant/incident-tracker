@@ -1397,10 +1397,15 @@
     if (!isObject(data) || data.protocolVersion !== PROTOCOL_VERSION || data.type !== type || data.nonce !== nonce) {
       return false;
     }
+    if (type === 'TDW_UX_INSPECTOR_CAPTURE') {
+      return hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture']) ||
+        hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture', 'storeStatus', 'storeChunks']);
+    }
     const shapes = {
       TDW_UX_INSPECTOR_READY: ['type', 'protocolVersion', 'nonce'],
-      TDW_UX_INSPECTOR_CAPTURE: ['type', 'protocolVersion', 'nonce', 'captureId', 'capture'],
       TDW_UX_INSPECTOR_RECEIVED: ['type', 'protocolVersion', 'nonce', 'captureId'],
+      TDW_UX_INSPECTOR_STORE_CHUNK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk'],
+      TDW_UX_INSPECTOR_STORE_ACK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index'],
       TDW_UX_INSPECTOR_ERROR: ['type', 'protocolVersion', 'nonce', 'code'],
       TDW_UI_EXPLORER_READY: ['type', 'protocolVersion', 'nonce'],
       TDW_UI_EXPLORER_CONTEXT: ['type', 'protocolVersion', 'nonce', 'contextId', 'context'],
@@ -1446,6 +1451,8 @@
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_READY', nonce),
     isReceivedMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_RECEIVED', nonce),
+    isStoreAckMessage: (data, nonce) =>
+      isProtocolMessage(data, 'TDW_UX_INSPECTOR_STORE_ACK', nonce),
     isCaptureMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_CAPTURE', nonce),
     isErrorMessage: (data, nonce) =>

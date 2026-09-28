@@ -18,6 +18,8 @@ describe('UxInspectorFacade', () => {
     capture: captureSignal,
     status: signal<'received' | 'idle'>('received'),
     error: signal(''),
+    storeState: signal<Record<string, unknown> | null>(null),
+    storeStatus: signal<'unavailable' | 'receiving' | 'available'>('unavailable'),
     start: vi.fn(),
     consumeCapture: vi.fn(() => captureSignal.set(null))
   };
@@ -35,6 +37,7 @@ describe('UxInspectorFacade', () => {
       diagnostics: [], limitations: []
     })),
     startJob: vi.fn((_request: UxInspectorJobStartRequest) => of(snapshot('QUEUED'))),
+    uploadStoreSnapshot: vi.fn(() => of({ storeSnapshotRef: 'store-ref' })),
     getJob: vi.fn(() => of(snapshot('COMPLETED'))),
     sendChatMessage: vi.fn(() => of(chatSnapshot())),
     exportJob: vi.fn(), importAnalysis: vi.fn()
@@ -51,6 +54,8 @@ describe('UxInspectorFacade', () => {
     vi.clearAllMocks();
     captureSignal.set(captureFixture());
     ingress.status.set('received');
+    ingress.storeState.set(null);
+    ingress.storeStatus.set('unavailable');
     TestBed.configureTestingModule({ providers: [
       UxInspectorFacade,
       { provide: UxInspectorApiService, useValue: api },
@@ -81,6 +86,36 @@ describe('UxInspectorFacade', () => {
     expect(polling.poll).toHaveBeenCalledTimes(1);
     expect(facade.job()?.status).toBe('COMPLETED');
     expect(facade.capture()?.captureId).toBe('cap_crm_contact_save');
+  });
+
+  it('uploads the captured store before starting the job', () => {
+    ingress.storeState.set({ contact: { editable: false } });
+    ingress.storeStatus.set('available');
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    facade.selectView('crm-contact-create');
+    facade.updateQuestion('Dlaczego nie można edytować kontaktu?');
+    facade.startJob();
+    expect(api.uploadStoreSnapshot).toHaveBeenCalledWith({
+      captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com',
+      state: { contact: { editable: false } }
+    });
+    expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({ storeSnapshotRef: 'store-ref' }));
+  });
+
+  it('starts a job without store when upload fails', () => {
+    ingress.storeState.set({ contact: { editable: false } });
+    ingress.storeStatus.set('available');
+    api.uploadStoreSnapshot.mockReturnValueOnce(throwError(() => new Error('upload failed')));
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    facade.selectView('crm-contact-create');
+    facade.updateQuestion('Dlaczego nie można edytować kontaktu?');
+    facade.startJob();
+    expect(api.startJob).toHaveBeenCalledWith(expect.not.objectContaining({ storeSnapshotRef: expect.anything() }));
+    expect(facade.startedRunId()).toBe('ux-crm-job');
   });
 
   it('does not create a manual or capture-less start path', () => {

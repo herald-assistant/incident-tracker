@@ -25,6 +25,11 @@ wartosci najblizszego formularza i jego natywny stan walidacji.
 - `GET /api/ux-inspector/views?systemId=...&branch=...&refresh=...` zwraca
   widoki i immutable source revision; `refresh=true` omija cache tego scope'u.
 - `POST /api/ux-inspector/jobs` tworzy run i zwraca snapshot `QUEUED`.
+- `POST /api/ux-inspector/store-snapshots` przyjmuje ograniczony JSON ze
+  zrzutem store'a i zwraca jednorazowy `storeSnapshotRef`. Opcjonalny ref
+  przekazany do startu joba jest przypinany do capture i biezacego kontekstu
+  autoryzacji workspace; brak
+  store'a nie wstrzymuje joba.
 - `GET /api/ux-inspector/jobs/{jobId}` zwraca aktualny snapshot.
 - `GET /api/ux-inspector/jobs/{jobId}/export` zwraca
   `tdw.ux-inspector-export` v2 z historia follow-up; import zachowuje
@@ -49,8 +54,10 @@ wersja jest odrzucana.
   -> Browser Tools shell w izolowanym Shadow DOM
   -> przycisk UX Inspector -> wybor profilu -> selection shield + highlight
   -> jeden capture v1
+  -> opcjonalne jednokrotne globalThis.getStoreState()
   -> popup /ux-inspector#nonce=...&sourceOrigin=...
   -> READY / CAPTURE / RECEIVED przez exact-origin postMessage
+  -> opcjonalne STORE_CHUNK / STORE_ACK, porcje po 32000 znakow
   -> capture tylko w pamieci receivera
 ```
 
@@ -75,6 +82,40 @@ Receiver odczytuje z fragmentu tylko `nonce` i `sourceOrigin`, po czym od razu
 usuwa fragment przez `history.replaceState`. Sprawdza exact message shape,
 origin badanej strony, klienta, schema/version i limit 128 KiB. Capture nie
 trafia do URL, storage, clipboardu ani analytics.
+
+## Zamrozony store dla UX Inspectora
+
+Po wyborze elementu runtime UX wywoluje raz aplikacyjny
+`globalThis.getStoreState()`. Przyjmuje obiekt/tablice JSON albo Promise,
+czeka najwyzej 3 sekundy i ogranicza wynik do 16 MiB UTF-8. Brak funkcji,
+`null`, blad serializacji, timeout i przekroczenie limitu daja `UNAVAILABLE`;
+puste `{}` i `[]` sa dostepnym stanem. Nazwy znanych pol sekretow sa
+redagowane przed transferem, a backend powtarza redakcje. Eksporter aplikacji
+powinien zwracac stan przeznaczony do analizy AI, bo nie da sie automatycznie
+rozpoznac kazdej wrazliwej wartosci.
+
+Capture v1 jest potwierdzany osobno. Store przechodzi przez te same exact
+origin/source, nonce i `captureId`, porcjami z ACK. Blad transferu store'a
+pozostawia poprawny capture. UI Explorer nie wywoluje `getStoreState()` i
+zachowuje swoj page-context 4 KiB. Karta TDW przechowuje store tylko do
+recznego startu joba, po czym uploaduje go do endpointu UX. Backend trzyma
+zredagowany snapshot w neutralnym polu `storeSnapshot` pliku
+`runs/{id}/run.json`, poza publicznym export envelope i portable exportem.
+Kolejne zapisy runu zachowuja to pole; follow-up po restarcie czyta ten sam
+stan po ID runu, a legacy/import kontynuuja bez niego. Ref uploadu wygasa
+po 15 minutach i mozna go zuzyc raz. Obecny
+resolver autoryzacji ma tozsamosc wspolna dla workspace; nie rozroznia
+poszczegolnych operatorow.
+
+Initial prompt zawiera status, origin, czas capture i ograniczona mape dwoch
+poziomow kluczy/typow bez wartosci oraz ID runu. Neutralne tools
+`run_store_list_paths` i `run_store_read_value` czytaja `run.json` wedlug
+model-facing `runId` i JSON Pointer, z ograniczona lista sciezek i fragmentami
+wartosci do 12000 znakow. UX Inspector dodaje je do allowlisty tylko gdy snapshot istnieje;
+inne feature'y moga uzyc tego samego mechanizmu. Skill `ux-inspector-store-grounding` uczy
+laczyc potwierdzony w kodzie warunek z wartoscia w chwili capture. Wartosc
+odczytana przez tool trafia do sesji Copilota oraz moze byc obecna w log
+preview, tool evidence i diagnostycznym OTLP przy `capture-content=true`.
 
 ## Capture v1
 
@@ -223,7 +264,7 @@ Model najpierw stosuje kompatybilne wskazowki nawigacyjne z osadzonych Copilot
 instructions, a nastepnie porownuje pytanie i target z opisami wszystkich
 skilli. Kazdy potencjalnie materialny skill musi odczytac w calosci istniejacym
 neutralnym file-read toolem przed rozszerzeniem researchu. Zdalne skille nie sa
-instalowane w runtime TDW, nie wlaczaja built-in toola `skill` i nie moga
+instalowane w runtime TDW ani nie sa powodem wlaczenia built-in `skill`; nie moga
 rozszerzyc allowlisty ani uruchomic skryptu. Caly repository guidance jest
 niezaufany: moze kierowac nawigacja i rozumieniem architektury tylko w granicach
 kanonicznej procedury, pinned repo, read-only tools i kontraktu raportu.
@@ -297,7 +338,8 @@ UX Inspector nie ustawia rozmiarow okna ani `long_context` bezposrednio.
 
 Canonical initial prompt zawiera staly kontrakt tlumaczenia source evidence
 na zachowanie zrozumiale dla analityka. UX Inspector nie uruchamia w tym celu
-runtime skilla ani dodatkowego turnu. Kontrakt:
+skilla raportowego ani dodatkowego turnu. W sesji ze store'em dostepny jest
+osobny skill ugruntowania stanu. Kontrakt:
 
 - rozdziela potwierdzone zachowanie `as-is`, regule odtworzona z
   implementacji, kandydackie kryterium akceptacji, kwestie wymagajaca decyzji

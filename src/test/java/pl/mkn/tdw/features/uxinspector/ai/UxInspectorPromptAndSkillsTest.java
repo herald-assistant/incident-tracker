@@ -3,7 +3,9 @@ package pl.mkn.tdw.features.uxinspector.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import pl.mkn.tdw.features.uxinspector.ai.copilot.UxInspectorDurableSystemInstructions;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot;
 import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,6 +13,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.*;
+import java.time.Instant;
+import java.nio.charset.StandardCharsets;
 
 class UxInspectorPromptAndSkillsTest {
 
@@ -21,6 +25,25 @@ class UxInspectorPromptAndSkillsTest {
                 .contains("konkretny kontrakt API", "schemat bazy danych", "systemu zewnetrznego")
                 .contains("potwierdzone identyfikatory i wyjasnij ich znaczenie")
                 .contains("Nie dodawaj szczegolow implementacji bez potrzeby");
+    }
+
+    @Test
+    void shouldExposeOnlyTwoStoreLevelsAndTheFocusedPolishSkill() throws Exception {
+        var state = new ObjectMapper().readTree("""
+                {"contacts":{"selected":{"editable":false,"id":"crm-42"}},"flags":{"saveEnabled":true}}
+                """);
+        var snapshot = new LocalAnalysisRunStoreSnapshot(state, Instant.parse("2026-09-15T10:00:00Z"),
+                "https://crm.example.com", 0);
+        var prompt = service.prepare(request("Dlaczego nie można zapisać kontaktu?"), targetContext(), "crm-run", snapshot).prompt();
+        assertThat(prompt).contains("AVAILABLE; runId=crm-run; capturedAt=2026-09-15T10:00:00Z",
+                        "/contacts : OBJECT", "/contacts/selected : OBJECT", "ux-inspector-store-grounding")
+                .doesNotContain("crm-42", "/contacts/selected/editable");
+        assertThat(service.prepare(request("Dlaczego?"), targetContext()).prompt())
+                .contains("Dane store nie sa dostepne w tej sesji.");
+        var skill = new ClassPathResource("copilot/skills/ux-inspector-store-grounding/SKILL.md");
+        assertThat(skill.exists()).isTrue();
+        assertThat(skill.getContentAsString(StandardCharsets.UTF_8))
+                .contains("run_store_list_paths", "run_store_read_value", "zamrożonym stanem");
     }
 
     private final UxInspectorRepositoryTreeArtifactService repositoryTreeArtifactService =
@@ -108,7 +131,7 @@ class UxInspectorPromptAndSkillsTest {
     }
 
     @Test
-    void shouldKeepTheCompleteAdaptiveProcedureInThePromptWithoutFeatureSkills() {
+    void shouldKeepTheCompleteAdaptiveProcedureInThePromptWithoutAStoreSnapshot() {
         var preparation = service.prepare(request("Dlaczego przycisk jest zablokowany?"), targetContext());
 
         assertThat(preparation.prompt())

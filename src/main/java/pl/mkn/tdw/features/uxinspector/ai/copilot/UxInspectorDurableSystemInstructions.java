@@ -26,6 +26,14 @@ public final class UxInspectorDurableSystemInstructions {
     }
 
     public static String followUp() {
+        return followUp(false, null);
+    }
+
+    public static String followUp(boolean storeAvailable) {
+        return followUp(storeAvailable, null);
+    }
+
+    public static String followUp(boolean storeAvailable, String storeRunId) {
         return """
                 <ux_inspector_follow_up_contract>
                 Kontynuujesz rozmowe o jednym elemencie z zakonczonego runu UX Inspectora.
@@ -42,11 +50,14 @@ public final class UxInspectorDurableSystemInstructions {
                 globalnych metadata report_update_meta. Po zapisie sprawdz report_get_current.
                 Gdy tool odrzuci zmiane, nie twierdz, ze raport zostal zaktualizowany.
                 Rozdzielaj zachowanie potwierdzone w kodzie od wnioskow, ograniczen i pytan otwartych.
+                %s
                 Gdy analityk pyta o konkretny kontrakt API, schemat bazy danych albo nazwe
                 systemu zewnetrznego, podaj potwierdzone identyfikatory i wyjasnij ich znaczenie.
                 W innych odpowiedziach techniczne nazwy podawaj tylko wtedy, gdy pomagaja
                 zrozumiec zachowanie. Nie dodawaj szczegolow implementacji bez potrzeby.
                 </ux_inspector_follow_up_contract>
-                """.trim();
+                """.formatted(storeAvailable
+                ? "Jesli pytanie zalezy od stanu tej sesji, uzyj ux-inspector-store-grounding i celowanych run_store_* tools z runId=" + storeRunId + ". Zrzut jest zamrozony w chwili capture."
+                : "Dane store nie sa dostepne w tej sesji; nie zgaduj ich wartosci.").trim();
     }
 }

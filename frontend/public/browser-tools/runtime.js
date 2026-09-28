@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.1.0';
+  const RUNTIME_VERSION = '1.2.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -318,6 +318,7 @@
       return;
     }
     this.disposed = true;
+    this.storeJson = null;
     this.state = 'disposed';
     this.closeMenu(false);
     this.launcherButton.removeEventListener('click', this.onLauncherClick);
@@ -355,6 +356,8 @@
     this.bridgeNonce = '';
     this.bridgeTimer = null;
     this.capture = null;
+    this.storeJson = null;
+    this.storeChunkIndex = 0;
     this.captureProfile = protocol.CAPTURE_PROFILES.includes(options?.captureProfile)
       ? options.captureProfile
       : 'ELEMENT_CONTEXT';
@@ -502,7 +505,7 @@
         captureProfile: this.captureProfile
       });
       this.hideSelection();
-      this.beginTransfer();
+      this.captureStore();
     } catch (error) {
       console.error('[TDW UX Inspector] Capture failed.', error);
       this.hideSelection();
@@ -624,10 +627,16 @@
       sourceOrigin: global.location.origin
     }).toString();
     global.addEventListener('message', this.onBridgeMessage, true);
-    this.bridgeWindow = global.open(
-      captureUrl.toString(),
-      `tdw-ux-inspector-${this.bridgeNonce}`
-    );
+    try {
+      if (this.bridgeWindow && !this.bridgeWindow.closed) {
+        this.bridgeWindow.location.href = captureUrl.toString();
+      } else {
+        this.bridgeWindow = global.open(captureUrl.toString(), `tdw-ux-inspector-${this.bridgeNonce}`);
+      }
+    } catch {
+      this.failTransfer('Nie udało się otworzyć UX Inspectora.');
+      return;
+    }
     if (!this.bridgeWindow) {
       this.failTransfer('Przeglądarka zablokowała otwarcie UX Inspectora.');
       return;
@@ -653,7 +662,9 @@
         this.bridgeWindow.postMessage(
           protocol.createMessage('TDW_UX_INSPECTOR_CAPTURE', this.bridgeNonce, {
             captureId: this.capture.captureId,
-            capture: this.capture
+            capture: this.capture,
+            storeStatus: this.storeJson ? 'AVAILABLE' : 'UNAVAILABLE',
+            storeChunks: this.storeJson ? Math.ceil(this.storeJson.length / 32000) : 0
           }),
           this.config.tdwOrigin
         );
@@ -675,11 +686,43 @@
       protocol.isReceivedMessage(event.data, this.bridgeNonce) &&
       event.data.captureId === this.capture?.captureId
     ) {
-      this.clearBridgeTimer();
-      this.state = 'completed';
-      this.setStatus('Gotowe · pytanie dokończysz w TDW', 'success');
-      global.setTimeout(() => this.dispose('transferred'), testMode ? 0 : 1100);
+      if (this.storeJson) {
+        this.state = 'transferring-store';
+        this.sendStoreChunk();
+      } else {
+        this.completeTransfer();
+      }
+      return;
     }
+    if (this.state === 'transferring-store' && protocol.isStoreAckMessage(event.data, this.bridgeNonce) &&
+        event.data.captureId === this.capture?.captureId && event.data.index === this.storeChunkIndex) {
+      this.storeChunkIndex++;
+      if (this.storeChunkIndex * 32000 >= this.storeJson.length) this.completeTransfer();
+      else this.sendStoreChunk();
+    }
+  };
+
+  UxInspector.prototype.sendStoreChunk = function sendStoreChunk() {
+    try {
+      this.bridgeWindow.postMessage(protocol.createMessage('TDW_UX_INSPECTOR_STORE_CHUNK', this.bridgeNonce, {
+        captureId: this.capture.captureId,
+        index: this.storeChunkIndex,
+        total: Math.ceil(this.storeJson.length / 32000),
+        chunk: this.storeJson.slice(this.storeChunkIndex * 32000, (this.storeChunkIndex + 1) * 32000)
+      }), this.config.tdwOrigin);
+      this.clearBridgeTimer();
+      this.bridgeTimer = global.setTimeout(() => this.completeTransfer(), testMode ? 80 : BRIDGE_TIMEOUT_MS);
+    } catch {
+      this.completeTransfer();
+    }
+  };
+
+  UxInspector.prototype.completeTransfer = function completeTransfer() {
+    this.clearBridgeTimer();
+    this.storeJson = null;
+    this.state = 'completed';
+    this.setStatus('Gotowe · pytanie dokończysz w TDW', 'success');
+    global.setTimeout(() => this.dispose('transferred'), testMode ? 0 : 1100);
   };
 
   UxInspector.prototype.resetBridgeTimer = function resetBridgeTimer(message) {
@@ -703,12 +746,54 @@
     this.statusText.textContent = message;
   };
 
+  UxInspector.prototype.captureStore = function captureStore() {
+    let getter;
+    try { getter = global.getStoreState; }
+    catch { this.beginTransfer(); return; }
+    if (typeof getter !== 'function') {
+      this.beginTransfer();
+      return;
+    }
+    this.setStatus('Pobieram stan strony…', 'working');
+    this.bridgeWindow = global.open('about:blank', 'tdw-ux-inspector-pending-' + protocol.createNonce());
+    let result;
+    try {
+      result = getter.call(global);
+    } catch {
+      this.beginTransfer();
+      return;
+    }
+    let timer;
+    Promise.race([
+      Promise.resolve(result),
+      new Promise((_, reject) => {
+        timer = global.setTimeout(() => reject(new Error('store timeout')), testMode ? 80 : 3000);
+      })
+    ]).then((state) => {
+      if (!this.disposed && state && typeof state === 'object') {
+        const json = JSON.stringify(state, (key, value) =>
+          /(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|api.?key|one[-_ ]?time|otp|cvv|cvc)/i.test(key)
+            ? '[redacted]' : value);
+        if (json && (json.startsWith('{') || json.startsWith('[')) &&
+            new TextEncoder().encode(json).byteLength <= 16 * 1024 * 1024) {
+          this.storeJson = json;
+        }
+      }
+    }).catch(() => {
+      this.storeJson = null;
+    }).finally(() => {
+      global.clearTimeout(timer);
+      if (!this.disposed) this.beginTransfer();
+    });
+  };
+
   UxInspector.prototype.failTransfer = function failTransfer(message) {
     this.clearBridgeTimer();
     global.removeEventListener('message', this.onBridgeMessage, true);
     this.state = 'failed';
     this.bridgeNonce = '';
     this.capture = null;
+    this.storeJson = null;
     try {
       this.bridgeWindow?.close();
     } catch {

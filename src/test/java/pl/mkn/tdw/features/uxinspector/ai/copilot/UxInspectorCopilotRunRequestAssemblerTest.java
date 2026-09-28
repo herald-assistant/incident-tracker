@@ -63,7 +63,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 new UxInspectorCopilotToolSessionContextFactory(),
                 new UxInspectorTargetToolSetFactory(),
                 new CopilotRunAuthMapper(),
-                new UxInspectorReportFactory()
+                new UxInspectorReportFactory(), mock(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory.class)
         );
 
         var assembly = assembler.assemble(
@@ -90,6 +90,21 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         assertThat(assembly.toolSessionContext().hiddenContext())
                 .doesNotContainKeys("gitLabFrontendTypeScriptSliceTargets",
                         "gitLabFrontendTypeScriptImportTargets");
+
+        var storeFactory = mock(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory.class);
+        when(storeFactory.create(any())).thenReturn(List.of(mock(org.springframework.ai.tool.ToolCallback.class)));
+        var storeTools = new ArrayList<>(registeredTools());
+        storeTools.add(tool(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreTools.LIST));
+        storeTools.add(tool(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreTools.READ));
+        when(toolFactory.createToolDefinitions(any(), any(), anyList())).thenReturn(storeTools);
+        var withStore = new UxInspectorCopilotRunRequestAssembler(toolFactory,
+                new UxInspectorCopilotToolSessionContextFactory(), new UxInspectorTargetToolSetFactory(),
+                new CopilotRunAuthMapper(), new UxInspectorReportFactory(), storeFactory)
+                .assemble("crm-ux-run-with-store", request, targetContext, preparation, AnalysisAiAuthRef.localToken(null));
+        assertThat(withStore.runRequest().sessionConfigRequest().skillsEnabled()).isTrue();
+        assertThat(withStore.runRequest().sessionConfigRequest().effectiveAvailableToolNames())
+                .contains(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreTools.LIST,
+                        pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreTools.READ, "skill");
     }
 
     private List<ToolDefinition> registeredTools() {
