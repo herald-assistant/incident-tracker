@@ -10,7 +10,7 @@ import {
 } from '../../../core/models/analysis.models';
 
 export const UX_INSPECTOR_CAPTURE_SCHEMA = 'tdw.ux-inspector-capture' as const;
-export const UX_INSPECTOR_CAPTURE_VERSION = 1 as const;
+export const UX_INSPECTOR_CAPTURE_VERSION = 2 as const;
 export const UX_INSPECTOR_CLIENT_NAME = 'TDW UX Inspector' as const;
 export const UX_INSPECTOR_FEATURE_ID = 'ux-inspector' as const;
 export const UX_INSPECTOR_PROTOCOL_VERSION = 1 as const;
@@ -74,63 +74,6 @@ export interface UxInspectorCapture {
     text: string | null;
     stableAttributes: Record<string, string>;
   }>;
-  formSnapshot: {
-    source: 'NEAREST_FORM' | 'SELECTED_CONTROL_ONLY';
-    stableAttributes: Record<string, string>;
-    selectorCandidates: string[];
-    valid: boolean | null;
-    observedControlCount: number;
-    emittedControlCount: number;
-    omittedControlCount: number;
-    controls: Array<{
-      selectedTarget: boolean;
-      tag: string;
-      type: string | null;
-      name: string | null;
-      formControlName: string | null;
-      accessibleName: string | null;
-      stableAttributes: Record<string, string>;
-      value: string | null;
-      valueTruncated: boolean;
-      checked: boolean | null;
-      selectedValues: string[];
-      selectedLabels: string[];
-      disabled: boolean;
-      readOnly: boolean;
-      required: boolean;
-      validity: {
-        valid: boolean;
-        valueMissing: boolean;
-        typeMismatch: boolean;
-        patternMismatch: boolean;
-        tooShort: boolean;
-        tooLong: boolean;
-        rangeUnderflow: boolean;
-        rangeOverflow: boolean;
-        stepMismatch: boolean;
-        badInput: boolean;
-        customError: boolean;
-        validationMessage: string | null;
-      } | null;
-    }>;
-    submitters: Array<{
-      selectedTarget: boolean;
-      tag: string;
-      type: string | null;
-      accessibleName: string | null;
-      stableAttributes: Record<string, string>;
-      disabled: boolean;
-    }>;
-    excludedControls: Array<{
-      tag: string;
-      type: string | null;
-      name: string | null;
-      formControlName: string | null;
-      reason: string;
-    }>;
-    valueCharacters: number;
-    valuesTruncated: boolean;
-  } | null;
   traversal: {
     observedDepth: number;
     emittedNodeCount: number;
@@ -148,6 +91,26 @@ export interface UxInspectorCapture {
     version: string;
     featureId: typeof UX_INSPECTOR_FEATURE_ID;
   };
+}
+
+export interface UxInspectorVisibleFormField {
+  tag: string;
+  type: string;
+  name: string;
+  id: string;
+  testId: string;
+  label: string;
+  disabled: boolean | null;
+  value: string | string[];
+  display: string;
+  source: 'dom' | 'display-text';
+  checked: boolean | null;
+  indeterminate: boolean | null;
+  invalid: boolean | null;
+  errors: string[];
+  descriptions: string[];
+  nativeInvalid: boolean | null;
+  nativeValidationMessage: string;
 }
 
 export interface UxInspectorSystemOption {
@@ -200,6 +163,7 @@ export interface UxInspectorViewCatalogResponse {
 
 export interface UxInspectorJobStartRequest {
   storeSnapshotRef?: string;
+  formFieldsSnapshotRef?: string;
   systemId: string;
   branch: string;
   viewId: string;

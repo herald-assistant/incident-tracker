@@ -7,6 +7,7 @@ import pl.mkn.tdw.features.uxinspector.ai.*;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetEvidenceMapper;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
 import pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse;
@@ -150,7 +151,8 @@ class UxInspectorJobServiceTest {
         var evidence = mock(UxInspectorTargetEvidenceMapper.class);
         when(evidence.map(any())).thenReturn(List.of());
         var preparation = mock(UxInspectorPromptPreparationService.class);
-        when(preparation.prepare(any(), any(), anyString(), nullable(pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot.class))).thenReturn(new UxInspectorPromptPreparation(
+        when(preparation.prepare(any(), any(), anyString(), nullable(pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot.class),
+                nullable(UxInspectorFormFieldsSnapshotService.Snapshot.class))).thenReturn(new UxInspectorPromptPreparation(
                 "Focused CRM prompt", java.util.Map.of("target", "CRM target")));
         var provider = mock(UxInspectorAnalysisProvider.class);
         when(provider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
@@ -161,7 +163,7 @@ class UxInspectorJobServiceTest {
                 executor, auth, persistence, mock(UxInspectorFollowUpChatService.class),
                 new UxInspectorFollowUpReportProjection(new pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper()),
                 mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard(),
-                stores);
+                stores, mock(UxInspectorFormFieldsSnapshotService.class));
     }
 
     private UxInspectorAiAnalysis completedAnalysis() {

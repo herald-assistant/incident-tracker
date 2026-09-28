@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, Subscription, catchError, finalize, of, switchMap } from 'rxjs';
+import { Observable, Subscription, catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -85,6 +85,8 @@ export class UxInspectorFacade {
   );
   readonly captureStatus = this.ingress.status;
   readonly storeStatus = this.ingress.storeStatus;
+  readonly formStatus = this.ingress.formStatus;
+  readonly formFields = this.ingress.formFields;
   readonly captureError = this.ingress.error;
   readonly selectedSystem = computed(
     () => this.inputOptions()?.systems.find((item) => item.systemId === this.selectedSystemId()) ?? null
@@ -117,6 +119,7 @@ export class UxInspectorFacade {
     () => Boolean(
       this.ingress.capture() &&
         this.ingress.storeStatus() !== 'receiving' &&
+        this.ingress.formStatus() !== 'receiving' &&
         this.selectedSystemId() &&
         this.branch().trim() &&
         this.selectedViewId() &&
@@ -283,12 +286,16 @@ export class UxInspectorFacade {
     this.jobError.set('');
     this.portabilityError.set('');
     const store = this.ingress.storeState();
-    const start = store && this.ingress.capture()
-      ? this.api.uploadStoreSnapshot({ captureId: request.capture.captureId, origin: request.capture.page.origin, state: store }).pipe(
-          catchError(() => of(null)),
-          switchMap((receipt) => this.api.startJob(receipt ? { ...request, storeSnapshotRef: receipt.storeSnapshotRef } : request))
-        )
-      : this.api.startJob(request);
+    const fields = this.ingress.formFields();
+    const scope = { captureId: request.capture.captureId, origin: request.capture.page.origin };
+    const start = forkJoin({
+      store: store ? this.api.uploadStoreSnapshot({ ...scope, state: store }).pipe(catchError(() => of(null))) : of(null),
+      form: fields ? this.api.uploadFormFieldsSnapshot({ ...scope, fields }).pipe(catchError(() => of(null))) : of(null)
+    }).pipe(switchMap(({ store: storeReceipt, form: formReceipt }) => this.api.startJob({
+      ...request,
+      ...(storeReceipt ? { storeSnapshotRef: storeReceipt.storeSnapshotRef } : {}),
+      ...(formReceipt ? { formFieldsSnapshotRef: formReceipt.formFieldsSnapshotRef } : {})
+    })));
     start.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (snapshot) => {
         this.isSubmitting.set(false);

@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.3.0';
+  const RUNTIME_VERSION = '1.4.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -121,7 +121,7 @@
       profileOption(
         'FORM_DIAGNOSTICS',
         'Formularz',
-        'Dołącz dozwolone wartości najbliższego formularza',
+        'Dołącz pola widoczne na stronie w chwili capture',
         false
       )
     ];
@@ -130,7 +130,7 @@
       element(
         'p',
         'tdw-capture-profile__note',
-        'Hasła, tokeny i pliki są zawsze wykluczone. Pola hidden są dołączane.'
+        'Pola ukryte, hasła, tokeny i pliki są wykluczone.'
       )
     );
     this.runInspectorButton = button('tdw-capture-profile__start', 'Wskaż element');
@@ -359,6 +359,12 @@
     this.capture = null;
     this.storeJson = null;
     this.storeChunkIndex = 0;
+    this.storeTimer = null;
+    this.storeDone = true;
+    this.formJson = null;
+    this.formChunkIndex = 0;
+    this.formTimer = null;
+    this.formDone = true;
     this.captureProfile = protocol.CAPTURE_PROFILES.includes(options?.captureProfile)
       ? options.captureProfile
       : 'ELEMENT_CONTEXT';
@@ -385,7 +391,7 @@
       'span',
       'tdw-status-text',
       this.captureProfile === 'FORM_DIAGNOSTICS'
-        ? 'Wskaż element · dołączę najbliższy formularz'
+        ? 'Wskaż element · dołączę widoczne pola strony'
         : 'Wskaż element i kliknij'
     );
     const statusExit = element('span', 'tdw-status-exit');
@@ -445,6 +451,8 @@
     this.state = 'disposed';
     this.cancelAnimationFrame();
     this.clearBridgeTimer();
+    this.clearOptionalTimer('store');
+    this.clearOptionalTimer('form');
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     global.removeEventListener('keydown', this.onKeyDown, true);
@@ -505,6 +513,14 @@
         featureId: this.config.featureId,
         captureProfile: this.captureProfile
       });
+      if (this.captureProfile === 'FORM_DIAGNOSTICS') {
+        try {
+          const json = JSON.stringify(protocol.captureVisibleFormFields());
+          if (new TextEncoder().encode(json).byteLength <= 16 * 1024 * 1024) this.formJson = json;
+        } catch {
+          this.formJson = null;
+        }
+      }
       this.hideSelection();
       this.captureStore();
     } catch (error) {
@@ -665,7 +681,9 @@
             captureId: this.capture.captureId,
             capture: this.capture,
             storeStatus: this.storeJson ? 'AVAILABLE' : 'UNAVAILABLE',
-            storeChunks: this.storeJson ? Math.ceil(this.storeJson.length / 32000) : 0
+            storeChunks: this.storeJson ? Math.ceil(this.storeJson.length / 32000) : 0,
+            formStatus: this.formJson ? 'AVAILABLE' : 'UNAVAILABLE',
+            formChunks: this.formJson ? Math.ceil(this.formJson.length / 32000) : 0
           }),
           this.config.tdwOrigin
         );
@@ -687,40 +705,63 @@
       protocol.isReceivedMessage(event.data, this.bridgeNonce) &&
       event.data.captureId === this.capture?.captureId
     ) {
-      if (this.storeJson) {
-        this.state = 'transferring-store';
-        this.sendStoreChunk();
-      } else {
-        this.completeTransfer();
-      }
+      this.state = 'transferring-extras';
+      this.clearBridgeTimer();
+      this.storeDone = !this.storeJson;
+      this.formDone = !this.formJson;
+      if (this.storeJson) this.sendOptionalChunk('store');
+      if (this.formJson) this.sendOptionalChunk('form');
+      if (this.storeDone && this.formDone) this.completeTransfer();
       return;
     }
-    if (this.state === 'transferring-store' && protocol.isStoreAckMessage(event.data, this.bridgeNonce) &&
-        event.data.captureId === this.capture?.captureId && event.data.index === this.storeChunkIndex) {
-      this.storeChunkIndex++;
-      if (this.storeChunkIndex * 32000 >= this.storeJson.length) this.completeTransfer();
-      else this.sendStoreChunk();
+    if (this.state === 'transferring-extras' && event.data?.captureId === this.capture?.captureId) {
+      for (const kind of ['store', 'form']) {
+        const matches = kind === 'store' ? protocol.isStoreAckMessage(event.data, this.bridgeNonce)
+          : protocol.isFormAckMessage(event.data, this.bridgeNonce);
+        if (!matches || event.data.index !== this[`${kind}ChunkIndex`] || this[`${kind}Done`]) continue;
+        this.clearOptionalTimer(kind);
+        this[`${kind}ChunkIndex`]++;
+        if (this[`${kind}ChunkIndex`] * 32000 >= this[`${kind}Json`].length) this.finishOptionalTransfer(kind);
+        else this.sendOptionalChunk(kind);
+        return;
+      }
     }
   };
 
-  UxInspector.prototype.sendStoreChunk = function sendStoreChunk() {
+  UxInspector.prototype.sendOptionalChunk = function sendOptionalChunk(kind) {
+    const json = this[`${kind}Json`];
+    const index = this[`${kind}ChunkIndex`];
     try {
-      this.bridgeWindow.postMessage(protocol.createMessage('TDW_UX_INSPECTOR_STORE_CHUNK', this.bridgeNonce, {
+      this.bridgeWindow.postMessage(protocol.createMessage(
+        kind === 'store' ? 'TDW_UX_INSPECTOR_STORE_CHUNK' : 'TDW_UX_INSPECTOR_FORM_CHUNK', this.bridgeNonce, {
         captureId: this.capture.captureId,
-        index: this.storeChunkIndex,
-        total: Math.ceil(this.storeJson.length / 32000),
-        chunk: this.storeJson.slice(this.storeChunkIndex * 32000, (this.storeChunkIndex + 1) * 32000)
+        index,
+        total: Math.ceil(json.length / 32000),
+        chunk: json.slice(index * 32000, (index + 1) * 32000)
       }), this.config.tdwOrigin);
-      this.clearBridgeTimer();
-      this.bridgeTimer = global.setTimeout(() => this.completeTransfer(), testMode ? 80 : BRIDGE_TIMEOUT_MS);
+      this.clearOptionalTimer(kind);
+      this[`${kind}Timer`] = global.setTimeout(() => this.finishOptionalTransfer(kind), testMode ? 80 : BRIDGE_TIMEOUT_MS);
     } catch {
-      this.completeTransfer();
+      this.finishOptionalTransfer(kind);
     }
+  };
+
+  UxInspector.prototype.clearOptionalTimer = function clearOptionalTimer(kind) {
+    if (this[`${kind}Timer`] !== null) global.clearTimeout(this[`${kind}Timer`]);
+    this[`${kind}Timer`] = null;
+  };
+
+  UxInspector.prototype.finishOptionalTransfer = function finishOptionalTransfer(kind) {
+    this.clearOptionalTimer(kind);
+    this[`${kind}Json`] = null;
+    this[`${kind}Done`] = true;
+    if (this.storeDone && this.formDone) this.completeTransfer();
   };
 
   UxInspector.prototype.completeTransfer = function completeTransfer() {
     this.clearBridgeTimer();
     this.storeJson = null;
+    this.formJson = null;
     this.state = 'completed';
     this.setStatus('Gotowe · pytanie dokończysz w TDW', 'success');
     global.setTimeout(() => this.dispose('transferred'), testMode ? 0 : 1100);
@@ -790,11 +831,14 @@
 
   UxInspector.prototype.failTransfer = function failTransfer(message) {
     this.clearBridgeTimer();
+    this.clearOptionalTimer('store');
+    this.clearOptionalTimer('form');
     global.removeEventListener('message', this.onBridgeMessage, true);
     this.state = 'failed';
     this.bridgeNonce = '';
     this.capture = null;
     this.storeJson = null;
+    this.formJson = null;
     try {
       this.bridgeWindow?.close();
     } catch {

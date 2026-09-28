@@ -39,7 +39,7 @@ function config(tdwOrigin = 'https://tdw.example.com') {
 function captureFixture(overrides = {}) {
   return {
     schema: 'tdw.ux-inspector-capture',
-    version: 1,
+    version: 2,
     captureId: 'cap_0123456789abcdef',
     capturedAt: '2026-09-15T10:00:00.000Z',
     captureProfile: 'ELEMENT_CONTEXT',
@@ -91,7 +91,6 @@ function captureFixture(overrides = {}) {
         stableAttributes: {}
       }
     ],
-    formSnapshot: null,
     traversal: {
       observedDepth: 5,
       emittedNodeCount: 3,
@@ -162,7 +161,7 @@ test('element context capture redacts identifiers and never reads form values or
   const serialized = JSON.stringify(capture);
 
   assert.equal(capture.schema, 'tdw.ux-inspector-capture');
-  assert.equal(capture.version, 1);
+  assert.equal(capture.version, 2);
   assert.equal(capture.captureProfile, 'ELEMENT_CONTEXT');
   assert.equal(capture.page.path, '/customers/:value');
   assert.deepEqual(Array.from(capture.page.queryParameterNames), ['view']);
@@ -181,7 +180,7 @@ test('element context capture redacts identifiers and never reads form values or
   assert.equal(capture.target.state.invalid, true);
   assert.equal(capture.traversal.reachedDocumentRoot, true);
   assert.ok(capture.ancestors.length > 0);
-  assert.equal(capture.formSnapshot, null);
+  assert.equal('formSnapshot' in capture, false);
   assert.ok(capture.signals.redactions.includes('FORM_VALUES_NOT_REQUESTED'));
   assert.doesNotMatch(serialized, /DO_NOT_CAPTURE_THIS_VALUE/);
   assert.doesNotMatch(serialized, /DO_NOT_CAPTURE_TEXTAREA_DEFAULT/);
@@ -192,63 +191,38 @@ test('element context capture redacts identifiers and never reads form values or
   dom.window.close();
 });
 
-test('form diagnostics freezes allowed nearest-form values, including hidden controls, and excludes sensitive controls', () => {
+test('form diagnostics reads every safe visible field on the page without a field-count limit', () => {
+  const extra = Array.from({ length: 70 }, (_, index) =>
+    `<input name="contactNote${index}" value="CRM note ${index}">`).join('');
   const dom = createDom(
     `<!doctype html><html><body>
-      <crm-login>
-        <form id="login-form">
+      <crm-contact>
+        <form id="contact-form">
           <label for="email">E-mail</label>
-          <input id="email" name="email" formcontrolname="email" value="customer@example.test" required>
-          <label for="reference">Reference</label>
-          <input id="reference" name="reference" value="" required>
+          <input id="email" name="email" value="customer@example.test" required>
+          ${extra}
           <input name="password" type="password" value="DO_NOT_CAPTURE_PASSWORD">
-          <input name="csrfToken" type="text" value="DO_NOT_CAPTURE_TOKEN">
+          <input name="csrfToken" value="DO_NOT_CAPTURE_TOKEN">
           <input name="internalReference" type="hidden" value="crm-contact-42">
-          <input name="attachment" type="file">
-          <button type="submit" disabled>Sign in</button>
+          <div style="display:none"><input name="invisible" value="DO_NOT_CAPTURE_HIDDEN"></div>
         </form>
-      </crm-login>
+        <form><label for="other">Other contact</label><input id="other" value="CRM second form"></form>
+      </crm-contact>
     </body></html>`,
-    'https://crm.example.com/login'
+    'https://crm.example.com/contacts/new'
   );
   const protocol = protocolFor(dom);
   const input = dom.window.document.getElementById('email');
-  input.getBoundingClientRect = () => ({
-    x: 10, y: 20, left: 10, top: 20, right: 210, bottom: 60,
-    width: 200, height: 40, toJSON() {}
-  });
-
-  const capture = protocol.captureElement(input, {
-    clientVersion: '1.0.0',
-    featureId: 'ux-inspector',
-    captureProfile: 'FORM_DIAGNOSTICS',
-    capturedAt: '2026-09-15T10:00:00.000Z'
-  });
-  const serialized = JSON.stringify(capture);
-
-  assert.equal(capture.captureProfile, 'FORM_DIAGNOSTICS');
-  assert.equal(capture.formSnapshot.source, 'NEAREST_FORM');
-  assert.equal(capture.formSnapshot.valid, false);
-  assert.equal(capture.formSnapshot.controls.length, 3);
-  assert.equal(capture.formSnapshot.controls[0].selectedTarget, true);
-  assert.equal(capture.formSnapshot.controls[0].value, 'customer@example.test');
-  assert.equal(capture.formSnapshot.controls[1].validity.valueMissing, true);
-  assert.equal(capture.formSnapshot.controls[2].type, 'hidden');
-  assert.equal(capture.formSnapshot.controls[2].name, 'internalReference');
-  assert.equal(capture.formSnapshot.controls[2].value, 'crm-contact-42');
-  assert.equal(capture.formSnapshot.submitters[0].disabled, true);
-  assert.deepEqual(
-    Array.from(capture.formSnapshot.excludedControls, (control) => control.reason).sort(),
-    ['FILE_CONTROL', 'SENSITIVE_NAME', 'SENSITIVE_TYPE']
-  );
-  assert.deepEqual(
-    Array.from(capture.target.domFingerprint.componentBoundaryTags),
-    ['crm-login']
-  );
-  assert.match(capture.target.domFingerprint.selectorCandidates[0], /#email|input\[formcontrolname/);
-  assert.match(serialized, /crm-contact-42/);
-  assert.doesNotMatch(serialized, /DO_NOT_CAPTURE_/);
-  assert.ok(protocol.serializedSize(capture) <= protocol.MAX_CAPTURE_BYTES);
+  const fields = protocol.captureVisibleFormFields();
+  const capture = protocol.captureElement(input, { captureProfile: 'FORM_DIAGNOSTICS' });
+  const serialized = JSON.stringify(fields);
+  assert.equal(fields.length, 72);
+  assert.equal(fields[0].label, 'E-mail');
+  assert.equal(fields[0].value, 'customer@example.test');
+  assert.equal(fields.at(-1).value, 'CRM second form');
+  assert.equal('formSnapshot' in capture, false);
+  assert.doesNotMatch(serialized, /DO_NOT_CAPTURE_|crm-contact-42/);
+  assert.equal(protocol.normalizeCapture(capture).ok, true);
   dom.window.close();
 });
 
@@ -430,7 +404,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.3.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.4.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -492,7 +466,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     inspector.shadowRoot.querySelector('.tdw-status strong').textContent,
     'TDW UX Inspector'
   );
-  assert.match(inspector.shadowRoot.querySelector('.tdw-status').textContent, /dołączę najbliższy formularz/);
+  assert.match(inspector.shadowRoot.querySelector('.tdw-status').textContent, /dołączę widoczne pola strony/);
   assert.match(inspector.shadowRoot.querySelector('.tdw-status').textContent, /Esc wyjdź/);
   assert.match(inspector.shadowRoot.querySelector('style').textContent, /background: #fbfcfe/);
   assert.doesNotMatch(
@@ -537,7 +511,7 @@ test('new runtime replaces an older Browser Tools instance on the same page', ()
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]')
       ?.getAttribute('data-tdw-browser-tool-version'),
-    '1.3.0'
+    '1.4.0'
   );
   dom.window.close();
 });
@@ -844,6 +818,96 @@ test('UX Inspector transfers a frozen, redacted store after capture receipt', as
   send('TDW_UX_INSPECTOR_STORE_ACK', { captureId: posted[0].captureId, index: 0 });
   await new Promise((resolve) => window.setTimeout(resolve, 5));
   assert.equal(window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'), null);
+  dom.window.close();
+});
+
+test('UX Inspector transfers visible form fields separately after capture receipt', async () => {
+  const dom = createDom(
+    '<!doctype html><html><body><label for="contact">Contact</label><input id="contact" value="CRM customer"><button>Save</button></body></html>',
+    'https://crm.example.com/contacts/new'
+  );
+  const { window } = dom;
+  const protocol = protocolFor(dom);
+  const posted = [];
+  let openedUrl = '';
+  const bridgeWindow = { postMessage(message) { posted.push(message); } };
+  window.open = (url) => { openedUrl = String(url); return bridgeWindow; };
+  window.__TDW_BROWSER_TOOLS_TEST_MODE__ = true;
+  window.__TDW_BROWSER_TOOL_CONFIG__ = config();
+  window.eval(runtimeSource);
+  const shell = window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]');
+  shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
+  shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]').click();
+  const formOption = shell.shadowRoot.querySelectorAll('.tdw-capture-profile input')[1];
+  formOption.checked = true;
+  formOption.dispatchEvent(new window.Event('change', { bubbles: true }));
+  shell.shadowRoot.querySelector('.tdw-capture-profile__start').click();
+  const host = window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]');
+  const target = window.document.querySelector('button');
+  target.getBoundingClientRect = () => ({ x: 10, y: 10, left: 10, top: 10, right: 100, bottom: 40,
+    width: 90, height: 30, toJSON() {} });
+  window.document.elementsFromPoint = () => [host, shell, target];
+  const shield = host.shadowRoot.querySelector('.tdw-selection-shield');
+  shield.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true, clientX: 20, clientY: 20 }));
+  await new Promise((resolve) => window.setTimeout(resolve, 25));
+  shield.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const nonce = new URLSearchParams(new URL(openedUrl).hash.slice(1)).get('nonce');
+  const send = (type, extra = {}) => window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: bridgeWindow, data: protocol.createMessage(type, nonce, extra)
+  }));
+  send('TDW_UX_INSPECTOR_READY');
+  assert.equal(posted[0].formStatus, 'AVAILABLE');
+  assert.equal(posted[0].storeStatus, 'UNAVAILABLE');
+  send('TDW_UX_INSPECTOR_RECEIVED', { captureId: posted[0].captureId });
+  assert.equal(posted[1].type, 'TDW_UX_INSPECTOR_FORM_CHUNK');
+  assert.equal(JSON.parse(posted[1].chunk)[0].value, 'CRM customer');
+  send('TDW_UX_INSPECTOR_FORM_ACK', { captureId: posted[0].captureId, index: 0 });
+  await new Promise((resolve) => window.setTimeout(resolve, 5));
+  assert.equal(window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'), null);
+  dom.window.close();
+});
+
+test('form field read failure leaves the element capture available', async () => {
+  const dom = createDom(
+    '<!doctype html><html><body><input id="contact" value="CRM customer"><button>Save</button></body></html>',
+    'https://crm.example.com/contacts/new'
+  );
+  const { window } = dom;
+  const protocol = protocolFor(dom);
+  const posted = [];
+  let openedUrl = '';
+  const bridgeWindow = { postMessage(message) { posted.push(message); } };
+  window.open = (url) => { openedUrl = String(url); return bridgeWindow; };
+  window.__TDW_BROWSER_TOOLS_TEST_MODE__ = true;
+  window.__TDW_BROWSER_TOOL_CONFIG__ = config();
+  window.eval(runtimeSource);
+  const shell = window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]');
+  shell.shadowRoot.querySelector('.tdw-tools-launcher').click();
+  shell.shadowRoot.querySelector('.tdw-tool-action[data-feature-id="ux-inspector"]').click();
+  const formOption = shell.shadowRoot.querySelectorAll('.tdw-capture-profile input')[1];
+  formOption.checked = true;
+  formOption.dispatchEvent(new window.Event('change', { bubbles: true }));
+  shell.shadowRoot.querySelector('.tdw-capture-profile__start').click();
+  const host = window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]');
+  const target = window.document.querySelector('button');
+  target.getBoundingClientRect = () => ({ x: 10, y: 10, left: 10, top: 10, right: 100, bottom: 40,
+    width: 90, height: 30, toJSON() {} });
+  window.document.elementsFromPoint = () => [host, shell, target];
+  Object.defineProperty(window.document.querySelector('input'), 'value', {
+    configurable: true, get() { throw new Error('field read failed'); }
+  });
+  const shield = host.shadowRoot.querySelector('.tdw-selection-shield');
+  shield.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true, clientX: 20, clientY: 20 }));
+  await new Promise((resolve) => window.setTimeout(resolve, 25));
+  shield.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const nonce = new URLSearchParams(new URL(openedUrl).hash.slice(1)).get('nonce');
+  window.dispatchEvent(new window.MessageEvent('message', {
+    origin: 'https://tdw.example.com', source: bridgeWindow,
+    data: protocol.createMessage('TDW_UX_INSPECTOR_READY', nonce)
+  }));
+  assert.equal(posted[0].type, 'TDW_UX_INSPECTOR_CAPTURE');
+  assert.equal(posted[0].capture.target.tag, 'button');
+  assert.equal(posted[0].formStatus, 'UNAVAILABLE');
   dom.window.close();
 });
 

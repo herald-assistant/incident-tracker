@@ -3,7 +3,7 @@
 
   const GLOBAL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const PROTOCOL_VERSION = 1;
-  const CAPTURE_VERSION = 1;
+  const CAPTURE_VERSION = 2;
   const CAPTURE_SCHEMA = 'tdw.ux-inspector-capture';
   const MAX_CAPTURE_BYTES = 128 * 1024;
   const PAGE_CONTEXT_SCHEMA = 'tdw.ui-explorer-page-context';
@@ -16,10 +16,6 @@
   const MAX_QUERY_NAMES = 16;
   const MAX_SELECTOR_CANDIDATES = 8;
   const MAX_COMPONENT_BOUNDARIES = 8;
-  const MAX_FORM_CONTROLS = 64;
-  const MAX_EXCLUDED_FORM_CONTROLS = 32;
-  const MAX_FORM_VALUE_LENGTH = 16 * 1024;
-  const MAX_FORM_VALUE_CHARACTERS = 64 * 1024;
   const CAPTURE_PROFILES = new Set(['ELEMENT_CONTEXT', 'FORM_DIAGNOSTICS']);
   const STABLE_ATTRIBUTES = Object.freeze([
     'data-testid',
@@ -486,25 +482,6 @@
     };
   }
 
-  function validityState(control) {
-    const validity = control?.validity;
-    if (!validity) return null;
-    return {
-      valid: validity.valid === true,
-      valueMissing: validity.valueMissing === true,
-      typeMismatch: validity.typeMismatch === true,
-      patternMismatch: validity.patternMismatch === true,
-      tooShort: validity.tooShort === true,
-      tooLong: validity.tooLong === true,
-      rangeUnderflow: validity.rangeUnderflow === true,
-      rangeOverflow: validity.rangeOverflow === true,
-      stepMismatch: validity.stepMismatch === true,
-      badInput: validity.badInput === true,
-      customError: validity.customError === true,
-      validationMessage: normalizeText(control.validationMessage, 300)
-    };
-  }
-
   function formControlKey(control) {
     return [
       control.getAttribute('name'),
@@ -529,171 +506,168 @@
     return null;
   }
 
-  function formControlIdentity(control) {
-    const attributes = stableAttributes(control);
-    return {
-      tag: control.tagName.toLowerCase(),
-      type: normalizeText(control.getAttribute('type'), 40),
-      name: isSafeIdentifier(control.getAttribute('name')) ? control.getAttribute('name').trim() : null,
-      formControlName: isSafeIdentifier(control.getAttribute('formcontrolname'))
-        ? control.getAttribute('formcontrolname').trim()
-        : null,
-      accessibleName: accessibleName(control),
-      stableAttributes: attributes
-    };
-  }
-
-  function boundedFormValue(value, remainingCharacters) {
-    const normalized = typeof value === 'string'
-      ? value.normalize('NFC').replace(/\r\n/g, '\n')
-      : '';
-    const allowed = Math.max(0, Math.min(MAX_FORM_VALUE_LENGTH, remainingCharacters));
-    if (normalized.length <= allowed) {
-      return { value: normalized, truncated: false, used: normalized.length };
-    }
-    return {
-      value: normalized.slice(0, allowed),
-      truncated: true,
-      used: allowed
-    };
-  }
-
-  function selectedOptionValues(control, remainingCharacters) {
-    if (!(global.HTMLSelectElement && control instanceof global.HTMLSelectElement)) {
-      return { values: [], labels: [], truncated: false, used: 0 };
-    }
-    const values = [];
-    const labels = [];
-    let used = 0;
-    let truncated = false;
-    for (const option of Array.from(control.selectedOptions || [])) {
-      const value = boundedFormValue(option.value, remainingCharacters - used);
-      const label = boundedFormValue(option.textContent || '', remainingCharacters - used - value.used);
-      values.push(value.value);
-      labels.push(label.value);
-      used += value.used + label.used;
-      truncated ||= value.truncated || label.truncated;
-      if (used >= remainingCharacters) break;
-    }
-    return { values, labels, truncated, used };
-  }
-
-  function describeFormControl(control, selectedTarget, remainingCharacters) {
-    const identity = formControlIdentity(control);
-    const options = selectedOptionValues(control, remainingCharacters);
-    const remainingAfterOptions = Math.max(0, remainingCharacters - options.used);
-    const isSelect = global.HTMLSelectElement && control instanceof global.HTMLSelectElement;
-    const rawValue = typeof control.value === 'string' ? control.value : '';
-    const bounded = isSelect
-      ? { value: null, truncated: false, used: 0 }
-      : boundedFormValue(rawValue, remainingAfterOptions);
-    const state = elementState(control);
-    return {
-      control: {
-        selectedTarget,
-        ...identity,
-        value: bounded.value,
-        valueTruncated: bounded.truncated || options.truncated,
-        checked: state.checked,
-        selectedValues: options.values,
-        selectedLabels: options.labels,
-        disabled: state.disabled,
-        readOnly: state.readOnly,
-        required: state.required,
-        validity: validityState(control)
-      },
-      used: options.used + bounded.used
-    };
-  }
-
-  function describeSubmitter(control, selectedTarget) {
-    const identity = formControlIdentity(control);
-    return {
-      selectedTarget,
-      tag: identity.tag,
-      type: identity.type,
-      accessibleName: identity.accessibleName,
-      stableAttributes: identity.stableAttributes,
-      disabled: Boolean(control.disabled) || control.getAttribute('aria-disabled') === 'true'
-    };
-  }
-
-  function isSubmitter(control) {
-    const tag = control.tagName.toLowerCase();
-    const type = (control.getAttribute('type') || '').toLowerCase();
-    return tag === 'button' || (tag === 'input' && ['submit', 'button', 'reset', 'image'].includes(type));
-  }
-
-  function selectedFormControlOnly(element) {
-    return isFormValueCarrier(element) ? [element] : [];
-  }
-
-  function captureFormSnapshot(element) {
-    const form = 'form' in element && element.form
-      ? element.form
-      : element.closest('form');
-    const allControls = form
-      ? Array.from(form.elements || []).filter((candidate) => candidate instanceof global.Element)
-      : selectedFormControlOnly(element);
-    if (!form && allControls.length === 0) return null;
-
-    const controls = [];
-    const submitters = [];
-    const excludedControls = [];
-    let valueCharacters = 0;
-    let omittedControlCount = 0;
-    for (const control of allControls) {
-      const selectedTarget = control === element || control.contains?.(element);
-      if (isSubmitter(control)) {
-        if (submitters.length < 16) submitters.push(describeSubmitter(control, selectedTarget));
-        continue;
+  // Odczyt jest obserwacją całej widocznej strony w chwili capture.
+  function captureVisibleFormFields() {
+    const scope = global.document;
+    const customValueSelector = 'san-select span.san-select__value';
+    const nativeSelector = 'input, textarea, select';
+    const errorSelector = [
+      'mat-error', 'san-error', '.invalid-feedback', '.error-message',
+      '.validation-message', '[class*="__error"]', '[class*="-error-message"]',
+      '[data-validation-error]'
+    ].join(',');
+    const labelSelector = [
+      'label', '[class*="label" i]', '[class*="text-top" i]',
+      '[class*="checkbox__text" i]', '[class*="radio__text" i]'
+    ].join(',');
+    const labelNoiseSelector = [
+      'script', 'style', 'template', 'input', 'textarea', 'select', 'button',
+      'svg', 'canvas', 'san-icon', 'san-tooltip', '[role="tooltip"]',
+      '[role="listbox"]', '[role="option"]', '[aria-hidden="true"]',
+      '[hidden]', '[class*="suffix" i]', '[class*="prefix" i]',
+      '[class*="hint" i]', '[class*="__value" i]',
+      '[class*="selected-value" i]', '[contenteditable="true"]', errorSelector
+    ].join(',');
+    const otherControlSelector = [
+      'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"])',
+      'textarea', 'select', customValueSelector, '[role="combobox"]',
+      '[role="textbox"]', '[role="checkbox"]', '[role="radio"]',
+      '[contenteditable="true"]'
+    ].join(',');
+    const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const unique = (values) => [...new Set(values.filter(Boolean))];
+    const selectIncludingSelf = (container, selector) => [
+      ...(container.matches?.(selector) ? [container] : []),
+      ...container.querySelectorAll(selector)
+    ];
+    const isDisplayed = (node) => {
+      for (let current = node; current; current = current.parentElement) {
+        const style = global.getComputedStyle(current);
+        if (current.hidden || current.getAttribute('aria-hidden') === 'true' ||
+            style.display === 'none' || ['hidden', 'collapse'].includes(style.visibility)) return false;
       }
-      if (!isFormValueCarrier(control)) continue;
-      const reason = sensitiveFormControlReason(control);
-      if (reason) {
-        if (excludedControls.length < MAX_EXCLUDED_FORM_CONTROLS) {
-          const identity = formControlIdentity(control);
-          excludedControls.push({
-            tag: identity.tag,
-            type: identity.type,
-            name: identity.name,
-            formControlName: identity.formControlName,
-            reason
-          });
+      return true;
+    };
+    const contexts = (element, maxDepth) => {
+      const result = [element];
+      let parent = element.parentElement;
+      for (let depth = 0; parent && depth < maxDepth; depth++, parent = parent.parentElement) {
+        if (parent.matches('body, html')) break;
+        const hasOtherControl = [...parent.querySelectorAll(otherControlSelector)].some((control) =>
+          control !== element && !control.contains(element) && !element.contains(control));
+        if (hasOtherControl) break;
+        result.push(parent);
+      }
+      return result;
+    };
+    const referencedNodes = (element, attribute) => normalize(element.getAttribute(attribute))
+      .split(/\s+/).filter(Boolean)
+      .map((id) => element.getRootNode().getElementById?.(id)).filter(Boolean);
+    const nodeText = (node, noiseSelector) => {
+      if (!node) return '';
+      const clone = node.cloneNode(true);
+      clone.querySelectorAll(noiseSelector).forEach((child) => child.remove());
+      clone.querySelectorAll('br').forEach((child) => child.replaceWith(' '));
+      return normalize(clone.textContent);
+    };
+    const readLabel = (element) => {
+      const labelledBy = referencedNodes(element, 'aria-labelledby')
+        .map((node) => nodeText(node, labelNoiseSelector)).filter(Boolean).join(' ');
+      if (labelledBy) return labelledBy;
+      const ariaLabel = normalize(element.getAttribute('aria-label'));
+      if (ariaLabel) return ariaLabel;
+      const nativeLabel = [...(element.labels || [])]
+        .map((node) => nodeText(node, labelNoiseSelector)).filter(Boolean).join(' | ');
+      if (nativeLabel) return nativeLabel;
+      let fallback = '';
+      for (const parent of contexts(element, 6).slice(1)) {
+        for (const candidate of selectIncludingSelf(parent, labelSelector)) {
+          if (candidate.closest(labelNoiseSelector)) continue;
+          const text = nodeText(candidate, labelNoiseSelector);
+          if (text && text.length <= 240) return text;
         }
-        continue;
+        const text = nodeText(parent, labelNoiseSelector);
+        if (!fallback && text && text.length <= 240) fallback = text;
       }
-      if (controls.length >= MAX_FORM_CONTROLS) {
-        omittedControlCount += 1;
-        continue;
-      }
-      const described = describeFormControl(
-        control,
-        selectedTarget,
-        Math.max(0, MAX_FORM_VALUE_CHARACTERS - valueCharacters)
-      );
-      valueCharacters += described.used;
-      controls.push(described.control);
-    }
-    const formAttributes = form ? stableAttributes(form) : {};
-    return {
-      source: form ? 'NEAREST_FORM' : 'SELECTED_CONTROL_ONLY',
-      stableAttributes: formAttributes,
-      selectorCandidates: form ? selectorCandidates(form, formAttributes) : [],
-      valid: form
-        ? allControls
-            .filter((control) => control && 'validity' in control && control.validity)
-            .every((control) => control.validity.valid === true)
-        : null,
-      observedControlCount: allControls.length,
-      emittedControlCount: controls.length,
-      omittedControlCount,
-      controls,
-      submitters,
-      excludedControls,
-      valueCharacters,
-      valuesTruncated: controls.some((control) => control.valueTruncated) || omittedControlCount > 0
+      return fallback;
     };
+    const messageText = (node) => nodeText(node, 'input, textarea, select, button, script, style, svg, san-icon');
+    const readValidation = (element) => {
+      const errors = [];
+      const descriptions = [];
+      const visited = new Set();
+      let invalidSignal = false;
+      let validSignal = false;
+      const addError = (node) => {
+        if (!visited.has(node)) { visited.add(node); errors.push(messageText(node)); }
+      };
+      for (const context of contexts(element, 8)) {
+        const aria = normalize(context.getAttribute('aria-invalid')).toLowerCase();
+        const ariaInvalid = aria !== '' && aria !== 'false';
+        invalidSignal ||= ariaInvalid || context.classList.contains('ng-invalid');
+        validSignal ||= aria === 'false' || context.classList.contains('ng-valid');
+        if (ariaInvalid) referencedNodes(context, 'aria-errormessage').forEach(addError);
+        for (const node of referencedNodes(context, 'aria-describedby')) {
+          const matches = selectIncludingSelf(node, errorSelector).filter(isDisplayed);
+          if (matches.length) matches.forEach(addError);
+          else descriptions.push(messageText(node));
+        }
+        context.querySelectorAll(errorSelector).forEach((node) => { if (isDisplayed(node)) addError(node); });
+      }
+      const nativeInvalid = element.willValidate && element.validity ? !element.validity.valid : null;
+      const nativeValidationMessage = nativeInvalid ? normalize(element.validationMessage) : '';
+      if (nativeValidationMessage) errors.push(nativeValidationMessage);
+      const messages = unique(errors);
+      return {
+        invalid: invalidSignal || nativeInvalid === true || messages.length ? true : validSignal ? false : null,
+        errors: messages,
+        descriptions: unique(descriptions).filter((text) => !messages.includes(text)),
+        nativeInvalid,
+        nativeValidationMessage
+      };
+    };
+    const controls = [...scope.querySelectorAll(`${nativeSelector}, ${customValueSelector}`)]
+      .filter((element) => isDisplayed(element) &&
+        (element.tagName !== 'INPUT' || !['hidden', 'button', 'submit', 'reset', 'image', 'password', 'file'].includes(element.type)) &&
+        !sensitiveFormControlReason(element));
+    return controls.map((element) => {
+      const native = element.matches(nativeSelector);
+      const label = readLabel(element);
+      const host = element.closest('[data-testid], [testid]');
+      let value;
+      let display;
+      let source = 'dom';
+      let checked = null;
+      let indeterminate = null;
+      if (!native) {
+        value = normalize(element.textContent);
+        display = value;
+        source = 'display-text';
+      } else if (element.tagName === 'SELECT') {
+        const selected = [...element.selectedOptions];
+        value = element.multiple ? selected.map((option) => option.value) : element.value;
+        display = selected.map((option) => option.label).join(', ');
+      } else if (element.type === 'checkbox' || element.type === 'radio') {
+        value = element.value;
+        checked = element.checked;
+        indeterminate = element.type === 'checkbox' ? element.indeterminate : null;
+        display = element.type === 'radio' ? (checked ? '◉' : '○') :
+          (indeterminate ? '▣' : checked ? '☑' : '☐');
+      } else {
+        value = element.value;
+        display = element.value;
+      }
+      if (/^Bearer\s+/i.test(String(value).trim()) || JWT_VALUE_PATTERN.test(String(value).trim())) {
+        return null;
+      }
+      return {
+        tag: element.tagName.toLowerCase(), type: native ? (element.type || '') : 'custom-select',
+        name: element.getAttribute('name') || '', id: element.id || '',
+        testId: host?.getAttribute('data-testid') || host?.getAttribute('testid') || '',
+        label, disabled: native ? element.matches(':disabled') : null,
+        value, display, source, checked, indeterminate, ...readValidation(element)
+      };
+    }).filter(Boolean);
   }
 
   function describeElement(element) {
@@ -770,12 +744,11 @@
     return Math.round(value * 100) / 100;
   }
 
-  function redactionSignals(element, captureProfile, formSnapshot) {
+  function redactionSignals(element, captureProfile) {
     const signals = new Set();
     if (captureProfile === 'ELEMENT_CONTEXT' && (isFormValueCarrier(element) || element.closest('form'))) {
       signals.add('FORM_VALUES_NOT_REQUESTED');
     }
-    if (formSnapshot?.excludedControls.length) signals.add('SENSITIVE_FORM_CONTROLS_EXCLUDED');
     const raw = String(element.textContent || '').slice(0, 1200);
     if (EMAIL_TEST_PATTERN.test(raw)) signals.add('EMAIL_REDACTED');
     if (UUID_TEST_PATTERN.test(raw) || /\b\d{6,}\b/.test(raw)) signals.add('IDENTIFIER_REDACTED');
@@ -795,9 +768,6 @@
     const captureProfile = CAPTURE_PROFILES.has(options?.captureProfile)
       ? options.captureProfile
       : 'ELEMENT_CONTEXT';
-    const formSnapshot = captureProfile === 'FORM_DIAGNOSTICS'
-      ? captureFormSnapshot(element)
-      : null;
     const emittedAncestors = selectAncestors(ancestry.elements.slice(1));
     const rect = element.getBoundingClientRect();
     const reachedDocumentRoot =
@@ -835,7 +805,6 @@
       },
       target,
       ancestors: emittedAncestors,
-      formSnapshot,
       traversal: {
         observedDepth: ancestry.elements.length,
         emittedNodeCount: emittedAncestors.length + 1,
@@ -845,12 +814,10 @@
       signals: {
         shadowBoundaryCount: ancestry.shadowBoundaryCount,
         frame: global.top === global ? 'TOP_LEVEL' : 'SAME_ORIGIN_FRAME',
-        redactions: redactionSignals(element, captureProfile, formSnapshot)
+        redactions: redactionSignals(element, captureProfile)
       },
       limits: [
-        ...(!reachedDocumentRoot ? ['DOCUMENT_ROOT_NOT_REACHED'] : []),
-        ...(captureProfile === 'FORM_DIAGNOSTICS' && !formSnapshot ? ['FORM_CONTEXT_NOT_FOUND'] : []),
-        ...(formSnapshot?.valuesTruncated ? ['FORM_VALUES_TRUNCATED'] : [])
+        ...(!reachedDocumentRoot ? ['DOCUMENT_ROOT_NOT_REACHED'] : [])
       ],
       client: {
         name: 'TDW UX Inspector',
@@ -993,178 +960,6 @@
     };
   }
 
-  function normalizeValidity(value) {
-    const keys = [
-      'valid', 'valueMissing', 'typeMismatch', 'patternMismatch', 'tooShort', 'tooLong',
-      'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'badInput', 'customError',
-      'validationMessage'
-    ];
-    if (value === null) return null;
-    if (!isObject(value) || !hasExactKeys(value, keys)) return undefined;
-    if (keys.slice(0, -1).some((key) => typeof value[key] !== 'boolean')) return undefined;
-    return {
-      valid: value.valid,
-      valueMissing: value.valueMissing,
-      typeMismatch: value.typeMismatch,
-      patternMismatch: value.patternMismatch,
-      tooShort: value.tooShort,
-      tooLong: value.tooLong,
-      rangeUnderflow: value.rangeUnderflow,
-      rangeOverflow: value.rangeOverflow,
-      stepMismatch: value.stepMismatch,
-      badInput: value.badInput,
-      customError: value.customError,
-      validationMessage: normalizeText(value.validationMessage, 300)
-    };
-  }
-
-  function normalizeNullableIdentifier(value) {
-    if (value === null) return null;
-    return isSafeIdentifier(value) ? value.trim() : undefined;
-  }
-
-  function normalizeRawFormValue(value, remainingCharacters) {
-    if (value === null) return { value: null, truncated: false, used: 0 };
-    if (typeof value !== 'string') return null;
-    const bounded = boundedFormValue(value, remainingCharacters);
-    return { value: bounded.value, truncated: bounded.truncated, used: bounded.used };
-  }
-
-  function normalizeStringValues(values, remainingCharacters) {
-    if (!Array.isArray(values)) return null;
-    const result = [];
-    let used = 0;
-    let truncated = false;
-    for (const value of values.slice(0, 64)) {
-      if (typeof value !== 'string') return null;
-      const bounded = boundedFormValue(value, Math.max(0, remainingCharacters - used));
-      result.push(bounded.value);
-      used += bounded.used;
-      truncated ||= bounded.truncated;
-    }
-    return { values: result, used, truncated };
-  }
-
-  function normalizeFormControl(value, remainingCharacters) {
-    const keys = [
-      'selectedTarget', 'tag', 'type', 'name', 'formControlName', 'accessibleName',
-      'stableAttributes', 'value', 'valueTruncated', 'checked', 'selectedValues',
-      'selectedLabels', 'disabled', 'readOnly', 'required', 'validity'
-    ];
-    if (!isObject(value) || !hasExactKeys(value, keys)) return null;
-    const tag = boundedString(value.tag, 40, false);
-    const type = value.type === null ? null : normalizeText(value.type, 40);
-    const name = normalizeNullableIdentifier(value.name);
-    const formControlName = normalizeNullableIdentifier(value.formControlName);
-    const validity = normalizeValidity(value.validity);
-    if (!tag || !/^[a-z][a-z0-9-]*$/.test(tag) || name === undefined ||
-        formControlName === undefined || validity === undefined) return null;
-    if (['password', 'file'].includes(String(type || '').toLowerCase()) ||
-        SENSITIVE_PATTERN.test([type, name, formControlName].filter(Boolean).join(' '))) return null;
-    const selectedValues = normalizeStringValues(value.selectedValues, remainingCharacters);
-    if (!selectedValues) return null;
-    const selectedLabels = normalizeStringValues(
-      value.selectedLabels,
-      Math.max(0, remainingCharacters - selectedValues.used)
-    );
-    if (!selectedLabels) return null;
-    const raw = normalizeRawFormValue(
-      value.value,
-      Math.max(0, remainingCharacters - selectedValues.used - selectedLabels.used)
-    );
-    if (!raw) return null;
-    if (raw.value && (/^Bearer\s+/i.test(raw.value.trim()) || JWT_VALUE_PATTERN.test(raw.value.trim()))) return null;
-    return {
-      control: {
-        selectedTarget: value.selectedTarget === true,
-        tag,
-        type,
-        name,
-        formControlName,
-        accessibleName: normalizeText(value.accessibleName, MAX_ACCESSIBLE_NAME_LENGTH),
-        stableAttributes: normalizeStableAttributes(value.stableAttributes),
-        value: raw.value,
-        valueTruncated: value.valueTruncated === true || raw.truncated || selectedValues.truncated || selectedLabels.truncated,
-        checked: value.checked === true || value.checked === false ? value.checked : null,
-        selectedValues: selectedValues.values,
-        selectedLabels: selectedLabels.values,
-        disabled: value.disabled === true,
-        readOnly: value.readOnly === true,
-        required: value.required === true,
-        validity
-      },
-      used: raw.used + selectedValues.used + selectedLabels.used
-    };
-  }
-
-  function normalizeExcludedControl(value) {
-    if (!isObject(value) || !hasExactKeys(value, ['tag', 'type', 'name', 'formControlName', 'reason'])) return null;
-    const tag = boundedString(value.tag, 40, false);
-    const type = value.type === null ? null : normalizeText(value.type, 40);
-    const name = normalizeNullableIdentifier(value.name);
-    const formControlName = normalizeNullableIdentifier(value.formControlName);
-    const reasons = new Set(['SENSITIVE_TYPE', 'FILE_CONTROL', 'SENSITIVE_AUTOCOMPLETE', 'SENSITIVE_NAME', 'SENSITIVE_VALUE']);
-    if (!tag || name === undefined || formControlName === undefined || !reasons.has(value.reason)) return null;
-    return { tag, type, name, formControlName, reason: value.reason };
-  }
-
-  function normalizeSubmitter(value) {
-    if (!isObject(value) || !hasExactKeys(value, [
-      'selectedTarget', 'tag', 'type', 'accessibleName', 'stableAttributes', 'disabled'
-    ])) return null;
-    const tag = boundedString(value.tag, 40, false);
-    if (!tag) return null;
-    return {
-      selectedTarget: value.selectedTarget === true,
-      tag,
-      type: value.type === null ? null : normalizeText(value.type, 40),
-      accessibleName: normalizeText(value.accessibleName, MAX_ACCESSIBLE_NAME_LENGTH),
-      stableAttributes: normalizeStableAttributes(value.stableAttributes),
-      disabled: value.disabled === true
-    };
-  }
-
-  function normalizeFormSnapshot(value) {
-    const keys = [
-      'source', 'stableAttributes', 'selectorCandidates', 'valid', 'observedControlCount',
-      'emittedControlCount', 'omittedControlCount', 'controls', 'submitters',
-      'excludedControls', 'valueCharacters', 'valuesTruncated'
-    ];
-    if (!isObject(value) || !hasExactKeys(value, keys)) return null;
-    if (!['NEAREST_FORM', 'SELECTED_CONTROL_ONLY'].includes(value.source) ||
-        !Array.isArray(value.selectorCandidates) || !Array.isArray(value.controls) ||
-        !Array.isArray(value.submitters) || !Array.isArray(value.excludedControls)) return null;
-    const selectors = value.selectorCandidates.map(normalizeSelectorCandidate).filter(Boolean).slice(0, MAX_SELECTOR_CANDIDATES);
-    if (selectors.length !== Math.min(value.selectorCandidates.length, MAX_SELECTOR_CANDIDATES)) return null;
-    const controls = [];
-    let used = 0;
-    for (const candidate of value.controls.slice(0, MAX_FORM_CONTROLS)) {
-      const normalized = normalizeFormControl(candidate, Math.max(0, MAX_FORM_VALUE_CHARACTERS - used));
-      if (!normalized) return null;
-      controls.push(normalized.control);
-      used += normalized.used;
-    }
-    const submitters = value.submitters.slice(0, 16).map(normalizeSubmitter);
-    const excludedControls = value.excludedControls.slice(0, MAX_EXCLUDED_FORM_CONTROLS).map(normalizeExcludedControl);
-    if (submitters.some((item) => !item) || excludedControls.some((item) => !item)) return null;
-    const observed = safeInteger(value.observedControlCount, controls.length + excludedControls.length, 4096);
-    const omitted = safeInteger(value.omittedControlCount, 0, 4096);
-    return {
-      source: value.source,
-      stableAttributes: normalizeStableAttributes(value.stableAttributes),
-      selectorCandidates: Array.from(new Set(selectors)),
-      valid: value.valid === true || value.valid === false ? value.valid : null,
-      observedControlCount: observed,
-      emittedControlCount: controls.length,
-      omittedControlCount: omitted,
-      controls,
-      submitters,
-      excludedControls,
-      valueCharacters: used,
-      valuesTruncated: value.valuesTruncated === true || controls.some((control) => control.valueTruncated) || omitted > 0
-    };
-  }
-
   function serializedSize(value) {
     let json;
     try {
@@ -1187,9 +982,9 @@
     }
     if (!hasExactKeys(input, [
       'schema', 'version', 'captureId', 'capturedAt', 'captureProfile', 'page', 'target',
-      'ancestors', 'formSnapshot', 'traversal', 'signals', 'limits', 'client'
+      'ancestors', 'traversal', 'signals', 'limits', 'client'
     ])) {
-      return failure('Capture fields do not match the v3 contract.');
+      return failure('Capture fields do not match the v2 contract.');
     }
     if (input.schema !== CAPTURE_SCHEMA || input.version !== CAPTURE_VERSION) {
       return failure('Unsupported capture schema or version.');
@@ -1277,13 +1072,6 @@
       ? Array.from(new Set(input.signals.redactions.filter(isSafeCode))).slice(0, 24)
       : [];
     const limits = Array.from(new Set(input.limits.filter(isSafeCode))).slice(0, 32);
-    const formSnapshot = input.formSnapshot === null ? null : normalizeFormSnapshot(input.formSnapshot);
-    if (input.formSnapshot !== null && !formSnapshot) {
-      return failure('Capture form snapshot is invalid.');
-    }
-    if (input.captureProfile === 'ELEMENT_CONTEXT' && formSnapshot !== null) {
-      return failure('Element context capture must not contain a form snapshot.');
-    }
     const normalized = {
       schema: CAPTURE_SCHEMA,
       version: CAPTURE_VERSION,
@@ -1299,7 +1087,6 @@
       },
       target,
       ancestors,
-      formSnapshot,
       traversal: {
         observedDepth: safeInteger(traversalInput.observedDepth, ancestors.length + 1, 4096),
         emittedNodeCount: safeInteger(traversalInput.emittedNodeCount, ancestors.length + 1, 4096),
@@ -1357,14 +1144,16 @@
       return false;
     }
     if (type === 'TDW_UX_INSPECTOR_CAPTURE') {
-      return hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture']) ||
-        hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture', 'storeStatus', 'storeChunks']);
+      return hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture',
+        'storeStatus', 'storeChunks', 'formStatus', 'formChunks']);
     }
     const shapes = {
       TDW_UX_INSPECTOR_READY: ['type', 'protocolVersion', 'nonce'],
       TDW_UX_INSPECTOR_RECEIVED: ['type', 'protocolVersion', 'nonce', 'captureId'],
       TDW_UX_INSPECTOR_STORE_CHUNK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk'],
       TDW_UX_INSPECTOR_STORE_ACK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index'],
+      TDW_UX_INSPECTOR_FORM_CHUNK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk'],
+      TDW_UX_INSPECTOR_FORM_ACK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index'],
       TDW_UX_INSPECTOR_ERROR: ['type', 'protocolVersion', 'nonce', 'code'],
       TDW_UI_EXPLORER_READY: ['type', 'protocolVersion', 'nonce'],
       TDW_UI_EXPLORER_CONTEXT: ['type', 'protocolVersion', 'nonce', 'contextId', 'context'],
@@ -1399,6 +1188,7 @@
     safeRouteHash,
     describeElement,
     captureElement,
+    captureVisibleFormFields,
     capturePageContext,
     normalizeCapture,
     normalizePageContext,
@@ -1412,6 +1202,8 @@
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_RECEIVED', nonce),
     isStoreAckMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_STORE_ACK', nonce),
+    isFormAckMessage: (data, nonce) =>
+      isProtocolMessage(data, 'TDW_UX_INSPECTOR_FORM_ACK', nonce),
     isCaptureMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_CAPTURE', nonce),
     isErrorMessage: (data, nonce) =>

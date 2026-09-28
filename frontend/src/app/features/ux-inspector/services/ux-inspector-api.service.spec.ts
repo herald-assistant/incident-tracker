@@ -42,6 +42,12 @@ describe('UxInspectorApiService', () => {
     expect(upload.request.method).toBe('POST');
     expect(upload.request.body).toBe(store);
 
+    const form = { captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com', fields: [] };
+    service.uploadFormFieldsSnapshot(form).subscribe();
+    const formUpload = http.expectOne('/api/ux-inspector/form-fields-snapshots');
+    expect(formUpload.request.method).toBe('POST');
+    expect(formUpload.request.body).toBe(form);
+
     service.getJob('job/crm').subscribe();
     expect(http.expectOne('/api/ux-inspector/jobs/job%2Fcrm').request.method).toBe('GET');
 

@@ -66,7 +66,7 @@ public class UxInspectorImportService {
                 || job.report().sections().size() != 1 || !"answer".equals(job.report().sections().get(0).id())
                 || job.request().capture() == null
                 || job.request().capture().version() != UxInspectorCapture.VERSION) {
-            throw invalid("Only a completed UX Inspector export v2 or legacy v1 result with capture v1 can be imported.");
+            throw invalid("Only a completed UX Inspector export v2 or legacy v1 result with capture v2 can be imported.");
         }
         try {
             if (!captureNormalizer.normalize(job.request().capture()).equals(job.request().capture())) {

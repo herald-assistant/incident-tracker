@@ -55,36 +55,27 @@
                   <span class="panel-chip">{{ entry[0] }}={{ entry[1] }}</span>
                 }
               </div>
-              @if (capture.formSnapshot; as form) {
+              @if (capture.captureProfile === 'FORM_DIAGNOSTICS') {
                 <details class="ux-inspector-form-snapshot">
                   <summary>
-                    Dane formularza: {{ form.controls.length }} pól ·
-                    {{ form.excludedControls.length }} wykluczonych
-                    @if (form.valuesTruncated) { · część danych obcięta }
+                    Pola widoczne przy capture:
+                    {{ facade.formStatus() === 'available' ? facade.formFields()?.length + ' ' + (facade.formFields()?.length === 1 ? 'pole' : 'pól') :
+                       facade.formStatus() === 'receiving' ? 'pobieranie…' : 'niedostępne' }}
                   </summary>
-                  <p>
-                    Stan zamrożony przy wskazaniu elementu.
-                    @if (form.valid !== null) { Formularz: {{ form.valid ? 'valid' : 'invalid' }}. }
-                  </p>
-                  <dl>
-                    @for (control of form.controls; track $index) {
-                      <div>
-                        <dt>
-                          {{ formControlLabel(control) }}
-                          @if (control.type === 'hidden') { <span>· hidden</span> }
-                          @if (control.selectedTarget) { <span>· wskazane</span> }
-                        </dt>
-                        <dd><code>{{ formControlValue(control) }}</code>@if (control.valueTruncated) { <span> · obcięto</span> }</dd>
-                      </div>
-                    }
-                  </dl>
-                  @if (form.excludedControls.length) {
-                    <p>Wykluczono:</p>
-                    <ul>
-                      @for (control of form.excludedControls; track $index) {
-                        <li>{{ control.formControlName || control.name || control.type || control.tag }} — {{ control.reason }}</li>
+                  <p>Obserwacja pól widocznych na stronie w chwili capture.</p>
+                  @if (facade.formFields(); as fields) {
+                    <dl>
+                      @for (field of fields; track $index) {
+                        <div>
+                          <dt>{{ field.label || field.name || field.testId || field.id || '<' + field.tag + '>' }}</dt>
+                          <dd><code>{{ formFieldValue(field) }}</code>
+                            @if (field.invalid === true && field.errors.length) {
+                              <span> · {{ field.errors.join(' | ') }}</span>
+                            }
+                          </dd>
+                        </div>
                       }
-                    </ul>
+                    </dl>
                   }
                 </details>
               }

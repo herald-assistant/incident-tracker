@@ -9,7 +9,6 @@ import org.springframework.util.StringUtils;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,11 +24,7 @@ public class UxInspectorCaptureNormalizer {
             "data-cy", "formcontrolname", "aria-label", "aria-describedby");
     private static final Pattern SAFE_IDENTIFIER = Pattern.compile("^[A-Za-z][A-Za-z0-9_.:-]*$");
     private static final Pattern SENSITIVE = Pattern.compile("(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|one[-_ ]?time|otp|cvv|cvc)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern JWT = Pattern.compile("^[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}$");
     private static final Pattern SELECTOR = Pattern.compile("^(#[A-Za-z][A-Za-z0-9_.:-]*|[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label)=\"[A-Za-z][A-Za-z0-9_.:-]*\"\\]|[a-z][a-z0-9-]{0,39}\\[class~=\"[A-Za-z][A-Za-z0-9_.:-]*\"\\])$");
-    private static final Set<String> FORM_SOURCES = Set.of("NEAREST_FORM", "SELECTED_CONTROL_ONLY");
-    private static final Set<String> EXCLUSION_REASONS = Set.of("SENSITIVE_TYPE", "FILE_CONTROL",
-            "SENSITIVE_AUTOCOMPLETE", "SENSITIVE_NAME", "SENSITIVE_VALUE");
     private static final Pattern EMAIL = Pattern.compile("\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern UUID = Pattern.compile("\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern LONG_NUMBER = Pattern.compile("\\b\\d{6,}\\b");
@@ -50,12 +45,11 @@ public class UxInspectorCaptureNormalizer {
         var target = normalizeTarget(capture.target(), redactions);
         var ancestors = capture.ancestors().stream().map(value -> normalizeAncestor(value, redactions)).toList();
         var limits = new LinkedHashSet<>(limitCodes(capture.limits(), 32));
-        var formSnapshot = normalizeFormSnapshot(capture.captureProfile(), capture.formSnapshot(), redactions, limits);
         var traversal = normalizeTraversal(capture.traversal(), ancestors.size());
         var signals = normalizeSignals(capture.signals(), redactions);
         var normalized = new UxInspectorCapture(UxInspectorCapture.SCHEMA, UxInspectorCapture.VERSION,
                 capture.captureId(), capture.capturedAt(), capture.captureProfile(), page, target, ancestors,
-                formSnapshot, traversal, signals,
+                traversal, signals,
                 List.copyOf(limits), new UxInspectorCapture.Client("TDW UX Inspector",
                 bounded(capture.client().version(), 40, "unknown"), "ux-inspector"));
         require(serializedBytes(normalized) <= UxInspectorCapture.MAX_BYTES,
@@ -101,156 +95,6 @@ public class UxInspectorCaptureNormalizer {
         var labelFor = nullableIdentifier(value.labelFor());
         require(value.labelFor() == null || labelFor != null, "domFingerprint.labelFor is invalid");
         return new UxInspectorCapture.DomFingerprint(attributes(value.stableAttributes()), selectors, boundaries, labelFor);
-    }
-
-    private UxInspectorCapture.FormSnapshot normalizeFormSnapshot(
-            UxInspectorCapture.CaptureProfile profile,
-            UxInspectorCapture.FormSnapshot value,
-            Set<String> redactions,
-            Set<String> limits
-    ) {
-        if (profile == UxInspectorCapture.CaptureProfile.ELEMENT_CONTEXT) {
-            require(value == null, "ELEMENT_CONTEXT must not contain formSnapshot");
-            return null;
-        }
-        if (value == null) return null;
-        require(FORM_SOURCES.contains(value.source()), "formSnapshot.source is invalid");
-        require(value.controls().size() <= UxInspectorCapture.MAX_FORM_CONTROLS,
-                "formSnapshot.controls exceeds the supported limit");
-        require(value.submitters().size() <= 16 && value.excludedControls().size() <= 32,
-                "formSnapshot metadata exceeds the supported limit");
-        var selectors = value.selectorCandidates().stream().filter(this::safeSelector).distinct().limit(8).toList();
-        require(selectors.size() == value.selectorCandidates().size(), "formSnapshot.selectorCandidates are invalid");
-        var controls = new ArrayList<UxInspectorCapture.FormControl>();
-        var valueCharacters = 0;
-        var backendTruncated = false;
-        for (var control : value.controls()) {
-            var normalized = normalizeFormControl(control,
-                    Math.max(0, UxInspectorCapture.MAX_FORM_VALUE_CHARACTERS - valueCharacters), redactions);
-            valueCharacters += formValueCharacters(normalized);
-            backendTruncated |= normalized.valueTruncated();
-            controls.add(normalized);
-        }
-        require(valueCharacters <= UxInspectorCapture.MAX_FORM_VALUE_CHARACTERS,
-                "formSnapshot values exceed the supported budget");
-        require(value.emittedControlCount() == value.controls().size(),
-                "formSnapshot.emittedControlCount is inconsistent");
-        require(value.observedControlCount() >= value.emittedControlCount()
-                        && value.omittedControlCount() >= 0 && value.observedControlCount() <= 4096,
-                "formSnapshot control counts are invalid");
-        var submitters = value.submitters().stream().map(item -> normalizeSubmitter(item, redactions)).toList();
-        var excluded = value.excludedControls().stream().map(this::normalizeExcludedControl).toList();
-        if (!excluded.isEmpty()) redactions.add("BACKEND_SENSITIVE_FORM_CONTROLS_EXCLUDED");
-        var truncated = value.valuesTruncated() || backendTruncated || value.omittedControlCount() > 0;
-        if (truncated) limits.add("FORM_VALUES_TRUNCATED");
-        return new UxInspectorCapture.FormSnapshot(value.source(), attributes(value.stableAttributes()), selectors,
-                value.valid(), value.observedControlCount(), controls.size(), value.omittedControlCount(), controls,
-                submitters, excluded, valueCharacters, truncated);
-    }
-
-    private UxInspectorCapture.FormControl normalizeFormControl(
-            UxInspectorCapture.FormControl value,
-            int remainingCharacters,
-            Set<String> redactions
-    ) {
-        require(value != null && matches(value.tag(), "^[A-Za-z][A-Za-z0-9-]{0,39}$"),
-                "form control tag is invalid");
-        var type = bounded(value.type(), 40, null);
-        var name = nullableIdentifier(value.name());
-        var formControlName = nullableIdentifier(value.formControlName());
-        require(value.name() == null || name != null, "form control name is invalid");
-        require(value.formControlName() == null || formControlName != null, "formControlName is invalid");
-        require(!isSensitiveControl(type, name, formControlName), "sensitive form control entered controls payload");
-        var selectedValues = normalizeFormValues(value.selectedValues(), remainingCharacters);
-        remainingCharacters -= selectedValues.stream().mapToInt(String::length).sum();
-        var selectedLabels = normalizeFormValues(value.selectedLabels(), Math.max(0, remainingCharacters));
-        remainingCharacters -= selectedLabels.stream().mapToInt(String::length).sum();
-        var normalizedValue = normalizeFormValue(value.value(), Math.max(0, remainingCharacters));
-        require(!looksSensitiveValue(normalizedValue), "sensitive form value entered capture");
-        var truncated = value.valueTruncated()
-                || value.value() != null && normalizedValue.length() < normalizeRaw(value.value()).length()
-                || rawCharacters(value.selectedValues()) > selectedValues.stream().mapToInt(String::length).sum()
-                || rawCharacters(value.selectedLabels()) > selectedLabels.stream().mapToInt(String::length).sum();
-        var validity = normalizeValidity(value.validity(), redactions);
-        return new UxInspectorCapture.FormControl(value.selectedTarget(), value.tag().toLowerCase(Locale.ROOT),
-                type != null ? type.toLowerCase(Locale.ROOT) : null, name, formControlName,
-                sanitizeText(value.accessibleName(), 140, redactions), attributes(value.stableAttributes()),
-                normalizedValue, truncated, value.checked(), selectedValues, selectedLabels,
-                value.disabled(), value.readOnly(), value.required(), validity);
-    }
-
-    private UxInspectorCapture.Validity normalizeValidity(UxInspectorCapture.Validity value, Set<String> redactions) {
-        if (value == null) return null;
-        return new UxInspectorCapture.Validity(value.valid(), value.valueMissing(), value.typeMismatch(),
-                value.patternMismatch(), value.tooShort(), value.tooLong(), value.rangeUnderflow(),
-                value.rangeOverflow(), value.stepMismatch(), value.badInput(), value.customError(),
-                sanitizeText(value.validationMessage(), 300, redactions));
-    }
-
-    private UxInspectorCapture.FormSubmitter normalizeSubmitter(
-            UxInspectorCapture.FormSubmitter value,
-            Set<String> redactions
-    ) {
-        require(value != null && matches(value.tag(), "^[A-Za-z][A-Za-z0-9-]{0,39}$"),
-                "form submitter tag is invalid");
-        return new UxInspectorCapture.FormSubmitter(value.selectedTarget(), value.tag().toLowerCase(Locale.ROOT),
-                bounded(value.type(), 40, null), sanitizeText(value.accessibleName(), 140, redactions),
-                attributes(value.stableAttributes()), value.disabled());
-    }
-
-    private UxInspectorCapture.ExcludedFormControl normalizeExcludedControl(UxInspectorCapture.ExcludedFormControl value) {
-        require(value != null && matches(value.tag(), "^[A-Za-z][A-Za-z0-9-]{0,39}$")
-                        && EXCLUSION_REASONS.contains(value.reason()), "excluded form control is invalid");
-        return new UxInspectorCapture.ExcludedFormControl(value.tag().toLowerCase(Locale.ROOT),
-                bounded(value.type(), 40, null), safeIdentifier(value.name()) ? value.name().trim() : null,
-                safeIdentifier(value.formControlName()) ? value.formControlName().trim() : null, value.reason());
-    }
-
-    private List<String> normalizeFormValues(List<String> values, int remainingCharacters) {
-        require(values == null || values.size() <= 64, "form selected values exceed the supported limit");
-        var result = new ArrayList<String>();
-        var remaining = Math.max(0, remainingCharacters);
-        for (var value : values != null ? values : List.<String>of()) {
-            require(value != null, "form selected values cannot contain null");
-            var normalized = normalizeFormValue(value, remaining);
-            require(!looksSensitiveValue(normalized), "sensitive selected value entered capture");
-            result.add(normalized);
-            remaining -= normalized.length();
-        }
-        return List.copyOf(result);
-    }
-
-    private String normalizeFormValue(String value, int remainingCharacters) {
-        if (value == null) return null;
-        var normalized = normalizeRaw(value);
-        var max = Math.min(UxInspectorCapture.MAX_FORM_VALUE_LENGTH, Math.max(0, remainingCharacters));
-        return normalized.length() <= max ? normalized : normalized.substring(0, max);
-    }
-
-    private String normalizeRaw(String value) {
-        return Normalizer.normalize(value, Normalizer.Form.NFC).replace("\r\n", "\n");
-    }
-
-    private int formValueCharacters(UxInspectorCapture.FormControl value) {
-        return (value.value() != null ? value.value().length() : 0)
-                + value.selectedValues().stream().mapToInt(String::length).sum()
-                + value.selectedLabels().stream().mapToInt(String::length).sum();
-    }
-
-    private int rawCharacters(List<String> values) {
-        return (values != null ? values : List.<String>of()).stream()
-                .mapToInt(value -> value != null ? normalizeRaw(value).length() : 0).sum();
-    }
-
-    private boolean isSensitiveControl(String type, String name, String formControlName) {
-        return Set.of("password", "file").contains(type != null ? type.toLowerCase(Locale.ROOT) : "")
-                || SENSITIVE.matcher(String.join(" ", nullToEmpty(name), nullToEmpty(formControlName))).find();
-    }
-
-    private boolean looksSensitiveValue(String value) {
-        if (!StringUtils.hasText(value)) return false;
-        var trimmed = value.trim();
-        return trimmed.regionMatches(true, 0, "Bearer ", 0, 7) || JWT.matcher(trimmed).matches();
     }
 
     private UxInspectorCapture.Ancestor normalizeAncestor(UxInspectorCapture.Ancestor value, Set<String> redactions) {

@@ -21,18 +21,14 @@ public record UxInspectorCapture(
         Page page,
         Target target,
         List<Ancestor> ancestors,
-        FormSnapshot formSnapshot,
         Traversal traversal,
         Signals signals,
         List<String> limits,
         Client client
 ) {
     public static final String SCHEMA = "tdw.ux-inspector-capture";
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     public static final int MAX_BYTES = 128 * 1024;
-    public static final int MAX_FORM_CONTROLS = 64;
-    public static final int MAX_FORM_VALUE_LENGTH = 16 * 1024;
-    public static final int MAX_FORM_VALUE_CHARACTERS = 64 * 1024;
 
     public UxInspectorCapture {
         ancestors = ancestors != null ? List.copyOf(ancestors) : List.of();
@@ -42,14 +38,13 @@ public record UxInspectorCapture(
     static UxInspectorCapture fromJson(JsonNode node) {
         requireObject(node, "capture");
         requireFields(node, "capture", Set.of("schema", "version", "captureId", "capturedAt", "captureProfile",
-                "page", "target", "ancestors", "formSnapshot", "traversal", "signals", "limits", "client"));
+                "page", "target", "ancestors", "traversal", "signals", "limits", "client"));
         var ancestorsNode = requiredArray(node, "ancestors");
         var ancestors = new java.util.ArrayList<Ancestor>();
         for (var value : ancestorsNode) ancestors.add(ancestor(value));
         return new UxInspectorCapture(
                 text(node, "schema"), integer(node, "version"), text(node, "captureId"), instant(node, "capturedAt"),
                 captureProfile(node), page(requiredObject(node, "page")), target(requiredObject(node, "target")), ancestors,
-                nullableFormSnapshot(node.get("formSnapshot")),
                 traversal(requiredObject(node, "traversal")), signals(requiredObject(node, "signals")),
                 strings(requiredArray(node, "limits"), "limits"), client(requiredObject(node, "client"))
         );
@@ -104,67 +99,6 @@ public record UxInspectorCapture(
         } catch (RuntimeException exception) {
             throw new IllegalArgumentException("captureProfile is invalid");
         }
-    }
-
-    private static FormSnapshot nullableFormSnapshot(JsonNode node) {
-        if (node == null || node.isNull()) return null;
-        requireObject(node, "formSnapshot");
-        requireFields(node, "formSnapshot", Set.of("source", "stableAttributes", "selectorCandidates", "valid",
-                "observedControlCount", "emittedControlCount", "omittedControlCount", "controls", "submitters",
-                "excludedControls", "valueCharacters", "valuesTruncated"));
-        var controls = new java.util.ArrayList<FormControl>();
-        for (var value : requiredArray(node, "controls")) controls.add(formControl(value));
-        var submitters = new java.util.ArrayList<FormSubmitter>();
-        for (var value : requiredArray(node, "submitters")) submitters.add(formSubmitter(value));
-        var excluded = new java.util.ArrayList<ExcludedFormControl>();
-        for (var value : requiredArray(node, "excludedControls")) excluded.add(excludedFormControl(value));
-        return new FormSnapshot(text(node, "source"), stringMap(requiredObject(node, "stableAttributes"), "stableAttributes"),
-                strings(requiredArray(node, "selectorCandidates"), "selectorCandidates"), nullableBool(node, "valid"),
-                integer(node, "observedControlCount"), integer(node, "emittedControlCount"),
-                integer(node, "omittedControlCount"), controls, submitters, excluded,
-                integer(node, "valueCharacters"), bool(node, "valuesTruncated"));
-    }
-
-    private static FormControl formControl(JsonNode node) {
-        requireObject(node, "formControl");
-        requireFields(node, "formControl", Set.of("selectedTarget", "tag", "type", "name", "formControlName",
-                "accessibleName", "stableAttributes", "value", "valueTruncated", "checked", "selectedValues",
-                "selectedLabels", "disabled", "readOnly", "required", "validity"));
-        return new FormControl(bool(node, "selectedTarget"), text(node, "tag"), nullableText(node, "type"),
-                nullableText(node, "name"), nullableText(node, "formControlName"), nullableText(node, "accessibleName"),
-                stringMap(requiredObject(node, "stableAttributes"), "stableAttributes"), nullableText(node, "value"),
-                bool(node, "valueTruncated"), nullableBool(node, "checked"),
-                strings(requiredArray(node, "selectedValues"), "selectedValues"),
-                strings(requiredArray(node, "selectedLabels"), "selectedLabels"), bool(node, "disabled"),
-                bool(node, "readOnly"), bool(node, "required"), nullableValidity(node.get("validity")));
-    }
-
-    private static Validity nullableValidity(JsonNode node) {
-        if (node == null || node.isNull()) return null;
-        requireObject(node, "validity");
-        requireFields(node, "validity", Set.of("valid", "valueMissing", "typeMismatch", "patternMismatch",
-                "tooShort", "tooLong", "rangeUnderflow", "rangeOverflow", "stepMismatch", "badInput",
-                "customError", "validationMessage"));
-        return new Validity(bool(node, "valid"), bool(node, "valueMissing"), bool(node, "typeMismatch"),
-                bool(node, "patternMismatch"), bool(node, "tooShort"), bool(node, "tooLong"),
-                bool(node, "rangeUnderflow"), bool(node, "rangeOverflow"), bool(node, "stepMismatch"),
-                bool(node, "badInput"), bool(node, "customError"), nullableText(node, "validationMessage"));
-    }
-
-    private static FormSubmitter formSubmitter(JsonNode node) {
-        requireObject(node, "formSubmitter");
-        requireFields(node, "formSubmitter", Set.of("selectedTarget", "tag", "type", "accessibleName",
-                "stableAttributes", "disabled"));
-        return new FormSubmitter(bool(node, "selectedTarget"), text(node, "tag"), nullableText(node, "type"),
-                nullableText(node, "accessibleName"),
-                stringMap(requiredObject(node, "stableAttributes"), "stableAttributes"), bool(node, "disabled"));
-    }
-
-    private static ExcludedFormControl excludedFormControl(JsonNode node) {
-        requireObject(node, "excludedFormControl");
-        requireFields(node, "excludedFormControl", Set.of("tag", "type", "name", "formControlName", "reason"));
-        return new ExcludedFormControl(text(node, "tag"), nullableText(node, "type"), nullableText(node, "name"),
-                nullableText(node, "formControlName"), text(node, "reason"));
     }
 
     private static Traversal traversal(JsonNode node) {
@@ -295,40 +229,6 @@ public record UxInspectorCapture(
                               boolean invalid, Boolean checked, Boolean expanded, boolean hidden) {}
     public record Bounds(double x, double y, double width, double height) {}
     public enum CaptureProfile { ELEMENT_CONTEXT, FORM_DIAGNOSTICS }
-    public record FormSnapshot(String source, Map<String, String> stableAttributes, List<String> selectorCandidates,
-                               Boolean valid, int observedControlCount, int emittedControlCount,
-                               int omittedControlCount, List<FormControl> controls, List<FormSubmitter> submitters,
-                               List<ExcludedFormControl> excludedControls, int valueCharacters,
-                               boolean valuesTruncated) {
-        public FormSnapshot {
-            stableAttributes = stableAttributes != null ? Map.copyOf(stableAttributes) : Map.of();
-            selectorCandidates = selectorCandidates != null ? List.copyOf(selectorCandidates) : List.of();
-            controls = controls != null ? List.copyOf(controls) : List.of();
-            submitters = submitters != null ? List.copyOf(submitters) : List.of();
-            excludedControls = excludedControls != null ? List.copyOf(excludedControls) : List.of();
-        }
-    }
-    public record FormControl(boolean selectedTarget, String tag, String type, String name, String formControlName,
-                              String accessibleName, Map<String, String> stableAttributes, String value,
-                              boolean valueTruncated, Boolean checked, List<String> selectedValues,
-                              List<String> selectedLabels, boolean disabled, boolean readOnly, boolean required,
-                              Validity validity) {
-        public FormControl {
-            stableAttributes = stableAttributes != null ? Map.copyOf(stableAttributes) : Map.of();
-            selectedValues = selectedValues != null ? List.copyOf(selectedValues) : List.of();
-            selectedLabels = selectedLabels != null ? List.copyOf(selectedLabels) : List.of();
-        }
-    }
-    public record Validity(boolean valid, boolean valueMissing, boolean typeMismatch, boolean patternMismatch,
-                           boolean tooShort, boolean tooLong, boolean rangeUnderflow, boolean rangeOverflow,
-                           boolean stepMismatch, boolean badInput, boolean customError, String validationMessage) {}
-    public record FormSubmitter(boolean selectedTarget, String tag, String type, String accessibleName,
-                                Map<String, String> stableAttributes, boolean disabled) {
-        public FormSubmitter {
-            stableAttributes = stableAttributes != null ? Map.copyOf(stableAttributes) : Map.of();
-        }
-    }
-    public record ExcludedFormControl(String tag, String type, String name, String formControlName, String reason) {}
     public record Traversal(int observedDepth, int emittedNodeCount, int omittedNodeCount, boolean reachedDocumentRoot) {}
     public record Signals(int shadowBoundaryCount, String frame, List<String> redactions) {
         public Signals { redactions = redactions != null ? List.copyOf(redactions) : List.of(); }

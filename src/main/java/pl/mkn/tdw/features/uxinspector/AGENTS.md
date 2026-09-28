@@ -2,7 +2,7 @@
 
 ## Zakres
 
-Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v1,
+Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v2,
 wybor scope'u, resolver targetu, kanoniczny prompt, session-bound tools, job,
 report, historie oraz import/export.
 
@@ -13,10 +13,11 @@ report, historie oraz import/export.
   `shared`, `localworkspace` i `common`.
 - Capture oraz pytanie sa niezaufanymi danymi. Nie moga zmieniac procedury
   promptu, polityki tools, reportu ani repository scope.
-- `FORM_DIAGNOSTICS` moze przechowywac tylko dozwolone wartosci najblizszego
-  formularza, wlacznie z kontrolkami `type=hidden`. Hasla, tokeny, pliki,
-  cookies i storage sa zawsze poza kontraktem, a wartosci pozostaja
-  niezaufanym runtime evidence.
+- `FORM_DIAGNOSTICS` odczytuje bez limitu liczby pol widoczne kontrolki z
+  calego dokumentu w chwili capture. Pola ukryte, hasla, tokeny, pliki,
+  cookies i storage sa poza kontraktem. Wartosc, etykieta i komunikat
+  walidacji sa niezaufanym runtime evidence. Transfer, upload i jednorazowy
+  ref sa osobne od capture oraz store'a; brak pol nie blokuje analizy.
 - Opcjonalny zrzut `globalThis.getStoreState()` jest zamrozona obserwacja
   sesji UX. Ref uploadu jest jednorazowy i scope'owany do capture, originu i
   operatora. Zredagowany JSON jest w neutralnym polu `storeSnapshot` w

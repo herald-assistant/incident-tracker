@@ -8,6 +8,7 @@ import {
   UxInspectorInputOptionsResponse,
   UxInspectorJobStartRequest,
   UxInspectorJobStateSnapshot,
+  UxInspectorVisibleFormField,
   UxInspectorViewCatalogResponse
 } from '../models/ux-inspector.models';
 
@@ -37,6 +38,10 @@ export class UxInspectorApiService {
 
   uploadStoreSnapshot(request: { captureId: string; origin: string; state: Record<string, unknown> | unknown[] }): Observable<{ storeSnapshotRef: string }> {
     return this.http.post<{ storeSnapshotRef: string }>('/api/ux-inspector/store-snapshots', request);
+  }
+
+  uploadFormFieldsSnapshot(request: { captureId: string; origin: string; fields: UxInspectorVisibleFormField[] }): Observable<{ formFieldsSnapshotRef: string }> {
+    return this.http.post<{ formFieldsSnapshotRef: string }>('/api/ux-inspector/form-fields-snapshots', request);
   }
 
   getJob(jobId: string): Observable<UxInspectorJobStateSnapshot> {

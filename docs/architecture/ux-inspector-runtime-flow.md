@@ -11,8 +11,8 @@ wyniku.
 
 Pierwsze wydanie wspiera Chrome desktop, strony `http`/`https`, top-level
 dokument oraz otwarty Shadow DOM dostepny dla skryptu. Operator wybiera profil
-`ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`; drugi profil zamraza dozwolone
-wartosci najblizszego formularza i jego natywny stan walidacji.
+`ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`; drugi profil zamraza pola widoczne
+w calym dokumencie strony w chwili capture.
 
 ## Publiczne wejscia i kontrakty
 
@@ -30,17 +30,21 @@ wartosci najblizszego formularza i jego natywny stan walidacji.
   przekazany do startu joba jest przypinany do capture i biezacego kontekstu
   autoryzacji workspace; brak
   store'a nie wstrzymuje joba.
+- `POST /api/ux-inspector/form-fields-snapshots` przyjmuje osobny JSON pol
+  widocznych w chwili capture i zwraca jednorazowy `formFieldsSnapshotRef`.
+  Ref jest przypinany do capture, originu i kontekstu autoryzacji workspace.
+  Brak obserwacji formularza nie wstrzymuje joba.
 - `GET /api/ux-inspector/jobs/{jobId}` zwraca aktualny snapshot.
 - `GET /api/ux-inspector/jobs/{jobId}/export` zwraca
   `tdw.ux-inspector-export` v2 z historia follow-up; import zachowuje
   kompatybilnosc z wynikiem v1.
-- `POST /api/ux-inspector/imports` przyjmuje export v2 albo legacy v1 z capture v1 i
+- `POST /api/ux-inspector/imports` przyjmuje export v2 albo legacy v1 z capture v2 i
   zapisuje nowy read-only wpis historii. Import nie naklada arbitralnego limitu
   rozmiaru na caly poprawny envelope; nadal wymaga scislego kontraktu,
   kanonicznego capture oraz spojnego, zakonczonego wyniku.
 - `/ux-inspector` jest jedynym receiverem capture i workspace'em feature'a.
 
-Launcher, protocol i capture maja wersje 1. Portable export ma wersje 2,
+Launcher i protocol maja wersje 1, capture ma wersje 2. Portable export ma wersje 2,
 z kontrolowanym odczytem legacy v1. Nie ma aliasow, legacy endpointow,
 recznego kanalu capture ani alternatywnego formatu uruchomienia. Kazda inna
 wersja jest odrzucana.
@@ -53,11 +57,12 @@ wersja jest odrzucana.
   -> protocol.js + runtime.js
   -> Browser Tools shell w izolowanym Shadow DOM
   -> przycisk UX Inspector -> wybor profilu -> selection shield + highlight
-  -> jeden capture v1
+  -> jeden capture v2 i opcjonalny odczyt pol formularza
   -> opcjonalne jednokrotne globalThis.getStoreState()
   -> popup /ux-inspector#nonce=...&sourceOrigin=...
   -> READY / CAPTURE / RECEIVED przez exact-origin postMessage
-  -> opcjonalne STORE_CHUNK / STORE_ACK, porcje po 32000 znakow
+  -> opcjonalne FORM_CHUNK / FORM_ACK oraz STORE_CHUNK / STORE_ACK
+  -> osobne transfery porcjami po 32000 znakow
   -> capture tylko w pamieci receivera
 ```
 
@@ -94,7 +99,7 @@ redagowane przed transferem, a backend powtarza redakcje. Eksporter aplikacji
 powinien zwracac stan przeznaczony do analizy AI, bo nie da sie automatycznie
 rozpoznac kazdej wrazliwej wartosci.
 
-Capture v1 jest potwierdzany osobno. Store przechodzi przez te same exact
+Capture v2 jest potwierdzany osobno. Store przechodzi przez te same exact
 origin/source, nonce i `captureId`, porcjami z ACK. Blad transferu store'a
 pozostawia poprawny capture. UI Explorer nie wywoluje `getStoreState()` i
 zachowuje swoj page-context 4 KiB. Karta TDW przechowuje store tylko do
@@ -117,9 +122,9 @@ laczyc potwierdzony w kodzie warunek z wartoscia w chwili capture. Wartosc
 odczytana przez tool trafia do sesji Copilota oraz moze byc obecna w log
 preview, tool evidence i diagnostycznym OTLP przy `capture-content=true`.
 
-## Capture v1
+## Capture v2 i widoczne pola formularza
 
-Kanoniczny kontrakt ma `schema=tdw.ux-inspector-capture`, `version=1`, klienta
+Kanoniczny kontrakt ma `schema=tdw.ux-inspector-capture`, `version=2`, klienta
 `TDW UX Inspector` i `featureId=ux-inspector`. Zawiera:
 
 - origin oraz route bez wartosci query,
@@ -131,20 +136,28 @@ Kanoniczny kontrakt ma `schema=tdw.ux-inspector-capture`, `version=1`, klienta
   boundaries; `omittedNodeCount=0` i nowe capture nie generuje
   `ANCESTORS_TRUNCATED`,
 - informacje o truncation, Shadow DOM, ramce i redakcji,
-- `captureProfile` oraz opcjonalny `formSnapshot`.
+- `captureProfile`.
 
-`ELEMENT_CONTEXT` nie zawiera `formSnapshot`. `FORM_DIAGNOSTICS` odczytuje
-najblizszy owning form, a gdy kontrolka nie nalezy do form - tylko wskazana
-kontrolke. Snapshot przechowuje do 64 kontrolek, do 16 KiB na wartosc i lacznie
-do 64 KiB znakow wartosci. Zachowuje `checked`, wybrane opcje,
-disabled/readonly/required, `ValidityState`, validation message oraz submittery.
-Kazde obciecie jest jawne.
+`ELEMENT_CONTEXT` nie odczytuje pol. `FORM_DIAGNOSTICS` odczytuje w chwili
+capture widoczne kontrolki `input`, `textarea`, `select` oraz wartosci
+`san-select` z calego dokumentu. Odczyt bazuje na zalaczonym skrypcie,
+rozpoznaje etykiete, wartosc i zastany stan walidacji bez wywolywania
+walidacji. Nie ma limitu liczby pol ani obciecia listy. Pusta lista `[]`
+jest poprawna obserwacja.
 
-Kontrolki `type=hidden` sa przechwytywane wraz z dozwolonymi wartosciami, aby
-zachowac kontekst zaleznosci formularza. Hasla, pliki oraz pola lub wartosci
-rozpoznane jako token, session, secret, CSRF/JWT albo jednorazowy kod sa nadal
-wykluczane. Cookies, storage i ruch sieciowy nie sa odczytywane. Dozwolone
-wartosci formularza sa niezaufanym runtime evidence.
+Pola ukryte, hasla, pliki oraz pola lub wartosci rozpoznane jako token,
+session, secret, CSRF/JWT albo jednorazowy kod sa wykluczane. Cookies,
+storage i ruch sieciowy nie sa odczytywane. Wartosc, etykieta i komunikat
+walidacji pozostaja niezaufanym runtime evidence.
+
+Po `RECEIVED` Browser Tools przesyla pola osobnym transferem `FORM_CHUNK` /
+`FORM_ACK`, niezaleznym od transferu store'a, z tym samym exact origin/source,
+nonce i `captureId`. Kazdy transfer ma limit 16 MiB. Karta TDW przechowuje
+pola do recznego startu joba, uploaduje je osobno, a backend wydaje ref
+jednorazowy z TTL 15 minut. Initial prompt dolacza kompletny bezpieczny JSON
+pol wraz z informacja, ze byly widoczne na stronie w chwili capture. Blad
+skryptu, transferu, uploadu, claim lub budzetu promptu jest jawna luka
+evidence i nie blokuje analizy.
 
 Frontend receiver i backend waliduja niezaleznie ten sam kontrakt. Backend
 odrzuca nieznane pola, inna wersje i payload wiekszy niz 128 KiB przed oraz po
@@ -380,7 +393,7 @@ udostepnia podpowiedz o brakujacych dowodach bez osobnego statusu i banera.
 
 Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Export
 zapisuje envelope v2 z historia chatu. Import akceptuje v2 oraz legacy v1,
-waliduje jednosekcyjny raport, capture v1 i spojny source revision, a nastepnie
+waliduje jednosekcyjny raport, capture v2 i spojny source revision, a nastepnie
 tworzy wynik read-only bez prawa do wznowienia sesji.
 
 ## Granice pakietow

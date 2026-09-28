@@ -51,7 +51,6 @@ public final class UxInspectorTestFixtures {
                         new UxInspectorCapture.Bounds(20, 40, 180, 42)),
                 List.of(new UxInspectorCapture.Ancestor(1, "crm-contact-form", "form", "Kontakt", null,
                         Map.of("data-testid", "contact-form"))),
-                null,
                 new UxInspectorCapture.Traversal(4, 2, 2, true),
                 new UxInspectorCapture.Signals(0, "TOP_LEVEL", List.of()), List.of(),
                 new UxInspectorCapture.Client("TDW UX Inspector", "1.0.0", "ux-inspector"));

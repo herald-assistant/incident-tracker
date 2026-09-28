@@ -7,6 +7,8 @@ import org.springframework.core.io.ClassPathResource;
 import pl.mkn.tdw.features.uxinspector.ai.copilot.UxInspectorDurableSystemInstructions;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot;
 import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,6 +19,36 @@ import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 
 class UxInspectorPromptAndSkillsTest {
+
+    @Test
+    void shouldAttachCompleteVisibleFieldsOrStateTheirAbsenceWithoutBlockingPreparation() {
+        var base = request("Jakie pola są widoczne?");
+        var capture = base.capture();
+        var formCapture = new UxInspectorCapture(capture.schema(), capture.version(), capture.captureId(),
+                capture.capturedAt(), UxInspectorCapture.CaptureProfile.FORM_DIAGNOSTICS, capture.page(),
+                capture.target(), capture.ancestors(), capture.traversal(), capture.signals(), capture.limits(), capture.client());
+        var request = new UxInspectorJobStartRequest(base.systemId(), base.branch(), base.viewId(),
+                base.sourceRevision(), base.question(), formCapture, base.model(), base.reasoningEffort());
+        var fields = new ObjectMapper().createArrayNode();
+        fields.addObject().put("label", "CRM contact").put("value", "CRM value");
+        var snapshot = new UxInspectorFormFieldsSnapshotService.Snapshot(capture.captureId(),
+                capture.page().origin(), fields);
+
+        assertThat(service.prepare(request, targetContext(), "crm-run", null, snapshot).prompt())
+                .contains("kompletny zestaw", "widocznych na stronie w chwili capture", "CRM value");
+        assertThat(service.prepare(request, targetContext(), "crm-run", null,
+                new UxInspectorFormFieldsSnapshotService.Snapshot(capture.captureId(), capture.page().origin(),
+                        new ObjectMapper().createArrayNode())).prompt()).contains("[] oznacza brak widocznych pol");
+        assertThat(service.prepare(request, targetContext(), "crm-run", null, null).prompt())
+                .contains("UNAVAILABLE: odczyt lub transfer pol nie powiodl sie");
+        var oversized = new ObjectMapper().createArrayNode();
+        oversized.addObject().put("value", "x".repeat(1_000_001));
+        assertThat(service.prepare(request, targetContext(), "crm-run", null,
+                new UxInspectorFormFieldsSnapshotService.Snapshot(capture.captureId(), capture.page().origin(),
+                        oversized)).prompt())
+                .contains("UNAVAILABLE: caly wynik pol przekracza budzet initial promptu")
+                .doesNotContain("x".repeat(100));
+    }
 
     @Test
     void shouldKeepFollowUpReadableWhileAnsweringRequestedTechnicalDetails() {
@@ -154,7 +186,7 @@ class UxInspectorPromptAndSkillsTest {
                 .contains("Direct view inheritance slice", "sourceMode=AVAILABLE_SLICE", "maksymalnie jeden poziom")
                 .contains("Szerszy statyczny graph", "nie jest serializowany do initial context")
                 .doesNotContain("INDEX_ONLY")
-                .contains("formSnapshot", "zamrozona obserwacja runtime")
+                .contains("Pola widoczne na stronie w chwili capture", "zamrozona obserwacja runtime")
                 .contains("README", "AGENTS.md", ".github/copilot-instructions.md", "complete: true")
                 .contains("```text\nrepository: CRM/crm-ui", "crm-ui/\n├── .github/")
                 .contains("Search shared CRM guards before concluding.", "crm-architecture",

@@ -7,7 +7,7 @@ import {
 } from './ux-inspector-capture-ingress.service';
 
 describe('UxInspectorCaptureIngressService', () => {
-  it('clears the fragment and accepts one exact-origin capture v1', () => {
+  it('clears the fragment and accepts one exact-origin capture v2', () => {
     const harness = createWindowHarness();
     const service = createService(harness.window);
 
@@ -29,7 +29,7 @@ describe('UxInspectorCaptureIngressService', () => {
       protocolVersion: 1,
       nonce: VALID_NONCE,
       captureId: capture.captureId,
-      capture
+      capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
     });
 
     expect(service.capture()).toEqual(capture);
@@ -53,7 +53,7 @@ describe('UxInspectorCaptureIngressService', () => {
     const capture = captureFixture();
     harness.dispatch('https://crm.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, storeStatus: 'AVAILABLE', storeChunks: 2
+      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'AVAILABLE', storeChunks: 2
     });
     expect(service.capture()).toEqual(capture);
     expect(service.storeStatus()).toBe('receiving');
@@ -73,6 +73,54 @@ describe('UxInspectorCaptureIngressService', () => {
     expect(service.storeState()).toBeNull();
   });
 
+  it('receives visible fields independently of store and preserves an empty successful result', () => {
+    const harness = createWindowHarness();
+    const service = createService(harness.window);
+    service.start();
+    const capture = { ...captureFixture(), captureProfile: 'FORM_DIAGNOSTICS' as const };
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, capture, storeStatus: 'UNAVAILABLE', storeChunks: 0,
+      formStatus: 'AVAILABLE', formChunks: 1
+    });
+    expect(service.formStatus()).toBe('receiving');
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_FORM_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, index: 0, total: 1, chunk: '[]'
+    });
+    expect(service.formFields()).toEqual([]);
+    expect(service.formStatus()).toBe('available');
+    expect(service.storeStatus()).toBe('unavailable');
+    expect(harness.posted.at(-1)?.message).toMatchObject({ type: 'TDW_UX_INSPECTOR_FORM_ACK', index: 0 });
+    expect(harness.listener).toBeNull();
+  });
+
+  it('keeps capture and store when the form transfer has a wrong chunk index', () => {
+    const harness = createWindowHarness();
+    const service = createService(harness.window);
+    service.start();
+    const capture = { ...captureFixture(), captureProfile: 'FORM_DIAGNOSTICS' as const };
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, capture, storeStatus: 'AVAILABLE', storeChunks: 1,
+      formStatus: 'AVAILABLE', formChunks: 1
+    });
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_FORM_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, index: 1, total: 1, chunk: '[]'
+    });
+    expect(service.capture()).toEqual(capture);
+    expect(service.formStatus()).toBe('unavailable');
+    expect(service.storeStatus()).toBe('receiving');
+    harness.dispatch('https://crm.example.com', harness.opener, {
+      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
+      captureId: capture.captureId, index: 0, total: 1, chunk: '{}'
+    });
+    expect(service.storeState()).toEqual({});
+    expect(service.storeStatus()).toBe('available');
+    expect(harness.listener).toBeNull();
+  });
+
   it('retains capture when store transfer has an invalid chunk', () => {
     const harness = createWindowHarness();
     const service = createService(harness.window);
@@ -80,7 +128,7 @@ describe('UxInspectorCaptureIngressService', () => {
     const capture = captureFixture();
     harness.dispatch('https://crm.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, storeStatus: 'AVAILABLE', storeChunks: 1
+      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'AVAILABLE', storeChunks: 1
     });
     harness.dispatch('https://crm.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
@@ -99,14 +147,14 @@ describe('UxInspectorCaptureIngressService', () => {
 
     harness.dispatch('https://evil.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture
+      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
     });
     expect(service.status()).toBe('waiting');
     expect(service.capture()).toBeNull();
 
     harness.dispatch('https://crm.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: 'n_invalid_invalid_invalid_123',
-      captureId: capture.captureId, capture
+      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
     });
     expect(service.status()).toBe('invalid');
     expect(service.capture()).toBeNull();
@@ -123,7 +171,7 @@ describe('UxInspectorCaptureIngressService', () => {
 
     harness.dispatch('https://crm.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture
+      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
     });
 
     expect(service.status()).toBe('invalid');
@@ -196,7 +244,7 @@ function createWindowHarness() {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save',
+    schema: 'tdw.ux-inspector-capture', version: 2, captureId: 'cap_crm_contact_save',
     capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
@@ -211,7 +259,6 @@ function captureFixture(): UxInspectorCapture {
       bounds: { x: 20, y: 40, width: 180, height: 42 }
     },
     ancestors: [],
-    formSnapshot: null,
     traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
     signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] },
     limits: [],

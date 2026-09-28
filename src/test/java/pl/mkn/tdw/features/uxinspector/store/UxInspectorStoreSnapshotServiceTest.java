@@ -137,9 +137,9 @@ class UxInspectorStoreSnapshotServiceTest {
     }
 
     private UxInspectorCapture capture(String id, String origin) {
-        return new UxInspectorCapture(UxInspectorCapture.SCHEMA, 1, id, Instant.parse("2026-09-15T10:00:00Z"),
+        return new UxInspectorCapture(UxInspectorCapture.SCHEMA, UxInspectorCapture.VERSION, id, Instant.parse("2026-09-15T10:00:00Z"),
                 UxInspectorCapture.CaptureProfile.ELEMENT_CONTEXT,
                 new UxInspectorCapture.Page(origin, "/contacts/new", "CRM", "pl", List.of()),
-                null, List.of(), null, null, null, List.of(), null);
+                null, List.of(), null, null, List.of(), null);
     }
 }

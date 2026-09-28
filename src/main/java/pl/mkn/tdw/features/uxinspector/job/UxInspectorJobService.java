@@ -11,6 +11,7 @@ import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatRequest;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetEvidenceMapper;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
@@ -52,6 +53,7 @@ public class UxInspectorJobService {
     private final UxInspectorFollowUpPromptService followUpPromptService;
     private final LocalAnalysisRunOperationGuard operationGuard;
     private final UxInspectorStoreSnapshotService storeSnapshots;
+    private final UxInspectorFormFieldsSnapshotService formFieldsSnapshots;
 
     public UxInspectorJobStateSnapshot startJob(UxInspectorJobStartRequest request) {
         var auth = authRefResolver.resolveForCurrentRequest();
@@ -61,6 +63,7 @@ public class UxInspectorJobService {
                 request.sourceRevision(), request.question(), normalizedCapture, request.model(), request.reasoningEffort());
         var id = UUID.randomUUID().toString();
         var claimedStore = storeSnapshots.claim(request.storeSnapshotRef(), normalizedCapture, auth);
+        var claimedFormFields = formFieldsSnapshots.claim(request.formFieldsSnapshotRef(), normalizedCapture, auth);
         var state = new UxInspectorJobState(id, normalizedRequest);
         jobs.put(id, state);
         authRefs.put(id, auth);
@@ -80,7 +83,7 @@ public class UxInspectorJobService {
         }
         var accepted = state.snapshot();
         try {
-            applicationTaskExecutor.execute(() -> runJob(id, state, normalizedRequest, auth));
+            applicationTaskExecutor.execute(() -> runJob(id, state, normalizedRequest, auth, claimedFormFields));
         } catch (RuntimeException exception) {
             state.fail("UX_INSPECTOR_JOB_SCHEDULING_FAILED", "UX Inspector analysis could not be scheduled.");
             persist(state);
@@ -90,7 +93,8 @@ public class UxInspectorJobService {
         return accepted;
     }
 
-    void runJob(String id, UxInspectorJobState state, UxInspectorJobStartRequest request, AnalysisAiAuthRef auth) {
+    void runJob(String id, UxInspectorJobState state, UxInspectorJobStartRequest request, AnalysisAiAuthRef auth,
+                UxInspectorFormFieldsSnapshotService.Snapshot formFields) {
         if (!state.tryStart()) return;
         persist(state);
         try {
@@ -101,7 +105,7 @@ public class UxInspectorJobService {
             persist(state);
             state.preparationStarted();
             persist(state);
-            var preparation = promptPreparationService.prepare(request, context, id, storeSnapshots.find(id).orElse(null));
+            var preparation = promptPreparationService.prepare(request, context, id, storeSnapshots.find(id).orElse(null), formFields);
             state.preparationCompleted(preparation.prompt(), preparation.artifactContents().size());
             persist(state);
             state.analysisStarted();

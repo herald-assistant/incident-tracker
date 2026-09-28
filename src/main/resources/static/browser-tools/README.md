@@ -36,9 +36,9 @@ usuwa Browser Tools i wszystkie jego listenery z badanej strony.
 - Badana strona nie otrzymuje cookies, tokenow, katalogu modeli ani klienta
   REST.
 - Profil `Element` nie czyta wartosci formularza. Profil `Formularz` zamraza
-  dozwolone wartosci najblizszego formularza i jego `ValidityState`, wlacznie
-  z kontrolkami `type=hidden`. Nadal wyklucza hasla, tokeny, pliki, cookies i
-  storage.
+  pola widoczne w calym dokumencie w chwili capture, wraz z zastanym stanem
+  walidacji. Nie ogranicza liczby pol. Wyklucza pola ukryte, hasla, tokeny,
+  pliki, cookies i storage.
 - Dla UX Inspectora runtime po wskazaniu elementu wywoluje jednokrotnie
   aplikacyjny `globalThis.getStoreState()`. Dostepny stan JSON (do 16 MiB)
   przechodzi porcjami do karty TDW i jest dolaczany do recznie uruchomionego
@@ -46,8 +46,10 @@ usuwa Browser Tools i wszystkie jego listenery z badanej strony.
   analizy AI; znane pola sekretow sa redagowane. Blad, timeout lub brak
   funkcji pozostawia capture bez store'a.
 - Runtime nie czyta requestow ani screenshotow.
-- Oba transfery wymagaja zgodnosci `event.origin`, `event.source`, nonce i
-  protokolu v1. UX capture ma limit 128 KiB, a wskazowka UI Explorera 4 KiB.
+- Capture, transfer pol i transfer store'a wymagaja zgodnosci `event.origin`,
+  `event.source`, nonce i protokolu v1. UX capture v2 ma limit 128 KiB,
+  kazdy z osobnych transferow ma limit 16 MiB, a wskazowka UI Explorera 4 KiB.
+  Blad odczytu lub przekazania pol nie zatrzymuje capture ani analizy.
 - UI Explorer nie pobiera store'a i przekazuje tylko dotychczasowa wskazowke
   widoku.
 - UX Inspector ponownie waliduje capture na zaufanym originie. UI Explorer

@@ -8,6 +8,7 @@ import {
   UX_INSPECTOR_MAX_CAPTURE_BYTES,
   UX_INSPECTOR_PROTOCOL_VERSION,
   UxInspectorCapture,
+  UxInspectorVisibleFormField,
   UxInspectorIngressStatus
 } from '../models/ux-inspector.models';
 
@@ -21,9 +22,13 @@ const RECEIVED = 'TDW_UX_INSPECTOR_RECEIVED';
 const ERROR = 'TDW_UX_INSPECTOR_ERROR';
 const STORE_CHUNK = 'TDW_UX_INSPECTOR_STORE_CHUNK';
 const STORE_ACK = 'TDW_UX_INSPECTOR_STORE_ACK';
-const MAX_STORE_BYTES = 16 * 1024 * 1024;
+const FORM_CHUNK = 'TDW_UX_INSPECTOR_FORM_CHUNK';
+const FORM_ACK = 'TDW_UX_INSPECTOR_FORM_ACK';
+const MAX_TRANSFER_BYTES = 16 * 1024 * 1024;
 const NONCE_PATTERN = /^[A-Za-z0-9_-]{22,128}$/;
 const HANDSHAKE_TIMEOUT_MS = 12_000;
+type TransferKind = 'store' | 'form';
+type TransferState = { expected: number; chunks: string[]; characters: number; timer: number | null; done: boolean };
 
 @Injectable()
 export class UxInspectorCaptureIngressService implements OnDestroy {
@@ -33,16 +38,18 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
   private sourceOrigin = '';
   private timeoutHandle: number | null = null;
   private listening = false;
-  private expectedStoreChunks = 0;
-  private storeChunks: string[] = [];
-  private storeCharacters = 0;
-  private storeCaptureId = '';
+  private readonly transfers: Record<TransferKind, TransferState> = {
+    store: { expected: 0, chunks: [], characters: 0, timer: null, done: true },
+    form: { expected: 0, chunks: [], characters: 0, timer: null, done: true }
+  };
 
   readonly capture = signal<UxInspectorCapture | null>(null);
   readonly status = signal<UxInspectorIngressStatus>('idle');
   readonly error = signal('');
   readonly storeState = signal<Record<string, unknown> | unknown[] | null>(null);
   readonly storeStatus = signal<'unavailable' | 'receiving' | 'available'>('unavailable');
+  readonly formFields = signal<UxInspectorVisibleFormField[] | null>(null);
+  readonly formStatus = signal<'unavailable' | 'receiving' | 'available'>('unavailable');
 
   start(): void {
     if (this.listening || this.capture()) {
@@ -104,6 +111,8 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
     this.capture.set(null);
     this.storeState.set(null);
     this.storeStatus.set('unavailable');
+    this.formFields.set(null);
+    this.formStatus.set('unavailable');
     this.status.set('idle');
     this.error.set('');
   }
@@ -112,118 +121,122 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
     this.cleanup();
     this.capture.set(null);
     this.storeState.set(null);
+    this.formFields.set(null);
   }
 
   private readonly receiveMessage = (event: MessageEvent<unknown>): void => {
-    if (event.source !== this.opener || event.origin !== this.sourceOrigin) {
+    if (event.source !== this.opener || event.origin !== this.sourceOrigin) return;
+    if (this.capture()) {
+      if (isPlainObject(event.data) && event.data['type'] === STORE_CHUNK) this.receiveChunk('store', event.data);
+      if (isPlainObject(event.data) && event.data['type'] === FORM_CHUNK) this.receiveChunk('form', event.data);
       return;
     }
-    if (this.expectedStoreChunks > 0) {
-      if (isPlainObject(event.data) && event.data['type'] === STORE_CHUNK) this.receiveStoreChunk(event.data);
-      else this.finishStoreTransfer(null);
-      return;
-    }
-    if (!isPlainObject(event.data) || event.data['type'] !== CAPTURE) {
-      this.rejectExpectedSource('MESSAGE_TYPE_INVALID', 'Browser Tools przesłał nieobsługiwany komunikat.');
-      return;
-    }
-    const legacyShape = hasExactKeys(event.data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture']);
-    const storeShape = hasExactKeys(event.data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture', 'storeStatus', 'storeChunks']);
-    if (!legacyShape && !storeShape) {
+    if (!isPlainObject(event.data) || event.data['type'] !== CAPTURE ||
+        !hasExactKeys(event.data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture',
+          'storeStatus', 'storeChunks', 'formStatus', 'formChunks'])) {
       this.rejectExpectedSource('MESSAGE_SHAPE_INVALID', 'Komunikat capture ma niepoprawny kontrakt.');
       return;
     }
-    if (
-      event.data['protocolVersion'] !== UX_INSPECTOR_PROTOCOL_VERSION ||
-      event.data['nonce'] !== this.nonce
-    ) {
+    if (event.data['protocolVersion'] !== UX_INSPECTOR_PROTOCOL_VERSION || event.data['nonce'] !== this.nonce) {
       this.rejectExpectedSource('HANDSHAKE_MISMATCH', 'Nie zgadza się wersja protokołu albo jednorazowy nonce.');
       return;
     }
-
     const candidate = event.data['capture'];
     let bytes = UX_INSPECTOR_MAX_CAPTURE_BYTES + 1;
-    try {
-      bytes = new TextEncoder().encode(JSON.stringify(candidate)).byteLength;
-    } catch {
-      // Validation below produces the user-facing error.
-    }
+    try { bytes = new TextEncoder().encode(JSON.stringify(candidate)).byteLength; } catch { /* invalid */ }
     if (bytes > UX_INSPECTOR_MAX_CAPTURE_BYTES || !isUxInspectorCapture(candidate)) {
-      this.rejectExpectedSource('CAPTURE_INVALID', 'Capture v1 jest niepoprawny albo przekracza limit 128 KiB.');
+      this.rejectExpectedSource('CAPTURE_INVALID', 'Capture v2 jest niepoprawny albo przekracza limit 128 KiB.');
       return;
     }
-    if (
-      event.data['captureId'] !== candidate.captureId ||
-      candidate.page.origin !== this.sourceOrigin
-    ) {
+    if (event.data['captureId'] !== candidate.captureId || candidate.page.origin !== this.sourceOrigin) {
       this.rejectExpectedSource('CAPTURE_SCOPE_MISMATCH', 'Capture nie pasuje do źródłowego okna i handshake.');
       return;
     }
-
     this.capture.set(candidate);
     this.status.set('received');
     this.error.set('');
-    this.opener?.postMessage(
-      {
-        type: RECEIVED,
-        protocolVersion: UX_INSPECTOR_PROTOCOL_VERSION,
-        nonce: this.nonce,
-        captureId: candidate.captureId
-      },
-      this.sourceOrigin
-    );
-    const count = event.data['storeChunks'];
-    if (storeShape && event.data['storeStatus'] === 'AVAILABLE' &&
-        Number.isInteger(count) && typeof count === 'number' && count > 0 && count <= 600) {
-      this.expectedStoreChunks = count;
-      this.storeCaptureId = candidate.captureId;
-      this.storeChunks = [];
-      this.storeCharacters = 0;
-      this.storeStatus.set('receiving');
-      this.resetStoreTimeout();
-    } else {
-      this.cleanup();
-    }
+    if (this.timeoutHandle !== null) this.browserWindow.clearTimeout(this.timeoutHandle);
+    this.timeoutHandle = null;
+    this.opener?.postMessage({
+      type: RECEIVED, protocolVersion: UX_INSPECTOR_PROTOCOL_VERSION,
+      nonce: this.nonce, captureId: candidate.captureId
+    }, this.sourceOrigin);
+    this.beginTransfer('store', event.data['storeStatus'], event.data['storeChunks']);
+    this.beginTransfer('form', candidate.captureProfile === 'FORM_DIAGNOSTICS'
+      ? event.data['formStatus'] : 'UNAVAILABLE', event.data['formChunks']);
+    if (this.transfers.store.done && this.transfers.form.done) this.cleanup();
   };
 
-  private receiveStoreChunk(data: Record<string, unknown>): void {
+  private beginTransfer(kind: TransferKind, status: unknown, count: unknown): void {
+    const state = this.transfers[kind];
+    state.expected = status === 'AVAILABLE' && typeof count === 'number' &&
+      Number.isInteger(count) && count > 0 && count <= 600 ? count : 0;
+    state.chunks = [];
+    state.characters = 0;
+    state.done = state.expected === 0;
+    if (kind === 'store') this.storeStatus.set(state.done ? 'unavailable' : 'receiving');
+    else this.formStatus.set(state.done ? 'unavailable' : 'receiving');
+    if (!state.done) this.resetTransferTimeout(kind);
+  }
+
+  private receiveChunk(kind: TransferKind, data: Record<string, unknown>): void {
+    const state = this.transfers[kind];
+    if (state.done) return;
     if (!hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk']) ||
         data['protocolVersion'] !== UX_INSPECTOR_PROTOCOL_VERSION || data['nonce'] !== this.nonce ||
-        data['captureId'] !== this.storeCaptureId || data['total'] !== this.expectedStoreChunks ||
-        data['index'] !== this.storeChunks.length || typeof data['chunk'] !== 'string' ||
-        data['chunk'].length > 32000 ||
-        this.storeCharacters + data['chunk'].length > MAX_STORE_BYTES) {
-      this.finishStoreTransfer(null);
+        data['captureId'] !== this.capture()?.captureId || data['total'] !== state.expected ||
+        data['index'] !== state.chunks.length || typeof data['chunk'] !== 'string' ||
+        data['chunk'].length > 32000 || state.characters + data['chunk'].length > MAX_TRANSFER_BYTES) {
+      this.finishTransfer(kind, null);
       return;
     }
-    this.storeChunks.push(data['chunk']);
-    this.storeCharacters += data['chunk'].length;
-    this.opener?.postMessage({ type: STORE_ACK, protocolVersion: UX_INSPECTOR_PROTOCOL_VERSION,
-      nonce: this.nonce, captureId: this.storeCaptureId, index: data['index'] }, this.sourceOrigin);
-    if (this.storeChunks.length === this.expectedStoreChunks) {
-      let parsed: unknown = null;
-      const json = this.storeChunks.join('');
-      try { parsed = JSON.parse(json); } catch { /* unavailable */ }
-      this.finishStoreTransfer(parsed && typeof parsed === 'object' &&
-        new TextEncoder().encode(json).byteLength <= MAX_STORE_BYTES
-        ? parsed as Record<string, unknown> : null);
+    state.chunks.push(data['chunk']);
+    state.characters += data['chunk'].length;
+    this.opener?.postMessage({
+      type: kind === 'store' ? STORE_ACK : FORM_ACK,
+      protocolVersion: UX_INSPECTOR_PROTOCOL_VERSION,
+      nonce: this.nonce, captureId: this.capture()?.captureId, index: data['index']
+    }, this.sourceOrigin);
+    if (state.chunks.length < state.expected) {
+      this.resetTransferTimeout(kind);
+      return;
+    }
+    const json = state.chunks.join('');
+    let parsed: unknown = null;
+    try { parsed = JSON.parse(json); } catch { /* unavailable */ }
+    if (new TextEncoder().encode(json).byteLength > MAX_TRANSFER_BYTES) parsed = null;
+    if (kind === 'store') {
+      this.finishTransfer(kind, parsed && typeof parsed === 'object' ? parsed : null);
     } else {
-      this.resetStoreTimeout();
+      this.finishTransfer(kind, isVisibleFormFields(parsed) ? parsed : null);
     }
   }
 
-  private finishStoreTransfer(state: Record<string, unknown> | unknown[] | null): void {
-    this.storeState.set(state);
-    this.storeStatus.set(state ? 'available' : 'unavailable');
-    this.expectedStoreChunks = 0;
-    this.storeChunks = [];
-    this.storeCharacters = 0;
-    this.cleanup();
+  private finishTransfer(kind: TransferKind, value: unknown): void {
+    const state = this.transfers[kind];
+    if (state.timer !== null) this.browserWindow.clearTimeout(state.timer);
+    state.timer = null;
+    state.done = true;
+    state.expected = 0;
+    state.chunks = [];
+    state.characters = 0;
+    if (kind === 'store') {
+      const store = value && typeof value === 'object'
+        ? value as Record<string, unknown> | unknown[] : null;
+      this.storeState.set(store);
+      this.storeStatus.set(store ? 'available' : 'unavailable');
+    } else {
+      const fields = Array.isArray(value) ? value as UxInspectorVisibleFormField[] : null;
+      this.formFields.set(fields);
+      this.formStatus.set(fields ? 'available' : 'unavailable');
+    }
+    if (this.transfers.store.done && this.transfers.form.done) this.cleanup();
   }
 
-  private resetStoreTimeout(): void {
-    if (this.timeoutHandle !== null) this.browserWindow.clearTimeout(this.timeoutHandle);
-    this.timeoutHandle = this.browserWindow.setTimeout(() => this.finishStoreTransfer(null), HANDSHAKE_TIMEOUT_MS);
+  private resetTransferTimeout(kind: TransferKind): void {
+    const state = this.transfers[kind];
+    if (state.timer !== null) this.browserWindow.clearTimeout(state.timer);
+    state.timer = this.browserWindow.setTimeout(() => this.finishTransfer(kind, null), HANDSHAKE_TIMEOUT_MS);
   }
 
   private rejectExpectedSource(code: string, message: string): void {
@@ -246,6 +259,8 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
     this.capture.set(null);
     this.storeState.set(null);
     this.storeStatus.set('unavailable');
+    this.formFields.set(null);
+    this.formStatus.set('unavailable');
     this.status.set('invalid');
     this.error.set(message);
   }
@@ -258,6 +273,10 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
     if (this.timeoutHandle !== null) {
       this.browserWindow.clearTimeout(this.timeoutHandle);
       this.timeoutHandle = null;
+    }
+    for (const state of Object.values(this.transfers)) {
+      if (state.timer !== null) this.browserWindow.clearTimeout(state.timer);
+      state.timer = null;
     }
     this.opener = null;
     this.nonce = '';
@@ -273,7 +292,7 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
 function isUxInspectorCapture(value: unknown): value is UxInspectorCapture {
   if (!isPlainObject(value) || !hasExactKeys(value, [
     'schema', 'version', 'captureId', 'capturedAt', 'captureProfile', 'page', 'target', 'ancestors',
-    'formSnapshot', 'traversal', 'signals', 'limits', 'client'
+    'traversal', 'signals', 'limits', 'client'
   ])) return false;
   if (
     value['schema'] !== UX_INSPECTOR_CAPTURE_SCHEMA ||
@@ -292,8 +311,6 @@ function isUxInspectorCapture(value: unknown): value is UxInspectorCapture {
     typeof page['origin'] === 'string' && typeof page['path'] === 'string' &&
     isNullableString(page['title']) && isNullableString(page['language']) && isStringArray(page['queryParameterNames']) &&
     isTarget(target) && Array.isArray(value['ancestors']) && value['ancestors'].every(isAncestor) &&
-    isFormSnapshot(value['formSnapshot']) &&
-    !(value['captureProfile'] === 'ELEMENT_CONTEXT' && value['formSnapshot'] !== null) &&
     isPlainObject(traversal) && hasExactKeys(traversal, ['observedDepth', 'emittedNodeCount', 'omittedNodeCount', 'reachedDocumentRoot']) &&
     isFiniteNumber(traversal['observedDepth']) && isFiniteNumber(traversal['emittedNodeCount']) &&
     isFiniteNumber(traversal['omittedNodeCount']) && typeof traversal['reachedDocumentRoot'] === 'boolean' &&
@@ -328,64 +345,20 @@ function isDomFingerprint(value: unknown): boolean {
     isStringArray(value['componentBoundaryTags']) && isNullableString(value['labelFor']);
 }
 
-function isFormSnapshot(value: unknown): boolean {
-  if (value === null) return true;
-  if (!isPlainObject(value) || !hasExactKeys(value, [
-    'source', 'stableAttributes', 'selectorCandidates', 'valid', 'observedControlCount',
-    'emittedControlCount', 'omittedControlCount', 'controls', 'submitters',
-    'excludedControls', 'valueCharacters', 'valuesTruncated'
-  ])) return false;
-  return ['NEAREST_FORM', 'SELECTED_CONTROL_ONLY'].includes(String(value['source'])) &&
-    isStringRecord(value['stableAttributes']) && isStringArray(value['selectorCandidates']) &&
-    isNullableBoolean(value['valid']) && isFiniteNumber(value['observedControlCount']) &&
-    isFiniteNumber(value['emittedControlCount']) && isFiniteNumber(value['omittedControlCount']) &&
-    Array.isArray(value['controls']) && value['controls'].every(isFormControl) &&
-    Array.isArray(value['submitters']) && value['submitters'].every(isFormSubmitter) &&
-    Array.isArray(value['excludedControls']) && value['excludedControls'].every(isExcludedFormControl) &&
-    isFiniteNumber(value['valueCharacters']) && typeof value['valuesTruncated'] === 'boolean';
-}
-
-function isFormControl(value: unknown): boolean {
-  if (!isPlainObject(value) || !hasExactKeys(value, [
-    'selectedTarget', 'tag', 'type', 'name', 'formControlName', 'accessibleName',
-    'stableAttributes', 'value', 'valueTruncated', 'checked', 'selectedValues',
-    'selectedLabels', 'disabled', 'readOnly', 'required', 'validity'
-  ])) return false;
-  return typeof value['selectedTarget'] === 'boolean' && typeof value['tag'] === 'string' &&
-    isNullableString(value['type']) && isNullableString(value['name']) &&
-    isNullableString(value['formControlName']) && isNullableString(value['accessibleName']) &&
-    isStringRecord(value['stableAttributes']) && isNullableString(value['value']) &&
-    typeof value['valueTruncated'] === 'boolean' && isNullableBoolean(value['checked']) &&
-    isStringArray(value['selectedValues']) && isStringArray(value['selectedLabels']) &&
-    typeof value['disabled'] === 'boolean' && typeof value['readOnly'] === 'boolean' &&
-    typeof value['required'] === 'boolean' && isValidity(value['validity']);
-}
-
-function isValidity(value: unknown): boolean {
-  if (value === null) return true;
-  const booleanKeys = [
-    'valid', 'valueMissing', 'typeMismatch', 'patternMismatch', 'tooShort', 'tooLong',
-    'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'badInput', 'customError'
-  ];
-  return isPlainObject(value) && hasExactKeys(value, [...booleanKeys, 'validationMessage']) &&
-    booleanKeys.every((key) => typeof value[key] === 'boolean') &&
-    isNullableString(value['validationMessage']);
-}
-
-function isFormSubmitter(value: unknown): boolean {
-  return isPlainObject(value) && hasExactKeys(value, [
-    'selectedTarget', 'tag', 'type', 'accessibleName', 'stableAttributes', 'disabled'
-  ]) && typeof value['selectedTarget'] === 'boolean' && typeof value['tag'] === 'string' &&
-    isNullableString(value['type']) && isNullableString(value['accessibleName']) &&
-    isStringRecord(value['stableAttributes']) && typeof value['disabled'] === 'boolean';
-}
-
-function isExcludedFormControl(value: unknown): boolean {
-  return isPlainObject(value) && hasExactKeys(value, [
-    'tag', 'type', 'name', 'formControlName', 'reason'
-  ]) && typeof value['tag'] === 'string' && isNullableString(value['type']) &&
-    isNullableString(value['name']) && isNullableString(value['formControlName']) &&
-    typeof value['reason'] === 'string';
+function isVisibleFormFields(value: unknown): value is UxInspectorVisibleFormField[] {
+  return Array.isArray(value) && value.every((field) =>
+    isPlainObject(field) && hasExactKeys(field, [
+      'tag', 'type', 'name', 'id', 'testId', 'label', 'disabled', 'value',
+      'display', 'source', 'checked', 'indeterminate', 'invalid', 'errors',
+      'descriptions', 'nativeInvalid', 'nativeValidationMessage'
+    ]) &&
+    ['tag', 'type', 'name', 'id', 'testId', 'label', 'display', 'nativeValidationMessage']
+      .every((key) => typeof field[key] === 'string') &&
+    (typeof field['value'] === 'string' || isStringArray(field['value'])) &&
+    ['dom', 'display-text'].includes(String(field['source'])) &&
+    ['disabled', 'checked', 'indeterminate', 'invalid', 'nativeInvalid']
+      .every((key) => isNullableBoolean(field[key])) &&
+    isStringArray(field['errors']) && isStringArray(field['descriptions']));
 }
 
 function isAncestor(value: unknown): boolean {

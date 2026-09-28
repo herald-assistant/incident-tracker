@@ -447,7 +447,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                         List.of(tags), fingerprint.labelFor()), original.target().state(), original.target().bounds());
         return new UxInspectorCapture(original.schema(), original.version(), original.captureId(),
                 original.capturedAt(), original.captureProfile(), original.page(), target, original.ancestors(),
-                original.formSnapshot(), original.traversal(), original.signals(), original.limits(), original.client());
+                original.traversal(), original.signals(), original.limits(), original.client());
     }
 
     private UxInspectorTargetContext contextWithGraph(

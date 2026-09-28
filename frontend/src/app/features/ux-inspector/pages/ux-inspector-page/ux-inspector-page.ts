@@ -12,7 +12,7 @@ import { BrowserToolsSetupModalComponent } from '../../../../components/browser-
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
-import { UxInspectorCapture, UxInspectorJobStatus } from '../../models/ux-inspector.models';
+import { UxInspectorCapture, UxInspectorJobStatus, UxInspectorVisibleFormField } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
 import { UxInspectorResultComponent } from '../../components/ux-inspector-result/ux-inspector-result';
@@ -210,14 +210,8 @@ export class UxInspectorPageComponent implements OnInit {
     return Object.entries(this.facade.capture()?.target.domFingerprint.stableAttributes ?? {});
   }
 
-  formControlLabel(control: NonNullable<UxInspectorCapture['formSnapshot']>['controls'][number]): string {
-    return control.formControlName || control.name || control.accessibleName || `<${control.tag}>`;
-  }
-
-  formControlValue(control: NonNullable<UxInspectorCapture['formSnapshot']>['controls'][number]): string {
-    if (control.selectedLabels.length) return control.selectedLabels.join(', ');
-    if (control.checked !== null) return control.checked ? 'checked' : 'unchecked';
-    return control.value !== null ? control.value : '—';
+  formFieldValue(field: UxInspectorVisibleFormField): string {
+    return field.display || (Array.isArray(field.value) ? field.value.join(', ') : field.value) || '—';
   }
 
   triggerImport(input: HTMLInputElement): void {

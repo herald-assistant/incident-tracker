@@ -262,7 +262,7 @@ class UxInspectorTargetResolverTest {
         var target = new UxInspectorCapture.Target(original.tag(), original.role(), original.accessibleName(),
                 original.text(), fingerprint, original.state(), original.bounds());
         return new UxInspectorCapture(capture.schema(), capture.version(), capture.captureId(), capture.capturedAt(),
-                capture.captureProfile(), capture.page(), target, capture.ancestors(), capture.formSnapshot(),
+                capture.captureProfile(), capture.page(), target, capture.ancestors(),
                 capture.traversal(), capture.signals(), capture.limits(), capture.client());
     }
 }

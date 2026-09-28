@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 import { AiOptionsApiService } from '../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingOptions, AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
-import { UxInspectorCapture, UxInspectorJobStartRequest, UxInspectorJobStateSnapshot } from '../models/ux-inspector.models';
+import { UxInspectorCapture, UxInspectorJobStartRequest, UxInspectorJobStateSnapshot, UxInspectorVisibleFormField } from '../models/ux-inspector.models';
 import { UxInspectorApiService } from '../services/ux-inspector-api.service';
 import { UxInspectorCaptureIngressService } from '../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from './ux-inspector.facade';
@@ -20,6 +20,8 @@ describe('UxInspectorFacade', () => {
     error: signal(''),
     storeState: signal<Record<string, unknown> | null>(null),
     storeStatus: signal<'unavailable' | 'receiving' | 'available'>('unavailable'),
+    formFields: signal<UxInspectorVisibleFormField[] | null>(null),
+    formStatus: signal<'unavailable' | 'receiving' | 'available'>('unavailable'),
     start: vi.fn(),
     consumeCapture: vi.fn(() => captureSignal.set(null))
   };
@@ -38,6 +40,7 @@ describe('UxInspectorFacade', () => {
     })),
     startJob: vi.fn((_request: UxInspectorJobStartRequest) => of(snapshot('QUEUED'))),
     uploadStoreSnapshot: vi.fn(() => of({ storeSnapshotRef: 'store-ref' })),
+    uploadFormFieldsSnapshot: vi.fn(() => of({ formFieldsSnapshotRef: 'form-ref' })),
     getJob: vi.fn(() => of(snapshot('COMPLETED'))),
     sendChatMessage: vi.fn(() => of(chatSnapshot())),
     exportJob: vi.fn(), importAnalysis: vi.fn()
@@ -56,6 +59,8 @@ describe('UxInspectorFacade', () => {
     ingress.status.set('received');
     ingress.storeState.set(null);
     ingress.storeStatus.set('unavailable');
+    ingress.formStatus.set('unavailable');
+    ingress.formFields.set(null);
     TestBed.configureTestingModule({ providers: [
       UxInspectorFacade,
       { provide: UxInspectorApiService, useValue: api },
@@ -66,7 +71,7 @@ describe('UxInspectorFacade', () => {
     ] });
   });
 
-  it('requires capture and sends the exact capture v1 with confirmed source selection', () => {
+  it('requires capture and sends the exact capture v2 with confirmed source selection', () => {
     const facade = TestBed.inject(UxInspectorFacade);
     facade.initialize();
     facade.loadViews();
@@ -102,6 +107,40 @@ describe('UxInspectorFacade', () => {
       state: { contact: { editable: false } }
     });
     expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({ storeSnapshotRef: 'store-ref' }));
+  });
+
+  it('uploads captured visible fields before the job', () => {
+    const field: UxInspectorVisibleFormField = {
+      tag: 'input', type: 'text', name: 'contactName', id: 'contactName', testId: '', label: 'Kontakt',
+      disabled: false, value: 'CRM contact', display: 'CRM contact', source: 'dom', checked: null,
+      indeterminate: null, invalid: null, errors: [], descriptions: [], nativeInvalid: null,
+      nativeValidationMessage: ''
+    };
+    ingress.formFields.set([field]);
+    ingress.formStatus.set('available');
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    facade.selectView('crm-contact-create');
+    facade.updateQuestion('Jakie pola są widoczne?');
+    facade.startJob();
+    expect(api.uploadFormFieldsSnapshot).toHaveBeenCalledWith({
+      captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com', fields: [field]
+    });
+    expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({ formFieldsSnapshotRef: 'form-ref' }));
+  });
+
+  it('starts the job without form fields when their upload fails', () => {
+    ingress.formFields.set([]);
+    ingress.formStatus.set('available');
+    api.uploadFormFieldsSnapshot.mockReturnValueOnce(throwError(() => new Error('upload failed')));
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+    facade.loadViews();
+    facade.selectView('crm-contact-create');
+    facade.updateQuestion('Jakie pola są widoczne?');
+    facade.startJob();
+    expect(api.startJob).toHaveBeenCalledWith(expect.not.objectContaining({ formFieldsSnapshotRef: expect.anything() }));
   });
 
   it('starts a job without store when upload fails', () => {
@@ -295,7 +334,7 @@ function viewCatalog(views: ReturnType<typeof view>[]) {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
+    schema: 'tdw.ux-inspector-capture', version: 2, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
     target: { tag: 'button', role: 'button', accessibleName: 'Zapisz kontakt', text: 'Zapisz kontakt',
@@ -303,7 +342,7 @@ function captureFixture(): UxInspectorCapture {
         selectorCandidates: ['button[data-testid="contact-save"]'], componentBoundaryTags: [], labelFor: null },
       state: { disabled: true, ariaDisabled: false, readOnly: false, required: false, invalid: false, checked: null, expanded: null, hidden: false },
       bounds: { x: 20, y: 40, width: 180, height: 42 } },
-    ancestors: [], formSnapshot: null,
+    ancestors: [],
     traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
     signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] }, limits: [],
     client: { name: 'TDW UX Inspector', version: '1.0.0', featureId: 'ux-inspector' }

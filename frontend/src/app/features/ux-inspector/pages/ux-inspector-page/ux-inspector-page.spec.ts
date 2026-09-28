@@ -44,7 +44,7 @@ describe('UxInspectorPageComponent', () => {
     expect(page.textContent).toContain('Zapisz kontakt');
     expect(page.textContent).toContain('diagnostyka formularza');
     expect(page.textContent).toContain('customer@example.test');
-    expect(page.textContent).toContain('SENSITIVE_TYPE');
+    expect(page.textContent).toContain('Pola widoczne przy capture: 1 pole');
     expect(page.textContent).not.toContain('Wklej capture');
     expect(page.querySelector('.ux-inspector-read-only')).toBeNull();
     expect(page.querySelector('a[href="/browser-tools/install.html"]')).toBeNull();
@@ -65,8 +65,11 @@ describe('UxInspectorPageComponent', () => {
     expect(Array.from(page.querySelectorAll<HTMLButtonElement>('button'))
       .every((button) => Boolean(button.textContent?.trim() || button.getAttribute('aria-label')))).toBe(true);
     expect(harness.replaceState).toHaveBeenCalledWith(null, '', '/ux-inspector');
-    expect(harness.posted.at(-1)?.message).toMatchObject({
+    expect(harness.posted.at(-2)?.message).toMatchObject({
       type: 'TDW_UX_INSPECTOR_RECEIVED', captureId: 'cap_crm_contact_save'
+    });
+    expect(harness.posted.at(-1)?.message).toMatchObject({
+      type: 'TDW_UX_INSPECTOR_FORM_ACK', captureId: 'cap_crm_contact_save'
     });
 
     fixture.componentInstance.facade.startedRunId.set('ux-job-1');
@@ -142,7 +145,18 @@ function createWindowHarness() {
         origin: 'https://crm.example.com', source: opener,
         data: {
           type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: NONCE,
-          captureId: capture.captureId, capture
+          captureId: capture.captureId, capture, formStatus: 'AVAILABLE', formChunks: 1, storeStatus: 'UNAVAILABLE', storeChunks: 0
+        }
+      } as unknown as MessageEvent<unknown>);
+      listener?.({
+        origin: 'https://crm.example.com', source: opener,
+        data: {
+          type: 'TDW_UX_INSPECTOR_FORM_CHUNK', protocolVersion: 1, nonce: NONCE,
+          captureId: capture.captureId, index: 0, total: 1,
+          chunk: JSON.stringify([{ tag: 'input', type: 'email', name: 'email', id: 'email', testId: '',
+            label: 'E-mail', disabled: false, value: 'customer@example.test', display: 'customer@example.test',
+            source: 'dom', checked: null, indeterminate: null, invalid: false, errors: [], descriptions: [],
+            nativeInvalid: false, nativeValidationMessage: '' }])
         }
       } as unknown as MessageEvent<unknown>);
     }
@@ -151,7 +165,7 @@ function createWindowHarness() {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save',
+    schema: 'tdw.ux-inspector-capture', version: 2, captureId: 'cap_crm_contact_save',
     capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'FORM_DIAGNOSTICS',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
@@ -163,24 +177,6 @@ function captureFixture(): UxInspectorCapture {
       bounds: { x: 20, y: 40, width: 180, height: 42 }
     },
     ancestors: [],
-    formSnapshot: {
-      source: 'NEAREST_FORM', stableAttributes: { id: 'contact-form' }, selectorCandidates: ['#contact-form'],
-      valid: false, observedControlCount: 2, emittedControlCount: 1, omittedControlCount: 0,
-      controls: [{
-        selectedTarget: false, tag: 'input', type: 'email', name: 'email', formControlName: 'email',
-        accessibleName: 'E-mail', stableAttributes: { name: 'email' }, value: 'customer@example.test',
-        valueTruncated: false, checked: null, selectedValues: [], selectedLabels: [], disabled: false,
-        readOnly: false, required: true,
-        validity: { valid: true, valueMissing: false, typeMismatch: false, patternMismatch: false,
-          tooShort: false, tooLong: false, rangeUnderflow: false, rangeOverflow: false,
-          stepMismatch: false, badInput: false, customError: false, validationMessage: null }
-      }],
-      submitters: [{ selectedTarget: true, tag: 'button', type: 'submit', accessibleName: 'Zapisz kontakt',
-        stableAttributes: { 'data-testid': 'contact-save' }, disabled: true }],
-      excludedControls: [{ tag: 'input', type: 'password', name: null, formControlName: null,
-        reason: 'SENSITIVE_TYPE' }],
-      valueCharacters: 21, valuesTruncated: false
-    },
     traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
     signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] },
     limits: [],
