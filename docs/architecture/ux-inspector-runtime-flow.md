@@ -127,9 +127,9 @@ Kanoniczny kontrakt ma `schema=tdw.ux-inspector-capture`, `version=1`, klienta
 - `domFingerprint`: allowlistowane stabilne atrybuty, selector candidates,
   label linkage i lancuch custom-element boundaries,
 - obserwowalny stan boolean/ARIA i bounds do preview,
-- skompaktowanych zwyklych przodkow i wszystkich rozpoznanych przodkow
-  custom-element; pelny lancuch unikalnych `componentBoundaryTags` nie ma
-  osobnego limitu liczby tagow,
+- pelny lancuch przodkow DOM, w tym wszystkie rozpoznane custom-element
+  boundaries; `omittedNodeCount=0` i nowe capture nie generuje
+  `ANCESTORS_TRUNCATED`,
 - informacje o truncation, Shadow DOM, ramce i redakcji,
 - `captureProfile` oraz opcjonalny `formSnapshot`.
 
@@ -149,6 +149,9 @@ wartosci formularza sa niezaufanym runtime evidence.
 Frontend receiver i backend waliduja niezaleznie ten sam kontrakt. Backend
 odrzuca nieznane pola, inna wersje i payload wiekszy niz 128 KiB przed oraz po
 normalizacji.
+Browser Tools laduje skrypty przez URL-e z wersja runtime. Po aktualizacji
+operator ponownie przeciaga bookmarklet z modala, aby przegladarka pobrala
+aktualny loader i protokol.
 
 ## Formularz analizy i katalog widokow
 

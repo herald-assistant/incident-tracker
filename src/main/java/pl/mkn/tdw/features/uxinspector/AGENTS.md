@@ -84,8 +84,9 @@ report, historie oraz import/export.
   przekazuje komponenty wybranych sciezek target -> komponent widoku oraz
   wszystkie odkryte komponenty dopasowane selectorem do runtime
   `componentBoundaryTags`, relacje tylko pomiedzy nimi i ich pelne pliki.
-  Capture nie ucina lancucha custom-element boundaries przy 8 tagach ani 24
-  przodkach; zwykle wezly DOM moga pozostac skompaktowane. Pack dolacza
+  Capture nie ucina lancucha przodkow DOM ani custom-element boundaries;
+  nowe wybory elementu maja `omittedNodeCount=0` i nie generuja
+  `ANCESTORS_TRUNCATED`. Pack dolacza
   kompaktowy effective route chain wybranego widoku oraz maksymalnie jeden ograniczony slice
   bezposredniej klasy bazowej komponentu widoku. Pelny route subtree, pelny
   plik klasy bazowej, dalsze dziedziczenie i pozostaly graph nie trafiaja do

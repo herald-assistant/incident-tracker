@@ -252,7 +252,7 @@ test('form diagnostics freezes allowed nearest-form values, including hidden con
   dom.window.close();
 });
 
-test('capture exposes useful button state and compacts ancestry to safe bounds', () => {
+test('capture exposes useful button state and keeps every DOM ancestor', () => {
   const wrappers = Array.from(
     { length: 40 },
     (_, index) => `<div class="layer-${index}">`
@@ -288,13 +288,15 @@ test('capture exposes useful button state and compacts ancestry to safe bounds',
   assert.equal(capture.target.domFingerprint.selectorCandidates.some(
     (candidate) => candidate.includes('build-123456789')
   ), false);
-  assert.ok(capture.ancestors.length <= 24);
-  assert.ok(capture.traversal.omittedNodeCount > 0);
+  assert.equal(capture.ancestors.length, 44);
+  assert.equal(capture.traversal.omittedNodeCount, 0);
+  assert.equal(capture.traversal.emittedNodeCount, capture.traversal.observedDepth);
+  assert.equal(capture.limits.includes('ANCESTORS_TRUNCATED'), false);
   assert.equal(capture.ancestors.at(-1).tag, 'html');
   dom.window.close();
 });
 
-test('UX capture keeps every custom-element boundary beyond the compact ancestor budget', () => {
+test('UX capture keeps every custom-element boundary in the full ancestor chain', () => {
   const tags = Array.from({ length: 30 }, (_, index) => `crm-layer-${index + 1}`);
   const openings = tags.map((tag) => `<${tag}>`).join('');
   const closings = [...tags].reverse().map((tag) => `</${tag}>`).join('');
@@ -360,7 +362,7 @@ test('remote loader derives TDW origin and loads protocol before runtime', async
     `<!doctype html><html><head></head><body>
       <script
         id="tdw-loader"
-        src="https://tdw.example.com/browser-tools/loader.js?v=1.0.0"
+        src="https://tdw.example.com/browser-tools/loader.js?v=1.3.0"
         data-tdw-feature-id="ux-inspector"
       ></script>
     </body></html>`,
@@ -428,7 +430,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.2.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.3.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -510,6 +512,33 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     null
   );
   assert.equal(shell.hidden, false);
+  dom.window.close();
+});
+
+test('new runtime replaces an older Browser Tools instance on the same page', () => {
+  const dom = createDom('<!doctype html><html><body></body></html>', 'https://crm.example.com/');
+  const { window } = dom;
+  const staleHost = window.document.createElement('div');
+  staleHost.setAttribute('data-tdw-browser-tool-version', '1.2.0');
+  let disposed = false;
+  let revealed = false;
+  window.__TDW_BROWSER_TOOLS_TEST_MODE__ = true;
+  window.__TDW_BROWSER_TOOL_CONFIG__ = config();
+  window.__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__ = {
+    host: staleHost,
+    reveal() { revealed = true; },
+    dispose() { disposed = true; }
+  };
+
+  window.eval(runtimeSource);
+
+  assert.equal(disposed, true);
+  assert.equal(revealed, false);
+  assert.equal(
+    window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]')
+      ?.getAttribute('data-tdw-browser-tool-version'),
+    '1.3.0'
+  );
   dom.window.close();
 });
 

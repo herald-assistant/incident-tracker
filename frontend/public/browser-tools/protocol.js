@@ -13,7 +13,6 @@
   const MAX_ACCESSIBLE_NAME_LENGTH = 140;
   const MAX_ATTRIBUTE_LENGTH = 100;
   const MAX_CLASSES = 8;
-  const MAX_ANCESTORS = 24;
   const MAX_QUERY_NAMES = 16;
   const MAX_SELECTOR_CANDIDATES = 8;
   const MAX_COMPONENT_BOUNDARIES = 8;
@@ -31,18 +30,6 @@
     'formcontrolname',
     'aria-label',
     'aria-describedby'
-  ]);
-  const SEMANTIC_TAGS = new Set([
-    'article',
-    'aside',
-    'dialog',
-    'fieldset',
-    'form',
-    'footer',
-    'header',
-    'main',
-    'nav',
-    'section'
   ]);
   const SENSITIVE_PATTERN =
     /(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|one[-_ ]?time|otp|cvv|cvc)/i;
@@ -741,49 +728,19 @@
     return { elements, shadowBoundaryCount };
   }
 
-  function isSemanticAncestor(element) {
-    const tag = element.tagName.toLowerCase();
-    return (
-      SEMANTIC_TAGS.has(tag) ||
-      tag.includes('-') ||
-      Boolean(element.getAttribute('role')) ||
-      Object.keys(stableAttributes(element)).length > 0
-    );
-  }
-
   function describeAncestor(element, depth) {
-    const descriptor = describeElement(element);
     return {
       depth,
-      tag: descriptor.tag,
-      role: descriptor.role,
-      accessibleName: descriptor.accessibleName,
-      text: depth <= 8 ? descriptor.text : null,
-      stableAttributes: descriptor.stableAttributes
+      tag: element.tagName.toLowerCase(),
+      role: inferredRole(element),
+      accessibleName: accessibleName(element),
+      text: depth <= 8 ? safeElementText(element) : null,
+      stableAttributes: stableAttributes(element)
     };
   }
 
   function selectAncestors(elements) {
-    const selectedIndices = new Set();
-    const nearTargetCount = Math.min(8, elements.length);
-    const nearRootStart = Math.max(nearTargetCount, elements.length - 4);
-    for (let index = 0; index < nearTargetCount; index += 1) {
-      selectedIndices.add(index);
-    }
-    for (let index = nearRootStart; index < elements.length; index += 1) {
-      selectedIndices.add(index);
-    }
-    elements.forEach((candidate, index) => {
-      if (candidate.tagName.toLowerCase().includes('-')) selectedIndices.add(index);
-    });
-    elements.forEach((candidate, index) => {
-      if (selectedIndices.size < MAX_ANCESTORS && isSemanticAncestor(candidate)) {
-        selectedIndices.add(index);
-      }
-    });
-    return Array.from(selectedIndices)
-      .sort((left, right) => left - right)
-      .map((index) => describeAncestor(elements[index], index + 1));
+    return elements.map((candidate, index) => describeAncestor(candidate, index + 1));
   }
 
   function createRandomToken(prefix) {
@@ -882,7 +839,7 @@
       traversal: {
         observedDepth: ancestry.elements.length,
         emittedNodeCount: emittedAncestors.length + 1,
-        omittedNodeCount: Math.max(0, ancestry.elements.length - emittedAncestors.length - 1),
+        omittedNodeCount: 0,
         reachedDocumentRoot
       },
       signals: {
@@ -891,7 +848,6 @@
         redactions: redactionSignals(element, captureProfile, formSnapshot)
       },
       limits: [
-        ...(emittedAncestors.length < ancestry.elements.length - 1 ? ['ANCESTORS_TRUNCATED'] : []),
         ...(!reachedDocumentRoot ? ['DOCUMENT_ROOT_NOT_REACHED'] : []),
         ...(captureProfile === 'FORM_DIAGNOSTICS' && !formSnapshot ? ['FORM_CONTEXT_NOT_FOUND'] : []),
         ...(formSnapshot?.valuesTruncated ? ['FORM_VALUES_TRUNCATED'] : [])

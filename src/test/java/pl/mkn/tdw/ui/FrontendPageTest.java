@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
@@ -133,19 +134,22 @@ class FrontendPageTest {
                 .andExpect(content().string(containsString("TDW UX Inspector")))
                 .andExpect(content().string(containsString("/ux-inspector")))
                 .andExpect(content().string(containsString("tdw-tools-launcher")))
-                .andExpect(content().string(containsString("data-tdw-browser-tool-root")));
+                .andExpect(content().string(containsString("data-tdw-browser-tool-root")))
+                .andExpect(content().string(containsString("1.3.0")));
 
         mockMvc.perform(get("/browser-tools/protocol.js"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("__TDW_BROWSER_TOOLS_PROTOCOL_V1__")))
                 .andExpect(content().string(containsString("tdw.ux-inspector-capture")))
-                .andExpect(content().string(containsString("TDW UX Inspector")));
+                .andExpect(content().string(containsString("TDW UX Inspector")))
+                .andExpect(content().string(not(containsString("ANCESTORS_TRUNCATED"))));
 
         mockMvc.perform(get("/browser-tools/loader.js"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Remote runtime loading failed")))
                 .andExpect(content().string(containsString("protocol.js")))
-                .andExpect(content().string(containsString("runtime.js")));
+                .andExpect(content().string(containsString("runtime.js")))
+                .andExpect(content().string(containsString("1.3.0")));
 
         mockMvc.perform(get("/browser-tools/demo.html"))
                 .andExpect(status().isNotFound())

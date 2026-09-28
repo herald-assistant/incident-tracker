@@ -115,8 +115,9 @@ Przed wieksza zmiana zacznij od:
   komponenty wybranej sciezki target -> komponent widoku oraz wszystkie
   odkryte komponenty, ktorych selector pasuje do runtime `componentBoundaryTags`.
   Przekazuje relacje tylko pomiedzy nimi oraz ich pelne zweryfikowane pliki TS
-  i zewnetrzne HTML. Capture zachowuje wszystkie rozpoznane custom-element
-  boundaries nawet gdy kompaktuje zwykle wezly DOM ancestry.
+  i zewnetrzne HTML. Capture zachowuje pelny lancuch przodkow DOM oraz
+  wszystkie rozpoznane custom-element boundaries, bez
+  `ANCESTORS_TRUNCATED` dla nowego wyboru elementu.
   Pack przekazuje tez kompaktowy effective route chain wybranego widoku i
   maksymalnie jeden przygotowany slice bezposredniej klasy bazowej komponentu
   widoku; nie dolacza pelnego route subtree, pelnego pliku klasy bazowej ani

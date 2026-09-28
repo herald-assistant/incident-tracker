@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.2.0';
+  const RUNTIME_VERSION = '1.3.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -32,7 +32,8 @@
   }
 
   const existing = global[SINGLETON_KEY];
-  if (existing && typeof existing.reveal === 'function') {
+  if (existing && existing.host?.getAttribute?.('data-tdw-browser-tool-version') === RUNTIME_VERSION
+      && typeof existing.reveal === 'function') {
     existing.reveal(configResult.value);
     return;
   }
