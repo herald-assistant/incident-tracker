@@ -55,7 +55,7 @@ public class UiExplorerPromptPreparationService {
 
                 %s
 
-                ## 2. Selected screen and source revision
+                ## 2. Selected screen and source branch
                 Logical artifact: `%s`
 
                 %s

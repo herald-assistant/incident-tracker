@@ -42,7 +42,7 @@ public class UxInspectorTargetResolver {
     private final GitLabFrontendScreenReachabilityPort screenReachabilityService;
 
     public UxInspectorTargetContext resolve(String systemId, String branch, String viewId,
-                                            String expectedRevision, UxInspectorCapture capture) {
+                                            UxInspectorCapture capture) {
         var frontend = applicationCatalogService.loadCatalog().findFrontend(systemId)
                 .orElseThrow(() -> error("UX_INSPECTOR_FRONTEND_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
                         "Selected frontend is not registered for source analysis."));
@@ -51,15 +51,10 @@ public class UxInspectorTargetResolver {
         GitLabFrontendScreenReachabilityGraph graph;
         try {
             graph = screenReachabilityService.buildFocused(new GitLabFrontendScreenSelectionRequest(
-                            scope, viewId, expectedRevision, GitLabFrontendGraphLimits.defaults()),
+                            scope, viewId, null, GitLabFrontendGraphLimits.defaults()),
                     orderedComponentBoundaries(capture));
         } catch (GitLabFrontendDiscoveryException exception) {
             throw mapFailure(exception);
-        }
-        if (!StringUtils.hasText(expectedRevision)
-                || !expectedRevision.trim().equals(graph.sourceRevision().commitId())) {
-            throw error("UX_INSPECTOR_SOURCE_REVISION_CHANGED", UserFacingErrorType.CONFLICT,
-                    "Source revision changed. Reload views and select the target again.");
         }
         var selectorSignals = selectorSignals(capture);
         var candidates = graph.componentLevels().stream().flatMap(level -> level.components().stream())
@@ -72,7 +67,7 @@ public class UxInspectorTargetResolver {
         if (status == UxInspectorTargetResolutionStatus.AMBIGUOUS) {
             limitations.add("Several source targets match the runtime observation; the answer must preserve this ambiguity.");
         } else if (status == UxInspectorTargetResolutionStatus.NOT_FOUND) {
-            limitations.add("No source target could be verified in the selected view and pinned revision.");
+            limitations.add("No source target could be verified in the selected view on the chosen branch.");
         }
         var focused = "";
         UxInspectorSourceBinding sourceBinding = null;
@@ -90,7 +85,7 @@ public class UxInspectorTargetResolver {
                 new UxInspectorViewIdentity(viewId,
                         StringUtils.hasText(graph.screenNode().label()) ? graph.screenNode().label() : graph.screenNode().routePattern(),
                         graph.screenNode().routePattern()),
-                new UxInspectorSourceRevision(graph.sourceRevision().ref(), graph.sourceRevision().commitId()),
+                new UxInspectorSourceRevision(scope.ref()),
                 status, candidates, sourceBinding, focused, List.copyOf(limitations), graph);
     }
 
@@ -493,12 +488,10 @@ public class UxInspectorTargetResolver {
 
     private RuntimeException mapFailure(GitLabFrontendDiscoveryException exception) {
         return switch (exception.code()) {
-            case "FRONTEND_SOURCE_REVISION_CHANGED" -> error("UX_INSPECTOR_SOURCE_REVISION_CHANGED",
-                    UserFacingErrorType.CONFLICT, "Source revision changed. Reload views and select the target again.");
             case "FRONTEND_REF_NOT_FOUND" -> error("UX_INSPECTOR_SOURCE_REF_NOT_FOUND",
                     UserFacingErrorType.NOT_FOUND, "Selected frontend branch or ref does not exist.");
             case "FRONTEND_SCREEN_NOT_FOUND" -> error("UX_INSPECTOR_VIEW_NOT_FOUND",
-                    UserFacingErrorType.CONFLICT, "Selected view is no longer present in the pinned source revision.");
+                    UserFacingErrorType.CONFLICT, "Selected view is no longer present on the chosen branch.");
             default -> error("UX_INSPECTOR_SOURCE_UNAVAILABLE", UserFacingErrorType.SERVICE_UNAVAILABLE,
                     "Frontend source could not be prepared for the selected view.");
         };

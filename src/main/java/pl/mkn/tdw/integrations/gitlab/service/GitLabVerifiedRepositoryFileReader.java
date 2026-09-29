@@ -29,18 +29,34 @@ public final class GitLabVerifiedRepositoryFileReader {
         if (maxBytes <= 0 || maxBytes > MAX_FILE_BYTES) {
             throw new IllegalArgumentException("GitLab verified read byte limit is invalid.");
         }
-        return readVerified(port, group, projectName, commitId, filePath, maxBytes);
+        return readVerified(port, group, projectName, commitId, filePath, maxBytes, true);
     }
 
     public static GitLabVerifiedFile readComplete(
             GitLabRepositoryReadPort port, String group, String projectName, String commitId, String filePath
     ) {
-        return readVerified(port, group, projectName, commitId, filePath, null);
+        return readVerified(port, group, projectName, commitId, filePath, null, true);
+    }
+
+    public static GitLabVerifiedFile readBranch(
+            GitLabRepositoryReadPort port, String group, String projectName, String branch,
+            String filePath, int maxBytes
+    ) {
+        if (maxBytes <= 0 || maxBytes > MAX_FILE_BYTES) {
+            throw new IllegalArgumentException("GitLab verified read byte limit is invalid.");
+        }
+        return readVerified(port, group, projectName, branch, filePath, maxBytes, false);
+    }
+
+    public static GitLabVerifiedFile readCompleteBranch(
+            GitLabRepositoryReadPort port, String group, String projectName, String branch, String filePath
+    ) {
+        return readVerified(port, group, projectName, branch, filePath, null, false);
     }
 
     private static GitLabVerifiedFile readVerified(
             GitLabRepositoryReadPort port, String group, String projectName, String commitId,
-            String filePath, Integer maxBytes
+            String filePath, Integer maxBytes, boolean pinnedCommit
     ) {
         if (!isSafePath(filePath, false)) {
             throw new IllegalArgumentException("Only relative text file paths can be read.");
@@ -49,7 +65,7 @@ public final class GitLabVerifiedRepositoryFileReader {
         if (metadata == null || !group.equals(metadata.group())
                 || !projectName.equals(metadata.projectName()) || !commitId.equals(metadata.branch())
                 || !filePath.equals(metadata.filePath())
-                || metadata.commitId() != null && !commitId.equals(metadata.commitId())
+                || pinnedCommit && metadata.commitId() != null && !commitId.equals(metadata.commitId())
                 || metadata.sizeBytes() == null || metadata.sizeBytes() < 0
                 || maxBytes != null && metadata.sizeBytes() > maxBytes) {
             throw new IllegalStateException("GitLab file metadata or size cannot be verified.");
@@ -60,7 +76,7 @@ public final class GitLabVerifiedRepositoryFileReader {
         if (file == null || !group.equals(file.group()) || !projectName.equals(file.projectName())
                 || !commitId.equals(file.branch()) || !filePath.equals(file.filePath())
                 || file.content() == null || file.truncated()) {
-            throw new IllegalStateException("GitLab file does not match the pinned commit or is incomplete.");
+            throw new IllegalStateException("GitLab file does not match the requested ref or is incomplete.");
         }
         var content = file.content();
         var actualBytes = content.getBytes(StandardCharsets.UTF_8).length;

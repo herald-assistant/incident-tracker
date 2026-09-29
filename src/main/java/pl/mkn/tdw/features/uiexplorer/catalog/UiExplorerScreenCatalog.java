@@ -3,10 +3,12 @@ package pl.mkn.tdw.features.uiexplorer.catalog;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 
 import java.util.List;
+import java.time.Instant;
 
 public record UiExplorerScreenCatalog(
         String systemId,
         String systemLabel,
+        Instant dataCollectedAt,
         UiExplorerSourceRevision sourceRevision,
         UiExplorerScreenCatalogStatus status,
         List<UiExplorerScreenCatalogEntry> screens,

@@ -9,7 +9,6 @@ public record UiExplorerJobRequestSnapshot(
         String systemLabel,
         String branch,
         String screenId,
-        String sourceRevision,
         List<UiExplorerSectionModeAssignment> sectionModes,
         String scenarioDescription,
         String aiModel,

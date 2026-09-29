@@ -30,8 +30,8 @@ export function buildUiExplorerReportMarkdown(
 
 export function buildUiExplorerReportFileName(result: UiExplorerResultResponse | null): string {
   const screen = sanitizeFileNamePart(result?.screen?.screenId ?? 'screen');
-  const revision = sanitizeFileNamePart(result?.sourceRevision?.revision ?? 'revision');
-  return `ui-explorer-${screen}-${revision}.md`;
+  const branch = sanitizeFileNamePart(result?.sourceRevision?.branch ?? 'branch');
+  return `ui-explorer-${screen}-${branch}.md`;
 }
 
 export function downloadUiExplorerMarkdown(fileName: string, markdown: string): void {

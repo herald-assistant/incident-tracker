@@ -29,8 +29,8 @@ describe('UI Explorer import and export contract', () => {
 
   it('marks a pending assistant response as interrupted after backend restart', () => {
     const envelope = localEnvelope() as any;
-    envelope.version = 6;
-    envelope.payload.resultContract = 'ui-explorer-result-v6';
+    envelope.version = 1;
+    envelope.payload.resultContract = 'ui-explorer-result-v1';
     envelope.payload.job.chatMessages = [
       {
         id: 'crm-assistant-pending',
@@ -60,11 +60,11 @@ describe('UI Explorer import and export contract', () => {
 function localEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 5,
+    version: 1,
     storedAt: '2026-08-15T10:04:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v5',
+      resultContract: 'ui-explorer-result-v1',
       job: crmHistorySnapshot()
     }
   };
@@ -78,7 +78,6 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
       systemLabel: 'CRM Agent Portal',
       branch: 'main',
       screenId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3',
       sectionModes: [{ sectionId: 'OVERVIEW', mode: 'DEEP' }],
       scenarioDescription: 'Describe a synthetic CRM contact flow.',
       aiModel: 'crm-doc-model',
@@ -107,7 +106,7 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
         navigationContext: 'Kontakty CRM > Nowy kontakt'
       },
       scenarioDescription: 'Describe a synthetic CRM contact flow.',
-      sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+      sourceRevision: { branch: 'main' },
       functionalOverview: 'Synthetic CRM contact documentation.',
       sections: [],
       overallConfidence: 'CONFIRMED',
@@ -131,7 +130,7 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
       }
     },
     usage: null,
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    sourceRevision: { branch: 'main' },
     outputAvailability: {
       status: 'AVAILABLE',
       code: 'READY',

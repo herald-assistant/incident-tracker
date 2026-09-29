@@ -154,7 +154,7 @@ class UiExplorerJobServiceTest {
         );
         when(reachabilityContextService.buildContext(
                 eq("crm-agent-portal"), eq("main"), eq("crm-contact-preferences"),
-                eq("crm-commit-abc123"), anyList()
+                anyList()
         )).thenThrow(new UiExplorerFrontendNotEligibleException("crm-agent-portal"));
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
         var executor = new CapturingTaskExecutor();

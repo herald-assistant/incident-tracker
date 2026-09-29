@@ -1,5 +1,6 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { formatDataDate } from '../../../../core/utils/format-data-date';
 
 import { UiExplorerScreenCatalogEntry } from '../../models/ui-explorer.models';
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
@@ -14,6 +15,10 @@ export class UiExplorerScreenCatalogComponent {
   readonly facade = inject(UiExplorerFacade);
   readonly open = signal(false);
   readonly search = signal('');
+  readonly catalogDateLabel = computed(() => {
+    const formatted = formatDataDate(this.facade.screenCatalog()?.dataCollectedAt);
+    return formatted ? `Data: ${formatted}` : '';
+  });
 
   readonly filteredScreens = computed(() => {
     const query = this.search().trim().toLocaleLowerCase();
@@ -53,7 +58,7 @@ export class UiExplorerScreenCatalogComponent {
     }
     const catalog = this.facade.screenCatalog();
     if (catalog) {
-      return `${catalog.screens.length} views · ${catalog.sourceRevision.revision}`;
+      return `${catalog.screens.length} views`;
     }
     switch (this.facade.screenState()) {
       case 'loading':

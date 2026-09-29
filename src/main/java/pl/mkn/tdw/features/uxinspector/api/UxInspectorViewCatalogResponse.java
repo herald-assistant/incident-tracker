@@ -1,10 +1,12 @@
 package pl.mkn.tdw.features.uxinspector.api;
 
 import java.util.List;
+import java.time.Instant;
 
 public record UxInspectorViewCatalogResponse(
         String systemId,
         String systemLabel,
+        Instant dataCollectedAt,
         SourceRevision sourceRevision,
         String status,
         List<ViewOption> views,
@@ -16,7 +18,7 @@ public record UxInspectorViewCatalogResponse(
         diagnostics = diagnostics != null ? List.copyOf(diagnostics) : List.of();
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
     }
-    public record SourceRevision(String branch, String revision) {}
+    public record SourceRevision(String branch) {}
     public record ViewOption(String viewId, String label, String routePattern, List<String> componentSelectors,
                              String status, List<String> limitations) {
         public ViewOption {

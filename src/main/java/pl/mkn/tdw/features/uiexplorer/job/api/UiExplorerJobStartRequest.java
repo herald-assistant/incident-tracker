@@ -25,9 +25,6 @@ public record UiExplorerJobStartRequest(
         @NotBlank(message = "screenId must not be blank")
         @Size(max = 240, message = "screenId must not exceed 240 characters")
         String screenId,
-        @NotBlank(message = "sourceRevision must not be blank")
-        @Size(max = 160, message = "sourceRevision must not exceed 160 characters")
-        String sourceRevision,
         @Size(max = 8, message = "sectionModes must contain at most 8 entries")
         Map<UiExplorerSectionId, UiExplorerSectionMode> sectionModes,
         @Size(max = 4000, message = "scenarioDescription must not exceed 4000 characters")
@@ -42,7 +39,6 @@ public record UiExplorerJobStartRequest(
         systemId = normalize(systemId);
         branch = normalize(branch);
         screenId = normalize(screenId);
-        sourceRevision = normalize(sourceRevision);
         sectionModes = sectionModes != null
                 ? Collections.unmodifiableMap(new LinkedHashMap<>(sectionModes))
                 : Map.of();

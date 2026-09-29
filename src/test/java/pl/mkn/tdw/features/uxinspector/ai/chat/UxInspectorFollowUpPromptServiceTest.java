@@ -11,7 +11,7 @@ class UxInspectorFollowUpPromptServiceTest {
     void shouldSendOnlyNewMessageToExistingSession() {
         var request = new UxInspectorFollowUpChatRequest("crm-follow-up",
                 new pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest(
-                        "crm-agent-portal", "main", VIEW_ID, REVISION, "Dlaczego zapis jest zablokowany?",
+                        "crm-agent-portal", "main", VIEW_ID, "Dlaczego zapis jest zablokowany?",
                         capture(), "gpt-crm", "medium"), targetContext(),
                 "  Co jeszcze wpływa na zapis?  ", "ux-inspector-crm", AnalysisAiAuthRef.localToken(null));
 

@@ -14,7 +14,7 @@ public class UxInspectorTargetEvidenceMapper {
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
         attributes.add(new AnalysisEvidenceAttribute("status", context.status().name()));
         attributes.add(new AnalysisEvidenceAttribute("viewId", context.view().viewId()));
-        attributes.add(new AnalysisEvidenceAttribute("sourceRevision", context.sourceRevision().revision()));
+        attributes.add(new AnalysisEvidenceAttribute("sourceBranch", context.sourceScope().ref()));
         attributes.add(new AnalysisEvidenceAttribute("candidateCount", Integer.toString(context.candidates().size())));
         if (!context.candidates().isEmpty()) {
             var top = context.candidates().get(0);

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-/** Builds pinned repository guidance without installing remote project skills in the TDW runtime. */
+/** Builds branch-scoped repository guidance without installing remote project skills in the TDW runtime. */
 @Service
 @RequiredArgsConstructor
 public class UxInspectorRepositoryGuidanceArtifactService {
@@ -65,7 +65,7 @@ public class UxInspectorRepositoryGuidanceArtifactService {
                 SCHEMA,
                 VERSION,
                 scope.group() + "/" + scope.project(),
-                scope.commit(),
+                scope.branch(),
                 instructions,
                 skills
         );
@@ -127,24 +127,24 @@ public class UxInspectorRepositoryGuidanceArtifactService {
 
     private GitLabVerifiedFile read(RepositoryScope scope, String path, int maxBytes) {
         try {
-            return verifiedFileReader.read(
-                    repositoryPort, scope.group(), scope.project(), scope.commit(), path, maxBytes);
+            return verifiedFileReader.readBranch(
+                    repositoryPort, scope.group(), scope.project(), scope.branch(), path, maxBytes);
         } catch (RuntimeException exception) {
-            throw unavailable("Repository guidance file could not be read from the pinned revision: " + path, exception);
+            throw unavailable("Repository guidance file could not be read from the selected branch: " + path, exception);
         }
     }
 
     private RepositoryScope requireScope(UxInspectorTargetContext context) {
-        if (context == null || context.sourceScope() == null || context.sourceRevision() == null
+        if (context == null || context.sourceScope() == null
                 || !StringUtils.hasText(context.sourceScope().group())
                 || !StringUtils.hasText(context.sourceScope().projectName())
-                || !StringUtils.hasText(context.sourceRevision().revision())) {
-            throw unavailable("Pinned repository scope is unavailable.", null);
+                || !StringUtils.hasText(context.sourceScope().ref())) {
+            throw unavailable("Selected repository branch scope is unavailable.", null);
         }
         return new RepositoryScope(
                 context.sourceScope().group().trim(),
                 context.sourceScope().projectName().trim(),
-                context.sourceRevision().revision().trim()
+                context.sourceScope().ref().trim()
         );
     }
 
@@ -166,14 +166,14 @@ public class UxInspectorRepositoryGuidanceArtifactService {
         return exception;
     }
 
-    private record RepositoryScope(String group, String project, String commit) {
+    private record RepositoryScope(String group, String project, String branch) {
     }
 
     private record RepositoryGuidance(
             String schema,
             int version,
             String repository,
-            String commit,
+            String branch,
             CopilotInstructions copilotInstructions,
             List<ProjectSkillHeader> projectSkills
     ) {

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -68,17 +69,18 @@ public class FrontendViewCatalogService {
                         parentRoutePattern(node, nodesById), node.screen().viewTarget().selectors(),
                         node.status().name(), node.lazyBoundary(), guards(node), node.routeParameters(),
                         node.limitations())).toList();
-        var diagnostics = source.diagnostics().stream().map(value -> new FrontendViewCatalog.Diagnostic(
+        var diagnostics = source.diagnostics().stream()
+                .filter(value -> value.code() != pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphDiagnosticCode.SOURCE_REVISION_UNRESOLVED)
+                .map(value -> new FrontendViewCatalog.Diagnostic(
                 value.severity().name(), value.code().name(), value.message(),
                 value.source() != null ? value.source().path() : null)).toList();
         var limitations = new ArrayList<String>();
         if (views.isEmpty()) limitations.add("No selectable views were resolved from the bounded route catalog.");
         if (source.coverage().limitReached()) limitations.add("Targeted route graph discovery reached a configured traversal limit.");
-        if (!StringUtils.hasText(source.sourceRevision().commitId())) limitations.add("The exact GitLab source revision could not be confirmed.");
         limitations.addAll(source.coverage().limitations());
         var status = status(source, views);
-        return new FrontendViewCatalog(frontend.systemId(), frontend.label(),
-                new FrontendViewCatalog.SourceRevision(source.sourceRevision().ref(), source.sourceRevision().commitId()),
+        return new FrontendViewCatalog(frontend.systemId(), frontend.label(), Instant.now(),
+                new FrontendViewCatalog.SourceRevision(source.scope().ref()),
                 status, views, diagnostics, limitations,
                 new FrontendViewCatalog.Boundary(source.coverage().visitedRouteNodeCount(),
                         source.coverage().visitedRouteFileCount(), source.coverage().sourceReadCount(),
@@ -92,8 +94,9 @@ public class FrontendViewCatalogService {
         var incomplete = source.nodes().stream().filter(node -> node.kind() == GitLabFrontendRouteNodeKind.SCREEN)
                 .anyMatch(node -> node.status() != GitLabFrontendDiscoveryStatus.RESOLVED);
         var diagnostic = source.diagnostics().stream()
+                .filter(value -> value.code() != pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphDiagnosticCode.SOURCE_REVISION_UNRESOLVED)
                 .anyMatch(value -> value.severity() != GitLabFrontendDiagnosticSeverity.INFO);
-        return source.coverage().limitReached() || !StringUtils.hasText(source.sourceRevision().commitId())
+        return source.coverage().limitReached()
                 || incomplete || diagnostic ? FrontendViewCatalog.Status.PARTIAL : FrontendViewCatalog.Status.READY;
     }
 

@@ -6,9 +6,9 @@ import java.time.Instant;
 
 public record UxInspectorExportEnvelope(String schema, int version, Instant exportedAt, Payload payload) {
     public static final String SCHEMA = "tdw.ux-inspector-export";
-    public static final int VERSION = 3;
+    public static final int VERSION = 1;
     public static final String PAYLOAD_TYPE = "ux-inspector-analysis";
-    public static final String RESULT_CONTRACT = "ux-inspector-result-v3";
+    public static final String RESULT_CONTRACT = "ux-inspector-result-v1";
 
     public boolean supported() {
         return SCHEMA.equals(schema) && version == VERSION && payload != null

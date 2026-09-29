@@ -71,7 +71,7 @@ class UiExplorerInitialPromptMatrixTest {
 
             assertThat(prompt).containsSubsequence(
                     "## 1. Analysis request and active sections",
-                    "## 2. Selected screen and source revision",
+                    "## 2. Selected screen and source branch",
                     "## 3. Effective route, component BFS and dependency map",
                     "## 4. Initial reachable source evidence and on-demand frontier",
                     "## 5. Coverage and targeted research queue",
@@ -653,7 +653,7 @@ class UiExplorerInitialPromptMatrixTest {
                         routeSource.startLine(),
                         routeSource.endLine()
                 ),
-                new UiExplorerSourceRevision("main", "crm-matrix-" + id),
+                new UiExplorerSourceRevision("main"),
                 coverageStatus,
                 graph,
                 sectionCoverage,
@@ -683,7 +683,6 @@ class UiExplorerInitialPromptMatrixTest {
                 "crm-agent-portal",
                 "main",
                 screenId,
-                "crm-matrix-" + screenId,
                 sectionModes,
                 "Document the strongly anonymized synthetic CRM scenario " + screenId + ".",
                 "gpt-5.4",

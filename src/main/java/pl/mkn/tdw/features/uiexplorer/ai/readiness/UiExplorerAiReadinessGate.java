@@ -31,8 +31,8 @@ public class UiExplorerAiReadinessGate {
         if (activeSections.isEmpty()) {
             return blocked(List.of(), "At least one UI Explorer section must be active.");
         }
-        if (context.sourceScope() == null || context.sourceRevision() == null) {
-            return blocked(activeSections, "Resolved source scope and revision are required for AI execution.");
+        if (context.sourceScope() == null) {
+            return blocked(activeSections, "Resolved source branch scope is required for AI execution.");
         }
         if (context.status() == UiExplorerCoverageStatus.BLOCKED || context.components().isEmpty()) {
             return blocked(activeSections, "Deterministic screen reachability is blocked.");

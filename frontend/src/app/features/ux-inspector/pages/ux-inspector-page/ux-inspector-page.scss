@@ -209,6 +209,17 @@
   line-height: 1;
 }
 
+.ux-inspector-cache-date {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ux-inspector-label-help {
   display: inline-flex;
   align-items: center;

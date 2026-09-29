@@ -44,7 +44,7 @@ class UxInspectorLocalRunChatHandlerTest {
 
     private pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStateSnapshot completedSnapshot(String id) {
         var state = new UxInspectorJobState(id, new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID,
-                REVISION, "Jak działa zapis?", capture(), "gpt-crm", "medium"));
+                "Jak działa zapis?", capture(), "gpt-crm", "medium"));
         state.tryStart(); state.targetResolved(targetContext(), List.of()); state.preparationStarted();
         state.preparationCompleted("CRM prompt", 1); state.analysisStarted();
         var meta = AnalysisReportMeta.empty();

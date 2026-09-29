@@ -33,7 +33,7 @@ describe('UxInspectorFacade', () => {
     })),
     getViews: vi.fn(() => of({
       systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
-      sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' }, status: 'READY',
+      dataCollectedAt: '2026-08-15T10:30:00Z', sourceRevision: { branch: 'main' }, status: 'READY',
       views: [{ viewId: 'crm-contact-create', label: 'Nowy kontakt', routePattern: '/contacts/new',
         componentSelectors: ['crm-contact-create'], status: 'READY', limitations: [] }],
       diagnostics: [], limitations: []
@@ -80,7 +80,7 @@ describe('UxInspectorFacade', () => {
 
     expect(api.startJob).toHaveBeenCalledWith({
       systemId: 'crm-agent-portal', branch: 'main', viewId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3', question: 'Dlaczego przycisk jest zablokowany?',
+      question: 'Dlaczego przycisk jest zablokowany?',
       captureId: 'cap_crm_contact_save', model: 'gpt-crm', reasoningEffort: 'medium'
     });
     expect(ingress.consumeCapture).toHaveBeenCalledTimes(1);
@@ -260,7 +260,7 @@ function view(viewId: string, routePattern: string, componentSelectors: string[]
 function viewCatalog(views: ReturnType<typeof view>[]) {
   return {
     systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' }, status: 'READY',
+    dataCollectedAt: '2026-08-15T10:30:00Z', sourceRevision: { branch: 'main' }, status: 'READY',
     views, diagnostics: [], limitations: []
   };
 }
@@ -286,14 +286,14 @@ function snapshot(status: UxInspectorJobStateSnapshot['status']): UxInspectorJob
   const terminal = status === 'COMPLETED';
   return {
     jobId: 'ux-crm-job', request: { systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal', branch: 'main',
-      viewId: 'crm-contact-create', sourceRevision: 'crm-revision-a1b2c3', question: 'Dlaczego przycisk jest zablokowany?',
+      viewId: 'crm-contact-create', question: 'Dlaczego przycisk jest zablokowany?',
       captureId: 'cap_crm_contact_save', capture: captureFixture(), aiModel: 'gpt-crm', reasoningEffort: 'medium',
       targetResolutionStatus: 'RESOLVED', targetCandidateCount: 1 },
     status, currentStepCode: terminal ? null : 'TARGET_RESOLUTION', currentStepLabel: terminal ? null : 'Resolve target',
     errorCode: null, errorMessage: null, createdAt: '2026-09-15T10:00:00Z', updatedAt: '2026-09-15T10:00:01Z',
     completedAt: terminal ? '2026-09-15T10:00:02Z' : null, steps: [], contextSections: [], toolEvidenceSections: [],
     aiActivityEvents: [], toolFeedback: [], preparedPrompt: null, result: null, report: null, usage: null,
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    sourceRevision: { branch: 'main' },
     outputAvailability: { status: 'BLOCKED', code: terminal ? 'DONE' : 'RUNNING', message: '', missingCapabilities: [] },
     exportAvailable: terminal
   };

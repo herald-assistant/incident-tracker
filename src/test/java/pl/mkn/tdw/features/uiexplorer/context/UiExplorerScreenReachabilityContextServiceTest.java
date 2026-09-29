@@ -28,7 +28,6 @@ import pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerFrontendCatalogService;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerFrontendNotEligibleException;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundException;
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerScreenSelectionStaleException;
-import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionChangedException;
 import pl.mkn.tdw.features.uiexplorer.contract.*;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 
@@ -50,7 +49,6 @@ class UiExplorerScreenReachabilityContextServiceTest {
 
         var result = service.buildContext(
                 "crm-agent-portal", "release/2026.08", "screen-crm-contact-preferences",
-                "crm-ui-revision-20260815",
                 List.of(
                         new UiExplorerSectionModeAssignment(UiExplorerSectionId.OVERVIEW, UiExplorerSectionMode.DEEP),
                         new UiExplorerSectionModeAssignment(UiExplorerSectionId.FORMS_AND_RULES, UiExplorerSectionMode.COMPACT),
@@ -61,7 +59,7 @@ class UiExplorerScreenReachabilityContextServiceTest {
         assertThat(result.systemLabel()).isEqualTo("CRM Agent Portal");
         assertThat(result.screen().routePattern()).isEqualTo("/contacts/:contactId/preferences");
         assertThat(result.screen().navigationContext()).isEqualTo("/contacts/:contactId");
-        assertThat(result.sourceRevision().revision()).isEqualTo("crm-ui-revision-20260815");
+        assertThat(result.sourceRevision().branch()).isEqualTo("release/2026.08");
         assertThat(result.status()).isEqualTo(UiExplorerCoverageStatus.READY);
         assertThat(result.guards()).containsExactly("CrmAuthGuard");
         assertThat(result.components()).singleElement().satisfies(component -> {
@@ -74,7 +72,7 @@ class UiExplorerScreenReachabilityContextServiceTest {
         var request = ArgumentCaptor.forClass(GitLabFrontendScreenSelectionRequest.class);
         verify(discovery).build(request.capture());
         assertThat(request.getValue().screenId()).isEqualTo("screen-crm-contact-preferences");
-        assertThat(request.getValue().expectedRevision()).isEqualTo("crm-ui-revision-20260815");
+        assertThat(request.getValue().expectedRevision()).isNull();
         assertThat(request.getValue().scope().pathPrefixes()).containsExactly("apps/crm-agent", "libs/crm-ui");
     }
 
@@ -84,8 +82,7 @@ class UiExplorerScreenReachabilityContextServiceTest {
         when(discovery.build(any())).thenReturn(reachabilityGraph(true));
 
         var result = service(eligibleCrmPathPrefixCatalog(), discovery).buildContext(
-                "crm-agent-portal", "release/2026.08", "screen-crm-contact-preferences",
-                "crm-ui-revision-20260815", activeOverview()
+                "crm-agent-portal", "release/2026.08", "screen-crm-contact-preferences", activeOverview()
         );
 
         assertThat(result.status()).isEqualTo(UiExplorerCoverageStatus.PARTIAL);
@@ -101,7 +98,6 @@ class UiExplorerScreenReachabilityContextServiceTest {
 
         var result = service(eligibleCrmPathPrefixCatalog(), discovery).buildContext(
                 "crm-agent-portal", "release/2026.08", "screen-crm-contact-preferences",
-                "crm-ui-revision-20260815",
                 List.of(
                         new UiExplorerSectionModeAssignment(
                                 UiExplorerSectionId.NAVIGATION_AND_ACCESS, UiExplorerSectionMode.DEEP
@@ -123,17 +119,6 @@ class UiExplorerScreenReachabilityContextServiceTest {
     }
 
     @Test
-    void shouldMapRevisionChangeToFeatureConflict() {
-        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
-        when(discovery.build(any())).thenThrow(new GitLabFrontendDiscoveryException(
-                "FRONTEND_SOURCE_REVISION_CHANGED", "Synthetic CRM revision changed"
-        ));
-        assertThatThrownBy(() -> service(eligibleCrmPathPrefixCatalog(), discovery).buildContext(
-                "crm-agent-portal", "main", "screen-crm-contact-preferences", "crm-old-revision", activeOverview()
-        )).isInstanceOf(UiExplorerSourceRevisionChangedException.class);
-    }
-
-    @Test
     void shouldMapMissingCrmScreenAndRefToFeatureOwnedErrors() {
         var discovery = mock(GitLabFrontendScreenReachabilityService.class);
         when(discovery.build(any()))
@@ -141,10 +126,10 @@ class UiExplorerScreenReachabilityContextServiceTest {
                 .thenThrow(new GitLabFrontendDiscoveryException("FRONTEND_REF_NOT_FOUND", "Synthetic CRM ref is missing"));
         var service = service(eligibleCrmPathPrefixCatalog(), discovery);
         assertThatThrownBy(() -> service.buildContext(
-                "crm-agent-portal", "main", "screen-crm-stale", "crm-ui-revision", activeOverview()
+                "crm-agent-portal", "main", "screen-crm-stale", activeOverview()
         )).isInstanceOf(UiExplorerScreenSelectionStaleException.class);
         assertThatThrownBy(() -> service.buildContext(
-                "crm-agent-portal", "release/crm-missing", "screen-crm", "crm-ui-revision", activeOverview()
+                "crm-agent-portal", "release/crm-missing", "screen-crm", activeOverview()
         )).isInstanceOf(UiExplorerSourceRefNotFoundException.class);
     }
 
@@ -152,7 +137,7 @@ class UiExplorerScreenReachabilityContextServiceTest {
     void shouldRejectIncompleteCrmRegistrationBeforeCallingDiscovery() {
         var discovery = mock(GitLabFrontendScreenReachabilityService.class);
         assertThatThrownBy(() -> service(crmCatalogWithoutPrimary(), discovery).buildContext(
-                "crm-agent-portal", "main", "screen-crm", "crm-ui-revision", activeOverview()
+                "crm-agent-portal", "main", "screen-crm", activeOverview()
         )).isInstanceOf(UiExplorerFrontendNotEligibleException.class);
         verifyNoInteractions(discovery);
     }

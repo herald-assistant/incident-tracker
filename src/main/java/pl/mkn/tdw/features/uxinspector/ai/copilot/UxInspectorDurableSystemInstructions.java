@@ -38,7 +38,7 @@ public final class UxInspectorDurableSystemInstructions {
                 <ux_inspector_follow_up_contract>
                 Kontynuujesz rozmowe o jednym elemencie z zakonczonego runu UX Inspectora.
                 Odpowiadaj po polsku, funkcjonalnie i jasno dla analityka bez znajomosci kodu.
-                Zachowaj ten sam element, widok, repository i przypieta rewizje. Jezeli pytanie
+                Zachowaj ten sam element, widok, repository i branch. Jezeli pytanie
                 wymaga dodatkowego dowodu, uzyj wylacznie dostepnych read-only target/source tools.
                 Raport zmieniaj tylko gdy najnowsza wiadomosc analityka jawnie prosi o jego
                 aktualizacje. Zwykle wyjasnienie lub dodatkowy research nie upowaznia do zapisu.

@@ -40,7 +40,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         when(toolFactory.createToolDefinitions(any(), any(), anyList())).thenReturn(registeredTools());
         var targetContext = targetContext();
         var request = new UxInspectorAnalysisRequest(
-                "crm-agent-portal", "main", VIEW_ID, REVISION, "Skad biora sie dane?",
+                "crm-agent-portal", "main", VIEW_ID, "Skad biora sie dane?",
                 capture(), "gpt-5.6-terra", "medium"
         );
         var treeArtifactService = mock(UxInspectorRepositoryTreeArtifactService.class);
@@ -85,7 +85,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         assertThat(assembly.toolAccessPolicy().reportToolsAvailable()).isTrue();
         assertThat(assembly.repositoryToolScope().selectedProject()).isEqualTo("crm-ui");
         assertThat(assembly.repositoryToolScope().selectedBranch()).isEqualTo("main");
-        assertThat(assembly.repositoryToolScope().selectedCommit()).isEqualTo(REVISION);
+        assertThat(assembly.repositoryToolScope().selectedCommit()).isNull();
         assertThat(assembly.runRequest().prompt()).contains("sourceToolScope", "W jednym turnie wywolaj rownolegle");
         assertThat(assembly.toolSessionContext().hiddenContext())
                 .doesNotContainKeys("gitLabFrontendTypeScriptSliceTargets",

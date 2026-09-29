@@ -59,7 +59,7 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
             reject(request, "projectName is outside the selected UX Inspector frontend.", true);
         }
         if (!repositoryScope.selectedBranch().equals(text(arguments, "branchRef"))) {
-            reject(request, "branchRef must be the selected UX Inspector branch pinned by the session.", true);
+            reject(request, "branchRef must be the selected UX Inspector branch.", true);
         }
 
         if (Set.of(

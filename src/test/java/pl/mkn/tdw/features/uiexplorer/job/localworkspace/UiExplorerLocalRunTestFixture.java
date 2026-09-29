@@ -59,7 +59,6 @@ final class UiExplorerLocalRunTestFixture {
                         context().systemLabel(),
                         request().branch(),
                         request().screenId(),
-                        request().sourceRevision(),
                         request().resolvedSectionModes(),
                         request().scenarioDescription(),
                         request().model(),

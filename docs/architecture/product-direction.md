@@ -243,7 +243,7 @@ Uzytkownik wskazuje element na uruchomionej stronie przez efemeryczne TDW
 Browser Tools, a nastepnie zadaje jedno konkretne pytanie, np. o walidacje,
 pochodzenie danych, stan `disabled` albo skutek klikniecia. Na zaufanym ekranie
 TDW potwierdza frontend, branch, view, model i reasoning effort. Feature
-przypina immutable source revision, deterministycznie rozpoznaje target,
+czyta wybrany branch bez przypinania SHA, deterministycznie rozpoznaje target,
 wyprowadza jego source binding i rozszerza source research tylko w kierunku
 wymaganym przez pytanie. Operator przed wskazaniem wybiera kontekst elementu
 albo diagnostyke najblizszego formularza; drugi profil zamraza ograniczone
@@ -265,14 +265,14 @@ jest doczytywany celowo przez neutralne repository tools.
 Materialne skille sa doczytywane przez
 neutralne file-read tools, ktore wraz z navigation/search maja read-only
 dostep do calego wybranego repozytorium. Polityka sesji wymusza project i
-branch, hidden scope przypina commit. UX Inspector nie przygotowuje ani nie
+branch, hidden scope ogranicza projekt i branch. UX Inspector nie przygotowuje ani nie
 klasyfikuje report references; niepotwierdzone twierdzenia pozostaja jawnymi
 gaps albo visibility limits.
 Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje
 capture przez URL, storage lub kanal reczny.
 Drugie dzialanie Browser Tools otwiera UI Explorer dla biezacego widoku bez
 wyboru elementu. Przekazuje tylko zredagowany route path i tagi glownego
-routowanego komponentu jako sugestie View; katalog przypietej rewizji
+routowanego komponentu jako sugestie View; katalog dla wybranego brancha
 pozostaje zrodlem potwierdzonego screenId.
 
 ### Functional logic explorer

@@ -862,15 +862,23 @@ public class GitLabMcpTools {
                 throw new IllegalArgumentException("A short reason is required.");
             }
             var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
-            var verified = Boolean.TRUE.equals(toolContext.getContext().get(
-                    AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ))
-                    ? verifiedFileReader.readComplete(
-                            gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(), filePath)
-                    : verifiedFileReader.read(
-                            gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(),
-                            filePath, GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES);
+            var completeRead = Boolean.TRUE.equals(toolContext.getContext().get(
+                    AgentToolContextKeys.GITLAB_COMPLETE_VERIFIED_READ));
+            var verified = target.pinned()
+                    ? completeRead
+                            ? verifiedFileReader.readComplete(gitLabRepositoryPort, target.group(),
+                                    target.projectName(), target.readRef(), filePath)
+                            : verifiedFileReader.read(gitLabRepositoryPort, target.group(),
+                                    target.projectName(), target.readRef(), filePath,
+                                    GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES)
+                    : completeRead
+                            ? verifiedFileReader.readCompleteBranch(gitLabRepositoryPort, target.group(),
+                                    target.projectName(), target.readRef(), filePath)
+                            : verifiedFileReader.readBranch(gitLabRepositoryPort, target.group(),
+                                    target.projectName(), target.readRef(), filePath,
+                                    GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES);
             return new GitLabReadRepositoryFileToolResponse(
-                    target.group(), target.projectName(), target.commitId(), verified.path(),
+                    target.group(), target.projectName(), target.readRef(), verified.path(),
                     verified.content(), false, repositoryScope.recordRead(target, verified.path())
             );
         }
@@ -1071,7 +1079,7 @@ public class GitLabMcpTools {
             effectiveProjectName = pinnedTarget.projectName();
             resolvedFilePath = filePath;
             effectiveGroup = pinnedTarget.group();
-            effectiveReadRef = pinnedTarget.commitId();
+            effectiveReadRef = pinnedTarget.readRef();
         } else {
             scope = scope(projectName, applicationNames, branchRef, toolContext);
             effectiveProjectName = canonicalProjectName(scope, projectName);
@@ -1135,7 +1143,7 @@ public class GitLabMcpTools {
             if (StringUtils.hasText(response.httpMethod()) && StringUtils.hasText(response.matchedPath())) {
                 verifiedSourceRef += "#" + response.httpMethod() + " " + response.matchedPath();
             }
-            pinnedCommit = pinnedTarget.commitId();
+            pinnedCommit = pinnedTarget.responseCommitId();
         }
         return GitLabOpenApiEndpointSliceToolResponse.from(
                 response,
@@ -1627,14 +1635,14 @@ public class GitLabMcpTools {
             var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
             var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
             var fileChunk = gitLabRepositoryPort.readFileChunk(
-                    target.group(), target.projectName(), target.commitId(), filePath,
+                    target.group(), target.projectName(), target.readRef(), filePath,
                     startLine, endLine, effectiveMaxCharacters
             );
             if (fileChunk == null || !target.group().equals(fileChunk.group())
                     || !target.projectName().equals(fileChunk.projectName())
-                    || !target.commitId().equals(fileChunk.branch())
+                    || !target.readRef().equals(fileChunk.branch())
                     || !filePath.equals(fileChunk.filePath()) || fileChunk.content() == null) {
-                throw new IllegalStateException("GitLab file chunk does not match the pinned commit or requested path.");
+                throw new IllegalStateException("GitLab file chunk does not match the requested ref or path.");
             }
             repositoryScope.recordRead(target, fileChunk.filePath());
             return new GitLabReadRepositoryFileChunkToolResponse(

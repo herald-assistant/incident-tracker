@@ -38,7 +38,7 @@ class UxInspectorTargetResolverTest {
 
         var correct = 0;
         for (var index = 0; index < components.size(); index++) {
-            var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+            var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                     capture("cap_crm_fixture_" + index, "button", "CRM target " + index, "crm-target-" + index));
             if (context.status() == UxInspectorTargetResolutionStatus.RESOLVED
                     && context.candidates().get(0).componentId().equals(components.get(index).componentId())) {
@@ -66,9 +66,9 @@ class UxInspectorTargetResolverTest {
         )));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 
-        var ambiguous = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var ambiguous = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 capture("cap_crm_ambiguous", "button", "Wykonaj", null));
-        var notFound = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var notFound = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 capture("cap_crm_missing", "canvas", "Wykres bez odpowiednika", null));
 
         assertEquals(UxInspectorTargetResolutionStatus.AMBIGUOUS, ambiguous.status());
@@ -94,7 +94,7 @@ class UxInspectorTargetResolverTest {
         var selected = withFingerprint(capture("cap_crm_selector", "button", "Wykonaj", null),
                 Map.of(), List.of("button[class~=\"crm-primary-action\"]"), List.of());
 
-        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION, selected);
+        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, selected);
 
         assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, context.status());
         assertEquals("contact-primary", context.candidates().get(0).componentId());
@@ -115,9 +115,9 @@ class UxInspectorTargetResolverTest {
         var resolver = new UxInspectorTargetResolver(applications, reachability);
         var base = capture("cap_crm_boundary", "div", "Runtime only", null);
 
-        var innerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var innerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 withFingerprint(base, Map.of(), List.of(), List.of("crm-inner", "crm-outer")));
-        var outerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var outerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 withFingerprint(base, Map.of(), List.of(), List.of("crm-outer", "crm-inner")));
 
         assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, innerFirst.status());
@@ -137,7 +137,7 @@ class UxInspectorTargetResolverTest {
         var selected = withFingerprint(capture("cap_crm_generic", "div", "Runtime only", null),
                 Map.of(), List.of(), List.of("crm-container"));
 
-        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION, selected);
+        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, selected);
 
         assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, context.status());
         assertNotNull(context.sourceBinding());
@@ -173,7 +173,7 @@ class UxInspectorTargetResolverTest {
         when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(component)));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 
-        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 capture("cap_crm_email", "input", "Email", "email"));
 
         assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, context.status());
@@ -186,38 +186,6 @@ class UxInspectorTargetResolverTest {
         assertEquals("email", context.sourceBinding().elementBindings().get(0).expression());
         assertEquals("doLogin()", context.sourceBinding().formSubmitBinding().expression());
         assertFalse(context.sourceBinding().sourceReference().contains("#L"));
-    }
-
-    @Test
-    void shouldMapStaleRevisionToConflictWithoutTryingAnotherRevision() {
-        var applications = mock(FrontendApplicationCatalogService.class);
-        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
-        when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.buildFocused(any(), any())).thenThrow(new GitLabFrontendDiscoveryException(
-                "FRONTEND_SOURCE_REVISION_CHANGED", "revision changed"));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
-
-        var error = assertThrows(UxInspectorContextException.class, () -> resolver.resolve(
-                "crm-agent-portal", "main", VIEW_ID, REVISION, capture()));
-
-        assertEquals("UX_INSPECTOR_SOURCE_REVISION_CHANGED", error.code());
-        assertTrue(error.getMessage().contains("Reload views"));
-    }
-
-    @Test
-    void shouldDefensivelyRejectGraphBuiltFromAnotherRevision() {
-        var applications = mock(FrontendApplicationCatalogService.class);
-        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
-        when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(
-                component("contact-create", "contact-save", "Zapisz kontakt", 1))));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
-
-        var error = assertThrows(UxInspectorContextException.class, () -> resolver.resolve(
-                "crm-agent-portal", "main", VIEW_ID, "different-revision", capture()));
-
-        assertEquals("UX_INSPECTOR_SOURCE_REVISION_CHANGED", error.code());
-        assertTrue(error.getMessage().contains("Reload views"));
     }
 
     private GitLabFrontendReachabilityComponent actionComponent(

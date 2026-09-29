@@ -82,7 +82,7 @@ public final class UiExplorerJobState {
         this.request = request;
         createdAt = Instant.now();
         updatedAt = createdAt;
-        sourceRevision = new UiExplorerSourceRevision(request.branch(), request.sourceRevision());
+        sourceRevision = new UiExplorerSourceRevision(request.branch());
         requestSnapshot = requestSnapshot(request.systemId());
         steps.put(SCREEN_DISCOVERY_STEP, new MutableStep(
                 SCREEN_DISCOVERY_STEP, "Identify the selected screen", "CONTEXT"));
@@ -100,7 +100,7 @@ public final class UiExplorerJobState {
         }
         executionClaimed = true;
         status = UiExplorerJobStatus.DISCOVERING_SCREEN;
-        startStep(SCREEN_DISCOVERY_STEP, "The selected screen is being validated against the catalog source revision.");
+        startStep(SCREEN_DISCOVERY_STEP, "The selected screen is being resolved on the chosen branch.");
         return true;
     }
 
@@ -122,7 +122,7 @@ public final class UiExplorerJobState {
         completeStep(
                 SCREEN_DISCOVERY_STEP,
                 "COMPLETED",
-                "The selected screen was validated against the catalog source revision.",
+                "The selected screen was resolved on the chosen branch.",
                 1,
                 null,
                 now
@@ -487,7 +487,6 @@ public final class UiExplorerJobState {
                 systemLabel,
                 request.branch(),
                 request.screenId(),
-                request.sourceRevision(),
                 request.resolvedSectionModes(),
                 request.scenarioDescription(),
                 request.model(),

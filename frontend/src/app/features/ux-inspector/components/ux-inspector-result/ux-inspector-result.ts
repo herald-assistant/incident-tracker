@@ -30,8 +30,8 @@ export class UxInspectorResultComponent {
   readonly status = input<UxInspectorJobStatus>('COMPLETED');
   protected readonly shareDocument = computed(() => {
     const target = sanitizeFileNamePart(this.result()?.targetLabel || 'element');
-    const revision = sanitizeFileNamePart(this.result()?.sourceRevision.revision || 'revision');
-    return buildReportShareDocument(this.report(), `ux-inspector-${target}-${revision}.md`);
+    const branch = sanitizeFileNamePart(this.result()?.sourceRevision.branch || 'branch');
+    return buildReportShareDocument(this.report(), `ux-inspector-${target}-${branch}.md`);
   });
   readonly answerSection = computed(() => this.report().sections[0] ?? null);
   readonly resultMeta = computed(() =>

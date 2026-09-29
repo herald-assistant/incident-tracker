@@ -66,9 +66,7 @@ public class UiExplorerExportService {
 
     private boolean supportedLocalEnvelope(UiExplorerLocalRunEnvelope envelope) {
         return envelope.version() == UiExplorerLocalRunEnvelope.VERSION
-                && UiExplorerLocalRunEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())
-                || envelope.version() == UiExplorerLocalRunEnvelope.LEGACY_VERSION
-                && UiExplorerLocalRunEnvelope.LEGACY_RESULT_CONTRACT.equals(envelope.payload().resultContract());
+                && UiExplorerLocalRunEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract());
     }
 
     private void validateExportable(UiExplorerJobStateSnapshot snapshot) {

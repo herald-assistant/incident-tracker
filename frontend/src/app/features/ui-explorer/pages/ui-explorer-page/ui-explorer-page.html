@@ -20,7 +20,6 @@
           <div><dt>Application</dt><dd>{{ readOnlySnapshot.request.systemLabel }}</dd></div>
           <div><dt>Branch / Ref</dt><dd>{{ readOnlySnapshot.request.branch }}</dd></div>
           <div><dt>View</dt><dd>{{ readOnlySnapshot.result?.screen?.label || readOnlySnapshot.request.screenId }}</dd></div>
-          <div><dt>Source revision</dt><dd>{{ readOnlySnapshot.request.sourceRevision }}</dd></div>
           <div><dt>Model / effort</dt><dd>{{ readOnlySnapshot.request.aiModel || 'Default' }} · {{ readOnlySnapshot.request.reasoningEffort || 'Default' }}</dd></div>
         </dl>
 
@@ -77,8 +76,7 @@
               <p class="section-eyebrow">{{ resultSourceLabel() }}</p>
               <h2>{{ screenLabel() }}</h2>
               <p>
-                {{ snapshot.request.systemLabel }} · {{ snapshot.request.branch }} ·
-                {{ snapshot.sourceRevision?.revision || snapshot.request.sourceRevision }}
+                {{ snapshot.request.systemLabel }} · {{ snapshot.request.branch }}
               </p>
             </div>
             <div class="ui-explorer-run__header-actions">
@@ -189,7 +187,7 @@
             emptyText="Po analizie możesz dopytać o działanie widoku, reguły, dane albo integracje oraz poprosić o aktualizację raportu."
             inputLabel="Pytanie do AI"
             placeholder="Np. co dzieje się po zapisaniu formularza i skąd pochodzą widoczne dane?"
-            pendingText="AI analizuje pytanie i w razie potrzeby sprawdza kod źródłowy tej samej rewizji."
+            pendingText="AI analizuje pytanie i w razie potrzeby sprawdza kod źródłowy na wybranym branchu."
             submitLabel="Wyślij"
             submittingLabel="Wysyłanie..."
             ariaLabel="UI Explorer follow-up chat"

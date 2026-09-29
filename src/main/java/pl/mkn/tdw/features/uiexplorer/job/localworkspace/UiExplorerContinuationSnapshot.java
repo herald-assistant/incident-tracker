@@ -89,7 +89,7 @@ public record UiExplorerContinuationSnapshot(
                 pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId.class);
         request.sectionModes().forEach(assignment -> modes.put(assignment.sectionId(), assignment.mode()));
         return new UiExplorerJobStartRequest(
-                request.systemId(), request.branch(), request.screenId(), request.sourceRevision(), modes,
+                request.systemId(), request.branch(), request.screenId(), modes,
                 request.scenarioDescription(), request.aiModel(), request.reasoningEffort()
         );
     }
@@ -104,14 +104,12 @@ public record UiExplorerContinuationSnapshot(
                 value(snapshot.request() != null ? snapshot.request().systemId() : null),
                 value(snapshot.request() != null ? snapshot.request().branch() : null),
                 value(snapshot.request() != null ? snapshot.request().screenId() : null),
-                value(snapshot.request() != null ? snapshot.request().sourceRevision() : null),
                 value(reportId),
                 value(context.sourceScope() != null ? context.sourceScope().gitLabGroup() : null),
                 value(context.sourceScope() != null ? context.sourceScope().projectName() : null),
                 value(context.sourceScope() != null ? context.sourceScope().ref() : null),
                 context.sourceScope() != null ? String.join("\u001f", context.sourceScope().pathPrefixes()) : "",
-                value(context.sourceRevision() != null ? context.sourceRevision().branch() : null),
-                value(context.sourceRevision() != null ? context.sourceRevision().revision() : null));
+                value(context.sourceRevision() != null ? context.sourceRevision().branch() : null));
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(material.getBytes(StandardCharsets.UTF_8)));

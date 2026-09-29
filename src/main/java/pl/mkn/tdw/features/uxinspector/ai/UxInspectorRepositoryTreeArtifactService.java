@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-/** Renders a complete path-only view of the first four repository levels for the pinned revision. */
+/** Renders a complete path-only view of the first four repository levels for the selected branch. */
 @Service
 @RequiredArgsConstructor
 public class UxInspectorRepositoryTreeArtifactService {
@@ -27,21 +27,20 @@ public class UxInspectorRepositoryTreeArtifactService {
     private final GitLabRepositoryTreePort repositoryPort;
 
     public UxInspectorRepositoryTreeArtifact prepare(UxInspectorTargetContext context) {
-        if (context == null || context.sourceScope() == null || context.sourceRevision() == null) {
+        if (context == null || context.sourceScope() == null) {
             throw unavailable();
         }
         var group = context.sourceScope().group();
         var project = context.sourceScope().projectName();
-        var branch = context.sourceRevision().branch();
-        var commit = context.sourceRevision().revision();
+        var branch = context.sourceScope().ref();
         if (!StringUtils.hasText(group) || !StringUtils.hasText(project)
-                || !StringUtils.hasText(branch) || !StringUtils.hasText(commit)) {
+                || !StringUtils.hasText(branch)) {
             throw unavailable();
         }
 
         final List<TreeEntry> entries;
         try {
-            entries = load(group.trim(), project.trim(), commit.trim());
+            entries = load(group.trim(), project.trim(), branch.trim());
         } catch (UxInspectorContextException exception) {
             throw exception;
         } catch (RuntimeException exception) {
@@ -51,7 +50,6 @@ public class UxInspectorRepositoryTreeArtifactService {
         var builder = new StringBuilder();
         builder.append("repository: ").append(group.trim()).append('/').append(project.trim()).append('\n');
         builder.append("branch: ").append(branch.trim()).append('\n');
-        builder.append("commit: ").append(commit.trim()).append('\n');
         builder.append("depth: ").append(DEPTH).append('\n');
         builder.append("content: PATH_NAMES_ONLY\n");
         builder.append("complete: true\n");
@@ -64,7 +62,7 @@ public class UxInspectorRepositoryTreeArtifactService {
         );
     }
 
-    private List<TreeEntry> load(String group, String project, String commit) {
+    private List<TreeEntry> load(String group, String project, String branch) {
         var pending = new ArrayDeque<Directory>();
         pending.add(new Directory("", 0));
         var scheduledDirectories = new HashSet<String>();
@@ -80,7 +78,7 @@ public class UxInspectorRepositoryTreeArtifactService {
                     throw unavailable();
                 }
                 var page = repositoryPort.listRepositoryTreeChildrenPage(
-                        group, project, commit, directory.path(), cursor, PAGE_SIZE);
+                        group, project, branch, directory.path(), cursor, PAGE_SIZE);
                 if (page == null || page.nodes() == null || page.nodes().size() > PAGE_SIZE) {
                     throw unavailable();
                 }
@@ -126,7 +124,7 @@ public class UxInspectorRepositoryTreeArtifactService {
         return new UxInspectorContextException(
                 "UX_INSPECTOR_REPOSITORY_TREE_UNAVAILABLE",
                 UserFacingErrorType.SERVICE_UNAVAILABLE,
-                "The complete four-level repository tree could not be loaded for the pinned source revision."
+                "The complete four-level repository tree could not be loaded for the selected branch."
         );
     }
 

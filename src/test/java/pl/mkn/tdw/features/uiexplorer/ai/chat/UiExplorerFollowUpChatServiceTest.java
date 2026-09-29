@@ -35,7 +35,7 @@ import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparat
 class UiExplorerFollowUpChatServiceTest {
 
     @Test
-    void shouldResumePinnedSessionWithReadOnlyResearchMode() {
+    void shouldResumeBranchSessionWithReadOnlyResearchMode() {
         var promptService = mock(UiExplorerFollowUpPromptService.class);
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var preparationService = mock(CopilotRunPreparationService.class);
@@ -91,7 +91,7 @@ class UiExplorerFollowUpChatServiceTest {
         var hidden = toolContextCaptor.getValue().hiddenContext();
         assertThat(hidden.get(UiExplorerCopilotToolContextKeys.RUN_KIND))
                 .isEqualTo(UiExplorerCopilotToolContextKeys.RUN_KIND_FOLLOW_UP);
-        assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("crm-commit-abc123");
+        assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("main");
         assertThat(hidden).doesNotContainKeys(
                 AgentToolContextKeys.REPORT_ID,
                 AgentToolContextKeys.REPORT_FEATURE,

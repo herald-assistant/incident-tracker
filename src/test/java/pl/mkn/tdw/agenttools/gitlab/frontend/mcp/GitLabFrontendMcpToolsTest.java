@@ -61,10 +61,10 @@ class GitLabFrontendMcpToolsTest {
         verify(routeService).readBranchSlice(request.capture());
         assertScope(request.getValue().scope());
         assertThat(request.getValue().screenId()).isEqualTo(SCREEN_REF);
-        assertThat(request.getValue().expectedRevision()).isEqualTo("crm-commit-abc123");
+        assertThat(request.getValue().expectedRevision()).isNull();
         assertThat(request.getValue().includeDescendantRoutes()).isTrue();
         assertThat(result.sliceRef()).isEqualTo(SCREEN_REF);
-        assertThat(result.sourceRevision()).isEqualTo("crm-commit-abc123");
+        assertThat(result.sourceBranch()).isEqualTo("main");
         assertThat(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(result))
                 .doesNotContain("synthetic-crm", "crm-agent-portal", "\"ref\":\"main\"");
     }
@@ -138,7 +138,6 @@ class GitLabFrontendMcpToolsTest {
                 AgentToolContextKeys.GITLAB_BRANCH, "main",
                 GitLabFrontendToolContextKeys.PROJECT_NAME, "crm-agent-portal",
                 GitLabFrontendToolContextKeys.PATH_PREFIXES, List.of("apps/crm-agent"),
-                GitLabFrontendToolContextKeys.SOURCE_REVISION, "crm-commit-abc123",
                 GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, SCREEN_REF
         ));
     }
@@ -189,7 +188,7 @@ class GitLabFrontendMcpToolsTest {
     private void assertScope(GitLabFrontendRepositoryScope scope) {
         assertThat(scope.group()).isEqualTo("synthetic-crm");
         assertThat(scope.projectName()).isEqualTo("crm-agent-portal");
-        assertThat(scope.ref()).isEqualTo("crm-commit-abc123");
+        assertThat(scope.ref()).isEqualTo("main");
         assertThat(scope.pathPrefixes()).containsExactly("apps/crm-agent");
     }
 }

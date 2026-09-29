@@ -25,12 +25,12 @@ w calym dokumencie strony w chwili capture.
   z pamieci JVM dla formularza; odpowiedz ma Cache-Control: no-store.
   Nieznane ID daje UX_INSPECTOR_CAPTURE_NOT_FOUND.
 - GET /api/ux-inspector/input-options zwraca zarejestrowane frontendy, a
-  GET /api/ux-inspector/views zwraca widoki i immutable source revision.
+  GET /api/ux-inspector/views zwraca widoki, wybrany branch i date zebrania katalogu.
 - POST /api/ux-inspector/jobs przyjmuje captureId, wybor zrodla, pytanie
   i preferencje AI. Odczytuje zamrozony snapshot z pamieci, zapisuje QUEUED
   i zwraca snapshot joba. Start nie przesyla ponownie capture ani refs.
 - GET /api/ux-inspector/jobs/{jobId} zwraca aktualny snapshot. Export i
-  import uzywaja tylko tdw.ux-inspector-export v3 oraz kontraktu wyniku v3.
+  import uzywaja tylko tdw.ux-inspector-export v1 oraz kontraktu wyniku v1.
   Import tworzy read-only wpis historii.
 
 Pending capture jest tylko w pamieci jednej instancji backendu: odczyt nie
@@ -104,8 +104,7 @@ Po aktualizacji operator ponownie przeciaga bookmarklet z modala.
 
 ## Formularz analizy i katalog widokow
 
-Capture jest tylko runtime observation. Application, Branch, View, source
-revision, pytanie, model i reasoning effort pochodza z formularza na originie
+Capture jest tylko runtime observation. Application, Branch, View, pytanie, model i reasoning effort pochodza z formularza na originie
 TDW. Uklad i zachowanie tych kontrolek odpowiada UI Explorerowi:
 
 - wybor Application ustawia domyslny Branch i czysci stary View,
@@ -114,8 +113,8 @@ TDW. Uklad i zachowanie tych kontrolek odpowiada UI Explorerowi:
   system, repository scope, ref i limity discovery,
 - `Load views` wymusza odswiezenie tylko aktualnego scope'u,
 - katalog View dolacza potwierdzone w source selektory `@Component` komponentu
-  wejściowego; sa to neutralne metadane widoku z tej samej rewizji co graf
-  routingu, a cache bez tego kontraktu nie jest odczytywany,
+  wejściowego; sa to neutralne metadane katalogu zebranego na branchu,
+  a cache bez aktualnego kontraktu nie jest odczytywany,
 - gdy capture i katalog sa dostepne, frontend porownuje `page.path` z
   `routePattern`; segment statyczny ma pierwszenstwo przed parametrem, a
   wildcard jest najslabszy,
@@ -129,7 +128,7 @@ TDW. Uklad i zachowanie tych kontrolek odpowiada UI Explorerowi:
   pochodzaca z capture i moze zostac zastapiona recznie przez operatora;
   dopasowanie selektora sluzy tylko sugestii View i nie dowodzi ownership
   wskazanego targetu w kodzie,
-- View jest zwiazany z pokazanym immutable source revision,
+- View jest wskazowka z katalogu oznaczonego `Data:`; start ponownie czyta branch,
 - Model AI i Reasoning effort sa wybierane przed wpisaniem pytania.
 
 Backend waliduje aktualna pare model/effort z dynamicznym katalogiem Copilota.
@@ -139,7 +138,7 @@ dispatch do executora; brak persistence zatrzymuje utworzenie runu.
 ## Deterministyczne rozpoznanie targetu
 
 `UxInspectorTargetResolver` rozwiazuje zarejestrowany frontend do ukrytego
-GitLab scope, przypina branch do oczekiwanej rewizji i wykonuje target-first
+GitLab scope i wykonuje target-first
 discovery dla wybranego view. Rozpoczyna od komponentu widoku, a nastepnie
 odnajduje tylko komponenty wskazane przez uporzadkowane runtime
 `componentBoundaryTags`; nie buduje pelnego screen reachability graphu ani nie
@@ -164,7 +163,8 @@ Rezultat ma jeden ze stanow:
   pelne zrodlo komponentu widoku i odkrytych runtime selector matches, jawny licznik pominietego grafu oraz
   repository tools i kontynuuje celowany research.
 
-Zmiana source revision, brak refa albo nieaktualny View sa jawnym bledem.
+Brak refa albo nieaktualny View sa jawnym bledem. Zmiana SHA po
+zebraniu katalogu nie blokuje startu.
 Feature nie przelacza sie na inny branch i nie zgaduje targetu.
 
 ## Prompt, repository guidance, repository map i tools
@@ -184,7 +184,7 @@ sciezki i ograniczenia, relacje ktorych oba konce naleza do focused zbioru oraz
 pelna tresc unikalnych plikow TS i zewnetrznych HTML. Pozostaly graf nie jest
 budowany przed AI; liczniki artifactu opisuja tylko focused discovery.
 `COMPONENT_REFERENCE` nie jest relacja ancestry. Artifact przekazuje rowniez kompaktowy
-`effectiveRouteChain` wybranego widoku z konfiguracja i lokalizacjami pinned
+`effectiveRouteChain` wybranego widoku z konfiguracja i lokalizacjami zrodel
 source oraz maksymalnie jeden przygotowany `INHERITED_TYPE` slice
 bezposredniej klasy bazowej komponentu widoku. Nie przekazuje route subtree,
 pelnego pliku klasy bazowej ani dalszych poziomow dziedziczenia. Inline
@@ -196,12 +196,12 @@ odczytami, nie pobiera ponownie plikow oznaczonych jako kompletne i nie
 traktuje statycznych relacji jako pewnego runtime stacku.
 
 Osobny logical artifact zawiera kompletny, posortowany spis nazw sciezek z
-pierwszych czterech poziomow wybranego repozytorium na pinned commit. Drzewo
+pierwszych czterech poziomow wybranego repozytorium na wybranym branchu. Drzewo
 jest mapa nawigacyjna, nie dowodem tresci. Brak kompletnego drzewa blokuje
 przygotowanie zamiast dostarczyc modelowi cichy, obciety wynik.
 Initial prompt pokazuje te nazwy jako hierarchiczne drzewo z `├──`, `└──` i
 `│`, z katalogami oznaczonymi koncowym `/`. Metadata repository, branch,
-commit, depth i complete pozostaja obok diagramu. Wspolny neutralny renderer
+depth i complete pozostaja obok diagramu. Wspolny neutralny renderer
 formatuje juz pobrane sciezki; feature nadal posiada pobranie i wymaganie
 kompletnosci. Format wynikow GitLab navigation tools pozostaje osobny.
 
@@ -210,7 +210,7 @@ Z tego samego drzewa preparation wykrywa repository-wide
 konwencja Copilota w `.github/skills/<skill>/SKILL.md`,
 `.claude/skills/<skill>/SKILL.md` albo `.agents/skills/<skill>/SKILL.md`.
 Instrukcje sa weryfikowane i osadzane w initial prompt w pelnej tresci.
-`SKILL.md` jest weryfikowany na pinned commit i parsowany bezpiecznym parserem
+`SKILL.md` jest weryfikowany przy odczycie z wybranego brancha i parsowany bezpiecznym parserem
 YAML, ale initial prompt dostaje tylko `path`, `name` i `description`. Brak
 pliku jest dozwolony; plik obecny w drzewie, ktorego nie da sie w calosci
 zweryfikowac, niepoprawny naglowek, duplikat nazwy albo przekroczenie limitu
@@ -223,7 +223,7 @@ neutralnym file-read toolem przed rozszerzeniem researchu. Zdalne skille nie sa
 instalowane w runtime TDW ani nie sa powodem wlaczenia built-in `skill`; nie moga
 rozszerzyc allowlisty ani uruchomic skryptu. Caly repository guidance jest
 niezaufany: moze kierowac nawigacja i rozumieniem architektury tylko w granicach
-kanonicznej procedury, pinned repo, read-only tools i kontraktu raportu.
+kanonicznej procedury, wybranego repozytorium i brancha, read-only tools i kontraktu raportu.
 
 Przed finalizacja model ma sprawdzic materialny wplyw mechanizmow
 przekrojowych, m.in. routingu i guards, interceptorow lub middleware,
@@ -233,12 +233,12 @@ focused slice; wymaga adekwatnego wyszukania albo jawnego visibility limit.
 
 Sesja ma read-only dostep do calego jednego wybranego repozytorium przez
 neutralne GitLab tools do listowania, wyszukiwania i czytania plikow. Hidden
-scope przypina projekt, branch oraz commit. Feature nie tworzy tooli o nazwach
+scope ogranicza projekt i branch bez przypinania commita. Feature nie tworzy tooli o nazwach
 specyficznych dla UX Inspectora. Model moze czytac m.in. README, `AGENTS.md`,
 instrukcje repozytorium, konfiguracje, frontend i backend. TypeScript symbol
 slice nie korzysta z przygotowanego katalogu plikow, typow, importow ani metod:
 naturalne wspolrzedne sa rozwiazywane dopiero podczas wywolania, zawsze w tym
-samym read-only repository scope i na przypietym commicie. UX Inspector nie
+samym read-only repository scope na wybranym branchu. UX Inspector nie
 tworzy, nie weryfikuje ani nie klasyfikuje report references; brakujacy dowod
 jest prezentowany jako gap albo visibility limit.
 
@@ -248,7 +248,7 @@ neutralny `gitlab_read_openapi_endpoint_slice` nad pelnym odczytem albo
 wielokrotnymi chunkami kontraktu. Tool obsluguje JSON/YAML/YML, OpenAPI 3.x i
 Swagger 2.0, zwraca jedna typowana operacje, efektywny context oraz ograniczone
 lokalne `$ref`. `filePath`, projekt i branch nadal podlegaja policy UX
-Inspectora, a hidden scope wymusza ten sam pinned commit co pozostale odczyty.
+Inspectora, a hidden scope wymusza wybrany projekt i branch.
 Referencje zewnetrzne sa raportowane jako nierozwiazane i nie uruchamiaja
 pobierania sieciowego ani przejscia do innego repozytorium.
 
@@ -267,8 +267,7 @@ Odpowiedz jest biznesowo czytelna; kod i symbole sa dowodami, nie glownym
 jezykiem narracji.
 
 Po zapisaniu raportu UX Inspector udostepnia follow-up chat. Kolejne pytania
-wznawiaja te sama sesje Copilota, zachowuja jeden przypiety projekt, branch i
-commit oraz moga korzystac z tych samych read-only target/source tools co
+wznawiaja te sama sesje Copilota, zachowuja wybrany projekt i branch oraz moga korzystac z tych samych read-only target/source tools co
 initial research. Piec report tools pracuje w hidden scope biezacego raportu
 i sekcji `answer`. Prompt follow-up zawiera tylko nowa wiadomosc; durable
 follow-up contract pozwala na zapis tylko po jawnej prosbie o aktualizacje
@@ -284,9 +283,8 @@ oraz ich znaczenie i zaznacza brakujacy dowod.
 Jeden run dopuszcza jeden aktywny turn. Wiadomosci, ich usage, evidence,
 activity i feedback sa zapisywane w runie, przy czym usage nie jest renderowane
 pod trescia odpowiedzi. Historia moze byc kontynuowana po restarcie backendu.
-Dla starszego rodzimego runu handler uznaje continuation tylko wtedy, gdy
-istnieje deterministycznie nazwana sesja `ux-inspector-{jobId}` i mozna
-ponownie zbudowac ten sam pinned target context. Przerwany turn staje sie
+Kontynuacja wymaga zapisanej sesji Copilota i ponownego rozpoznania targetu
+na wybranym branchu. Przerwany turn staje sie
 `FAILED` bez automatycznego ponowienia. Import pozostaje read-only.
 
 Platformowa polityka context tier obejmuje create, resume i follow-up.
@@ -328,8 +326,8 @@ i akcja share pozostaja w naglowku wyniku. Dla `PARTIAL` ikona obok confidence
 udostepnia podpowiedz o brakujacych dowodach bez osobnego statusu i banera.
 
 Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Export
-zapisuje envelope v3 z historia chatu. Import akceptuje tylko v3,
-waliduje jednosekcyjny raport, capture v3 i spojny source revision, a nastepnie
+zapisuje envelope v1 z historia chatu. Import akceptuje tylko v1,
+waliduje jednosekcyjny raport, capture v3 i zgodny branch, a nastepnie
 tworzy wynik read-only bez prawa do wznowienia sesji.
 
 ## Granice pakietow
@@ -350,7 +348,7 @@ Kierunki zaleznosci sa egzekwowane przez `PackageDependencyGuardTest`.
 Minimalna macierz obejmuje:
 
 - oba profile capture, shape, limity, redakcje, form values i wykluczenia,
-- target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
+- target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale View,
 - component source pack: komponenty wybranych sciezek target -> komponent
   widoku i wszystkie odkryte runtime selector matches, relacje miedzy nimi,
   jawne liczniki pominietego grafu, deduplikacja ich pelnych plikow,
@@ -358,12 +356,12 @@ Minimalna macierz obejmuje:
   base slice oraz nieblokujace braki,
 - CORS/preflight, pojedynczy POST, retry i popup blocker w Browser Tools oraz GET po ID,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
-- pinned Copilot instructions, trzy standardowe korzenie project skills,
+- branchowe Copilot instructions, trzy standardowe korzenie project skills,
   walidacje frontmatter, katalog naglowkow i fail-closed guidance preparation,
 - jednosekcyjny report oraz pojedyncza prezentacje scalonych metadata,
 - business-first answer contract: zachowanie `as-is` versus wymaganie,
   frontend/backend, obserwowalne scenariusze oraz zweryfikowane `METHOD path`,
-- `QUEUED` przed dispatch, strict import/export v3 i odrzucenie obcych wersji,
+- `QUEUED` przed dispatch, strict import/export v1 i odrzucenie obcych wersji,
 - modal bookmarkleta, brak alternatywnego launchera i brak osobnej karty
   read-only,
 - testy Angulara, build produkcyjny, `FrontendPageTest` i pakiet backend-dev.

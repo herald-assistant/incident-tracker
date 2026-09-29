@@ -15,7 +15,7 @@ import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.frontendCa
 class UxInspectorInputOptionsServiceTest {
 
     @Test
-    void shouldExposeTrustedFrontendAndPinnedViewRevision() {
+    void shouldExposeTrustedFrontendAndBranchViewCatalog() {
         var applications = mock(FrontendApplicationCatalogService.class);
         var views = mock(FrontendViewCatalogService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
@@ -27,7 +27,8 @@ class UxInspectorInputOptionsServiceTest {
             assertThat(system.defaultBranch()).isEqualTo("main");
         });
         var result = service.views("crm-agent-portal", "main", false);
-        assertThat(result.sourceRevision().revision()).isEqualTo("abc123crm");
+        assertThat(result.sourceRevision().branch()).isEqualTo("main");
+        assertThat(result.dataCollectedAt()).isNotNull();
         assertThat(result.views()).singleElement().satisfies(view -> {
             assertThat(view.viewId()).isEqualTo("crm-contact-create");
             assertThat(view.componentSelectors()).containsExactly("crm-contact-create");
@@ -68,7 +69,8 @@ class UxInspectorInputOptionsServiceTest {
 
     private FrontendViewCatalog viewCatalog() {
         return new FrontendViewCatalog("crm-agent-portal", "CRM Agent Portal",
-                new FrontendViewCatalog.SourceRevision("main", "abc123crm"), FrontendViewCatalog.Status.READY,
+                java.time.Instant.parse("2026-08-15T10:30:00Z"),
+                new FrontendViewCatalog.SourceRevision("main"), FrontendViewCatalog.Status.READY,
                 List.of(new FrontendViewCatalog.View("crm-contact-create", "Nowy kontakt", "/contacts/new", "/contacts",
                         List.of("crm-contact-create"), "RESOLVED", false, List.of(), List.of(), List.of())),
                 List.of(), List.of(),

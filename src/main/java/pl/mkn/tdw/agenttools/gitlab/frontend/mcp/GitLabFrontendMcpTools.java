@@ -42,7 +42,7 @@ public class GitLabFrontendMcpTools {
             name = READ_FRONTEND_ROUTE_BRANCH_SLICE,
             description = """
                     Reads the focused Angular route branch identified by a safe sliceRef prepared for the current session.
-                    The repository, ref, source revision and path boundary come exclusively from hidden runtime context.
+                    The repository, branch and path boundary come exclusively from hidden runtime context.
                     Use this to inspect selected-route configuration, guards, resolvers, providers and child-route frontier
                     without reading unrelated route siblings or repository files.
                     """
@@ -60,7 +60,7 @@ public class GitLabFrontendMcpTools {
         var response = routeBranchSliceService.readBranchSlice(new GitLabAngularRouteBranchSliceRequest(
                 context.scope(),
                 context.screenSliceRef(),
-                context.sourceRevision(),
+                null,
                 true,
                 GitLabAngularRouteBranchSlicePort.DEFAULT_OUTPUT_CHARACTERS
         ));
@@ -74,7 +74,7 @@ public class GitLabFrontendMcpTools {
                     Reads a focused TypeScript symbol slice without opaque references. Use direct mode with filePath and
                     declaringTypeName for a source target already shown in evidence. Use import mode with consumerFilePath,
                     moduleSpecifier and importedSymbol copied from the original code to follow an import. Optional memberNames
-                    selects the members needed by the analysis. Hidden session context fixes the pinned repository and resolves
+                    selects the members needed by the analysis. Hidden session context fixes the selected repository and resolves
                     imports on demand without a prepared reachability allowlist. The result preserves
                     relevant original import lines, dependency injection fields, selected methods and required local helpers.
                     """
@@ -169,12 +169,11 @@ public class GitLabFrontendMcpTools {
                 : Map.<String, Object>of();
         var group = requiredString(values, AgentToolContextKeys.GITLAB_GROUP);
         var projectName = requiredString(values, GitLabFrontendToolContextKeys.PROJECT_NAME);
-        var sourceRevision = requiredString(values, GitLabFrontendToolContextKeys.SOURCE_REVISION);
+        var branch = requiredString(values, AgentToolContextKeys.GITLAB_BRANCH);
         var screenSliceRef = requiredString(values, GitLabFrontendToolContextKeys.SCREEN_SLICE_REF);
         var pathPrefixes = stringList(values.get(GitLabFrontendToolContextKeys.PATH_PREFIXES));
         return new FrontendToolContext(
-                new GitLabFrontendRepositoryScope(group, projectName, sourceRevision, pathPrefixes),
-                sourceRevision,
+                new GitLabFrontendRepositoryScope(group, projectName, branch, pathPrefixes),
                 screenSliceRef
         );
     }
@@ -217,7 +216,6 @@ public class GitLabFrontendMcpTools {
 
     private record FrontendToolContext(
             GitLabFrontendRepositoryScope scope,
-            String sourceRevision,
             String screenSliceRef
     ) {
         private void requireScreenSliceRef(String requested) {

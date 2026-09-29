@@ -3,7 +3,7 @@
 ## Cel i granica produktu
 
 UI Explorer tworzy funkcjonalna dokumentacje jednego widoku frontendu w
-konkretnym scenariuszu i na konkretnej rewizji kodu. Odbiorca jest analitykiem
+konkretnym scenariuszu i na wybranej galezi kodu. Odbiorca jest analitykiem
 biznesowo-systemowym: raport wyjasnia zachowanie uzytkownika, reguly, dane,
 akcje, warianty i ograniczenia bez wymagania znajomosci Angulara ani
 repozytorium.
@@ -21,7 +21,7 @@ Feature udostepnia:
 - `GET /api/ui-explorer/input-options` - kwalifikujace sie frontendy i stale
   opcje formularza,
 - `GET /api/ui-explorer/screens?systemId=...&branch=...&refresh=...` - katalog
-  widokow przypiety do immutable source revision,
+  widokow z czasem zebrania danych z wybranego brancha,
 - `POST /api/ui-explorer/jobs` - asynchroniczny start analizy,
 - `GET /api/ui-explorer/jobs/{jobId}` - aktualny snapshot runu,
 - `POST /api/ui-explorer/jobs/{jobId}/chat/messages` - follow-up dla aktywnego
@@ -33,7 +33,7 @@ Feature udostepnia:
   kontynuacje z historii po restarcie backendu.
 
 Start request zawiera tylko `systemId`, `branch`, katalogowy `screenId`,
-oczekiwany `sourceRevision`, tryby sekcji, opcjonalny opis scenariusza oraz
+tryby sekcji, opcjonalny opis scenariusza oraz
 preferencje modelu i reasoning. Nie przyjmuje repository id/path, grupy
 GitLaba, tokenu, sciezek plikow, nazw komponentow, promptow ani tools.
 Nieznane pola sa odrzucane.
@@ -62,7 +62,8 @@ Angular/Nx graph-first. Discovery zaczyna od produkcyjnego bootstrapu
 `bootstrapApplication` z `provideRouter` albo
 `platformBrowserDynamic().bootstrapModule` z osiagalnym przez statyczne importy
 modulow `RouterModule.forRoot`. Przechodzi tylko po osiagalnych importach,
-`children` i lazy routes, a ref rozwiazuje bezposrednio do immutable commit id.
+`children` i lazy routes. Odczyty zrodel uzywaja nazwy wybranego brancha;
+metadata commita nie przypina kolejnych odczytow.
 Niejednoznaczny root lub nierozstrzygniety import pozostaje diagnostyka.
 Discovery nie tworzy repository inventory i nie wykonuje TypeScriptu.
 
@@ -80,7 +81,9 @@ limitow. Zwykly odczyt reuse'uje cache po restarcie, a `refresh=true` usuwa i
 odbudowuje tylko dopasowany wpis.
 
 Publiczny katalog pokazuje biznesowa nazwe, `routePattern`, potwierdzone
-selektory komponentu, pomocnicza nazwe komponentu, status i source revision.
+selektory komponentu, pomocnicza nazwe komponentu, status, branch i
+`dataCollectedAt`. Cache hit zachowuje date zebrania katalogu; refresh tworzy
+nowy katalog. Data nie oznacza czasu wszystkich pozniejszych odczytow kodu.
 Nie ujawnia GitLab group, project ani ukrytych search prefixes.
 
 ## Wejscie z Browser Tools
@@ -106,15 +109,15 @@ Application. Branch pochodzi z platformowego defaultu albo wyboru operatora.
 Po pobraniu katalogu dla tej pary wspolny z UX Inspectorem matcher porownuje
 route path z `routePattern`; przy remisie uzywa najblizszego jednoznacznego
 tagu z `componentSelectors`. Brak rozstrzygniecia pozostawia View puste.
-Sugestia jest oznaczona i edytowalna, a source revision pochodzi wylacznie
-z katalogu kodu. Tryby sekcji i model zachowuja domyslne wartosci; opis
+Sugestia jest oznaczona i edytowalna, a wybrany branch pochodzi z katalogu
+kodu. Tryby sekcji i model zachowuja domyslne wartosci; opis
 scenariusza pozostaje pusty. Job wymaga jawnej akcji operatora.
 
 ## Deterministyczny context pipeline
 
-Job ponownie rozwiazuje hidden repository scope i wymaga zgodnosci
-`sourceRevision` z katalogiem. Zmiana rewizji lub nieaktualny `screenId`
-konczy sie kontrolowanym konfliktem wymagajacym odswiezenia katalogu.
+Job ponownie rozwiazuje hidden repository scope i szuka wybranego `screenId`
+na aktualnie wybranym branchu. Nie porownuje SHA z katalogiem. Nieaktualny
+`screenId` lub brak brancha pozostaje jawnym bledem.
 
 `UiExplorerScreenReachabilityContextService` buduje bounded kontekst od
 effective route chain oraz poddrzewa wybranego route node. Iteracyjny BFS
@@ -133,7 +136,7 @@ ograniczenie widocznosci.
 
 Krok `AI_PREPARATION` jest wykonywany jednokrotnie przed otwarciem sesji.
 Buduje feature prompt oraz logical artifacts zawierajace request i aktywne
-sekcje, ekran i rewizje, route/reachability outline, source slices, coverage,
+sekcje, ekran i branch, route/reachability outline, source slices, coverage,
 research queue, zasady funkcjonalnego pisania i kontrakt raportu. Kod,
 komentarze oraz opis uzytkownika sa oznaczone jako untrusted evidence.
 
@@ -157,7 +160,7 @@ ustawia `long_context` bezposrednio.
 
 ## Sesja Copilota, tools i report-first result
 
-Initial run tworzy nowa sesje Copilota z hidden repository/ref/source revision
+Initial run tworzy nowa sesje Copilota z hidden repository/branch scope
 oraz hidden report scope. Default-deny allowlista zawiera:
 
 - `gitlab_read_frontend_route_branch_slice`,
@@ -169,7 +172,8 @@ oraz hidden report scope. Default-deny allowlista zawiera:
 Route i TypeScript slices sa preferowane dla znanych targetow. Generyczny
 search/read jest fallbackiem dla materialnej luki bez bezpiecznego targetu.
 Model moze zawezic `pathPrefixes` do potomka hidden scope, ale nie moze go
-rozszerzyc. Repository, branch/ref i commit nie sa model-facing inputem.
+rozszerzyc. Repository i branch pozostaja ukrytym zakresem sesji dla frontend slices;
+generyczne tools wymagaja poprawnych wspolrzednych brancha z artefaktu.
 Feature nie naklada limitu poprawnych wywolan; petla konczy sie po readiness
 albo po potwierdzeniu rzeczywistej granicy runtime, zewnetrznej biblioteki lub
 scope.
@@ -212,7 +216,7 @@ Praca przebiega poza watkiem HTTP przez stany:
 COMPLETED | PARTIAL | BLOCKED | FAILED`.
 
 Atomowy snapshot publikuje kroki, deterministic i tool evidence, aktywnosc AI,
-feedback, usage, prepared prompt, result, report, source revision, output
+feedback, usage, prepared prompt, result, report, source branch, output
 availability oraz historie chatu. Kazdy krok wskazuje konsumowane i
 produkowane evidence. Brak katalogu, kontekstu, readiness lub AI daje jawny
 stan; feature nie tworzy placeholderowego raportu.
@@ -226,8 +230,8 @@ Na konkretne pytanie o API, schemat danych albo system zewnetrzny podaje
 potwierdzone identyfikatory oraz ich znaczenie dla widoku; niewidoczne
 szczegoly backendu pozostaja ograniczeniem widocznosci.
 
-Follow-up wznawia ta sama sesje Copilota i zachowuje pierwotny immutable
-commit oraz hidden repository scope. Ma piec read-only research tools oraz
+Follow-up wznawia ta sama sesje Copilota i zachowuje wybrany branch oraz
+hidden repository scope. Kazdy odczyt moze widziec nowszy stan brancha. Ma piec read-only research tools oraz
 piec report tools w hidden scope biezacego raportu. Prompt zawiera jedynie
 nowa wiadomosc i wskazowke skilla `ui-explorer-follow-up-chat`. Model moze
 odczytac raport przez `report_get_current`; tylko jawna prosba w najnowszej
@@ -248,26 +252,27 @@ trescia odpowiedzi.
 Terminalny snapshot jest sanitizowany i zapisywany pod feature key
 `ui-explorer`. Publiczny local run nie zawiera tokenow ani hidden repository
 scope. Prywatny `tdw.ui-explorer-continuation/v1` zachowuje minimalny frozen
-scope, source revision i fingerprint raportu potrzebne do bezpiecznego resume.
+scope, branch i fingerprint raportu potrzebne do bezpiecznego resume.
 
 Historia po restarcie korzysta z zapisanej sesji i prywatnego snapshotu.
-Przed turnem sprawdza zgodnosc joba, raportu, source scope, immutable commit,
+Przed turnem sprawdza zgodnosc joba, raportu, source scope i brancha,
 session id oraz trybu autoryzacji. Nieudostepniona lub uszkodzona kontynuacja
 jest jawnie niedostepna; aplikacja nie uruchamia nowej analizy pod pozorem
 kontynuacji. Turn przerwany restartem staje sie `FAILED` i nie jest wysylany
 ponownie automatycznie.
 
-Local i portable envelope maja aktualnie wersje 6 oraz result contract v6.
-Reader obsluguje legacy v5. Export zawiera sanitizowany wynik i historie
-rozmowy, ale nie private continuation snapshot ani session handle. Import v5
-lub v6 jest ponownie walidowany i sanitizowany, tworzy nowy run read-only i
+Local i portable envelope maja wersje 1 oraz result contract v1. Starsze
+formaty nie sa odczytywane.
+Export zawiera sanitizowany wynik i historie
+rozmowy, ale nie private continuation snapshot ani session handle. Import v1
+jest ponownie walidowany i sanitizowany, tworzy nowy run read-only i
 nigdy nie aktywuje chatu.
 
 ## Workspace Angular
 
 Ekran `/ui-explorer` prowadzi przez wybor aplikacji, branch/ref, widoku,
-trybow sekcji, scenariusza, modelu i reasoning. Source revision pochodzi z
-katalogu i jest czyszczona po zmianie scope. Konfiguracja jest blokowana na
+trybow sekcji, scenariusza, modelu i reasoning. Katalog pokazuje `Data:`
+przy polu View i jest czyszczony po zmianie scope. Konfiguracja jest blokowana na
 czas aktywnego runu.
 
 Wspolny aside pokazuje postep, workflow AI, evidence, feedback i follow-up
@@ -290,7 +295,7 @@ Wynik z historii lub importu pokazuje zwarty wiersz parametrow wejsciowych;
 tryby sekcji mozna rozwinac na zadanie.
 
 Glowna identyfikacja widoku uzywa `routePattern`. Nazwa komponentu pozostaje
-pomocniczym metadata, a branch i commit opisuja wersje zrodla. Raw source i
+pomocniczym metadata, a branch wskazuje zrodlo kolejnych odczytow. Raw source i
 raw JSON nie sa glowna trescia raportu.
 
 ## Granice pakietow i bezpieczenstwo
@@ -307,7 +312,7 @@ raw JSON nie sa glowna trescia raportu.
 - `features.uiexplorer` oraz `features.uxinspector` nie importuja siebie.
 
 Source, opisy i komentarze sa niezaufanym evidence. Sesja ma jawna allowliste,
-pre-tool policy, pinned revision, walidowany path scope, limity pojedynczego
+pre-tool policy, branch scope, walidowany path scope, limity pojedynczego
 transferu i platformowy timeout. UI Explorer nie uruchamia shell/filesystem,
 nie modyfikuje repozytorium, nie publikuje dokumentacji i nie przejmuje sesji
 Keycloak badanego systemu.
@@ -319,12 +324,12 @@ Kierunki zaleznosci sa egzekwowane przez `PackageDependencyGuardTest`.
 Zmiana runtime UI Explorera powinna pokrywac co najmniej:
 
 - kwalifikacje Operational Context, branch/ref, cache i scoped refresh,
-- route discovery, lazy patterns, limits, diagnostics i immutable revision,
-- stale screen/source revision oraz bounded reachability,
+- route discovery, lazy patterns, limits i diagnostics,
+- stale screen, brak brancha oraz bounded reachability,
 - prompt/artifacts, untrusted boundaries i widocznosc prepared promptu,
 - default-deny tool policy, hidden scope i readiness,
 - report-first zapis, partial sections i walidacje source references,
-- job transitions, persistence, v6 export/import i legacy v5,
+- job transitions, persistence i v1 export/import bez legacy readerow,
 - live oraz history follow-up, ten sam session id, operation guard,
   przerwany turn i read-only import,
 - business-first rendering, aside, copy/download i statusy terminalne,

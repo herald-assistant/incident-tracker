@@ -6,11 +6,9 @@ import {
 
 export const UI_EXPLORER_EXPORT_SCHEMA = 'tdw.ui-explorer-export';
 export const UI_EXPLORER_LOCAL_RUN_SCHEMA = 'tdw.ui-explorer-local-run';
-export const UI_EXPLORER_EXPORT_VERSION = 6;
-export const UI_EXPLORER_LEGACY_EXPORT_VERSION = 5;
+export const UI_EXPLORER_EXPORT_VERSION = 1;
 export const UI_EXPLORER_EXPORT_PAYLOAD_TYPE = 'ui-explorer-analysis';
-export const UI_EXPLORER_RESULT_CONTRACT = 'ui-explorer-result-v6';
-export const UI_EXPLORER_LEGACY_RESULT_CONTRACT = 'ui-explorer-result-v5';
+export const UI_EXPLORER_RESULT_CONTRACT = 'ui-explorer-result-v1';
 
 export function parseUiExplorerLocalRunEnvelope(payload: unknown): {
   storedAt: string;
@@ -20,9 +18,7 @@ export function parseUiExplorerLocalRunEnvelope(payload: unknown): {
   if (!envelope || envelope['schema'] !== UI_EXPLORER_LOCAL_RUN_SCHEMA) {
     throw new Error('Lokalny run nie zawiera koperty UI Explorer w aktualnym formacie.');
   }
-  if (![UI_EXPLORER_EXPORT_VERSION, UI_EXPLORER_LEGACY_EXPORT_VERSION].includes(
-    envelope['version'] as number
-  )) {
+  if (envelope['version'] !== UI_EXPLORER_EXPORT_VERSION) {
     throw new Error('Lokalny run UI Explorer ma nieobsługiwaną wersję formatu.');
   }
 
@@ -30,7 +26,7 @@ export function parseUiExplorerLocalRunEnvelope(payload: unknown): {
   if (!envelopePayload || envelopePayload['type'] !== UI_EXPLORER_EXPORT_PAYLOAD_TYPE) {
     throw new Error('Lokalny run nie zawiera wyniku UI Explorer.');
   }
-  if (!isSupportedResultContract(envelope['version'], envelopePayload['resultContract'])) {
+  if (envelopePayload['resultContract'] !== UI_EXPLORER_RESULT_CONTRACT) {
     throw new Error('Lokalny run UI Explorer ma nieobsługiwany kontrakt wyniku.');
   }
 
@@ -83,7 +79,6 @@ function isUiExplorerJobSnapshot(value: unknown): value is UiExplorerJobStateSna
       typeof request['systemLabel'] === 'string' &&
       typeof request['branch'] === 'string' &&
       typeof request['screenId'] === 'string' &&
-      typeof request['sourceRevision'] === 'string' &&
       Array.isArray(request['sectionModes']) &&
       Array.isArray(job['steps']) &&
       Array.isArray(job['contextSections']) &&
@@ -91,14 +86,6 @@ function isUiExplorerJobSnapshot(value: unknown): value is UiExplorerJobStateSna
       Array.isArray(job['aiActivityEvents']) &&
       Array.isArray(job['toolFeedback']) &&
       typeof job['exportAvailable'] === 'boolean'
-  );
-}
-
-function isSupportedResultContract(version: unknown, contract: unknown): boolean {
-  return (
-    (version === UI_EXPLORER_EXPORT_VERSION && contract === UI_EXPLORER_RESULT_CONTRACT) ||
-    (version === UI_EXPLORER_LEGACY_EXPORT_VERSION &&
-      contract === UI_EXPLORER_LEGACY_RESULT_CONTRACT)
   );
 }
 
@@ -120,11 +107,7 @@ function normalizeUiExplorerJobSnapshot(job: UiExplorerJobStateSnapshot): UiExpl
   return {
     ...job,
     chatMessages,
-    chatAvailability: job.chatAvailability ?? {
-      available: false,
-      code: 'UI_EXPLORER_LEGACY_CHAT_UNAVAILABLE',
-      message: 'Ten starszy zapis nie zawiera danych potrzebnych do kontynuacji rozmowy.'
-    }
+    chatAvailability: job.chatAvailability
   };
 }
 

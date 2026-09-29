@@ -139,7 +139,6 @@ export interface UxInspectorInputOptionsResponse {
 
 export interface UxInspectorSourceRevision {
   branch: string;
-  revision: string;
 }
 
 export interface UxInspectorViewOption {
@@ -154,6 +153,7 @@ export interface UxInspectorViewOption {
 export interface UxInspectorViewCatalogResponse {
   systemId: string;
   systemLabel: string;
+  dataCollectedAt: string;
   sourceRevision: UxInspectorSourceRevision;
   status: string;
   views: UxInspectorViewOption[];
@@ -170,7 +170,6 @@ export interface UxInspectorJobStartRequest {
   systemId: string;
   branch: string;
   viewId: string;
-  sourceRevision: string;
   question: string;
   captureId: string;
   model: string;
@@ -182,7 +181,6 @@ export interface UxInspectorJobRequestSnapshot {
   systemLabel: string;
   branch: string;
   viewId: string;
-  sourceRevision: string;
   question: string;
   captureId: string;
   capture: UxInspectorCapture;
@@ -245,11 +243,11 @@ export interface UxInspectorJobStateSnapshot {
 
 export interface UxInspectorExportEnvelope {
   schema: 'tdw.ux-inspector-export';
-  version: 3;
+  version: 1;
   exportedAt: string;
   payload: {
     type: 'ux-inspector-analysis';
-    resultContract: 'ux-inspector-result-v3';
+    resultContract: 'ux-inspector-result-v1';
     job: UxInspectorJobStateSnapshot;
   };
 }

@@ -94,7 +94,6 @@ public class UiExplorerJobService {
                     request.systemId(),
                     request.branch(),
                     request.screenId(),
-                    request.sourceRevision(),
                     request.resolvedSectionModes()
             );
             reachabilityContexts.put(jobId, reachabilityContext);

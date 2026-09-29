@@ -14,7 +14,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.REVISION;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.targetContext;
 
 class UxInspectorRepositoryTreeArtifactServiceTest {
@@ -25,19 +24,19 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
 
     @Test
     void shouldLoadEveryPageAndRenderOnlyTheFirstFourPathLevels() {
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "", "", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", "", "", 100))
                 .thenReturn(page(List.of(
                         node(".github", "tree"), node("README.md", "blob"), node("src", "tree")
                 ), "root-2"));
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "", "root-2", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", "", "root-2", 100))
                 .thenReturn(page(List.of(node("pom.xml", "blob")), null));
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, ".github", "", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", ".github", "", 100))
                 .thenReturn(page(List.of(node(".github/copilot-instructions.md", "blob")), null));
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "src", "", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", "src", "", 100))
                 .thenReturn(page(List.of(node("src/app", "tree")), null));
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "src/app", "", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", "src/app", "", 100))
                 .thenReturn(page(List.of(node("src/app/pages", "tree")), null));
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "src/app/pages", "", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", "src/app/pages", "", 100))
                 .thenReturn(page(List.of(node("src/app/pages/login.ts", "blob"),
                         node("src/app/pages/private", "tree")), null));
 
@@ -46,7 +45,6 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
         assertThat(artifact.markdown()).isEqualTo("""
                 repository: CRM/crm-ui
                 branch: main
-                commit: %s
                 depth: 4
                 content: PATH_NAMES_ONLY
                 complete: true
@@ -60,16 +58,16 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
                 │           ├── private/
                 │           └── login.ts
                 ├── README.md
-                └── pom.xml""".formatted(REVISION));
+                └── pom.xml""");
         assertThat(artifact.filePaths()).containsExactly(
                 ".github/copilot-instructions.md", "README.md", "pom.xml", "src/app/pages/login.ts");
         verify(repositoryPort, never()).listRepositoryTreeChildrenPage(
-                "CRM", "crm-ui", REVISION, "src/app/pages/private", "", 100);
+                "CRM", "crm-ui", "main", "src/app/pages/private", "", 100);
     }
 
     @Test
     void shouldFailInsteadOfPublishingAnIncompleteOrMalformedTree() {
-        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "", "", 100))
+        when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", "main", "", "", 100))
                 .thenReturn(page(List.of(node("src/nested/file.ts", "blob")), null));
 
         assertThatThrownBy(() -> service.prepare(targetContext()))

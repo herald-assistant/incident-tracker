@@ -44,7 +44,7 @@ describe('UiExplorerPageComponent', () => {
         request.url === '/api/ui-explorer/screens' &&
         request.params.get('systemId') === 'crm-agent-portal' &&
         request.params.get('branch') === 'main'
-    ).flush(crmScreenCatalog('main', 'crm-revision-a1b2c3'));
+    ).flush(crmScreenCatalog('main'));
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     await fixture.whenStable();
     fixture.detectChanges();
@@ -72,7 +72,8 @@ describe('UiExplorerPageComponent', () => {
       .toBe('/contacts/new');
     expect(compiled.querySelector('.ui-explorer-screen-option small')?.textContent?.trim())
       .toBe('CrmContactCreateComponent');
-    expect(compiled.textContent).toContain('crm-revision-a1b2c3');
+    expect(compiled.textContent).toContain('Data:');
+    expect(compiled.textContent).not.toContain('crm-revision-a1b2c3');
 
     const screenOption = compiled.querySelector<HTMLButtonElement>('.ui-explorer-screen-option');
     expect(screenOption).not.toBeNull();
@@ -93,7 +94,7 @@ describe('UiExplorerPageComponent', () => {
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
-      crmScreenCatalog('main', 'crm-revision-a1b2c3')
+      crmScreenCatalog('main')
     );
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     await fixture.whenStable();
@@ -122,10 +123,10 @@ describe('UiExplorerPageComponent', () => {
         candidate.params.get('branch') === 'crm-review' &&
         !candidate.params.has('refresh')
     );
-    request.flush(crmScreenCatalog('crm-review', 'crm-revision-d4e5f6'));
+    request.flush(crmScreenCatalog('crm-review'));
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.facade.sourceRevision()?.revision).toBe('crm-revision-d4e5f6');
+    expect(fixture.componentInstance.facade.sourceRevision()?.branch).toBe('crm-review');
     http.verify();
   });
 
@@ -138,7 +139,7 @@ describe('UiExplorerPageComponent', () => {
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
-      crmScreenCatalog('main', 'crm-revision-a1b2c3')
+      crmScreenCatalog('main')
     );
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     await fixture.whenStable();
@@ -162,7 +163,6 @@ describe('UiExplorerPageComponent', () => {
       systemId: 'crm-agent-portal',
       branch: 'main',
       screenId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3',
       sectionModes: {
         OVERVIEW: 'DEEP',
         NAVIGATION_AND_ACCESS: 'COMPACT',
@@ -230,7 +230,7 @@ describe('UiExplorerPageComponent', () => {
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
-      crmScreenCatalog('main', 'crm-revision-a1b2c3')
+      crmScreenCatalog('main')
     );
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     await fixture.whenStable();
@@ -261,7 +261,7 @@ describe('UiExplorerPageComponent', () => {
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
-      crmScreenCatalog('main', 'crm-revision-a1b2c3')
+      crmScreenCatalog('main')
     );
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     const historyRequest = http.expectOne('/api/analysis/runs/crm-ui-history-1');
@@ -303,7 +303,7 @@ describe('UiExplorerPageComponent', () => {
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
-      crmScreenCatalog('main', 'crm-revision-a1b2c3')
+      crmScreenCatalog('main')
     );
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     const portable = crmPortableEnvelope();
@@ -341,7 +341,7 @@ describe('UiExplorerPageComponent', () => {
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
-      crmScreenCatalog('main', 'crm-revision-a1b2c3')
+      crmScreenCatalog('main')
     );
     http.expectOne('/api/analysis/ai/options').flush(crmAiOptions());
     fixture.componentInstance.facade.job.set(crmJobSnapshot('COMPLETED'));
@@ -424,11 +424,12 @@ function crmInputOptions(): UiExplorerInputOptionsResponse {
   };
 }
 
-function crmScreenCatalog(branch: string, revision: string): UiExplorerScreenCatalogResponse {
+function crmScreenCatalog(branch: string): UiExplorerScreenCatalogResponse {
   return {
     systemId: 'crm-agent-portal',
     systemLabel: 'CRM Agent Portal',
-    sourceRevision: { branch, revision },
+    dataCollectedAt: '2026-08-15T10:30:00Z',
+    sourceRevision: { branch },
     status: 'READY',
     screens: [
       {
@@ -489,7 +490,6 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
       systemLabel: 'CRM Agent Portal',
       branch: 'main',
       screenId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3',
       sectionModes: [
         { sectionId: 'OVERVIEW', mode: 'DEEP' },
         { sectionId: 'FORMS_AND_RULES', mode: 'COMPACT' }
@@ -531,7 +531,7 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
     result: reportAvailable ? crmResult() : null,
     report: reportAvailable ? crmReport() : null,
     usage: null,
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    sourceRevision: { branch: 'main' },
     outputAvailability: {
       status: reportAvailable ? 'AVAILABLE' : 'BLOCKED',
       code: reportAvailable ? 'READY' : terminal ? 'UNAVAILABLE' : 'IN_PROGRESS',
@@ -604,7 +604,7 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
       navigationContext: 'Kontakty CRM > Nowy kontakt'
     },
     scenarioDescription: 'Describe the anonymized CRM contact creation flow.',
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    sourceRevision: { branch: 'main' },
     functionalOverview: 'Widok umożliwia utworzenie zanonimizowanego kontaktu CRM.',
     sections: [],
     overallConfidence: 'INFERRED',
@@ -617,11 +617,11 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 5,
+    version: 1,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v5',
+      resultContract: 'ui-explorer-result-v1',
       job: crmJobSnapshot('COMPLETED')
     }
   };
@@ -630,11 +630,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export',
-    version: 6,
+    version: 1,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v6',
+      resultContract: 'ui-explorer-result-v1',
       job: crmJobSnapshot('COMPLETED')
     }
   };

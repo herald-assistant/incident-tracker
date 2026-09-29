@@ -51,9 +51,8 @@ public class UxInspectorInputOptionsService {
                     UserFacingErrorType.CONFLICT,
                     "Frontend registration changed while loading views. Reload input options.");
         }
-        return new UxInspectorViewCatalogResponse(catalog.systemId(), catalog.systemLabel(),
-                new UxInspectorViewCatalogResponse.SourceRevision(catalog.sourceRevision().branch(),
-                        catalog.sourceRevision().revision()), catalog.status().name(),
+        return new UxInspectorViewCatalogResponse(catalog.systemId(), catalog.systemLabel(), catalog.dataCollectedAt(),
+                new UxInspectorViewCatalogResponse.SourceRevision(catalog.sourceRevision().branch()), catalog.status().name(),
                 catalog.views().stream().map(value -> new UxInspectorViewCatalogResponse.ViewOption(
                         value.viewId(), value.label(), value.routePattern(), value.componentSelectors(),
                         value.status(), value.limitations())).toList(),

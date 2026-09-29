@@ -1,6 +1,9 @@
 <div class="ui-explorer-screen-select" (click)="keepOpen($event)">
   <span class="ui-explorer-screen-select__label">
     <span class="field-label">View</span>
+    @if (catalogDateLabel()) {
+      <span class="ui-explorer-screen-select__cache-date">{{ catalogDateLabel() }}</span>
+    }
     @if (facade.screenMatchedFromBrowserTools()) {
       <span class="ui-explorer-screen-option__badge">sugestia Browser Tools</span>
     }
@@ -8,7 +11,7 @@
       class="ui-explorer-screen-select__help"
       tabindex="0"
       aria-label="View field help"
-      matTooltip="Widok rozpoznany z routingu frontendu. Wybór jest związany z pokazaną source revision."
+      matTooltip="Widok rozpoznany z routingu frontendu na wybranym branchu. Data oznacza czas zebrania katalogu widoków."
       matTooltipPosition="right"
     >
       <span class="material-symbols-outlined" aria-hidden="true">info</span>
@@ -49,11 +52,6 @@
           (input)="search.set($any($event.target).value)"
         />
       </label>
-
-      <div class="ui-explorer-screen-select__revision">
-        <span>{{ catalog.systemLabel }}</span>
-        <code [title]="catalog.sourceRevision.revision">{{ catalog.sourceRevision.revision }}</code>
-      </div>
 
       <div class="ui-explorer-screen-select__options">
         @for (screen of filteredScreens(); track screen.screenId) {

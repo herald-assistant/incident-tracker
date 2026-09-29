@@ -75,7 +75,6 @@ final class UiExplorerJobServiceTestCreator {
                 eq("crm-agent-portal"),
                 eq("main"),
                 eq("crm-contact-preferences"),
-                eq("crm-commit-abc123"),
                 anyList()
         )).thenReturn(context);
         return reachabilityContextService;

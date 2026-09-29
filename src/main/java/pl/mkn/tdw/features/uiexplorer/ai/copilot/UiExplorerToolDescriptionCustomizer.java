@@ -29,7 +29,7 @@ public class UiExplorerToolDescriptionCustomizer implements CopilotToolDescripti
 
                     UI Explorer guidance: prefer this deterministic tool whenever the artifacts expose a natural file/type target
                     or the current original source contains a material import. Copy exact source/import coordinates and optionally
-                    narrow memberNames. Repository scope and pinned revision are enforced by hidden runtime context; import targets
+                    narrow memberNames. Repository and branch scope are enforced by hidden runtime context; import targets
                     are resolved on demand from the original source instead of a prepared target allowlist.
                     Returned original imports enable another narrow call when deeper evidence is material.
                     """;
@@ -38,7 +38,7 @@ public class UiExplorerToolDescriptionCustomizer implements CopilotToolDescripti
             return description + """
 
                     UI Explorer guidance: prefer this deterministic route tool when the reachability artifact exposes the selected
-                    screen sliceRef. Repository, ref, revision and route target are enforced by hidden runtime context.
+                    screen sliceRef. Repository, branch and route target are enforced by hidden runtime context.
                     """;
         }
         return description + """

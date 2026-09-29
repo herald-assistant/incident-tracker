@@ -62,6 +62,10 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- [UI Explorer i UX Inspector: analiza wedlug wybranego brancha](needs/frontend-analysis-branch-source-strategy.md)
+  oraz [draft planu strategii branchowej](plans/frontend-analysis-branch-source-strategy.md)
+  opisuja migracje od walidacji i przypinania SHA do odczytow brancha z cache
+  przez caly run i follow-up. Plan czeka na zatwierdzenie.
 - [UX Inspector: jedno przekazanie obserwacji](needs/ux-inspector-capture-snapshot.md)
   oraz [plan capture przez REST](plans/ux-inspector-capture-snapshot.md)
   opisuja upload calej obserwacji z badanej strony, snapshot w

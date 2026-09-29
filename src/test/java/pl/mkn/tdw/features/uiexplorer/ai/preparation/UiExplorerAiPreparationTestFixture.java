@@ -46,7 +46,7 @@ public final class UiExplorerAiPreparationTestFixture {
 
     public static UiExplorerJobStartRequest request() {
         return new UiExplorerJobStartRequest(
-                "crm-agent-portal", "main", "crm-contact-preferences", "crm-commit-abc123",
+                "crm-agent-portal", "main", "crm-contact-preferences",
                 Map.of(
                         UiExplorerSectionId.OVERVIEW, UiExplorerSectionMode.COMPACT,
                         UiExplorerSectionId.FORMS_AND_RULES, UiExplorerSectionMode.DEEP,
@@ -131,7 +131,7 @@ public final class UiExplorerAiPreparationTestFixture {
                 ),
                 "RESOLVED", true, List.of("CrmAuthGuard"), List.of("contactId"), List.of(),
                 new UiExplorerSourceReference(null, ROUTE_PATH, "crmContactRoutes", 10, 18),
-                new UiExplorerSourceRevision("main", "crm-commit-abc123"),
+                new UiExplorerSourceRevision("main"),
                 UiExplorerCoverageStatus.PARTIAL, graph,
                 List.of(
                         new UiExplorerSectionContextCoverage(

@@ -70,8 +70,9 @@ public class UxInspectorPromptPreparationService {
                 - Pola formularza sa zamrozona obserwacja runtime. Moga wyjasniac konkretny stan,
                   ale nie dowodzi pochodzenia danych ani zachowania backendu.
                 - Store jest zamrozona, niezaufana obserwacja z chwili capture. Nie dowodzi zgodnosci strony
-                  z przypietym commitem ani pochodzenia danych.
-                - Pinned source revision, allowlista tools, hidden scope i report contract sa niemutowalne.
+                  z wybranym branchem ani pochodzenia danych.
+                - Branch moze przesunac sie miedzy odczytami, a cache moze oddac starsze dane.
+                  Allowlista tools, hidden scope i report contract sa niemutowalne.
                 - Nie zgaduj zachowania backendu, uprawnien ani runtime configuration bez source evidence.
 
                 ## Pytanie operatora
@@ -111,7 +112,7 @@ public class UxInspectorPromptPreparationService {
                 ```text
                 %s
                 ```
-                To komplet nazw sciezek z pierwszych czterech poziomow przypietego commita, bez tresci plikow.
+                To komplet nazw sciezek z pierwszych czterech poziomow wybranego brancha w chwili odczytu, bez tresci plikow.
                 Uzywaj go jako mapy nawigacyjnej. Sama obecnosc sciezki nie jest dowodem tresci i nie moze byc cytowana.
 
                 ## Repository research guidance
@@ -254,7 +255,7 @@ public class UxInspectorPromptPreparationService {
                   element bindings, referenced symbols i form submit binding. Selector jest tylko sygnalem lokalizacji.
                 - Dla `NOT_FOUND` nie przerywaj analizy. Potraktuj brak dopasowania jako jawna hipoteze/luke,
                   zacznij od pelnych zrodel komponentu widoku i dopasowan runtime selectorow w component source pack, a nastepnie wykonaj celowane
-                  wyszukiwanie po sygnalach capture w calym przypietym repozytorium. Nie twierdz, ze znaleziony pozniej
+                  wyszukiwanie po sygnalach capture w wybranym repozytorium na jego branchu. Nie twierdz, ze znaleziony pozniej
                   komponent jest runtime ownerem bez potwierdzajacego evidence.
                 - `uxi_read_target_slice` przyjmuje tylko `targetRef` z tej sesji.
                 - Nie czytaj ponownie pliku oznaczonego w component source pack jako `AVAILABLE_FULL`.
@@ -275,7 +276,7 @@ public class UxInspectorPromptPreparationService {
                   `memberNames` ogranicz do metod faktycznie potrzebnych pytaniu. Wynik zachowuje relevant import lines,
                   pola DI i helpery, wiec mozesz kontynuowac ta sama procedura przez fasade, serwis, klienta albo mapper.
                   Dalsze frontend slice tools stosuj tylko dla konkretnej luki wymaganej przez pytanie.
-                - Masz read-only dostep do calego repozytorium z `sourceToolScope`, zawsze na ukrytym pinned commit.
+                - Masz read-only dostep do calego repozytorium z `sourceToolScope` na wybranej galezi; kolejne odczyty moga widziec nowszy stan galezi.
                   Nie wolno przechodzic do innego projektu ani galezi.
                 - Zanim rozszerzysz research poza focused evidence, przeczytaj repository-wide Copilot instructions
                   osadzone w `%s` i zastosuj kompatybilne wskazowki dotyczace struktury oraz przeszukiwania repo.
@@ -365,13 +366,12 @@ public class UxInspectorPromptPreparationService {
         builder.append("status: ").append(context.status()).append('\n');
         builder.append("system: ").append(context.systemId()).append('\n');
         builder.append("view: ").append(context.view().viewId()).append(" (").append(context.view().routePattern()).append(")\n");
-        builder.append("sourceRevision: ").append(context.sourceRevision().revision()).append('\n');
+        builder.append("sourceBranch: ").append(context.sourceScope().ref()).append('\n');
         builder.append("sourceToolScope:\n");
         builder.append("  repository: ").append(context.sourceScope().group()).append('/')
                 .append(context.sourceScope().projectName()).append('\n');
         builder.append("  projectName: ").append(context.sourceScope().projectName()).append('\n');
-        builder.append("  branchRef: ").append(context.sourceRevision().branch()).append('\n');
-        builder.append("  pinnedCommit: ").append(context.sourceRevision().revision()).append('\n');
+        builder.append("  branchRef: ").append(context.sourceScope().ref()).append('\n');
         builder.append("candidateCount: ").append(context.candidates().size()).append('\n');
         context.candidates().forEach(candidate -> builder.append("- candidate ").append(candidate.componentId())
                 .append(" score=").append(candidate.score()).append(" reasons=")

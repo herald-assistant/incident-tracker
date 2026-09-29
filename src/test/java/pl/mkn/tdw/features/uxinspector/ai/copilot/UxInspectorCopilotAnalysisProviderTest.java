@@ -55,7 +55,7 @@ class UxInspectorCopilotAnalysisProviderTest {
                 assembler, preparationService, executionGateway, reportMapper);
         var context = notFoundContext();
         var request = new UxInspectorAnalysisRequest(
-                "crm-agent-portal", "main", VIEW_ID, REVISION, "Wyjasnij ten element.",
+                "crm-agent-portal", "main", VIEW_ID, "Wyjasnij ten element.",
                 capture(), "gpt-crm", "medium");
         var preparation = new UxInspectorPromptPreparation(
                 "Prompt with component source pack", Map.of("component-pack", "all components"));
@@ -73,7 +73,7 @@ class UxInspectorCopilotAnalysisProviderTest {
         return new UxInspectorTargetContext(
                 original.systemId(), original.systemLabel(), original.sourceScope(), original.view(),
                 original.sourceRevision(), UxInspectorTargetResolutionStatus.NOT_FOUND, List.of(), null, "",
-                List.of("No source target could be verified in the selected view and pinned revision."),
+                List.of("No source target could be verified in the selected view on the selected branch."),
                 original.graph());
     }
 }

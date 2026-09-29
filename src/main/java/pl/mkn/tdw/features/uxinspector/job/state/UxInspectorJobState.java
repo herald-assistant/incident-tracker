@@ -57,7 +57,7 @@ public final class UxInspectorJobState {
     public UxInspectorJobState(String jobId, UxInspectorAnalysisRequest request) {
         this.jobId = jobId;
         this.request = request;
-        sourceRevision = new UxInspectorSourceRevision(request.branch(), request.sourceRevision());
+        sourceRevision = new UxInspectorSourceRevision(request.branch());
         steps.put(TARGET_STEP, new MutableStep(TARGET_STEP, "Resolve the selected browser target", "CONTEXT"));
         steps.put(PREPARATION_STEP, new MutableStep(PREPARATION_STEP, "Prepare focused AI context", "AI_PREPARATION"));
         steps.put(ANALYSIS_STEP, new MutableStep(ANALYSIS_STEP, "Answer the focused UX question", "AI"));
@@ -67,7 +67,7 @@ public final class UxInspectorJobState {
         if (claimed) return false;
         claimed = true;
         status = UxInspectorJobStatus.RESOLVING_TARGET;
-        start(TARGET_STEP, "The element is being matched inside the selected view and pinned revision.");
+        start(TARGET_STEP, "The element is being matched inside the selected view on the chosen branch.");
         return true;
     }
 
@@ -90,7 +90,7 @@ public final class UxInspectorJobState {
     public synchronized void preparationCompleted(String prompt, int artifactCount) {
         preparedPrompt = prompt;
         complete(PREPARATION_STEP, "COMPLETED",
-                "Pinned runtime, repository guidance and component source pack prepared.",
+                "Branch-scoped runtime, repository guidance and component source pack prepared.",
                 artifactCount, null);
         currentStepCode = ANALYSIS_STEP;
         currentStepLabel = steps.get(ANALYSIS_STEP).label;
@@ -157,7 +157,7 @@ public final class UxInspectorJobState {
                 && result != null && report != null;
         return new UxInspectorJobStateSnapshot(jobId,
                 new UxInspectorJobRequestSnapshot(request.systemId(), systemLabel != null ? systemLabel : request.systemId(),
-                        request.branch(), request.viewId(), request.sourceRevision(), request.question(),
+                        request.branch(), request.viewId(), request.question(),
                         request.capture().captureId(), request.capture(),
                         request.model(), request.reasoningEffort(), resolutionStatus, candidateCount),
                 status, currentStepCode, currentStepLabel, errorCode, errorMessage, createdAt, updatedAt, completedAt,

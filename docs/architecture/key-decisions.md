@@ -70,8 +70,8 @@ Decyzje:
   jest rozwijane bez wykonywania badanego kodu. Bounded katalog ma domyslnie
   200 000 znakow na plik i 2 000 000 lacznie; wyczerpanie limitu lacznego nie
   moze generowac kaskady wtornych bledow importu.
-  Source revision pochodzi z bezposredniego rozwiazania refa do commit id, nie
-  z metadanych pliku bootstrap. Screen reachability zaczyna od wewnetrznego
+  Katalog zachowuje wybrany branch i czas zebrania; metadata commita nie
+  przypina odczytow. Screen reachability zaczyna od wewnetrznego
   seed wybranego route/view i jego routowanego poddrzewa, a nastepnie
   iteracyjnie rozwija BFS komponentow oraz kanoniczny rejestr faktycznie
   uzytych zaleznosci. Pelne template'y osiagalnych komponentow sa source
@@ -494,7 +494,7 @@ publiczny kontrakt:
   pojedyncza sekcja jest niekompletna.
 - UX Inspector dopuszcza dokladnie jedna sekcje `answer`, waliduje referencje
   wobec initial target context albo plikow rzeczywiscie odczytanych z
-  wybranego repozytorium na pinned commit i wymaga jawnego evidence gap, gdy
+  wybranego repozytorium na wybranym branchu i wymaga jawnego evidence gap, gdy
   odpowiedz nie ma source reference.
 
 UI Explorer i UX Inspector nie posiadaja JSON fallbacku ani parsera finalnej
@@ -832,7 +832,7 @@ Decyzje:
 - UI Explorer follow-up ma osobny prompt, durable instructions i skill
   `ui-explorer-follow-up-chat`. Korzysta z raportu zapisanego w historii sesji,
   odpowiada jezykiem funkcjonalnym dla nietechnicznego analityka i zachowuje
-  piec initial research tools na przypietym commicie. Report tools dzialaja
+  piec initial research tools na wybranym branchu. Report tools dzialaja
   w hidden scope biezacego raportu i moga go zmienic po jawnej prosbie,
 - UX Inspector follow-up wysyla tylko nowa wiadomosc; krotki durable follow-up
   contract utrzymuje zasady odpowiedzi bez ponownego osadzania raportu.
@@ -865,7 +865,7 @@ Konsekwencje:
 - chat moze prosic AI o weryfikacje w repo, DB albo wygenerowanie raportu, ale
   model nie powinien wymyslac scope'u ani obchodzic blokady lokalnego workspace.
 - zwykly import UI Explorera zachowuje tekst rozmowy, ale nigdy session handle,
-  auth ani prywatny scope; dlatego pozostaje read-only także dla formatu v6.
+  auth ani prywatny scope; dlatego pozostaje read-only także dla formatu v1.
 
 ## 21. Optymalizacje Copilota prowadzimy inkrementalnie
 
@@ -1175,8 +1175,22 @@ oraz zaufane wybory formularza i pytanie. QUEUED jest utrwalany przed
 dispatch; po starcie store pozostaje w run.json dla neutralnych tools
 i follow-up po restarcie.
 
-System, branch, katalogowy view i revision pochodza z formularza i
-katalogu kodu. Backend ponownie normalizuje capture, przypina source
-revision i prowadzi target-first discovery. Brak targetu jest jawna luka
+System, branch i katalogowy view pochodza z formularza i katalogu kodu.
+Backend ponownie normalizuje capture i prowadzi target-first discovery na
+wybranym branchu. Brak targetu jest jawna luka
 i nie zatrzymuje AI. Wynik ma jedna sekcje answer. Import/export UX
-obsluguje tylko v3; nie ma legacy continuation ani starych endpointow.
+obsluguje tylko v1; nie ma legacy continuation ani starych endpointow.
+
+## 31. UI Explorer i UX Inspector czytaja wybrany branch przez caly run
+
+Katalog widokow jest wskazowka wyboru i zawiera `dataCollectedAt`. Cache hit
+zachowuje date zebrania, a refresh tworzy nowy katalog. Start ponownie szuka
+widoku na wybranym branchu bez porownania SHA. Initial research tools i
+follow-up po restarcie uzywaja tego samego brancha jako refa, bez przypinania
+commita. Nie gwarantuje to jednego snapshotu kodu ani najnowszego HEAD przy
+cache hit. UI pokazuje `Data:` przy `View` i nie prezentuje SHA.
+
+Neutralny `GitLabRepositoryToolScope` utrzymuje osobny tryb pinned dla
+Operational Context Assistance. Formaty cache, exportu, local runu i
+continuation zmienione dla UI/UX maja V1; stare readery i lokalne rekordy
+tych feature'ow zostaly usuniete.

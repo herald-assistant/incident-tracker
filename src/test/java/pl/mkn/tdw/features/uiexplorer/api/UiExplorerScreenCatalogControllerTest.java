@@ -41,7 +41,8 @@ class UiExplorerScreenCatalogControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.systemId").value("crm-agent-portal"))
                 .andExpect(jsonPath("$.systemLabel").value("CRM Agent Portal"))
-                .andExpect(jsonPath("$.sourceRevision.revision").value("crm-ui-revision-20260815"))
+                .andExpect(jsonPath("$.sourceRevision.branch").value("release/2026.08"))
+                .andExpect(jsonPath("$.dataCollectedAt").value("2026-08-15T10:30:00Z"))
                 .andExpect(jsonPath("$.status").value("READY"))
                 .andExpect(jsonPath("$.screens[0].screenId").value("crm-customer-profile"))
                 .andExpect(jsonPath("$.screens[0].routePattern").value("/crm/customers/:customerId"))
@@ -92,7 +93,8 @@ class UiExplorerScreenCatalogControllerTest {
         return new UiExplorerScreenCatalog(
                 "crm-agent-portal",
                 "CRM Agent Portal",
-                new UiExplorerSourceRevision("release/2026.08", "crm-ui-revision-20260815"),
+                java.time.Instant.parse("2026-08-15T10:30:00Z"),
+                new UiExplorerSourceRevision("release/2026.08"),
                 UiExplorerScreenCatalogStatus.READY,
                 List.of(new UiExplorerScreenCatalogEntry(
                         "crm-customer-profile",

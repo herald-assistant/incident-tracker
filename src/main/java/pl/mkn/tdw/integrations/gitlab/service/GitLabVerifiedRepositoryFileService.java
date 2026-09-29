@@ -21,4 +21,18 @@ public class GitLabVerifiedRepositoryFileService implements GitLabVerifiedReposi
         return GitLabVerifiedRepositoryFileReader.readComplete(
                 repositoryPort, group, projectName, commitId, filePath);
     }
+
+    @Override
+    public GitLabVerifiedFile readBranch(GitLabRepositoryReadPort repositoryPort, String group,
+                                          String projectName, String branch, String filePath, int maxBytes) {
+        return GitLabVerifiedRepositoryFileReader.readBranch(
+                repositoryPort, group, projectName, branch, filePath, maxBytes);
+    }
+
+    @Override
+    public GitLabVerifiedFile readCompleteBranch(GitLabRepositoryReadPort repositoryPort, String group,
+                                                  String projectName, String branch, String filePath) {
+        return GitLabVerifiedRepositoryFileReader.readCompleteBranch(
+                repositoryPort, group, projectName, branch, filePath);
+    }
 }

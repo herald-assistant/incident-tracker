@@ -140,7 +140,7 @@ class UxInspectorJobServiceTest {
                                           UxInspectorCaptureSnapshotService captures) {
         var selection = mock(UxInspectorAiSelectionValidator.class);
         var resolver = mock(UxInspectorTargetResolver.class);
-        when(resolver.resolve(anyString(), anyString(), anyString(), anyString(), any())).thenReturn(targetContext());
+        when(resolver.resolve(anyString(), anyString(), anyString(), any())).thenReturn(targetContext());
         var evidence = mock(UxInspectorTargetEvidenceMapper.class);
         when(evidence.map(any())).thenReturn(List.of());
         var preparation = mock(UxInspectorPromptPreparationService.class);
@@ -183,7 +183,7 @@ class UxInspectorJobServiceTest {
     }
 
     private UxInspectorJobStartRequest request() {
-        return new UxInspectorJobStartRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
+        return new UxInspectorJobStartRequest("crm-agent-portal", "main", VIEW_ID,
                 "Dlaczego przycisk jest zablokowany?", capture().captureId(), "gpt-crm", "medium");
     }
 }

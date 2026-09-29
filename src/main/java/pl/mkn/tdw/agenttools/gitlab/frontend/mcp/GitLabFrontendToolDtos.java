@@ -20,7 +20,7 @@ public final class GitLabFrontendToolDtos {
 
     public record RouteBranchSliceToolResponse(
             String sliceRef,
-            String sourceRevision,
+            String sourceBranch,
             String status,
             GitLabFrontendRouteNode screenNode,
             GitLabFrontendEffectiveRouteChain effectiveRouteChain,
@@ -41,7 +41,7 @@ public final class GitLabFrontendToolDtos {
         ) {
             return new RouteBranchSliceToolResponse(
                     sliceRef,
-                    response.sourceRevision().commitId(),
+                    response.scope().ref(),
                     response.status(),
                     response.screenNode(),
                     response.effectiveRouteChain(),

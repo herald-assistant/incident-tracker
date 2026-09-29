@@ -69,24 +69,16 @@ public class UiExplorerImportService {
         if (envelope == null || !UiExplorerExportEnvelope.SCHEMA.equals(envelope.schema())) {
             throw invalid("Unsupported UI Explorer export schema.");
         }
-        if (envelope.version() != UiExplorerExportEnvelope.VERSION
-                && envelope.version() != UiExplorerExportEnvelope.LEGACY_VERSION) {
+        if (envelope.version() != UiExplorerExportEnvelope.VERSION) {
             throw invalid("Unsupported UI Explorer export version.");
         }
         if (envelope.exportedAt() == null
                 || envelope.payload() == null
                 || !UiExplorerExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
-                || !supportedContract(envelope.version(), envelope.payload().resultContract())) {
+                || !UiExplorerExportEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())) {
             throw invalid("Unsupported UI Explorer result contract.");
         }
         validateJob(envelope.payload().job());
-    }
-
-    private boolean supportedContract(int version, String resultContract) {
-        return version == UiExplorerExportEnvelope.VERSION
-                && UiExplorerExportEnvelope.RESULT_CONTRACT.equals(resultContract)
-                || version == UiExplorerExportEnvelope.LEGACY_VERSION
-                && UiExplorerExportEnvelope.LEGACY_RESULT_CONTRACT.equals(resultContract);
     }
 
     private void validateJob(UiExplorerJobStateSnapshot job) {
@@ -106,15 +98,12 @@ public class UiExplorerImportService {
         if (!StringUtils.hasText(job.request().systemId())
                 || !StringUtils.hasText(job.request().screenId())
                 || !StringUtils.hasText(job.request().branch())
-                || !StringUtils.hasText(job.request().sourceRevision())
                 || !StringUtils.hasText(job.sourceRevision().branch())
-                || !StringUtils.hasText(job.sourceRevision().revision())
                 || !job.request().systemId().equals(job.result().screen().systemId())
                 || !job.request().screenId().equals(job.result().screen().screenId())
                 || !job.sourceRevision().equals(job.result().sourceRevision())
-                || !job.request().branch().equals(job.sourceRevision().branch())
-                || !job.request().sourceRevision().equals(job.sourceRevision().revision())) {
-            throw invalid("UI Explorer export has inconsistent screen or source revision data.");
+                || !job.request().branch().equals(job.sourceRevision().branch())) {
+            throw invalid("UI Explorer export has inconsistent screen or branch data.");
         }
     }
 

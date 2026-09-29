@@ -124,14 +124,13 @@ export class UiExplorerFacade {
         this.selectedSystemId() &&
           this.branch().trim() &&
           this.selectedScreenId() &&
-          this.sourceRevision()?.revision
+          this.sourceRevision()?.branch
       ) && this.hasActiveSection() && this.catalogMatchesSelection()
   );
   readonly configuration = computed<UiExplorerConfigurationSnapshot>(() => ({
     systemId: this.selectedSystemId(),
     branch: this.branch().trim(),
     screenId: this.selectedScreenId(),
-    sourceRevision: this.sourceRevision()?.revision ?? '',
     sectionModes: { ...this.sectionModes() },
     scenarioDescription: this.scenarioDescription().trim(),
     model: this.selectedModel(),
@@ -594,7 +593,6 @@ export class UiExplorerFacade {
       systemId: configuration.systemId,
       branch: configuration.branch,
       screenId: configuration.screenId,
-      sourceRevision: configuration.sourceRevision,
       sectionModes: { ...configuration.sectionModes },
       ...(configuration.scenarioDescription
         ? { scenarioDescription: configuration.scenarioDescription }

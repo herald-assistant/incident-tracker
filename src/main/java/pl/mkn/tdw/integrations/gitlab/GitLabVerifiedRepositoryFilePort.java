@@ -11,4 +11,10 @@ public interface GitLabVerifiedRepositoryFilePort {
 
     GitLabVerifiedFile readComplete(GitLabRepositoryReadPort repositoryPort, String group,
                                     String projectName, String commitId, String filePath);
+
+    GitLabVerifiedFile readBranch(GitLabRepositoryReadPort repositoryPort, String group,
+                                   String projectName, String branch, String filePath, int maxBytes);
+
+    GitLabVerifiedFile readCompleteBranch(GitLabRepositoryReadPort repositoryPort, String group,
+                                           String projectName, String branch, String filePath);
 }

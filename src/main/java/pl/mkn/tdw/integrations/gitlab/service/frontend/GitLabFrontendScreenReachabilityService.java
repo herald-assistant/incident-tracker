@@ -760,7 +760,7 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
         result.append("- screen: `").append(context.screenNode().routePattern()).append("` -> `")
                 .append(context.screenNode().viewTarget() != null ? context.screenNode().viewTarget().symbol() : "unresolved")
                 .append("`\n");
-        result.append("- revision: `").append(value(context.sourceRevision().commitId())).append("`\n\n");
+        result.append("- branch: `").append(value(context.scope().ref())).append("`\n\n");
         result.append("## Effective route chain\n\n");
         var routeOrder = 1;
         for (var segment : context.effectiveRouteChain().segments()) {

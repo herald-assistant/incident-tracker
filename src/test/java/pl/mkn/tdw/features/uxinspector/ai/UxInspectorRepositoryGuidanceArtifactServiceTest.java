@@ -26,7 +26,7 @@ class UxInspectorRepositoryGuidanceArtifactServiceTest {
                     new GitLabVerifiedRepositoryFileService(), repositoryPort, new ObjectMapper().findAndRegisterModules());
 
     @Test
-    void shouldInlinePinnedCopilotInstructionsAndOnlyCatalogHeadersFromSupportedProjectSkills() {
+    void shouldInlineBranchCopilotInstructionsAndOnlyCatalogHeadersFromSupportedProjectSkills() {
         var copilot = ".github/copilot-instructions.md";
         var githubSkill = ".github/skills/frontend-architecture/SKILL.md";
         var claudeSkill = ".claude/skills/data-flow/SKILL.md";
@@ -43,16 +43,16 @@ class UxInspectorRepositoryGuidanceArtifactServiceTest {
                 "docs/examples/SKILL.md", agentsSkill, copilot, githubSkill, claudeSkill));
 
         assertThat(artifact)
-                .contains("tdw.ux-inspector-repository-guidance", REVISION,
+                .contains("tdw.ux-inspector-repository-guidance", "main",
                         "Search shared guards and initializers before answering.",
                         "frontend-architecture", "Explains global frontend mechanisms.",
                         "data-flow", "Traces data from UI to persistence.",
                         "access-control", "Finds guards and authorization policy.")
                 .doesNotContain("PRIVATE GITHUB SKILL BODY", "PRIVATE CLAUDE SKILL BODY",
                         "PRIVATE AGENTS SKILL BODY", "docs/examples/SKILL.md");
-        verify(repositoryPort, times(4)).readFileMetadata(eq("CRM"), eq("crm-ui"), eq(REVISION), anyString());
+        verify(repositoryPort, times(4)).readFileMetadata(eq("CRM"), eq("crm-ui"), eq("main"), anyString());
         verify(repositoryPort, times(4)).readFileBounded(
-                eq("CRM"), eq("crm-ui"), eq(REVISION), anyString(), anyInt());
+                eq("CRM"), eq("crm-ui"), eq("main"), anyString(), anyInt());
     }
 
     @Test
@@ -77,14 +77,14 @@ class UxInspectorRepositoryGuidanceArtifactServiceTest {
     }
 
     @Test
-    void shouldFailClosedWhenInstructionsListedAtThePinnedCommitCannotBeVerified() {
+    void shouldFailClosedWhenInstructionsListedOnTheBranchCannotBeVerified() {
         var path = ".github/copilot-instructions.md";
-        when(repositoryPort.readFileMetadata("CRM", "crm-ui", REVISION, path)).thenReturn(null);
+        when(repositoryPort.readFileMetadata("CRM", "crm-ui", "main", path)).thenReturn(null);
 
         assertThatThrownBy(() -> service.render(targetContext(), List.of(path)))
                 .isInstanceOfSatisfying(UxInspectorContextException.class, exception -> {
                     assertThat(exception.code()).isEqualTo("UX_INSPECTOR_REPOSITORY_GUIDANCE_UNAVAILABLE");
-                    assertThat(exception.getMessage()).contains("pinned revision", path);
+                    assertThat(exception.getMessage()).contains("selected branch", path);
                 });
     }
 
@@ -94,11 +94,11 @@ class UxInspectorRepositoryGuidanceArtifactServiceTest {
 
     private void stubFile(String path, String content) {
         var size = (long) content.getBytes(StandardCharsets.UTF_8).length;
-        when(repositoryPort.readFileMetadata("CRM", "crm-ui", REVISION, path)).thenReturn(
-                new GitLabRepositoryFileMetadata("CRM", "crm-ui", REVISION, path,
+        when(repositoryPort.readFileMetadata("CRM", "crm-ui", "main", path)).thenReturn(
+                new GitLabRepositoryFileMetadata("CRM", "crm-ui", "main", path,
                         "blob-" + path, REVISION, REVISION, null, null, size));
-        when(repositoryPort.readFileBounded(eq("CRM"), eq("crm-ui"), eq(REVISION), eq(path), anyInt()))
+        when(repositoryPort.readFileBounded(eq("CRM"), eq("crm-ui"), eq("main"), eq(path), anyInt()))
                 .thenReturn(new GitLabRepositoryFileContent(
-                        "CRM", "crm-ui", REVISION, path, content, false));
+                        "CRM", "crm-ui", "main", path, content, false));
     }
 }

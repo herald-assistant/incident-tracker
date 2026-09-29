@@ -18,7 +18,7 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
 
 ## Kontrakt produktu
 
-- Jednostka analizy to jeden widok w konkretnym scenariuszu i rewizji zrodla.
+- Jednostka analizy to jeden widok w konkretnym scenariuszu na wybranym branchu.
 - UI Explorer tworzy wylacznie dokumentacje funkcjonalna; publiczny kontrakt
   nie zawiera wyboru profilu ani celu analizy.
 - Sekcje to osiem identyfikatorow z kanonicznego runtime flow UI Explorera, a tryby to `OFF`,
@@ -44,7 +44,7 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
   MCP toolem UI Explorera, zeby nie duplikowac initial context. Generyczny
   GitLab search/read jest dozwolony tylko dla
   materialnej luki, ktora nie ma jeszcze bezpiecznej referencji. Repository,
-  ref oraz source revision pozostaja hidden contextem. Naturalne sciezki, typy
+  ref brancha pozostaje hidden contextem. Naturalne sciezki, typy
   i importy sa walidowane w read-only repository scope dopiero przy wywolaniu
   toola; nie przywracaj przygotowanego katalogu dozwolonych targetow.
 - Result nie posiada `dependencies`, `crossSectionDependencies` ani osobnego
@@ -69,7 +69,7 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
   przygotowanego kontekstu i captured tool evidence, a nastepnie projektuje
   raport na feature-specific `UiExplorerResultResponse` dla publicznego API.
 - Follow-up wznawia te sama sesje Copilota dla `COMPLETED` i `PARTIAL`, uzywa
-  pierwotnego immutable commita i pieciu read-only research tools. Report tools
+  wybranego brancha i pieciu read-only research tools. Report tools
   maja hidden scope biezacego raportu; mutacja wymaga jawnej prosby operatora
   w najnowszej wiadomosci i ponownej walidacji report/result.
 - Local history zapisuje minimalny prywatny continuation snapshot bez tokenow,

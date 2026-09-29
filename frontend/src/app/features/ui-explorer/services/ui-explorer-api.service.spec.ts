@@ -56,7 +56,7 @@ describe('UiExplorerApiService', () => {
     request.flush({
       systemId: 'crm-agent-portal',
       systemLabel: 'CRM Agent Portal',
-      sourceRevision: { branch: 'crm-review', revision: 'crm-revision-refreshed' },
+      sourceRevision: { branch: 'crm-review' },
       status: 'READY',
       screens: [],
       diagnostics: [],
@@ -90,7 +90,7 @@ describe('UiExplorerApiService', () => {
     request.flush({
       systemId: 'crm-agent-portal',
       systemLabel: 'CRM Agent Portal',
-      sourceRevision: { branch: 'crm-review', revision: 'crm-revision-a1b2c3' },
+      sourceRevision: { branch: 'crm-review' },
       status: 'READY',
       screens: [],
       diagnostics: [],
@@ -116,7 +116,6 @@ describe('UiExplorerApiService', () => {
       systemId: 'crm-agent-portal',
       branch: 'crm-review',
       screenId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3',
       sectionModes: { OVERVIEW: 'DEEP' as const },
       scenarioDescription: 'Describe the anonymized CRM contact flow.',
       model: 'crm-doc-model',
@@ -147,11 +146,11 @@ describe('UiExplorerApiService', () => {
   it('uses dedicated feature endpoints for portable export and server-validated import', () => {
     const portableDocument = {
       schema: 'tdw.ui-explorer-export',
-      version: 5,
+      version: 1,
       exportedAt: '2026-08-15T10:05:00Z',
       payload: {
         type: 'ui-explorer-analysis',
-        resultContract: 'ui-explorer-result-v5',
+        resultContract: 'ui-explorer-result-v1',
         job: { jobId: 'crm/ui-job-1' }
       }
     };

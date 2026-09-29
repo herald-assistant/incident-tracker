@@ -126,7 +126,7 @@ describe('UiExplorerFacade', () => {
     expect(facade.selectedModel()).toBe('crm-doc-model');
     expect(facade.selectedReasoningEffort()).toBe('medium');
     expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'main', false);
-    expect(facade.sourceRevision()?.revision).toBe('crm-revision-a1b2c3');
+    expect(facade.sourceRevision()?.branch).toBe('main');
   });
 
   it('suggests the same view as UX Inspector from route and nearest main component', () => {
@@ -192,7 +192,7 @@ describe('UiExplorerFacade', () => {
     expect(api.getScreens).toHaveBeenNthCalledWith(2, 'crm-agent-portal', 'main', true);
   });
 
-  it('clears the selected screen and source revision while the new branch loads', () => {
+  it('clears the selected screen while the new branch loads', () => {
     api.getScreens.mockReturnValueOnce(of(screenCatalog)).mockReturnValueOnce(NEVER);
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
@@ -221,7 +221,7 @@ describe('UiExplorerFacade', () => {
     expect(facade.configurationReady()).toBe(false);
   });
 
-  it('starts and polls a bounded CRM run with the selected source revision', () => {
+  it('starts and polls a bounded CRM run on the selected branch', () => {
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
     facade.changeBranch('main');
@@ -234,7 +234,6 @@ describe('UiExplorerFacade', () => {
       systemId: 'crm-agent-portal',
       branch: 'main',
       screenId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3',
       sectionModes: { OVERVIEW: 'DEEP', FORMS_AND_RULES: 'COMPACT' },
       scenarioDescription: 'Describe the anonymized CRM contact creation flow.',
       model: 'crm-doc-model',
@@ -554,7 +553,8 @@ function crmScreenCatalog(): UiExplorerScreenCatalogResponse {
   return {
     systemId: 'crm-agent-portal',
     systemLabel: 'CRM Agent Portal',
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    dataCollectedAt: '2026-08-15T10:30:00Z',
+    sourceRevision: { branch: 'main' },
     status: 'READY',
     screens: [
       {
@@ -597,7 +597,6 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
       systemLabel: 'CRM Agent Portal',
       branch: 'main',
       screenId: 'crm-contact-create',
-      sourceRevision: 'crm-revision-a1b2c3',
       sectionModes: [
         { sectionId: 'OVERVIEW', mode: 'DEEP' },
         { sectionId: 'FORMS_AND_RULES', mode: 'COMPACT' }
@@ -623,7 +622,7 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
     result: null,
     report: null,
     usage: null,
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    sourceRevision: { branch: 'main' },
     outputAvailability: {
       status: terminal ? 'AVAILABLE' : 'BLOCKED',
       code: terminal ? 'READY' : 'IN_PROGRESS',
@@ -650,7 +649,7 @@ function crmReadableSnapshot(
         navigationContext: 'Kontakty CRM > Nowy kontakt'
       },
       scenarioDescription: 'Describe the anonymized CRM contact creation flow.',
-      sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+      sourceRevision: { branch: 'main' },
       functionalOverview: 'Synthetic CRM contact documentation.',
       sections: [],
       overallConfidence: 'CONFIRMED',
@@ -680,11 +679,11 @@ function crmReadableSnapshot(
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 5,
+    version: 1,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v5',
+      resultContract: 'ui-explorer-result-v1',
       job: crmReadableSnapshot('COMPLETED')
     }
   };
@@ -693,11 +692,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export' as const,
-    version: 6 as const,
+    version: 1 as const,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis' as const,
-      resultContract: 'ui-explorer-result-v6' as const,
+      resultContract: 'ui-explorer-result-v1' as const,
       job: crmReadableSnapshot('COMPLETED')
     }
   };

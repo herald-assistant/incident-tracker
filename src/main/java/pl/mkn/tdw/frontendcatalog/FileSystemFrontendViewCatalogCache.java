@@ -22,7 +22,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class FileSystemFrontendViewCatalogCache implements FrontendViewCatalogCache {
     private static final String SCHEMA = "tdw.frontend-view-catalog-cache";
-    private static final int VERSION = 4;
+    private static final int VERSION = 1;
 
     private final LocalWorkspaceProperties properties;
     private final LocalWorkspacePaths paths;
@@ -44,7 +44,7 @@ public class FileSystemFrontendViewCatalogCache implements FrontendViewCatalogCa
                 || catalog.boundary().sourceReadCount() <= 0) return;
         try {
             jsonFileStore.writeAtomic(cacheFile(key),
-                    new FrontendViewCatalogCacheEntry(SCHEMA, VERSION, Instant.now(), key, catalog));
+                    new FrontendViewCatalogCacheEntry(SCHEMA, VERSION, key, catalog));
         } catch (RuntimeException exception) {
             log.warn("Failed to write frontend view catalog cache key={} error={}", key, exception.getMessage());
         }
@@ -87,7 +87,6 @@ public class FileSystemFrontendViewCatalogCache implements FrontendViewCatalogCa
 record FrontendViewCatalogCacheEntry(
         String schema,
         int version,
-        Instant cachedAt,
         FrontendViewCatalogCache.Key key,
         FrontendViewCatalog catalog
 ) {}

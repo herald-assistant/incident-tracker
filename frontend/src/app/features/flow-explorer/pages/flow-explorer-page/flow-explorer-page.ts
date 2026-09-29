@@ -20,6 +20,7 @@ import { AiOptionsApiService } from '../../../../core/services/ai-options-api.se
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { AppUiConfigService } from '../../../../core/services/app-ui-config.service';
+import { formatDataDate } from '../../../../core/utils/format-data-date';
 import {
   FlowExplorerAnalysisGoal,
   FlowExplorerEndpointInventoryResponse,
@@ -363,7 +364,7 @@ export class FlowExplorerPageComponent implements OnInit {
   });
   readonly endpointInventoryDateLabel = computed(() => {
     const dataCollectedAt = this.endpointInventory()?.dataCollectedAt;
-    const formatted = formatEndpointInventoryDate(dataCollectedAt);
+      const formatted = formatDataDate(dataCollectedAt);
     return formatted ? `Data: ${formatted}` : '';
   });
   readonly selectedSystemLabel = computed(() => {
@@ -1750,22 +1751,6 @@ function hasDisplayMetaValue(meta: FlowExplorerDisplayMeta): boolean {
       meta.gaps.length ||
       meta.warnings.length
   );
-}
-
-function formatEndpointInventoryDate(value: string | null | undefined): string {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat('pl-PL', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(date);
 }
 
 function normalizeSearch(value: string): string {

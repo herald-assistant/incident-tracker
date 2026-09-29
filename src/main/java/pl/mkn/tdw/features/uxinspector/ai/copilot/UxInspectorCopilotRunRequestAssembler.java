@@ -43,7 +43,7 @@ public class UxInspectorCopilotRunRequestAssembler {
         var access = UxInspectorCopilotToolAccessPolicy.from(registered);
         var sessionConfig = new CopilotSessionConfigRequest(toolContext.copilotSessionId(), access.enabledTools(),
                 access.availableToolNames(), new CopilotModelSelection(request.model(), request.reasoningEffort()),
-                "Use only UX Inspector target/source/store/report tools in the pinned scope.",
+                "Use only UX Inspector target/source/store/report tools in the selected branch scope.",
                 !storeCallbacks.isEmpty())
                 .withDurableSystemInstructions(UxInspectorDurableSystemInstructions.render(preparation));
         var initialReport = reportFactory.create((String) toolContext.hiddenContext().get(AgentToolContextKeys.REPORT_ID), context);

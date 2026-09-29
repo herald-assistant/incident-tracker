@@ -8,7 +8,6 @@ public record UxInspectorJobRequestSnapshot(
         String systemLabel,
         String branch,
         String viewId,
-        String sourceRevision,
         String question,
         String captureId,
         UxInspectorCapture capture,

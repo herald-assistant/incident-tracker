@@ -33,7 +33,7 @@ public final class UxInspectorTargetTools {
     }
 
     @Tool(name = UxInspectorToolNames.LIST_TARGET_CANDIDATES,
-            description = "Zwraca ograniczona liste kandydatow targetu z przypietego scope UX Inspectora. Scope pochodzi z hidden context; podaj tylko powod.")
+            description = "Zwraca ograniczona liste kandydatow targetu z wybranego branchowego scope UX Inspectora. Scope pochodzi z hidden context; podaj tylko powod.")
     public CandidateListResult listTargetCandidates(
             @ToolParam(required = false, description = "Krotki powod potrzebny do audytu wywolania.") String reason,
             ToolContext toolContext

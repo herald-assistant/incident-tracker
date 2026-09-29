@@ -88,6 +88,23 @@ class GitLabRepositoryNavigationMcpToolsTest {
     }
 
     @Test
+    void branchScopeNavigatesWithBranchRefWithoutExposingACommit() {
+        var branchScope = GitLabRepositoryToolScope.forBranch("CRM", "PROCESSES/customer-profile", "main");
+        var branchContext = new ToolContext(Map.of(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, branchScope));
+        when(port.listRepositoryFilesPage("CRM", "PROCESSES/customer-profile", "main", "", "", 200))
+                .thenReturn(new GitLabRepositoryFilePage(List.of(
+                        new GitLabRepositoryFile("CRM", "PROCESSES/customer-profile", "main", "README.md")
+                ), null));
+
+        var files = tools.listRepositoryFiles("PROCESSES/customer-profile", "main", "", "",
+                "Szukam pliku CRM.", branchContext);
+
+        assertThat(files.paths()).containsExactly("README.md");
+        assertThat(files.commitId()).isNull();
+        verify(port, never()).resolveRevision("CRM", "PROCESSES/customer-profile", "main");
+    }
+
+    @Test
     void anotherProjectInMainGroupIsPinnedAndSearchOnlyReturnsMatchingPaths() {
         when(port.resolveRevision("CRM", "LIBS/shared", "release/1"))
                 .thenReturn(new GitLabRepositoryRevision("CRM", "LIBS/shared", "release/1", OTHER_COMMIT, null));

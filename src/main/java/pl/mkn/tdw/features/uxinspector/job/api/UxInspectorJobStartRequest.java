@@ -10,7 +10,6 @@ public record UxInspectorJobStartRequest(
         @NotBlank @Size(max = 120) String systemId,
         @NotBlank @Size(max = 160) String branch,
         @NotBlank @Size(max = 240) String viewId,
-        @NotBlank @Size(max = 160) String sourceRevision,
         @NotBlank @Size(max = 4000) String question,
         @NotBlank String captureId,
         @NotBlank @Size(max = 80) String model,
@@ -20,7 +19,6 @@ public record UxInspectorJobStartRequest(
         systemId = normalize(systemId);
         branch = normalize(branch);
         viewId = normalize(viewId);
-        sourceRevision = normalize(sourceRevision);
         question = normalize(question);
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);

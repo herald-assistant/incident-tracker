@@ -11,6 +11,7 @@ import { AnalysisReportEditorComponent } from '../../../../components/analysis-r
 import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
+import { formatDataDate } from '../../../../core/utils/format-data-date';
 import { UxInspectorCapture, UxInspectorJobStatus, UxInspectorVisibleFormField } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
@@ -107,12 +108,16 @@ export class UxInspectorPageComponent implements OnInit {
       ? `${selected.label} · dopasowano z capture`
       : selected.label;
     const catalog = this.facade.viewCatalog();
-    if (catalog) return `${catalog.views.length} views · ${catalog.sourceRevision.revision}`;
+    if (catalog) return `${catalog.views.length} views`;
     switch (this.facade.viewState()) {
       case 'loading': return 'discovering Angular routes';
       case 'error': return 'retry view inventory';
       default: return 'waiting for application';
     }
+  });
+  readonly viewCatalogDateLabel = computed(() => {
+    const formatted = formatDataDate(this.facade.viewCatalog()?.dataCollectedAt);
+    return formatted ? `Data: ${formatted}` : '';
   });
   readonly targetLabel = computed(() => {
     const capture = this.facade.capture();

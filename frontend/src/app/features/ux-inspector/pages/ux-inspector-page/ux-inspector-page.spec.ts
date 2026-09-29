@@ -35,6 +35,14 @@ describe('UxInspectorPageComponent', () => {
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
+    fixture.componentInstance.facade.viewCatalog.set({
+      systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal',
+      dataCollectedAt: '2026-08-15T10:30:00Z', sourceRevision: { branch: 'main' }, status: 'READY',
+      views: [], diagnostics: [], limitations: []
+    });
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Data: 15.08.2026');
+    expect(page.textContent).not.toContain('crm-revision-a1b2c3');
     expect(page.textContent).toContain('Zapisz kontakt');
     const preview = page.querySelector<HTMLDetailsElement>('.ux-inspector-capture-preview');
     expect(preview?.open).toBe(false);

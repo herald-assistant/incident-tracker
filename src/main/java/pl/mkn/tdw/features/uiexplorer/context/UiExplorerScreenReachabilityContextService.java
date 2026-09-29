@@ -9,8 +9,6 @@ import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundE
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerScreenSelectionStaleException;
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerScreenSourceUnavailableException;
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerReachabilityInputException;
-import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionChangedException;
-import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionUnavailableException;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerScreenIdentity;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
@@ -36,7 +34,6 @@ public class UiExplorerScreenReachabilityContextService {
     private static final int MAX_SYSTEM_ID_LENGTH = 120;
     private static final int MAX_REF_LENGTH = 160;
     private static final int MAX_SCREEN_ID_LENGTH = 240;
-    private static final int MAX_REVISION_LENGTH = 160;
     private final UiExplorerFrontendCatalogService frontendCatalogService;
     private final GitLabFrontendScreenReachabilityPort screenReachabilityService;
 
@@ -44,13 +41,11 @@ public class UiExplorerScreenReachabilityContextService {
             String systemId,
             String ref,
             String screenId,
-            String expectedRevision,
             List<UiExplorerSectionModeAssignment> sectionModes
     ) {
         var normalizedSystemId = required(systemId, "systemId", MAX_SYSTEM_ID_LENGTH);
         var normalizedRef = required(ref, "branch", MAX_REF_LENGTH);
         var normalizedScreenId = required(screenId, "screenId", MAX_SCREEN_ID_LENGTH);
-        var normalizedRevision = required(expectedRevision, "sourceRevision", MAX_REVISION_LENGTH);
         var activeSections = activeSections(sectionModes);
         var frontend = frontendCatalogService.loadCatalog().findFrontend(normalizedSystemId)
                 .orElseThrow(() -> new UiExplorerFrontendNotEligibleException(normalizedSystemId));
@@ -59,7 +54,7 @@ public class UiExplorerScreenReachabilityContextService {
                         frontend.gitLabGroup(), frontend.gitLabProjectName(), normalizedRef, frontend.pathPrefixes()
                 ),
                 normalizedScreenId,
-                normalizedRevision,
+                null,
                 GitLabFrontendGraphLimits.defaults()
         );
         try {
@@ -89,6 +84,7 @@ public class UiExplorerScreenReachabilityContextService {
                 .toList();
         var gaps = new LinkedHashSet<String>(graph.limitations());
         graph.diagnostics().stream()
+                .filter(diagnostic -> diagnostic.code() != pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendGraphDiagnosticCode.SOURCE_REVISION_UNRESOLVED)
                 .filter(diagnostic -> diagnostic.severity() != GitLabFrontendDiagnosticSeverity.INFO)
                 .map(diagnostic -> diagnostic.message())
                 .filter(StringUtils::hasText)
@@ -118,7 +114,7 @@ public class UiExplorerScreenReachabilityContextService {
                         screenNode.routeSource().startLine(),
                         screenNode.routeSource().endLine()
                 ),
-                new UiExplorerSourceRevision(graph.sourceRevision().ref(), graph.sourceRevision().commitId()),
+                new UiExplorerSourceRevision(graph.scope().ref()),
                 status,
                 graph,
                 coverage,
@@ -220,8 +216,6 @@ public class UiExplorerScreenReachabilityContextService {
     ) {
         return switch (exception.code()) {
             case "FRONTEND_REF_NOT_FOUND" -> new UiExplorerSourceRefNotFoundException(systemId, ref);
-            case "FRONTEND_SOURCE_REVISION_CHANGED" -> new UiExplorerSourceRevisionChangedException(systemId, ref);
-            case "FRONTEND_SOURCE_REVISION_UNRESOLVED" -> new UiExplorerSourceRevisionUnavailableException(systemId, ref);
             case "FRONTEND_SCREEN_NOT_FOUND" -> new UiExplorerScreenSelectionStaleException(systemId, screenId);
             default -> new UiExplorerScreenSourceUnavailableException(systemId, screenId);
         };

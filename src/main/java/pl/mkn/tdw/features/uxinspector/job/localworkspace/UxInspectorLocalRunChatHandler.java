@@ -98,7 +98,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
         accessTokenResolver.resolve(runAuthMapper.toRunAuth(auth));
         var startRequest = toStartRequest(snapshot.request());
         var context = targetResolver.resolve(startRequest.systemId(), startRequest.branch(), startRequest.viewId(),
-                startRequest.sourceRevision(), startRequest.capture());
+                startRequest.capture());
         var assistantId = UUID.randomUUID().toString();
         var startedAt = Instant.now();
         var request = new UxInspectorFollowUpChatRequest(
@@ -158,7 +158,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
 
     private UxInspectorAnalysisRequest toStartRequest(UxInspectorJobRequestSnapshot request) {
         return new UxInspectorAnalysisRequest(request.systemId(), request.branch(), request.viewId(),
-                request.sourceRevision(), request.question(), request.capture(), request.aiModel(), request.reasoningEffort());
+                request.question(), request.capture(), request.aiModel(), request.reasoningEffort());
     }
 
     private UxInspectorJobStateSnapshot recoverInterruptedTurn(UxInspectorJobStateSnapshot snapshot) {

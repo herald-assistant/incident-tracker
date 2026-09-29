@@ -20,23 +20,20 @@ public class UxInspectorCopilotToolSessionContextFactory {
         var hidden = new LinkedHashMap<String, Object>();
         hidden.put(UxInspectorCopilotContextKeys.FEATURE, UxInspectorCopilotContextKeys.FEATURE_VALUE);
         hidden.put(UxInspectorCopilotContextKeys.SYSTEM_ID, context.systemId());
-        hidden.put(UxInspectorCopilotContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(UxInspectorCopilotContextKeys.VIEW_ID, context.view().viewId());
         hidden.put(AgentToolContextKeys.REPORT_ID, "ux-inspector-report-" + runId);
         hidden.put(AgentToolContextKeys.REPORT_FEATURE, UxInspectorCopilotContextKeys.FEATURE_VALUE);
         hidden.put(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS, List.of("answer"));
         hidden.put(AgentToolContextKeys.TOOL_BUDGET_POLICY, AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
         hidden.put(AgentToolContextKeys.GITLAB_GROUP, context.sourceScope().group());
-        hidden.put(AgentToolContextKeys.GITLAB_BRANCH, context.sourceRevision().branch());
-        hidden.put(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, new GitLabRepositoryToolScope(
+        hidden.put(AgentToolContextKeys.GITLAB_BRANCH, context.sourceScope().ref());
+        hidden.put(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, GitLabRepositoryToolScope.forBranch(
                 context.sourceScope().group(),
                 context.sourceScope().projectName(),
-                context.sourceRevision().branch(),
-                context.sourceRevision().revision()
+                context.sourceScope().ref()
         ));
         hidden.put(GitLabFrontendToolContextKeys.PROJECT_NAME, context.sourceScope().projectName());
         hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, context.sourceScope().pathPrefixes());
-        hidden.put(GitLabFrontendToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.view().viewId());
         return new CopilotToolSessionContext(runId, "ux-inspector-" + runId, hidden);
     }

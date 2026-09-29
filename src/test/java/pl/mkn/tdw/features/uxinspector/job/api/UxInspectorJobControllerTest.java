@@ -75,7 +75,6 @@ class UxInspectorJobControllerTest {
         result.put("systemId", "crm-agent-portal");
         result.put("branch", "main");
         result.put("viewId", "crm-contact-create");
-        result.put("sourceRevision", "abc123crm");
         result.put("question", "Dlaczego przycisk jest zablokowany?");
         result.put("captureId", capture().captureId());
         result.put("model", "gpt-crm");

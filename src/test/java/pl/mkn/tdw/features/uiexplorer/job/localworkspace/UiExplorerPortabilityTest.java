@@ -67,8 +67,8 @@ class UiExplorerPortabilityTest {
         var document = (ObjectNode) objectMapper.valueToTree(portable);
 
         assertThat(portable.schema()).isEqualTo("tdw.ui-explorer-export");
-        assertThat(portable.version()).isEqualTo(6);
-        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v6");
+        assertThat(portable.version()).isEqualTo(1);
+        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v1");
         assertThat(document.at("/payload/job/preparedPrompt").asText()).isEqualTo(PREPARED_PROMPT);
         assertThat(document.toString()).doesNotContain(
                 "CRM_RAW_SOURCE_SECRET",
@@ -106,8 +106,8 @@ class UiExplorerPortabilityTest {
         var historyDetail = history.getRun(imported.jobId());
         assertThat(historyDetail.feature()).isEqualTo("ui-explorer");
         assertThat(historyDetail.continuationEnabled()).isFalse();
-        assertThat(historyDetail.exportEnvelope().at("/payload/job/sourceRevision/revision").asText())
-                .isEqualTo("crm-commit-abc123");
+        assertThat(historyDetail.exportEnvelope().at("/payload/job/sourceRevision/branch").asText())
+                .isEqualTo("main");
 
         var restartedJobs = mock(UiExplorerJobService.class);
         when(restartedJobs.getJob(imported.jobId())).thenThrow(new UiExplorerJobNotFoundException(imported.jobId()));
@@ -130,7 +130,7 @@ class UiExplorerPortabilityTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 1, 2, 3, 4, 99})
+    @ValueSource(ints = {0, 2, 3, 4, 6, 99})
     void shouldRejectEveryNonCurrentCrmExportVersion(int version) {
         var document = portableDocument();
         document.put("version", version);
@@ -141,7 +141,7 @@ class UiExplorerPortabilityTest {
     }
 
     @Test
-    void shouldRejectUnknownSchemaResultContractAndInconsistentCrmRevision() {
+    void shouldRejectUnknownSchemaResultContractAndInconsistentCrmBranch() {
         var unknownSchema = portableDocument();
         unknownSchema.put("schema", "tdw.ui-explorer-export-legacy");
         assertThatThrownBy(() -> importService(true).importReadOnly(unknownSchema))
@@ -154,12 +154,12 @@ class UiExplorerPortabilityTest {
                 .isInstanceOf(UiExplorerImportException.class)
                 .hasMessage("Unsupported UI Explorer result contract.");
 
-        var inconsistentRevision = portableDocument();
-        ((ObjectNode) inconsistentRevision.at("/payload/job/result/sourceRevision"))
-                .put("revision", "crm-other-commit");
-        assertThatThrownBy(() -> importService(true).importReadOnly(inconsistentRevision))
+        var inconsistentBranch = portableDocument();
+        ((ObjectNode) inconsistentBranch.at("/payload/job/result/sourceRevision"))
+                .put("branch", "crm-other-branch");
+        assertThatThrownBy(() -> importService(true).importReadOnly(inconsistentBranch))
                 .isInstanceOf(UiExplorerImportException.class)
-                .hasMessage("UI Explorer export has inconsistent screen or source revision data.");
+                .hasMessage("UI Explorer export has inconsistent screen or branch data.");
     }
 
     @Test

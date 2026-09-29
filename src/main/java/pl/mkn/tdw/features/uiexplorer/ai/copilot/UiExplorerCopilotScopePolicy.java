@@ -155,7 +155,7 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             RepositoryScope repository
     ) {
         if (!repository.branchRef().equals(text(arguments, "branchRef"))) {
-            reject(request, "branchRef is outside the validated UI Explorer source revision.", true);
+            reject(request, "branchRef is outside the selected UI Explorer branch.", true);
         }
         var applicationNames = textList(arguments.get("applicationNames"));
         var expectedSystemId = stringValue(request.sessionContext().hiddenContext()

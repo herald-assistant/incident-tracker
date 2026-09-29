@@ -42,8 +42,8 @@ public class UiExplorerScreenCatalogService {
 
     private UiExplorerScreenCatalog map(FrontendViewCatalog source) {
         return new UiExplorerScreenCatalog(
-                source.systemId(), source.systemLabel(),
-                new UiExplorerSourceRevision(source.sourceRevision().branch(), source.sourceRevision().revision()),
+                source.systemId(), source.systemLabel(), source.dataCollectedAt(),
+                new UiExplorerSourceRevision(source.sourceRevision().branch()),
                 UiExplorerScreenCatalogStatus.valueOf(source.status().name()),
                 source.views().stream().map(view -> new UiExplorerScreenCatalogEntry(
                         view.viewId(), view.label(), view.routePattern(), view.parentRoutePattern(),

@@ -128,8 +128,8 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(hidden.get(GitLabFrontendToolContextKeys.PROJECT_NAME)).isEqualTo("crm-agent-portal");
         assertThat(hidden.get(GitLabFrontendToolContextKeys.PATH_PREFIXES))
                 .isEqualTo(List.of("apps/crm-agent"));
-        assertThat(hidden.get(GitLabFrontendToolContextKeys.SOURCE_REVISION))
-                .isEqualTo("crm-commit-abc123");
+        assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH))
+                .isEqualTo("main");
         assertThat(hidden.get(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF))
                 .isEqualTo("crm-contact-preferences");
         assertThat(hidden).doesNotContainKeys("gitLabFrontendTypeScriptSliceTargets",

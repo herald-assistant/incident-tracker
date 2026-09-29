@@ -122,7 +122,7 @@ export class UxInspectorFacade {
         this.selectedSystemId() &&
         this.branch().trim() &&
         this.selectedViewId() &&
-        this.sourceRevision()?.revision &&
+        this.sourceRevision()?.branch &&
         this.question().trim() &&
         this.aiSelectionValid() &&
         this.catalogMatchesSelection()
@@ -410,11 +410,10 @@ export class UxInspectorFacade {
 
   private buildRequest(): UxInspectorJobStartRequest | null {
     const capture = this.ingress.snapshot();
-    const revision = this.sourceRevision()?.revision;
-    if (!capture || !revision || !this.catalogMatchesSelection()) return null;
+    if (!capture || !this.catalogMatchesSelection()) return null;
     return {
       systemId: this.selectedSystemId(), branch: this.branch(), viewId: this.selectedViewId(),
-      sourceRevision: revision, question: this.question().trim(), captureId: capture.captureId,
+      question: this.question().trim(), captureId: capture.captureId,
       model: this.selectedModel(), reasoningEffort: this.selectedReasoningEffort()
     };
   }
@@ -508,7 +507,7 @@ function hasActiveChat(snapshot: UxInspectorJobStateSnapshot): boolean {
 function isUxInspectorExport(value: unknown): value is UxInspectorExportEnvelope {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const envelope = value as Partial<UxInspectorExportEnvelope>;
-  const contractSupported = envelope.version === 3 && envelope.payload?.resultContract === 'ux-inspector-result-v3';
+  const contractSupported = envelope.version === 1 && envelope.payload?.resultContract === 'ux-inspector-result-v1';
   return envelope.schema === 'tdw.ux-inspector-export' && contractSupported &&
     envelope.payload?.type === 'ux-inspector-analysis' &&
     Boolean(envelope.payload.job);

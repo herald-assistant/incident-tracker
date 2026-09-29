@@ -32,7 +32,8 @@ describe('UiExplorerScreenCatalogComponent', () => {
     screenCatalog: signal({
       systemId: 'crm-agent-portal',
       systemLabel: 'Synthetic CRM Agent Portal',
-      sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+      dataCollectedAt: '2026-08-15T10:30:00Z',
+      sourceRevision: { branch: 'main' },
       status: 'READY',
       screens: [crmScreen],
       diagnostics: [],
@@ -71,6 +72,8 @@ describe('UiExplorerScreenCatalogComponent', () => {
       .toBe('/crm/contacts/:contactId/preferences');
     expect(control?.querySelector('small')?.textContent?.trim())
       .toBe('CrmContactPreferencesComponent');
+    expect(root.textContent).toContain('Data: 15.08.2026');
+    expect(root.textContent).not.toContain('crm-revision-a1b2c3');
 
     root.querySelector<HTMLButtonElement>('.ui-explorer-screen-select__control')?.click();
     fixture.detectChanges();

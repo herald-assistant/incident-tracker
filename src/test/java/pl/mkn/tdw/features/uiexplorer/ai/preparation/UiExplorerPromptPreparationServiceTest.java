@@ -58,7 +58,7 @@ class UiExplorerPromptPreparationServiceTest {
         assertThat(preparation.prompt())
                 .containsSubsequence(
                         "## 1. Analysis request and active sections",
-                        "## 2. Selected screen and source revision",
+                        "## 2. Selected screen and source branch",
                         "## 3. Effective route, component BFS and dependency map",
                         "## 4. Initial reachable source evidence and on-demand frontier",
                         "## 5. Coverage and targeted research queue",

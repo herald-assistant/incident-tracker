@@ -8,7 +8,6 @@ public final class UiExplorerCopilotToolContextKeys {
     public static final String RUN_KIND_INITIAL = "initial";
     public static final String RUN_KIND_FOLLOW_UP = "follow-up";
     public static final String SYSTEM_ID = "uiExplorerSystemId";
-    public static final String SOURCE_REVISION = "uiExplorerSourceRevision";
 
     private UiExplorerCopilotToolContextKeys() {
     }

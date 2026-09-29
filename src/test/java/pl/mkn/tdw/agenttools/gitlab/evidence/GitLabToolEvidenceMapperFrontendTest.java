@@ -31,7 +31,7 @@ class GitLabToolEvidenceMapperFrontendTest {
                 """
                         {
                           "sliceRef": "crm-contact-preferences",
-                          "sourceRevision": "crm-commit-abc123",
+                          "sourceBranch": "main",
                           "status": "RESOLVED",
                           "files": [{
                             "path": "apps/crm-agent/src/app/contact-preferences/crm-contact.routes.ts",

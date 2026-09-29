@@ -64,8 +64,8 @@ class FileSystemFrontendViewCatalogCacheTest {
     }
 
     private FrontendViewCatalog catalog(String branch, String revision) {
-        return new FrontendViewCatalog("crm-agent-portal", "CRM Agent Portal",
-                new FrontendViewCatalog.SourceRevision(branch, revision), FrontendViewCatalog.Status.READY,
+        return new FrontendViewCatalog("crm-agent-portal", "CRM Agent Portal", java.time.Instant.parse("2026-08-15T10:30:00Z"),
+                new FrontendViewCatalog.SourceRevision(branch), FrontendViewCatalog.Status.READY,
                 List.of(new FrontendViewCatalog.View("crm-contact-create", "Create contact", "/contacts/new",
                         "/contacts", List.of("crm-contact-create"), "RESOLVED", false,
                         List.of(), List.of(), List.of())),

@@ -77,7 +77,7 @@ public class UxInspectorImportService {
         }
         if (!Objects.equals(job.request().captureId(), job.request().capture().captureId())
                 || !Objects.equals(job.request().captureId(), job.result().captureId())
-                || !Objects.equals(job.request().sourceRevision(), job.sourceRevision().revision())
+                || !Objects.equals(job.request().branch(), job.sourceRevision().branch())
                 || !Objects.equals(job.sourceRevision(), job.result().sourceRevision())
                 || !Objects.equals(job.request().viewId(), job.result().view().viewId())
                 || !Objects.equals(job.report().sections().get(0).markdown(), job.result().answer())

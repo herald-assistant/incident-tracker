@@ -21,13 +21,13 @@ class UxInspectorInputOptionsControllerTest {
     @MockitoBean UxInspectorInputOptionsService service;
 
     @Test
-    void shouldExposeTrustedInputOptionsAndPinnedRevision() throws Exception {
+    void shouldExposeTrustedInputOptionsAndCatalogDate() throws Exception {
         when(service.inputOptions()).thenReturn(new UxInspectorInputOptionsResponse("ux-inspector",
                 List.of(new UxInspectorInputOptionsResponse.SystemOption(
                         "crm-agent-portal", "CRM Agent Portal", "Fikcyjny frontend CRM", "main")), List.of()));
         when(service.views("crm-agent-portal", "main", false)).thenReturn(new UxInspectorViewCatalogResponse(
-                "crm-agent-portal", "CRM Agent Portal",
-                new UxInspectorViewCatalogResponse.SourceRevision("main", "abc123crm"), "READY",
+                "crm-agent-portal", "CRM Agent Portal", java.time.Instant.parse("2026-08-15T10:30:00Z"),
+                new UxInspectorViewCatalogResponse.SourceRevision("main"), "READY",
                 List.of(new UxInspectorViewCatalogResponse.ViewOption(
                         "crm-contact-create", "Nowy kontakt", "/contacts/new",
                         List.of("crm-contact-create"), "RESOLVED", List.of())),
@@ -40,19 +40,20 @@ class UxInspectorInputOptionsControllerTest {
         mockMvc.perform(get("/api/ux-inspector/views")
                         .param("systemId", "crm-agent-portal").param("branch", "main"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sourceRevision.revision").value("abc123crm"))
+                .andExpect(jsonPath("$.sourceRevision.branch").value("main"))
+                .andExpect(jsonPath("$.dataCollectedAt").value("2026-08-15T10:30:00Z"))
                 .andExpect(jsonPath("$.views[0].viewId").value("crm-contact-create"))
                 .andExpect(jsonPath("$.views[0].componentSelectors[0]").value("crm-contact-create"));
 
         when(service.views("crm-agent-portal", "main", true)).thenReturn(new UxInspectorViewCatalogResponse(
-                "crm-agent-portal", "CRM Agent Portal",
-                new UxInspectorViewCatalogResponse.SourceRevision("main", "fresh456crm"), "READY",
+                "crm-agent-portal", "CRM Agent Portal", java.time.Instant.parse("2026-08-16T10:30:00Z"),
+                new UxInspectorViewCatalogResponse.SourceRevision("main"), "READY",
                 List.of(), List.of(), List.of()));
         mockMvc.perform(get("/api/ux-inspector/views")
                         .param("systemId", "crm-agent-portal").param("branch", "main")
                         .param("refresh", "true"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sourceRevision.revision").value("fresh456crm"));
+                .andExpect(jsonPath("$.dataCollectedAt").value("2026-08-16T10:30:00Z"));
     }
 
     @Test
@@ -61,8 +62,8 @@ class UxInspectorInputOptionsControllerTest {
                 "UX_INSPECTOR_FRONTEND_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
                 "Selected frontend is not registered for source analysis."));
         when(service.views("crm-agent-portal", "stale", false)).thenThrow(new UxInspectorContextException(
-                "UX_INSPECTOR_SOURCE_REVISION_CHANGED", UserFacingErrorType.CONFLICT,
-                "Source revision changed. Reload views and select the target again."));
+                "UX_INSPECTOR_SOURCE_REF_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
+                "Selected frontend branch or ref does not exist."));
 
         mockMvc.perform(get("/api/ux-inspector/views")
                         .param("systemId", "unknown-crm").param("branch", "main"))
@@ -70,7 +71,7 @@ class UxInspectorInputOptionsControllerTest {
                 .andExpect(jsonPath("$.code").value("UX_INSPECTOR_FRONTEND_NOT_FOUND"));
         mockMvc.perform(get("/api/ux-inspector/views")
                         .param("systemId", "crm-agent-portal").param("branch", "stale"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("UX_INSPECTOR_SOURCE_REVISION_CHANGED"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("UX_INSPECTOR_SOURCE_REF_NOT_FOUND"));
     }
 }

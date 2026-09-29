@@ -40,7 +40,6 @@ public class UiExplorerScreenReachabilityEvidenceMapper {
                         attribute("guards", String.join(", ", context.guards())),
                         attribute("routeParameters", String.join(", ", context.routeParameters())),
                         attribute("branch", context.sourceRevision().branch()),
-                        attribute("sourceRevision", context.sourceRevision().revision()),
                         attribute("reachabilityStatus", context.status())
                 )
         )));

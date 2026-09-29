@@ -54,9 +54,9 @@ class UiExplorerJobControllerTest {
                 .andExpect(jsonPath("$.request.systemId").value("crm-agent-portal"))
                 .andExpect(jsonPath("$.request.branch").value("main"))
                 .andExpect(jsonPath("$.request.screenId").value("crm-contact-preferences"))
-                .andExpect(jsonPath("$.request.sourceRevision").value("crm-commit-abc123"))
+                .andExpect(jsonPath("$.request.sourceRevision").doesNotExist())
                 .andExpect(jsonPath("$.status").value("QUEUED"))
-                .andExpect(jsonPath("$.sourceRevision.revision").value("crm-commit-abc123"))
+                .andExpect(jsonPath("$.sourceRevision.branch").value("main"))
                 .andExpect(jsonPath("$.outputAvailability.status").value("BLOCKED"))
                 .andExpect(jsonPath("$.preparedPrompt").doesNotExist())
                 .andExpect(jsonPath("$.result").doesNotExist())
@@ -67,7 +67,6 @@ class UiExplorerJobControllerTest {
                 "crm-agent-portal",
                 "main",
                 "crm-contact-preferences",
-                "crm-commit-abc123",
                 Map.of(
                         UiExplorerSectionId.OVERVIEW, UiExplorerSectionMode.DEEP,
                         UiExplorerSectionId.FORMS_AND_RULES, UiExplorerSectionMode.COMPACT
@@ -87,7 +86,6 @@ class UiExplorerJobControllerTest {
                                   "systemId": "crm-agent-portal",
                                   "branch": "main",
                                   "screenId": "crm-contact-preferences",
-                                  "sourceRevision": "crm-commit-abc123",
                                   "sectionModes": {
                                     "OVERVIEW": "OFF"
                                   }
@@ -106,7 +104,6 @@ class UiExplorerJobControllerTest {
                                   "systemId": "crm-agent-portal",
                                   "branch": "main",
                                   "screenId": "crm-contact-preferences",
-                                  "sourceRevision": "crm-commit-abc123",
                                   "sectionModes": {
                                     "LEGACY_FORM_SECTION": "DEEP"
                                   }
@@ -124,7 +121,6 @@ class UiExplorerJobControllerTest {
                                   "systemId": "crm-agent-portal",
                                   "branch": "main",
                                   "screenId": "crm-contact-preferences",
-                                  "sourceRevision": "crm-commit-abc123",
                                   "profile": "FUNCTIONAL_DOCUMENTATION",
                                   "sectionModes": {
                                     "OVERVIEW": "DEEP"
@@ -135,7 +131,9 @@ class UiExplorerJobControllerTest {
     }
 
     @Test
-    void shouldRequireCatalogSourceRevision() throws Exception {
+    void shouldAcceptWithoutCatalogSourceRevision() throws Exception {
+        when(uiExplorerJobService.startJob(any(UiExplorerJobStartRequest.class)))
+                .thenReturn(snapshot("crm-ui-job-123"));
         mockMvc.perform(post("/api/ui-explorer/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -146,8 +144,7 @@ class UiExplorerJobControllerTest {
                                   "sectionModes": { "OVERVIEW": "DEEP" }
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                .andExpect(status().isAccepted());
     }
 
     @Test
@@ -211,9 +208,9 @@ class UiExplorerJobControllerTest {
         mockMvc.perform(get("/api/ui-explorer/jobs/crm-ui-job-123/export"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schema").value("tdw.ui-explorer-export"))
-                .andExpect(jsonPath("$.version").value(6))
+                .andExpect(jsonPath("$.version").value(1))
                 .andExpect(jsonPath("$.payload.type").value("ui-explorer-analysis"))
-                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v6"));
+                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v1"));
     }
 
     @Test
@@ -235,7 +232,6 @@ class UiExplorerJobControllerTest {
                   "systemId": "crm-agent-portal",
                   "branch": "main",
                   "screenId": "crm-contact-preferences",
-                  "sourceRevision": "crm-commit-abc123",
                   "sectionModes": {
                     "OVERVIEW": "DEEP",
                     "FORMS_AND_RULES": "COMPACT"
@@ -262,7 +258,6 @@ class UiExplorerJobControllerTest {
                         "CRM Agent Portal",
                         "main",
                         "crm-contact-preferences",
-                        "crm-commit-abc123",
                         List.of(new UiExplorerSectionModeAssignment(
                                 UiExplorerSectionId.OVERVIEW,
                                 UiExplorerSectionMode.DEEP
@@ -288,7 +283,7 @@ class UiExplorerJobControllerTest {
                 null,
                 null,
                 null,
-                new UiExplorerSourceRevision("main", "crm-commit-abc123"),
+                new UiExplorerSourceRevision("main"),
                 availability,
                 false
         );

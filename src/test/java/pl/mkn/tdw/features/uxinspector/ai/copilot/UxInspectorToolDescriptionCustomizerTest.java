@@ -21,7 +21,7 @@ class UxInspectorToolDescriptionCustomizerTest {
         assertThat(description)
                 .contains("OpenAPI/Swagger")
                 .contains("instead of reading the contract with full-file or chunk tools")
-                .contains("pinned revision");
+                .contains("branch");
     }
 
     @Test

@@ -71,8 +71,10 @@ Nie obejmuje:
   neutralnym zestawem read-only dla projektow w glownej grupie GitLab.
   `projectName` i (dla odczytu tresci) `branchRef` sa jawne w schema, a grupa
   wynika z konfiguracji. Lista galezi pozwala ustalic ref drugiego projektu.
-  Hidden `GitLabRepositoryToolScope` przypina wybrany projekt do commita
-  operatora i kolejne projekty w tej grupie do osobnych commitow. Tree/list/search
+  Hidden `GitLabRepositoryToolScope` ma tryb pinned dla Operational Context
+  Assistance: przypina wybrany projekt do commita operatora i kolejne projekty
+  w tej grupie do osobnych commitow. Tryb branchowy UX Inspectora ogranicza
+  projekt i branch bez przypinania SHA. Tree/list/search
   zwracaja sciezki, nie `sourceRef`; pelny odczyt i odczyt fragmentu z
   przypietego commita rejestruja ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie
   wzorcow danych wrazliwych; pozostaja walidacja sciezki, rozmiaru i tekstu.
@@ -92,9 +94,9 @@ Nie obejmuje:
   slice nie ujawnia syntetycznych refow: przyjmuje naturalny `filePath` z
   `declaringTypeName` albo dokladne wspolrzedne importu widocznego w kodzie
   (`consumerFilePath`, `moduleSpecifier`, `importedSymbol`), opcjonalne
-  `memberNames` i `reason`. Group, project, path prefixes oraz source revision
+  `memberNames` i `reason`. Group, project, path prefixes oraz branch
   pochodza z hidden session context, a import jest rozwiazywany na zadanie z
-  przypietego commita. Tool nie wymaga przygotowanego katalogu targetow. Nie
+  wybranego brancha. Tool nie wymaga przygotowanego katalogu targetow. Nie
   przywracaj scope jako pol toola. Nie wystawiaj pelnego Screen
   Reachability jako MCP result, gdy zasila juz initial prompt.
 

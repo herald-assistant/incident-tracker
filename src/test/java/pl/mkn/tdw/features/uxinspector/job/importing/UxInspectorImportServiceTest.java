@@ -96,7 +96,7 @@ class UxInspectorImportServiceTest {
     }
 
     private pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStateSnapshot completedSnapshot() {
-        var request = new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var request = new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID,
                 "Jak dziala zapis kontaktu?", capture(), "gpt-crm", "medium");
         var state = new UxInspectorJobState("ux-crm-completed", request);
         state.tryStart();

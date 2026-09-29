@@ -54,7 +54,8 @@ class UiExplorerScreenCatalogServiceTest {
         var result = service.loadCatalog("crm-agent-portal", "release/2026.08");
 
         assertThat(result.systemId()).isEqualTo("crm-agent-portal");
-        assertThat(result.sourceRevision().revision()).isEqualTo("crm-ui-revision-20260815");
+        assertThat(result.sourceRevision().branch()).isEqualTo("release/2026.08");
+        assertThat(result.dataCollectedAt()).isNotNull();
         assertThat(result.status()).isEqualTo(UiExplorerScreenCatalogStatus.READY);
         assertThat(result.screens()).singleElement().satisfies(screen -> {
             assertThat(screen.screenId()).startsWith("screen-");
@@ -148,9 +149,11 @@ class UiExplorerScreenCatalogServiceTest {
         var first = service.loadCatalog("crm-agent-portal", "release/2026.08");
         var cached = service.loadCatalog("crm-agent-portal", "release/2026.08");
         service.loadCatalog("crm-agent-portal", "crm-review");
-        service.loadCatalog("crm-agent-portal", "release/2026.08", true);
+        var refreshed = service.loadCatalog("crm-agent-portal", "release/2026.08", true);
 
         assertThat(cached).isEqualTo(first);
+        assertThat(cached.dataCollectedAt()).isEqualTo(first.dataCollectedAt());
+        assertThat(refreshed.dataCollectedAt()).isAfterOrEqualTo(first.dataCollectedAt());
         verify(discovery, times(3)).discover(any(), any());
         assertThat(cache.evictions).isEqualTo(1);
         assertThat(cache.entries).hasSize(2);

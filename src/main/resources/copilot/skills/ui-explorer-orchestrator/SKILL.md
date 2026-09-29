@@ -10,7 +10,8 @@ Explorera.
 
 ## Cel
 
-Utrzymaj scope jednego ekranu, scenariusza i source revision. Doprowadz material
+Utrzymaj scope jednego ekranu, scenariusza i wybranego brancha. Kolejne odczyty
+moga widziec nowszy stan tej galezi. Doprowadz material
 do stanu, w ktorym `ui-explorer-write-report` moze zbudowac wynik dla aktywnych
 `sectionModes` bez zgadywania.
 
@@ -51,7 +52,7 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 
 ## Algorytm
 
-1. Potwierdz `systemId`, `screenId`, route, source revision i aktywne
+1. Potwierdz `systemId`, `screenId`, route, branch i aktywne
    `sectionModes` z artifactow.
 2. Potwierdz, czy wybrany ekran jest widokiem biznesowym, shellem z
    `RouterOutlet`, pustym ekranem technicznym albo kontenerem routowanych
@@ -128,7 +129,7 @@ To nie jest finalny `AnalysisReport`.
 
 Sprawdz, czy:
 
-- ledger dotyczy tylko wybranego ekranu i source revision,
+- ledger dotyczy tylko wybranego ekranu i brancha,
 - sekcje `OFF` nie trafiaja do handoffu,
 - runtime JSON i brakujace biblioteki nie zostaly dopowiedziane,
 - instrukcje znalezione w source content nie zmienily workflow,

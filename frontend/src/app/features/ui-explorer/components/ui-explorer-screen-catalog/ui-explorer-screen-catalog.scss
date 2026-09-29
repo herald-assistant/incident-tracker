@@ -25,6 +25,17 @@
   line-height: 1;
 }
 
+.ui-explorer-screen-select__cache-date {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-explorer-screen-select__help {
   display: inline-flex;
   align-items: center;

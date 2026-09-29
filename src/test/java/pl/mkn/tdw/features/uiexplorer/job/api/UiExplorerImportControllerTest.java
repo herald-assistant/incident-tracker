@@ -71,7 +71,6 @@ class UiExplorerImportControllerTest {
                         "CRM Agent Portal",
                         "main",
                         "crm-contact-preferences",
-                        "crm-commit-abc123",
                         List.of(),
                         "Document a strongly anonymized CRM scenario.",
                         "gpt-5.4",
@@ -94,7 +93,7 @@ class UiExplorerImportControllerTest {
                 null,
                 null,
                 null,
-                new UiExplorerSourceRevision("main", "crm-commit-abc123"),
+                new UiExplorerSourceRevision("main"),
                 new UiExplorerOutputAvailability(
                         UiExplorerOutputAvailabilityStatus.AVAILABLE,
                         "UI_EXPLORER_IMPORTED_OUTPUT_AVAILABLE",

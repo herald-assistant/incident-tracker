@@ -58,7 +58,7 @@ public class UxInspectorJobService {
         var captureSnapshot = captureSnapshots.get(request.captureId());
         var normalizedCapture = captureSnapshot.capture();
         var normalizedRequest = new UxInspectorAnalysisRequest(request.systemId(), request.branch(), request.viewId(),
-                request.sourceRevision(), request.question(), normalizedCapture, request.model(), request.reasoningEffort());
+                request.question(), normalizedCapture, request.model(), request.reasoningEffort());
         var id = UUID.randomUUID().toString();
         var claimedStore = captureSnapshots.runStoreSnapshot(captureSnapshot);
         var claimedFormFields = captureSnapshot.formFields();
@@ -97,7 +97,7 @@ public class UxInspectorJobService {
         persist(state);
         try {
             var context = targetResolver.resolve(request.systemId(), request.branch(), request.viewId(),
-                    request.sourceRevision(), request.capture());
+                    request.capture());
             targetContexts.put(id, context);
             state.targetResolved(context, evidenceMapper.map(context));
             persist(state);

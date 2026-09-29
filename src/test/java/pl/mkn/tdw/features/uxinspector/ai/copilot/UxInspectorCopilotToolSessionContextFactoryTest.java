@@ -14,7 +14,7 @@ import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.targetCont
 class UxInspectorCopilotToolSessionContextFactoryTest {
 
     @Test
-    void shouldPinRepositoryRevisionAndLimitReportToAnswerSection() {
+    void shouldBindRepositoryBranchAndLimitReportToAnswerSection() {
         var session = new UxInspectorCopilotToolSessionContextFactory().create("crm-run", targetContext());
         var hidden = session.hiddenContext();
 
@@ -22,13 +22,12 @@ class UxInspectorCopilotToolSessionContextFactoryTest {
         assertThat(hidden.get(UxInspectorCopilotContextKeys.SYSTEM_ID)).isEqualTo("crm-agent-portal");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_GROUP)).isEqualTo("CRM");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("main");
-        assertThat(hidden.get(GitLabFrontendToolContextKeys.SOURCE_REVISION)).isEqualTo(REVISION);
         assertThat(hidden.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)).isEqualTo(List.of("answer"));
         var repositoryScope = (GitLabRepositoryToolScope) hidden.get(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE);
         assertThat(repositoryScope.group()).isEqualTo("CRM");
         assertThat(repositoryScope.selectedProject()).isEqualTo("crm-ui");
         assertThat(repositoryScope.selectedBranch()).isEqualTo("main");
-        assertThat(repositoryScope.selectedCommit()).isEqualTo(REVISION);
+        assertThat(repositoryScope.selectedCommit()).isNull();
         assertThat(hidden).doesNotContainKeys(
                 AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES,
                 AgentToolContextKeys.TOOL_HARD_BUDGET

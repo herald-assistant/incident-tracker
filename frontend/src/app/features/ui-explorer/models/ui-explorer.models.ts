@@ -80,7 +80,6 @@ export interface UiExplorerInputOptionsResponse {
 
 export interface UiExplorerSourceRevision {
   branch: string;
-  revision: string;
 }
 
 export interface UiExplorerScreenCatalogEntry {
@@ -120,6 +119,7 @@ export interface UiExplorerScreenCatalogBoundary {
 export interface UiExplorerScreenCatalogResponse {
   systemId: string;
   systemLabel: string;
+  dataCollectedAt: string;
   sourceRevision: UiExplorerSourceRevision;
   status: UiExplorerScreenCatalogStatus;
   screens: UiExplorerScreenCatalogEntry[];
@@ -132,7 +132,6 @@ export interface UiExplorerConfigurationSnapshot {
   systemId: string;
   branch: string;
   screenId: string;
-  sourceRevision: string;
   sectionModes: Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>;
   scenarioDescription: string;
   model: string;
@@ -143,7 +142,6 @@ export interface UiExplorerJobStartRequest {
   systemId: string;
   branch: string;
   screenId: string;
-  sourceRevision: string;
   sectionModes: Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>;
   scenarioDescription?: string;
   model?: string;
@@ -155,7 +153,6 @@ export interface UiExplorerJobRequestSnapshot {
   systemLabel: string;
   branch: string;
   screenId: string;
-  sourceRevision: string;
   sectionModes: UiExplorerSectionModeAssignment[];
   scenarioDescription: string | null;
   aiModel: string | null;
@@ -245,11 +242,11 @@ export interface UiExplorerJobStateSnapshot {
 
 export interface UiExplorerExportEnvelope {
   schema: 'tdw.ui-explorer-export';
-  version: 5 | 6;
+  version: 1;
   exportedAt: string;
   payload: {
     type: 'ui-explorer-analysis';
-    resultContract: 'ui-explorer-result-v5' | 'ui-explorer-result-v6';
+    resultContract: 'ui-explorer-result-v1';
     job: UiExplorerJobStateSnapshot;
   };
 }

@@ -1,10 +1,12 @@
 package pl.mkn.tdw.frontendcatalog;
 
 import java.util.List;
+import java.time.Instant;
 
 public record FrontendViewCatalog(
         String systemId,
         String systemLabel,
+        Instant dataCollectedAt,
         SourceRevision sourceRevision,
         Status status,
         List<View> views,
@@ -19,7 +21,7 @@ public record FrontendViewCatalog(
     }
 
     public enum Status { READY, PARTIAL, BLOCKED }
-    public record SourceRevision(String branch, String revision) {}
+    public record SourceRevision(String branch) {}
     public record View(String viewId, String label, String routePattern, String parentRoutePattern,
                        List<String> componentSelectors, String status,
                        boolean lazyLoaded, List<String> guards, List<String> routeParameters, List<String> limitations) {

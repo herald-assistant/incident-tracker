@@ -28,7 +28,7 @@ class UxInspectorPromptAndSkillsTest {
                 capture.capturedAt(), UxInspectorCapture.CaptureProfile.FORM_DIAGNOSTICS, capture.page(),
                 capture.target(), capture.ancestors(), capture.traversal(), capture.signals(), capture.limits(), capture.client());
         var request = new UxInspectorAnalysisRequest(base.systemId(), base.branch(), base.viewId(),
-                base.sourceRevision(), base.question(), formCapture, base.model(), base.reasoningEffort());
+                base.question(), formCapture, base.model(), base.reasoningEffort());
         var fields = new ObjectMapper().createArrayNode();
         fields.addObject().put("label", "CRM contact").put("value", "CRM value");
         var snapshot = new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", fields, 0, null);
@@ -92,7 +92,6 @@ class UxInspectorPromptAndSkillsTest {
         when(repositoryTreeArtifactService.prepare(any())).thenReturn(new UxInspectorRepositoryTreeArtifact("""
                 repository: CRM/crm-ui
                 branch: main
-                commit: %s
                 depth: 4
                 content: PATH_NAMES_ONLY
                 complete: true
@@ -102,14 +101,14 @@ class UxInspectorPromptAndSkillsTest {
                 │   └── copilot-instructions.md
                 ├── src/
                 └── README.md
-                """.formatted(REVISION), java.util.List.of(
+                """, java.util.List.of(
                 ".github/copilot-instructions.md", ".github/skills/crm-architecture/SKILL.md", "README.md")));
         when(repositoryGuidanceArtifactService.render(any(), any())).thenReturn("""
                 {
                   "schema" : "tdw.ux-inspector-repository-guidance",
                   "version" : 1,
                   "repository" : "CRM/crm-ui",
-                  "commit" : "%s",
+                  "branch" : "main",
                   "copilotInstructions" : {
                     "path" : ".github/copilot-instructions.md",
                     "present" : true,
@@ -121,7 +120,7 @@ class UxInspectorPromptAndSkillsTest {
                     "description" : "Explains cross-cutting CRM architecture."
                   } ]
                 }
-                """.formatted(REVISION));
+                """);
         when(componentSourcePackArtifactService.prepare(any(), any())).thenReturn(
                 new UxInspectorComponentSourcePackArtifact("""
                         schema: tdw.ux-inspector-component-source-pack
@@ -165,7 +164,7 @@ class UxInspectorPromptAndSkillsTest {
         var preparation = service.prepare(request("Dlaczego przycisk jest zablokowany?"), targetContext());
 
         assertThat(preparation.prompt())
-                .contains("UNTRUSTED_RUNTIME_OBSERVATION", "UNTRUSTED_SOURCE_EVIDENCE", "pinnedCommit")
+                .contains("UNTRUSTED_RUNTIME_OBSERVATION", "UNTRUSTED_SOURCE_EVIDENCE", "sourceToolScope")
                 .contains("czy pytanie jest precyzyjne, czy ogolne")
                 .contains("Dla pytania precyzyjnego", "Dla pytania ogolnego")
                 .contains("gitlab_list_repository_tree", "gitlab_list_repository_files",
@@ -174,8 +173,7 @@ class UxInspectorPromptAndSkillsTest {
                         "gitlab_read_frontend_typescript_symbol_slice")
                 .contains("nie uzywa syntetycznych refow", "`filePath` + `declaringTypeName`",
                         "`consumerFilePath`, `moduleSpecifier` i `importedSymbol`", "`memberNames`")
-                .contains("sourceToolScope", "projectName: crm-ui", "branchRef: main",
-                        "pinnedCommit: " + REVISION)
+                .contains("sourceToolScope", "projectName: crm-ui", "branchRef: main")
                 .contains("DETERMINISTIC_SOURCE_BINDING", "sourceReference", "Selector jest tylko sygnalem lokalizacji")
                 .contains("tdw.ux-inspector-component-source-pack", "STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY",
                         "SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES", "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH",
@@ -236,7 +234,7 @@ class UxInspectorPromptAndSkillsTest {
     }
 
     private UxInspectorAnalysisRequest request(String question) {
-        return new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
+        return new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID,
                 question, capture(), "gpt-crm", "medium");
     }
 }

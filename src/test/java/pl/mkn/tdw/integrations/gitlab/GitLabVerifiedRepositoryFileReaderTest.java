@@ -28,6 +28,33 @@ class GitLabVerifiedRepositoryFileReaderTest {
     }
 
     @Test
+    void acceptsCompleteFileFromBranchWhenMetadataReportsItsCurrentCommit() {
+        var content = "CRM customer list";
+        when(port.readFileMetadata("CRM", "lib", "main", "README.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "lib", "main", "README.md",
+                        null, COMMIT, null, null, null, (long) content.length()));
+        when(port.readFileBounded("CRM", "lib", "main", "README.md", 1024))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "lib", "main", "README.md", content, false));
+
+        assertThat(GitLabVerifiedRepositoryFileReader.readBranch(
+                port, "CRM", "lib", "main", "README.md", 1024).content()).isEqualTo(content);
+    }
+
+    @Test
+    void acceptsBranchNamedLikeShaWithoutTreatingItAsPinnedCommit() {
+        var branch = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        var content = "CRM customer list";
+        when(port.readFileMetadata("CRM", "lib", branch, "README.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "lib", branch, "README.md",
+                        null, COMMIT, null, null, null, (long) content.length()));
+        when(port.readFileBounded("CRM", "lib", branch, "README.md", 1024))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "lib", branch, "README.md", content, false));
+
+        assertThat(GitLabVerifiedRepositoryFileReader.readBranch(
+                port, "CRM", "lib", branch, "README.md", 1024).content()).isEqualTo(content);
+    }
+
+    @Test
     void completeReadAcceptsLargeFileAndVerifiesItsMetadata() {
         var content = "CRM customer lookup\n".repeat(20_000);
         when(port.readFileMetadata("CRM", "lib", COMMIT, "README.md"))

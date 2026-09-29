@@ -30,14 +30,14 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Builds a best-effort, pinned source pack for selected target-to-view paths
+ * Builds a best-effort, branch-scoped source pack for selected target-to-view paths
  * and every discovered component whose selector matches a runtime boundary.
  */
 @Service
 @RequiredArgsConstructor
 public class UxInspectorComponentSourcePackArtifactService {
     static final String SCHEMA = "tdw.ux-inspector-component-source-pack";
-    static final int VERSION = 3;
+    static final int VERSION = 1;
     private static final int MAX_INHERITED_SLICE_CHARACTERS = 12_000;
     private static final Pattern ELEMENT_SELECTOR_PREFIX = Pattern.compile("^([A-Za-z][A-Za-z0-9_.:-]*)");
     private static final String INHERITED_SLICE_BOUNDARY_MARKER =
@@ -255,24 +255,24 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (!GitLabRepositoryPath.isSafePath(path, false)) {
             return PackFile.unavailable(path, "UNSAFE_OR_INVALID_PATH");
         }
-        if (context == null || context.sourceScope() == null || context.sourceRevision() == null
+        if (context == null || context.sourceScope() == null
                 || !StringUtils.hasText(context.sourceScope().group())
                 || !StringUtils.hasText(context.sourceScope().projectName())
-                || !StringUtils.hasText(context.sourceRevision().revision())) {
-            return PackFile.unavailable(path, "PINNED_REPOSITORY_SCOPE_UNAVAILABLE");
+                || !StringUtils.hasText(context.sourceScope().ref())) {
+            return PackFile.unavailable(path, "REPOSITORY_BRANCH_SCOPE_UNAVAILABLE");
         }
         try {
-            var file = verifiedFileReader.read(
+            var file = verifiedFileReader.readBranch(
                     repositoryPort,
                     context.sourceScope().group(),
                     context.sourceScope().projectName(),
-                    context.sourceRevision().revision(),
+                    context.sourceScope().ref(),
                     path,
                     GitLabVerifiedRepositoryFilePort.MAX_FILE_BYTES
             );
             return PackFile.available(file.path(), file.content(), file.sizeBytes());
         } catch (RuntimeException exception) {
-            return PackFile.unavailable(path, "VERIFIED_PINNED_READ_FAILED");
+            return PackFile.unavailable(path, "VERIFIED_BRANCH_READ_FAILED");
         }
     }
 
@@ -301,8 +301,8 @@ public class UxInspectorComponentSourcePackArtifactService {
         builder.append("uniqueFileCount: ").append(files.size()).append('\n');
         builder.append("availableFileCount: ").append(available).append('\n');
         builder.append("unavailableFileCount: ").append(files.size() - available).append('\n');
-        if (context != null && context.sourceRevision() != null) {
-            builder.append("pinnedCommit: ").append(context.sourceRevision().revision()).append('\n');
+        if (context != null && context.sourceScope() != null) {
+            builder.append("branchRef: ").append(context.sourceScope().ref()).append('\n');
         }
         var complete = !focusedComponents.isEmpty() && !selection.paths().isEmpty()
                 && selection.paths().stream().allMatch(SelectedPath::complete)

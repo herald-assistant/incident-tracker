@@ -40,13 +40,11 @@ public class UiExplorerCopilotToolSessionContextFactory {
                 AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN
         );
         hidden.put(UiExplorerCopilotToolContextKeys.SYSTEM_ID, context.systemId());
-        hidden.put(UiExplorerCopilotToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(AgentToolContextKeys.GITLAB_GROUP, scope.gitLabGroup());
         hidden.put(AgentToolContextKeys.GITLAB_BRANCH, scope.ref());
         hidden.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, List.of(context.systemId()));
         hidden.put(GitLabFrontendToolContextKeys.PROJECT_NAME, scope.projectName());
         hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, scope.pathPrefixes());
-        hidden.put(GitLabFrontendToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.screen().screenId());
         return new CopilotToolSessionContext(runId, SESSION_PREFIX + runId, hidden);
     }
@@ -83,13 +81,11 @@ public class UiExplorerCopilotToolSessionContextFactory {
         }
         hidden.put(AgentToolContextKeys.TOOL_BUDGET_POLICY, AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
         hidden.put(UiExplorerCopilotToolContextKeys.SYSTEM_ID, context.systemId());
-        hidden.put(UiExplorerCopilotToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(AgentToolContextKeys.GITLAB_GROUP, scope.gitLabGroup());
-        hidden.put(AgentToolContextKeys.GITLAB_BRANCH, context.sourceRevision().revision());
+        hidden.put(AgentToolContextKeys.GITLAB_BRANCH, scope.ref());
         hidden.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, List.of(context.systemId()));
         hidden.put(GitLabFrontendToolContextKeys.PROJECT_NAME, scope.projectName());
         hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, scope.pathPrefixes());
-        hidden.put(GitLabFrontendToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.screen().screenId());
         return new CopilotToolSessionContext(runId, copilotSessionId.trim(), hidden);
     }

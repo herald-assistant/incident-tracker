@@ -64,7 +64,7 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(record.continuation().enabled()).isTrue();
         assertThat(record.continuation().copilotSessionId()).isEqualTo("crm-ui-copilot-session");
         var restored = continuationStore.findById(completed.jobId()).orElseThrow();
-        assertThat(restored.toContext().sourceRevision().revision()).isEqualTo("crm-commit-abc123");
+        assertThat(restored.toContext().sourceRevision().branch()).isEqualTo("main");
         assertThat(restored.toContext().sourceScope().projectName()).isEqualTo("crm-agent-portal");
         assertThat(restored.fingerprint()).hasSize(64);
         assertThat(restored.matches(completed)).isTrue();
@@ -92,11 +92,11 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(record.continuation().copilotSessionId()).isNull();
         var envelope = record.exportEnvelope();
         assertThat(envelope.path("schema").asText()).isEqualTo("tdw.ui-explorer-local-run");
-        assertThat(envelope.path("version").asInt()).isEqualTo(6);
+        assertThat(envelope.path("version").asInt()).isEqualTo(1);
         assertThat(envelope.at("/payload/type").asText()).isEqualTo("ui-explorer-analysis");
-        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v6");
-        assertThat(envelope.at("/payload/job/sourceRevision/revision").asText())
-                .isEqualTo("crm-commit-abc123");
+        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v1");
+        assertThat(envelope.at("/payload/job/sourceRevision/branch").asText())
+                .isEqualTo("main");
         assertThat(envelope.at("/payload/job/result/sections/0/sourceReferences/0/repository").isNull()).isTrue();
         assertThat(envelope.at("/payload/job/report/meta/references/0/target").asText())
                 .isEqualTo(SOURCE_PATH + "#L10-L18");

@@ -68,7 +68,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 "src/app/app.routes.ts");
         assertThat(artifact.markdown())
                 .contains("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY")
-                .contains("version: 3", "scope: SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES")
+                .contains("version: 1", "scope: SELECTED_TARGET_TO_VIEW_PATHS_AND_RUNTIME_SELECTOR_MATCHES")
                 .contains("graphComponentCount: 3", "focusedComponentCount: 2", "omittedGraphComponentCount: 1")
                 .contains("fullSourceStrategy: RESOLVED_PATH_AND_RUNTIME_SELECTOR_MATCHES")
                 .contains("targetToView=contact-editor -> contact-create")
@@ -87,8 +87,8 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .contains("status: AVAILABLE", "complete: true");
         assertThat(artifact.markdown().indexOf("| 1 | contact-create |"))
                 .isLessThan(artifact.markdown().indexOf("| 2 | contact-editor |"));
-        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.sourcePath());
-        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.templatePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", "main", sibling.sourcePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", "main", sibling.templatePath());
     }
 
     @Test
@@ -118,7 +118,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .contains("contact-create --TEMPLATE_CHILD--> contact-panel")
                 .contains("BEGIN_UNTRUSTED_COMPONENT_FILE " + runtimeMatch.sourcePath())
                 .doesNotContain(unrelated.sourcePath());
-        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, unrelated.sourcePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", "main", unrelated.sourcePath());
     }
 
     @Test
@@ -162,7 +162,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .doesNotContain(transitiveBase.symbol(), alternativeBase.symbol(), transitiveBase.sliceContent(),
                         alternativeBase.sliceContent());
         verify(repositoryPort, never()).readFileMetadata(
-                "CRM", "crm-ui", REVISION, directBase.sourcePath());
+                "CRM", "crm-ui", "main", directBase.sourcePath());
     }
 
     @Test
@@ -192,7 +192,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .contains("baseSymbol: " + base.symbol(), "sourcePath: " + base.sourcePath())
                 .contains(base.sliceContent())
                 .doesNotContain("BEGIN_UNTRUSTED_COMPONENT_FILE " + base.sourcePath());
-        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, base.sourcePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", "main", base.sourcePath());
     }
 
     @Test
@@ -225,7 +225,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .contains("// ... direct inherited slice bounded by UX Inspector ...")
                 .doesNotContain(oversizedSlice);
         verify(repositoryPort, never()).readFileMetadata(
-                "CRM", "crm-ui", REVISION, directBase.sourcePath());
+                "CRM", "crm-ui", "main", directBase.sourcePath());
     }
 
     @Test
@@ -345,7 +345,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .contains("targetToView=contact-editor -> contact-create")
                 .contains("targetToView=contact-owner -> contact-create")
                 .doesNotContain(unrelated.componentId(), unrelated.sourcePath(), "INDEX_ONLY");
-        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, unrelated.sourcePath());
+        verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", "main", unrelated.sourcePath());
     }
 
     @Test
@@ -413,7 +413,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     }
 
     @Test
-    void shouldKeepThePackUsableAndMarkEveryMissingPinnedFileWithoutBlockingPreparation() {
+    void shouldKeepThePackUsableAndMarkEveryMissingBranchFileWithoutBlockingPreparation() {
         var artifact = service.prepare(targetContext(), capture());
 
         assertThat(artifact.graphComponentCount()).isEqualTo(1);
@@ -425,7 +425,7 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
         assertThat(artifact.markdown())
                 .contains("complete: false")
                 .contains("status: UNAVAILABLE")
-                .contains("reason: VERIFIED_PINNED_READ_FAILED")
+                .contains("reason: VERIFIED_BRANCH_READ_FAILED")
                 .contains("tag=crm-contact-form status=NOT_FOUND_IN_STATIC_GRAPH");
     }
 
@@ -535,22 +535,22 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     }
 
     private void stubFiles(Map<String, String> contents) {
-        when(repositoryPort.readFileMetadata(eq("CRM"), eq("crm-ui"), eq(REVISION), anyString()))
+        when(repositoryPort.readFileMetadata(eq("CRM"), eq("crm-ui"), eq("main"), anyString()))
                 .thenAnswer(invocation -> {
                     var path = invocation.getArgument(3, String.class);
                     var content = contents.get(path);
                     if (content == null) return null;
                     var size = (long) content.getBytes(StandardCharsets.UTF_8).length;
                     return new GitLabRepositoryFileMetadata(
-                            "CRM", "crm-ui", REVISION, path, "blob-" + path, REVISION, REVISION,
+                            "CRM", "crm-ui", "main", path, "blob-" + path, REVISION, REVISION,
                             null, null, size);
                 });
-        when(repositoryPort.readFileBounded(eq("CRM"), eq("crm-ui"), eq(REVISION), anyString(), anyInt()))
+        when(repositoryPort.readFileBounded(eq("CRM"), eq("crm-ui"), eq("main"), anyString(), anyInt()))
                 .thenAnswer(invocation -> {
                     var path = invocation.getArgument(3, String.class);
                     var content = contents.get(path);
                     return content == null ? null : new GitLabRepositoryFileContent(
-                            "CRM", "crm-ui", REVISION, path, content, false);
+                            "CRM", "crm-ui", "main", path, content, false);
                 });
     }
 }

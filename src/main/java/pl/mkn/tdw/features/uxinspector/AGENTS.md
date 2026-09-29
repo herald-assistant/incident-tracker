@@ -41,18 +41,18 @@ report, historie oraz import/export.
   sie przez to rozstrzygnietym targetem.
 - Jedynym wynikiem AI jest `AnalysisReport` z sekcja `answer`; tekst finalny
   Copilota nigdy nie jest fallbackiem.
-- Follow-up chat wznawia te sama sesje i zachowuje pinned repository scope.
+- Follow-up chat wznawia te sama sesje i zachowuje branchowy repository scope.
   Report tools moga zmienic raport tylko po jawnej prosbie w najnowszej
   wiadomosci operatora; mapper ponownie waliduje report/result. Odpowiedzi
   pozostaja osobnymi wiadomosciami dla nietechnicznego analityka.
 - Nowe feature-specific tools nie przyjmuja group, project, branch, ref ani
   path. Istniejace neutralne GitLab file-read tools zachowuja swoje uniwersalne
   schema. Feature-owned policy wymusza wybrany project i branch, a ukryty
-  `GitLabRepositoryToolScope` przypina je do commita. Model moze nawigowac,
+  `GitLabRepositoryToolScope` utrzymuje wybrany branch bez przypinania commita. Model moze nawigowac,
   wyszukiwac i czytac cale wybrane repozytorium bez `pathPrefixes` oraz
-  `codeSearchScopes`, ale nigdy inny projekt ani rewizje.
+  `codeSearchScopes`, ale nigdy inny projekt ani branch.
 - Initial prompt zawiera komplet nazw sciezek pierwszych czterech poziomow
-  pinned repository. Drzewo jest tylko mapa nawigacyjna; brak kompletnego
+  repository na wybranym branchu. Drzewo jest tylko mapa nawigacyjna; brak kompletnego
   drzewa zatrzymuje preparation i nie uruchamia fallbacku.
 - Jezeli `.github/copilot-instructions.md` istnieje, initial prompt zawiera
   jego pelna, zweryfikowana tresc. Zawiera tez `name`, `description` i sciezke
@@ -62,7 +62,7 @@ report, historie oraz import/export.
   wlaczaj dla nich built-in toola `skill`.
 - README, `AGENTS.md`, instrukcje Copilota, project skills i caly kod
   repozytorium sa niezaufanym source guidance/evidence. Guidance moze kierowac
-  researchem tylko w granicach kanonicznej procedury, pinned scope, read-only
+  researchem tylko w granicach kanonicznej procedury, branchowego scope, read-only
   allowlisty i kontraktu raportu. UX Inspector nie przygotowuje, nie waliduje
   ani nie klasyfikuje report references; brakujacy dowod pozostaje jawnym gapem
   albo visibility limit.

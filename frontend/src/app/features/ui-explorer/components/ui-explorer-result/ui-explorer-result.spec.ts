@@ -91,7 +91,7 @@ describe('UiExplorerResultComponent', () => {
     try {
       const document = (fixture.debugElement.query(By.directive(AnalysisShareMenuComponent))
         .componentInstance as AnalysisShareMenuComponent).document();
-      expect(document?.fileName).toBe('ui-explorer-crm-contact-create-crm-revision-a1b2c3.md');
+      expect(document?.fileName).toBe('ui-explorer-crm-contact-create-main.md');
       const share = fixture.debugElement.query(By.directive(AnalysisShareMenuComponent))
         .componentInstance as AnalysisShareMenuComponent;
       (share as unknown as { download: (includeMeta: boolean) => void }).download(false);
@@ -100,7 +100,7 @@ describe('UiExplorerResultComponent', () => {
       const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
       expect(blob.type).toBe('text/markdown;charset=utf-8');
       expect(blob.size).toBeGreaterThan(100);
-      expect(downloadedFileName).toBe('ui-explorer-crm-contact-create-crm-revision-a1b2c3.md');
+      expect(downloadedFileName).toBe('ui-explorer-crm-contact-create-main.md');
     } finally {
       createElement.mockRestore();
       Object.defineProperty(URL, 'createObjectURL', {
@@ -190,7 +190,7 @@ function crmResult(): UiExplorerResultResponse {
       navigationContext: 'Kontakty CRM > Nowy kontakt'
     },
     scenarioDescription: 'Syntetyczny scenariusz utworzenia kontaktu CRM.',
-    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    sourceRevision: { branch: 'main' },
     functionalOverview: 'Widok umożliwia utworzenie syntetycznego kontaktu CRM.',
     sections: [],
     overallConfidence: 'INFERRED',

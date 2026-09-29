@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
-/** Session-bound group boundary and immutable revisions for GitLab repository tools. */
+/** Session-bound group boundary with either a pinned commit or a moving branch ref. */
 public final class GitLabRepositoryToolScope {
 
     private static final Pattern PROJECT_PATH = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,511}");
@@ -17,6 +17,7 @@ public final class GitLabRepositoryToolScope {
     private final String selectedProject;
     private final String selectedBranch;
     private final String selectedCommit;
+    private final boolean branchScoped;
     private final ConcurrentHashMap<String, String> revisions = new ConcurrentHashMap<>();
     private final Set<String> readSourceRefs = ConcurrentHashMap.newKeySet();
 
@@ -30,7 +31,20 @@ public final class GitLabRepositoryToolScope {
             throw new IllegalArgumentException("Selected GitLab commit is invalid.");
         }
         this.selectedCommit = selectedCommit;
+        this.branchScoped = false;
         revisions.put(this.selectedProject + "@" + this.selectedBranch, selectedCommit);
+    }
+
+    private GitLabRepositoryToolScope(String group, String selectedProject, String selectedBranch) {
+        this.group = checkedPath(group, "group");
+        this.selectedProject = relativeProject(selectedProject);
+        this.selectedBranch = checkedBranch(selectedBranch);
+        this.selectedCommit = null;
+        this.branchScoped = true;
+    }
+
+    public static GitLabRepositoryToolScope forBranch(String group, String selectedProject, String selectedBranch) {
+        return new GitLabRepositoryToolScope(group, selectedProject, selectedBranch);
     }
 
     public String group() {
@@ -75,6 +89,12 @@ public final class GitLabRepositoryToolScope {
         if (selectedProject.equals(project) && !selectedBranch.equals(branch)) {
             throw new IllegalArgumentException("The selected GitLab project is pinned to the operator's branch.");
         }
+        if (branchScoped) {
+            if (!selectedProject.equals(project)) {
+                throw new IllegalArgumentException("The branch-scoped GitLab session is limited to its selected project.");
+            }
+            return new Target(group, project, branch, branch, false);
+        }
         var commit = revisions.computeIfAbsent(project + "@" + branch, ignored -> {
             var revision = port.resolveRevision(group, project, branch);
             if (revision == null || !group.equals(revision.group())
@@ -88,7 +108,7 @@ public final class GitLabRepositoryToolScope {
     }
 
     public String recordRead(Target target, String filePath) {
-        var sourceRef = "gitlab:" + target.projectPath() + "@" + target.commitId() + ":" + filePath;
+        var sourceRef = "gitlab:" + target.projectPath() + "@" + target.readRef() + ":" + filePath;
         readSourceRefs.add(sourceRef);
         return sourceRef;
     }
@@ -117,7 +137,15 @@ public final class GitLabRepositoryToolScope {
         return value;
     }
 
-    public record Target(String group, String projectName, String branch, String commitId) {
+    public record Target(String group, String projectName, String branch, String readRef, boolean pinned) {
+        public Target(String group, String projectName, String branch, String readRef) {
+            this(group, projectName, branch, readRef, true);
+        }
+
+        public String responseCommitId() {
+            return pinned ? readRef : null;
+        }
+
         public String projectPath() {
             return group + "/" + projectName;
         }

@@ -8,7 +8,6 @@ public record UxInspectorAnalysisRequest(
         String systemId,
         String branch,
         String viewId,
-        String sourceRevision,
         String question,
         UxInspectorCapture capture,
         String model,
