@@ -6,7 +6,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.uxinspector.ai.*;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
@@ -23,7 +23,7 @@ public class UxInspectorCopilotAnalysisProvider implements UxInspectorAnalysisPr
     private final UxInspectorReportMapper reportMapper;
 
     @Override
-    public UxInspectorAiAnalysis analyze(String runReference, UxInspectorJobStartRequest request,
+    public UxInspectorAiAnalysis analyze(String runReference, UxInspectorAnalysisRequest request,
                                          UxInspectorTargetContext context, UxInspectorPromptPreparation preparation,
                                          AnalysisAiAuthRef authRef, AnalysisAiToolEvidenceListener evidenceListener,
                                          AnalysisAiActivityListener activityListener) {

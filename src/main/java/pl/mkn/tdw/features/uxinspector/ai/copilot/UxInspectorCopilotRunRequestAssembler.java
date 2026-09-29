@@ -14,7 +14,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCon
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparation;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportFactory;
 import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
@@ -30,7 +30,7 @@ public class UxInspectorCopilotRunRequestAssembler {
     private final UxInspectorReportFactory reportFactory;
     private final RunStoreToolSetFactory storeToolSetFactory;
 
-    public UxInspectorCopilotRunAssembly assemble(String runReference, UxInspectorJobStartRequest request,
+    public UxInspectorCopilotRunAssembly assemble(String runReference, UxInspectorAnalysisRequest request,
                                                   UxInspectorTargetContext context,
                                                   UxInspectorPromptPreparation preparation,
                                                   AnalysisAiAuthRef authRef) {

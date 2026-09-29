@@ -36,17 +36,8 @@ describe('UxInspectorApiService', () => {
     expect(start.request.method).toBe('POST');
     expect(start.request.body).toBe(body);
 
-    const store = { captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com', state: { editable: false } };
-    service.uploadStoreSnapshot(store).subscribe();
-    const upload = http.expectOne('/api/ux-inspector/store-snapshots');
-    expect(upload.request.method).toBe('POST');
-    expect(upload.request.body).toBe(store);
-
-    const form = { captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com', fields: [] };
-    service.uploadFormFieldsSnapshot(form).subscribe();
-    const formUpload = http.expectOne('/api/ux-inspector/form-fields-snapshots');
-    expect(formUpload.request.method).toBe('POST');
-    expect(formUpload.request.body).toBe(form);
+    service.getCapture('cap/crm').subscribe();
+    expect(http.expectOne('/api/ux-inspector/captures/cap%2Fcrm').request.method).toBe('GET');
 
     service.getJob('job/crm').subscribe();
     expect(http.expectOne('/api/ux-inspector/jobs/job%2Fcrm').request.method).toBe('GET');

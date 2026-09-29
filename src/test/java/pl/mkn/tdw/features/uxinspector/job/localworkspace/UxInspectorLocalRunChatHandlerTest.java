@@ -3,19 +3,14 @@ package pl.mkn.tdw.features.uxinspector.job.localworkspace;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionStateAvailability;
 import pl.mkn.tdw.features.uxinspector.ai.*;
 import pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
 import pl.mkn.tdw.features.uxinspector.job.state.UxInspectorJobState;
 import pl.mkn.tdw.localworkspace.analysisruns.*;
 import pl.mkn.tdw.shared.ai.report.*;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
@@ -24,38 +19,31 @@ import static org.mockito.Mockito.mock;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.*;
 
 class UxInspectorLocalRunChatHandlerTest {
-    @TempDir Path temporaryDirectory;
-
     @Test
-    void shouldExposeACompatibleLegacyRunOnlyWhenItsDeterministicSessionExists() throws Exception {
+    void shouldRequireExplicitContinuationForCurrentRun() throws Exception {
         var mapper = JsonMapper.builder().findAndAddModules()
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
-        var properties = new CopilotSdkProperties();
-        properties.setCopilotHome(temporaryDirectory.resolve("copilot").toString());
-        var sessionId = "ux-inspector-ux-crm-legacy";
-        Files.createDirectories(temporaryDirectory.resolve("copilot/session-state").resolve(sessionId));
         var handler = new UxInspectorLocalRunChatHandler(mapper, mock(pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver.class),
                 mock(pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService.class),
                 mock(pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService.class),
                 new pl.mkn.tdw.features.uxinspector.job.UxInspectorFollowUpReportProjection(new pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper()),
                 mock(pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper.class),
-                mock(pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver.class),
-                new CopilotSessionStateAvailability(properties));
+                mock(pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver.class));
         var snapshot = completedSnapshot("ux-crm-legacy");
         var record = LocalAnalysisRunRecord.v1(mapper.valueToTree(new UxInspectorExportEnvelope(
-                        UxInspectorExportEnvelope.SCHEMA, UxInspectorExportEnvelope.LEGACY_VERSION, Instant.now(),
+                        UxInspectorExportEnvelope.SCHEMA, UxInspectorExportEnvelope.VERSION, Instant.now(),
                         new UxInspectorExportEnvelope.Payload(UxInspectorExportEnvelope.PAYLOAD_TYPE,
-                                UxInspectorExportEnvelope.LEGACY_RESULT_CONTRACT, snapshot))),
+                                UxInspectorExportEnvelope.RESULT_CONTRACT, snapshot))),
                 new LocalAnalysisRunContinuation(false, null, null, null, null, null, null));
         var entry = new LocalAnalysisRunIndexEntry("ux-crm-legacy", LocalAnalysisRunRecord.SCHEMA, 1,
                 "runs/ux-crm-legacy/run.json", "ux-inspector", "CRM target", "COMPLETED",
                 snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt());
 
-        assertThat(handler.canContinue(entry, record)).isTrue();
+        assertThat(handler.canContinue(entry, record)).isFalse();
     }
 
     private pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStateSnapshot completedSnapshot(String id) {
-        var state = new UxInspectorJobState(id, new UxInspectorJobStartRequest("crm-agent-portal", "main", VIEW_ID,
+        var state = new UxInspectorJobState(id, new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID,
                 REVISION, "Jak działa zapis?", capture(), "gpt-crm", "medium"));
         state.tryStart(); state.targetResolved(targetContext(), List.of()); state.preparationStarted();
         state.preparationCompleted("CRM prompt", 1); state.analysisStarted();

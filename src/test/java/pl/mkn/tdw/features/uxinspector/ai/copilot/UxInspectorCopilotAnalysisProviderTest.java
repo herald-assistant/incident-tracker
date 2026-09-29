@@ -12,7 +12,7 @@ import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparation;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
 import pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
@@ -54,7 +54,7 @@ class UxInspectorCopilotAnalysisProviderTest {
         var provider = new UxInspectorCopilotAnalysisProvider(
                 assembler, preparationService, executionGateway, reportMapper);
         var context = notFoundContext();
-        var request = new UxInspectorJobStartRequest(
+        var request = new UxInspectorAnalysisRequest(
                 "crm-agent-portal", "main", VIEW_ID, REVISION, "Wyjasnij ten element.",
                 capture(), "gpt-crm", "medium");
         var preparation = new UxInspectorPromptPreparation(

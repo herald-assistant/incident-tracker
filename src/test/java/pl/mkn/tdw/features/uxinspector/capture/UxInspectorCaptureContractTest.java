@@ -15,24 +15,24 @@ import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.capture;
 
 class UxInspectorCaptureContractTest {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-    private final UxInspectorCaptureNormalizer normalizer = new UxInspectorCaptureNormalizer(objectMapper);
+    private final UxInspectorCaptureNormalizer normalizer = new UxInspectorCaptureNormalizer();
 
     @Test
-    void shouldRejectUnknownNestedFieldsUnsupportedVersionAndPayloadBombsBeforeNormalization() throws Exception {
+    void shouldRejectUnknownNestedFieldsAndUnsupportedVersionWhileAcceptingLargeCapture() throws Exception {
         var node = objectMapper.valueToTree(capture());
         node.withObject("target").put("value", "FORM_VALUE_MUST_NOT_ENTER_CAPTURE");
         assertThrows(Exception.class, () -> objectMapper.treeToValue(node, UxInspectorCapture.class));
 
         ObjectNode unsupported = objectMapper.valueToTree(capture());
         unsupported.put("capturedAt", "2026-09-15T10:00:00Z");
-        unsupported.put("version", 3);
+        unsupported.put("version", 2);
         var unsupportedCapture = objectMapper.treeToValue(unsupported, UxInspectorCapture.class);
         assertThrows(IllegalArgumentException.class, () -> normalizer.normalize(unsupportedCapture));
 
         ObjectNode oversized = objectMapper.valueToTree(capture());
         oversized.put("capturedAt", "2026-09-15T10:00:00Z");
-        oversized.withObject("page").put("title", "x".repeat(UxInspectorCapture.MAX_BYTES));
-        assertThrows(Exception.class, () -> objectMapper.treeToValue(oversized, UxInspectorCapture.class));
+        oversized.withObject("page").put("title", "x".repeat(200_000));
+        assertDoesNotThrow(() -> normalizer.normalize(objectMapper.treeToValue(oversized, UxInspectorCapture.class)));
     }
 
     @Test
@@ -76,7 +76,7 @@ class UxInspectorCaptureContractTest {
         assertTrue(normalized.signals().redactions().contains("BACKEND_SENSITIVE_TEXT_REMOVED"));
         assertFalse(json.contains("FORM_VALUE_MUST_NOT_SURVIVE"));
         assertFalse(json.contains("stealSecret"));
-        assertTrue(json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= UxInspectorCapture.MAX_BYTES);
+        assertTrue(json.contains("crm-contact-form"));
     }
 
     @Test

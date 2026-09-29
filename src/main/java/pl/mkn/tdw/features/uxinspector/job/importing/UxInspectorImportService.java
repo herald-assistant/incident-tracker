@@ -66,7 +66,7 @@ public class UxInspectorImportService {
                 || job.report().sections().size() != 1 || !"answer".equals(job.report().sections().get(0).id())
                 || job.request().capture() == null
                 || job.request().capture().version() != UxInspectorCapture.VERSION) {
-            throw invalid("Only a completed UX Inspector export v2 or legacy v1 result with capture v2 can be imported.");
+            throw invalid("Only a completed UX Inspector export v3 result with capture v3 can be imported.");
         }
         try {
             if (!captureNormalizer.normalize(job.request().capture()).equals(job.request().capture())) {
@@ -75,7 +75,8 @@ public class UxInspectorImportService {
         } catch (IllegalArgumentException exception) {
             throw invalid("UX Inspector import contains an invalid capture.");
         }
-        if (!Objects.equals(job.request().capture().captureId(), job.result().captureId())
+        if (!Objects.equals(job.request().captureId(), job.request().capture().captureId())
+                || !Objects.equals(job.request().captureId(), job.result().captureId())
                 || !Objects.equals(job.request().sourceRevision(), job.sourceRevision().revision())
                 || !Objects.equals(job.sourceRevision(), job.result().sourceRevision())
                 || !Objects.equals(job.request().viewId(), job.result().view().viewId())

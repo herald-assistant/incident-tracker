@@ -5,13 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionStateAvailability;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.uxinspector.ai.chat.*;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.job.UxInspectorFollowUpReportProjection;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
@@ -41,7 +41,6 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
     private final UxInspectorFollowUpReportProjection reportProjection;
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
-    private final CopilotSessionStateAvailability sessionStateAvailability;
 
     @Override public String feature() { return FEATURE; }
 
@@ -82,7 +81,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
             if (continuation != null && continuation.enabled() && StringUtils.hasText(continuation.copilotSessionId())) {
                 return true;
             }
-            return sessionStateAvailability.exists(legacySessionId(indexEntry.analysisId()));
+            return false;
         } catch (RuntimeException exception) {
             return false;
         }
@@ -149,22 +148,16 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
                                                                 LocalAnalysisRunRecord record) {
         var value = record.continuation();
         if (value != null && value.enabled() && StringUtils.hasText(value.copilotSessionId())) return value;
-        var sessionId = legacySessionId(indexEntry.analysisId());
-        if (!sessionStateAvailability.exists(sessionId)) throw LocalAnalysisRunContinuationException.unavailable(
+        throw LocalAnalysisRunContinuationException.unavailable(
                 "The saved UX Inspector Copilot session is no longer available.");
-        return new LocalAnalysisRunContinuation(true, null, AnalysisAiAuthRef.MODE_LOCAL_TOKEN, null, sessionId,
-                LocalAnalysisRunContinuation.COPILOT_RUNTIME_GITHUB_COPILOT_SDK,
-                LocalAnalysisRunContinuation.CONTINUATION_MODE_COPILOT_SESSION);
     }
-
-    private String legacySessionId(String jobId) { return "ux-inspector-" + jobId; }
 
     private AnalysisAiAuthRef authRef(LocalAnalysisRunContinuation continuation) {
         return AnalysisAiAuthRef.localToken(null);
     }
 
-    private UxInspectorJobStartRequest toStartRequest(UxInspectorJobRequestSnapshot request) {
-        return new UxInspectorJobStartRequest(request.systemId(), request.branch(), request.viewId(),
+    private UxInspectorAnalysisRequest toStartRequest(UxInspectorJobRequestSnapshot request) {
+        return new UxInspectorAnalysisRequest(request.systemId(), request.branch(), request.viewId(),
                 request.sourceRevision(), request.question(), request.capture(), request.aiModel(), request.reasoningEffort());
     }
 

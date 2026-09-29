@@ -10,6 +10,7 @@ public record UxInspectorJobRequestSnapshot(
         String viewId,
         String sourceRevision,
         String question,
+        String captureId,
         UxInspectorCapture capture,
         String aiModel,
         String reasoningEffort,
@@ -17,4 +18,3 @@ public record UxInspectorJobRequestSnapshot(
         int targetCandidateCount
 ) {
 }
-

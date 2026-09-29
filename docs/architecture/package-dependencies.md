@@ -257,7 +257,8 @@ feature'ow, API, tools ani platformy AI. UI Explorer mapuje ten katalog na
 swoj publiczny kontrakt przez adapter, a UX Inspector korzysta z niego bez
 importowania UI Explorera.
 
-`features.uxinspector` posiada capture v1, target resolution, source binding,
+`features.uxinspector` posiada capture v3, pamieciowy snapshot i REST ingress,
+target resolution, source binding,
 kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek
 oraz jego neutralne formatowanie przez `common`,
 session-bound `uxi_*` target tools oraz policy dla neutralnych GitLab

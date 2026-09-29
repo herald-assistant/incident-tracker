@@ -29,7 +29,7 @@ class UxInspectorJobControllerTest {
     @MockitoBean UxInspectorExportService exportService;
 
     @Test
-    void shouldAcceptOnlyTypedCaptureV2WithRequiredAiSelection() throws Exception {
+    void shouldAcceptCaptureIdWithRequiredAiSelection() throws Exception {
         when(jobService.startJob(any())).thenReturn(null);
 
         mockMvc.perform(post("/api/ux-inspector/jobs").contentType("application/json")
@@ -38,7 +38,7 @@ class UxInspectorJobControllerTest {
 
         var request = ArgumentCaptor.forClass(UxInspectorJobStartRequest.class);
         verify(jobService).startJob(request.capture());
-        assertThat(request.getValue().capture().version()).isEqualTo(2);
+        assertThat(request.getValue().captureId()).isEqualTo(capture().captureId());
         assertThat(request.getValue().model()).isEqualTo("gpt-crm");
     }
 
@@ -77,7 +77,7 @@ class UxInspectorJobControllerTest {
         result.put("viewId", "crm-contact-create");
         result.put("sourceRevision", "abc123crm");
         result.put("question", "Dlaczego przycisk jest zablokowany?");
-        result.put("capture", objectMapper.convertValue(capture(), Map.class));
+        result.put("captureId", capture().captureId());
         result.put("model", "gpt-crm");
         result.put("reasoningEffort", "medium");
         return result;

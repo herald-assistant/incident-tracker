@@ -62,10 +62,11 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- `needs/ux-inspector-store-context.md` i
-  `plans/ux-inspector-store-context.md` opisuja wdrozony kontekst
-  zamrozonego store'a tylko dla UX Inspectora; plan jest zrealizowany.
-- UI Explorer oraz UX Inspector nie utrzymuja zakonczonych potrzeb i planow
+- [UX Inspector: jedno przekazanie obserwacji](needs/ux-inspector-capture-snapshot.md)
+  oraz [plan capture przez REST](plans/ux-inspector-capture-snapshot.md)
+  opisuja upload calej obserwacji z badanej strony, snapshot w
+  pamieci przed startem i zwijany podglad. Plan ma status `in-progress`.
+- UI Explorer oraz UX Inspector nie utrzymuja pozostalych zakonczonych potrzeb i planow
   jako archiwum. Ich aktualne kontrakty, runtime, follow-up chat, historia,
   import/export i granice bezpieczenstwa opisuja odpowiednio
   `architecture/ui-explorer-runtime-flow.md` oraz
@@ -109,7 +110,7 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
   opisuje katalog widokow, pinned source context, report-first Copilot flow,
   osiem sekcji wyniku, follow-up chat, historie i portability UI Explorera.
 - `architecture/ux-inspector-runtime-flow.md`
-  opisuje Browser Tools, capture v1, transport postMessage, target resolution,
+  opisuje Browser Tools, capture v3 przez jeden POST i odczyt po ID, target resolution,
   focused Copilot workflow, jednosekcyjny report, follow-up chat, job/history
   i security model.
 - `architecture/config-drift-viewer-runtime-flow.md`

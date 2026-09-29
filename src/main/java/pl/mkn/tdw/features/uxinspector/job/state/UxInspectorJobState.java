@@ -5,6 +5,7 @@ import pl.mkn.tdw.features.uxinspector.ai.UxInspectorAiAnalysisStatus;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorSourceRevision;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest;
@@ -27,7 +28,7 @@ public final class UxInspectorJobState {
     public static final String PREPARATION_STEP = "AI_PREPARATION";
     public static final String ANALYSIS_STEP = "AI_ANALYSIS";
     private final String jobId;
-    private final UxInspectorJobStartRequest request;
+    private final UxInspectorAnalysisRequest request;
     private final Instant createdAt = Instant.now();
     private final Map<String, MutableStep> steps = new LinkedHashMap<>();
     private boolean claimed;
@@ -53,7 +54,7 @@ public final class UxInspectorJobState {
     private String copilotSessionId;
     private final List<AnalysisChatMessageState> chatMessages = new ArrayList<>();
 
-    public UxInspectorJobState(String jobId, UxInspectorJobStartRequest request) {
+    public UxInspectorJobState(String jobId, UxInspectorAnalysisRequest request) {
         this.jobId = jobId;
         this.request = request;
         sourceRevision = new UxInspectorSourceRevision(request.branch(), request.sourceRevision());
@@ -156,7 +157,8 @@ public final class UxInspectorJobState {
                 && result != null && report != null;
         return new UxInspectorJobStateSnapshot(jobId,
                 new UxInspectorJobRequestSnapshot(request.systemId(), systemLabel != null ? systemLabel : request.systemId(),
-                        request.branch(), request.viewId(), request.sourceRevision(), request.question(), request.capture(),
+                        request.branch(), request.viewId(), request.sourceRevision(), request.question(),
+                        request.capture().captureId(), request.capture(),
                         request.model(), request.reasoningEffort(), resolutionStatus, candidateCount),
                 status, currentStepCode, currentStepLabel, errorCode, errorMessage, createdAt, updatedAt, completedAt,
                 steps.values().stream().map(MutableStep::snapshot).toList(), contextSections, toolEvidenceSections,
@@ -210,7 +212,7 @@ public final class UxInspectorJobState {
         assistantMessage(assistantId).fail(code, message); updatedAt = Instant.now();
     }
     public synchronized String copilotSessionId() { return copilotSessionId; }
-    public synchronized UxInspectorJobStartRequest initialRequest() { return request; }
+    public synchronized UxInspectorAnalysisRequest initialRequest() { return request; }
     public synchronized AnalysisReport currentReport() { return report; }
     public synchronized UxInspectorJobStateSnapshot editReport(AnalysisReportEditRequest edit,
             java.util.function.Function<AnalysisReport, pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping> projector) {

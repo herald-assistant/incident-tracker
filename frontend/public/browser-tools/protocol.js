@@ -3,9 +3,8 @@
 
   const GLOBAL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const PROTOCOL_VERSION = 1;
-  const CAPTURE_VERSION = 2;
+  const CAPTURE_VERSION = 3;
   const CAPTURE_SCHEMA = 'tdw.ux-inspector-capture';
-  const MAX_CAPTURE_BYTES = 128 * 1024;
   const PAGE_CONTEXT_SCHEMA = 'tdw.ui-explorer-page-context';
   const PAGE_CONTEXT_VERSION = 1;
   const MAX_PAGE_CONTEXT_BYTES = 4096;
@@ -732,10 +731,6 @@
     return `${prefix}${Date.now().toString(36)}${performance.now().toString(36).replace('.', '')}`;
   }
 
-  function createCaptureId() {
-    return createRandomToken('cap_');
-  }
-
   function createNonce() {
     return createRandomToken('n_');
   }
@@ -791,7 +786,6 @@
     const capture = {
       schema: CAPTURE_SCHEMA,
       version: CAPTURE_VERSION,
-      captureId: createCaptureId(),
       capturedAt: options?.capturedAt || new Date().toISOString(),
       captureProfile,
       page: {
@@ -977,21 +971,14 @@
     if (!isObject(input)) {
       return failure('Capture must be an object.');
     }
-    if (serializedSize(input) > MAX_CAPTURE_BYTES) {
-      return failure('Capture exceeds the 128 KiB limit.');
-    }
     if (!hasExactKeys(input, [
-      'schema', 'version', 'captureId', 'capturedAt', 'captureProfile', 'page', 'target',
+      'schema', 'version', 'capturedAt', 'captureProfile', 'page', 'target',
       'ancestors', 'traversal', 'signals', 'limits', 'client'
     ])) {
-      return failure('Capture fields do not match the v2 contract.');
+      return failure('Capture fields do not match the v3 contract.');
     }
     if (input.schema !== CAPTURE_SCHEMA || input.version !== CAPTURE_VERSION) {
       return failure('Unsupported capture schema or version.');
-    }
-    const captureId = boundedString(input.captureId, 96, false);
-    if (!captureId || !SAFE_CAPTURE_ID_PATTERN.test(captureId)) {
-      return failure('Invalid capture id.');
     }
     const capturedAt = boundedString(input.capturedAt, 64, false);
     if (!capturedAt || Number.isNaN(Date.parse(capturedAt))) {
@@ -1075,7 +1062,6 @@
     const normalized = {
       schema: CAPTURE_SCHEMA,
       version: CAPTURE_VERSION,
-      captureId,
       capturedAt: new Date(capturedAt).toISOString(),
       captureProfile: input.captureProfile,
       page: {
@@ -1105,9 +1091,6 @@
         featureId
       }
     };
-    if (serializedSize(normalized) > MAX_CAPTURE_BYTES) {
-      return failure('Normalized capture exceeds the 128 KiB limit.');
-    }
     return success(normalized);
   }
 
@@ -1123,7 +1106,7 @@
       !hasExactKeys(input, ['schema', 'version', 'featureId', 'tdwOrigin']) ||
       input.schema !== 'tdw.browser-tool-launcher' ||
       input.version !== 1 ||
-      !['browser-tools', 'ux-inspector'].includes(input.featureId)
+      input.featureId !== 'browser-tools'
     ) {
       return failure('Unsupported launcher configuration.');
     }
@@ -1143,18 +1126,7 @@
     if (!isObject(data) || data.protocolVersion !== PROTOCOL_VERSION || data.type !== type || data.nonce !== nonce) {
       return false;
     }
-    if (type === 'TDW_UX_INSPECTOR_CAPTURE') {
-      return hasExactKeys(data, ['type', 'protocolVersion', 'nonce', 'captureId', 'capture',
-        'storeStatus', 'storeChunks', 'formStatus', 'formChunks']);
-    }
     const shapes = {
-      TDW_UX_INSPECTOR_READY: ['type', 'protocolVersion', 'nonce'],
-      TDW_UX_INSPECTOR_RECEIVED: ['type', 'protocolVersion', 'nonce', 'captureId'],
-      TDW_UX_INSPECTOR_STORE_CHUNK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk'],
-      TDW_UX_INSPECTOR_STORE_ACK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index'],
-      TDW_UX_INSPECTOR_FORM_CHUNK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index', 'total', 'chunk'],
-      TDW_UX_INSPECTOR_FORM_ACK: ['type', 'protocolVersion', 'nonce', 'captureId', 'index'],
-      TDW_UX_INSPECTOR_ERROR: ['type', 'protocolVersion', 'nonce', 'code'],
       TDW_UI_EXPLORER_READY: ['type', 'protocolVersion', 'nonce'],
       TDW_UI_EXPLORER_CONTEXT: ['type', 'protocolVersion', 'nonce', 'contextId', 'context'],
       TDW_UI_EXPLORER_RECEIVED: ['type', 'protocolVersion', 'nonce', 'contextId'],
@@ -1180,7 +1152,6 @@
     PAGE_CONTEXT_VERSION,
     MAX_PAGE_CONTEXT_BYTES,
     CAPTURE_PROFILES: Object.freeze(['ELEMENT_CONTEXT', 'FORM_DIAGNOSTICS']),
-    MAX_CAPTURE_BYTES,
     normalizeText,
     isSafeIdentifier,
     normalizeOrigin,
@@ -1196,18 +1167,6 @@
     serializedSize,
     createNonce,
     createMessage,
-    isReadyMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_READY', nonce),
-    isReceivedMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_RECEIVED', nonce),
-    isStoreAckMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_STORE_ACK', nonce),
-    isFormAckMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_FORM_ACK', nonce),
-    isCaptureMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_CAPTURE', nonce),
-    isErrorMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_ERROR', nonce),
     isUiExplorerReadyMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UI_EXPLORER_READY', nonce),
     isUiExplorerReceivedMessage: (data, nonce) =>

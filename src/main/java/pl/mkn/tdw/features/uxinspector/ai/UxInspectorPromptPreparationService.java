@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshot;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot;
 
 import java.util.LinkedHashMap;
@@ -27,23 +27,23 @@ public class UxInspectorPromptPreparationService {
     private final UxInspectorRepositoryGuidanceArtifactService repositoryGuidanceArtifactService;
     private final UxInspectorComponentSourcePackArtifactService componentSourcePackArtifactService;
 
-    public UxInspectorPromptPreparation prepare(UxInspectorJobStartRequest request, UxInspectorTargetContext context) {
+    public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context) {
         return prepare(request, context, null, null, null);
     }
 
-    public UxInspectorPromptPreparation prepare(UxInspectorJobStartRequest request, UxInspectorTargetContext context,
+    public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context,
             LocalAnalysisRunStoreSnapshot storeSnapshot) {
         return prepare(request, context, null, storeSnapshot, null);
     }
 
-    public UxInspectorPromptPreparation prepare(UxInspectorJobStartRequest request, UxInspectorTargetContext context,
+    public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context,
             String runId, LocalAnalysisRunStoreSnapshot storeSnapshot) {
         return prepare(request, context, runId, storeSnapshot, null);
     }
 
-    public UxInspectorPromptPreparation prepare(UxInspectorJobStartRequest request, UxInspectorTargetContext context,
+    public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context,
             String runId, LocalAnalysisRunStoreSnapshot storeSnapshot,
-            UxInspectorFormFieldsSnapshotService.Snapshot formFields) {
+            UxInspectorCaptureSnapshot.FormFields formFields) {
         var repositoryTree = repositoryTreeArtifactService.prepare(context);
         var artifacts = new LinkedHashMap<String, String>();
         artifacts.put(CAPTURE_ARTIFACT, json(request.capture()));
@@ -314,11 +314,12 @@ public class UxInspectorPromptPreparationService {
     }
 
     private String formFieldsManifest(pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture capture,
-            UxInspectorFormFieldsSnapshotService.Snapshot snapshot) {
+            UxInspectorCaptureSnapshot.FormFields snapshot) {
         if (capture.captureProfile() != pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture.CaptureProfile.FORM_DIAGNOSTICS) {
             return "Nie zadano odczytu pol formularza.";
         }
-        if (snapshot == null) return "UNAVAILABLE: odczyt lub transfer pol nie powiodl sie; analiza trwa bez tych danych.";
+        if (snapshot == null || !"AVAILABLE".equals(snapshot.status()))
+            return "UNAVAILABLE: odczyt lub walidacja pol nie powiodly sie; analiza trwa bez tych danych.";
         String json;
         try { json = json(snapshot.fields()); }
         catch (RuntimeException exception) {

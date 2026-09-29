@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.4.0';
+  const RUNTIME_VERSION = '1.5.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -354,17 +354,9 @@
     this.animationFrame = null;
     this.resizeObserver = null;
     this.bridgeWindow = null;
-    this.bridgeNonce = '';
-    this.bridgeTimer = null;
     this.capture = null;
-    this.storeJson = null;
-    this.storeChunkIndex = 0;
-    this.storeTimer = null;
-    this.storeDone = true;
-    this.formJson = null;
-    this.formChunkIndex = 0;
-    this.formTimer = null;
-    this.formDone = true;
+    this.storeState = null;
+    this.formFields = null;
     this.captureProfile = protocol.CAPTURE_PROFILES.includes(options?.captureProfile)
       ? options.captureProfile
       : 'ELEMENT_CONTEXT';
@@ -403,6 +395,13 @@
       this.statusText,
       statusExit
     );
+    this.retryButton = element('button', '', 'Ponów zapis capture');
+    this.retryButton.hidden = true;
+    this.retryButton.type = 'button';
+    this.retryButton.addEventListener('click', () => this.sendCapture());
+    this.statusLink = element('a', '', 'Otwórz UX Inspector');
+    this.statusLink.hidden = true;
+    this.status.append(this.retryButton, this.statusLink);
     this.shadowRoot.append(this.style, this.shield, this.highlight, this.status);
 
     this.onKeyDown = this.onKeyDown.bind(this);
@@ -412,7 +411,6 @@
     this.onViewportChange = this.onViewportChange.bind(this);
     this.onWindowBlur = this.onWindowBlur.bind(this);
     this.onVisibilityChange = this.onVisibilityChange.bind(this);
-    this.onBridgeMessage = this.onBridgeMessage.bind(this);
   }
 
   UxInspector.prototype.start = function start() {
@@ -450,16 +448,12 @@
     this.disposed = true;
     this.state = 'disposed';
     this.cancelAnimationFrame();
-    this.clearBridgeTimer();
-    this.clearOptionalTimer('store');
-    this.clearOptionalTimer('form');
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     global.removeEventListener('keydown', this.onKeyDown, true);
     global.removeEventListener('scroll', this.onViewportChange, true);
     global.removeEventListener('resize', this.onViewportChange, true);
     global.removeEventListener('blur', this.onWindowBlur, true);
-    global.removeEventListener('message', this.onBridgeMessage, true);
     global.document.removeEventListener(
       'visibilitychange',
       this.onVisibilityChange,
@@ -515,13 +509,15 @@
       });
       if (this.captureProfile === 'FORM_DIAGNOSTICS') {
         try {
-          const json = JSON.stringify(protocol.captureVisibleFormFields());
-          if (new TextEncoder().encode(json).byteLength <= 16 * 1024 * 1024) this.formJson = json;
+          this.formFields = protocol.captureVisibleFormFields();
         } catch {
-          this.formJson = null;
+          this.formFields = null;
         }
       }
       this.hideSelection();
+      this.state = 'capturing';
+      try { this.bridgeWindow = global.open('about:blank', 'tdw-ux-inspector-pending-' + protocol.createNonce()); }
+      catch { this.bridgeWindow = null; }
       this.captureStore();
     } catch (error) {
       console.error('[TDW UX Inspector] Capture failed.', error);
@@ -634,151 +630,48 @@
     }
   };
 
-  UxInspector.prototype.beginTransfer = function beginTransfer() {
-    this.state = 'transferring';
-    this.setStatus('Otwieram UX Inspector…', 'working');
-    this.bridgeNonce = protocol.createNonce();
-    const captureUrl = new URL('/ux-inspector', this.config.tdwOrigin);
-    captureUrl.hash = new URLSearchParams({
-      nonce: this.bridgeNonce,
-      sourceOrigin: global.location.origin
-    }).toString();
-    global.addEventListener('message', this.onBridgeMessage, true);
+  UxInspector.prototype.sendCapture = async function sendCapture() {
+    if (!this.capture || this.state === 'saving') return;
+    this.state = 'saving';
+    this.retryButton.hidden = true;
+    this.setStatus('Zapisuję capture w TDW…', 'working');
+    const payload = {
+      capture: this.capture,
+      formFields: this.captureProfile === 'FORM_DIAGNOSTICS' && this.formFields !== null
+        ? { status: 'AVAILABLE', fields: this.formFields }
+        : { status: this.captureProfile === 'FORM_DIAGNOSTICS' ? 'UNAVAILABLE' : 'NOT_REQUESTED' },
+      store: this.storeState !== null
+        ? { status: 'AVAILABLE', state: this.storeState }
+        : { status: 'UNAVAILABLE' }
+    };
     try {
-      if (this.bridgeWindow && !this.bridgeWindow.closed) {
-        this.bridgeWindow.location.href = captureUrl.toString();
-      } else {
-        this.bridgeWindow = global.open(captureUrl.toString(), `tdw-ux-inspector-${this.bridgeNonce}`);
+      const response = await global.fetch(new URL('/api/ux-inspector/captures', this.config.tdwOrigin), {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const receipt = await response.json();
+      if (!receipt || typeof receipt.captureId !== 'string' ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(receipt.captureId)) {
+        throw new Error('Invalid capture receipt');
       }
-    } catch {
-      this.failTransfer('Nie udało się otworzyć UX Inspectora.');
-      return;
-    }
-    if (!this.bridgeWindow) {
-      this.failTransfer('Przeglądarka zablokowała otwarcie UX Inspectora.');
-      return;
-    }
-    this.resetBridgeTimer(
-      'Nie udało się potwierdzić połączenia z UX Inspectorem.'
-    );
-  };
-
-  UxInspector.prototype.onBridgeMessage = function onBridgeMessage(event) {
-    if (
-      event.origin !== this.config.tdwOrigin ||
-      event.source !== this.bridgeWindow ||
-      !this.bridgeNonce
-    ) {
-      return;
-    }
-    if (
-      this.state === 'transferring' &&
-      protocol.isReadyMessage(event.data, this.bridgeNonce)
-    ) {
+      const target = new URL('/ux-inspector', this.config.tdwOrigin);
+      target.searchParams.set('captureId', receipt.captureId);
+      this.statusLink.href = target.toString();
+      this.statusLink.hidden = false;
       try {
-        this.bridgeWindow.postMessage(
-          protocol.createMessage('TDW_UX_INSPECTOR_CAPTURE', this.bridgeNonce, {
-            captureId: this.capture.captureId,
-            capture: this.capture,
-            storeStatus: this.storeJson ? 'AVAILABLE' : 'UNAVAILABLE',
-            storeChunks: this.storeJson ? Math.ceil(this.storeJson.length / 32000) : 0,
-            formStatus: this.formJson ? 'AVAILABLE' : 'UNAVAILABLE',
-            formChunks: this.formJson ? Math.ceil(this.formJson.length / 32000) : 0
-          }),
-          this.config.tdwOrigin
-        );
-        this.state = 'awaiting-receipt';
-        this.setStatus('Capture wysłany · czekam na potwierdzenie TDW…', 'working');
-        this.resetBridgeTimer('UX Inspector nie potwierdził odbioru capture.');
-      } catch (error) {
-        console.error('[TDW UX Inspector] postMessage failed.', error);
-        this.failTransfer('Nie udało się przekazać capture do UX Inspectora.');
-      }
-      return;
-    }
-    if (protocol.isErrorMessage(event.data, this.bridgeNonce)) {
-      this.failTransfer('UX Inspector odrzucił capture: ' + event.data.code + '.');
-      return;
-    }
-    if (
-      this.state === 'awaiting-receipt' &&
-      protocol.isReceivedMessage(event.data, this.bridgeNonce) &&
-      event.data.captureId === this.capture?.captureId
-    ) {
-      this.state = 'transferring-extras';
-      this.clearBridgeTimer();
-      this.storeDone = !this.storeJson;
-      this.formDone = !this.formJson;
-      if (this.storeJson) this.sendOptionalChunk('store');
-      if (this.formJson) this.sendOptionalChunk('form');
-      if (this.storeDone && this.formDone) this.completeTransfer();
-      return;
-    }
-    if (this.state === 'transferring-extras' && event.data?.captureId === this.capture?.captureId) {
-      for (const kind of ['store', 'form']) {
-        const matches = kind === 'store' ? protocol.isStoreAckMessage(event.data, this.bridgeNonce)
-          : protocol.isFormAckMessage(event.data, this.bridgeNonce);
-        if (!matches || event.data.index !== this[`${kind}ChunkIndex`] || this[`${kind}Done`]) continue;
-        this.clearOptionalTimer(kind);
-        this[`${kind}ChunkIndex`]++;
-        if (this[`${kind}ChunkIndex`] * 32000 >= this[`${kind}Json`].length) this.finishOptionalTransfer(kind);
-        else this.sendOptionalChunk(kind);
-        return;
-      }
-    }
-  };
-
-  UxInspector.prototype.sendOptionalChunk = function sendOptionalChunk(kind) {
-    const json = this[`${kind}Json`];
-    const index = this[`${kind}ChunkIndex`];
-    try {
-      this.bridgeWindow.postMessage(protocol.createMessage(
-        kind === 'store' ? 'TDW_UX_INSPECTOR_STORE_CHUNK' : 'TDW_UX_INSPECTOR_FORM_CHUNK', this.bridgeNonce, {
-        captureId: this.capture.captureId,
-        index,
-        total: Math.ceil(json.length / 32000),
-        chunk: json.slice(index * 32000, (index + 1) * 32000)
-      }), this.config.tdwOrigin);
-      this.clearOptionalTimer(kind);
-      this[`${kind}Timer`] = global.setTimeout(() => this.finishOptionalTransfer(kind), testMode ? 80 : BRIDGE_TIMEOUT_MS);
-    } catch {
-      this.finishOptionalTransfer(kind);
-    }
-  };
-
-  UxInspector.prototype.clearOptionalTimer = function clearOptionalTimer(kind) {
-    if (this[`${kind}Timer`] !== null) global.clearTimeout(this[`${kind}Timer`]);
-    this[`${kind}Timer`] = null;
-  };
-
-  UxInspector.prototype.finishOptionalTransfer = function finishOptionalTransfer(kind) {
-    this.clearOptionalTimer(kind);
-    this[`${kind}Json`] = null;
-    this[`${kind}Done`] = true;
-    if (this.storeDone && this.formDone) this.completeTransfer();
-  };
-
-  UxInspector.prototype.completeTransfer = function completeTransfer() {
-    this.clearBridgeTimer();
-    this.storeJson = null;
-    this.formJson = null;
-    this.state = 'completed';
-    this.setStatus('Gotowe · pytanie dokończysz w TDW', 'success');
-    global.setTimeout(() => this.dispose('transferred'), testMode ? 0 : 1100);
-  };
-
-  UxInspector.prototype.resetBridgeTimer = function resetBridgeTimer(message) {
-    this.clearBridgeTimer();
-    this.bridgeTimer = global.setTimeout(
-      () => this.failTransfer(message),
-      testMode ? 80 : BRIDGE_TIMEOUT_MS
-    );
-  };
-
-  UxInspector.prototype.clearBridgeTimer = function clearBridgeTimer() {
-    if (this.bridgeTimer !== null) {
-      global.clearTimeout(this.bridgeTimer);
-      this.bridgeTimer = null;
+        if (this.bridgeWindow && !this.bridgeWindow.closed) this.bridgeWindow.location.href = target.toString();
+      } catch { /* The link remains available when navigation is blocked. */ }
+      this.state = 'completed';
+      this.setStatus('Capture zapisany · dokończ pytanie w TDW', 'success');
+    } catch (error) {
+      console.error('[TDW UX Inspector] Capture upload failed.', error);
+      this.state = 'failed';
+      this.retryButton.hidden = false;
+      this.setStatus('Nie udało się zapisać capture. Możesz ponowić bez wybierania elementu.', 'error');
     }
   };
 
@@ -791,20 +684,15 @@
   UxInspector.prototype.captureStore = function captureStore() {
     let getter;
     try { getter = global.getStoreState; }
-    catch { this.beginTransfer(); return; }
+    catch { void this.sendCapture(); return; }
     if (typeof getter !== 'function') {
-      this.beginTransfer();
+      void this.sendCapture();
       return;
     }
     this.setStatus('Pobieram stan strony…', 'working');
-    this.bridgeWindow = global.open('about:blank', 'tdw-ux-inspector-pending-' + protocol.createNonce());
     let result;
-    try {
-      result = getter.call(global);
-    } catch {
-      this.beginTransfer();
-      return;
-    }
+    try { result = getter.call(global); }
+    catch { void this.sendCapture(); return; }
     let timer;
     Promise.race([
       Promise.resolve(result),
@@ -816,37 +704,19 @@
         const json = JSON.stringify(state, (key, value) =>
           /(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|api.?key|one[-_ ]?time|otp|cvv|cvc)/i.test(key)
             ? '[redacted]' : value);
-        if (json && (json.startsWith('{') || json.startsWith('[')) &&
-            new TextEncoder().encode(json).byteLength <= 16 * 1024 * 1024) {
-          this.storeJson = json;
-        }
+        if (json && (json.startsWith('{') || json.startsWith('['))) this.storeState = JSON.parse(json);
       }
     }).catch(() => {
-      this.storeJson = null;
+      this.storeState = null;
     }).finally(() => {
       global.clearTimeout(timer);
-      if (!this.disposed) this.beginTransfer();
+      if (!this.disposed) void this.sendCapture();
     });
   };
 
   UxInspector.prototype.failTransfer = function failTransfer(message) {
-    this.clearBridgeTimer();
-    this.clearOptionalTimer('store');
-    this.clearOptionalTimer('form');
-    global.removeEventListener('message', this.onBridgeMessage, true);
     this.state = 'failed';
-    this.bridgeNonce = '';
-    this.capture = null;
-    this.storeJson = null;
-    this.formJson = null;
-    try {
-      this.bridgeWindow?.close();
-    } catch {
-      // A page policy can detach the opened window before cleanup.
-    }
-    this.bridgeWindow = null;
     this.setStatus(message, 'error');
-    global.setTimeout(() => this.dispose('transfer-failed'), testMode ? 0 : 2200);
   };
 
   function UiExplorer(config, onExit) {
@@ -1370,6 +1240,7 @@
     }
 
     .tdw-status[hidden] { display: none; }
+    .tdw-status button, .tdw-status a { pointer-events: auto; font: inherit; cursor: pointer; }
     .tdw-status[data-kind="success"] { border-color: #7ee2b8; background: #eaf7f0; }
     .tdw-status[data-kind="error"] { border-color: #ffb8b2; background: #fff1f0; }
     .tdw-status strong { color: #0747a6; }

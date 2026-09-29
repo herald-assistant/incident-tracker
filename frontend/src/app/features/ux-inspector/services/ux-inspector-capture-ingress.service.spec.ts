@@ -1,267 +1,70 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { UxInspectorCapture } from '../models/ux-inspector.models';
-import {
-  UX_INSPECTOR_WINDOW,
-  UxInspectorCaptureIngressService
-} from './ux-inspector-capture-ingress.service';
+import { UxInspectorCaptureSnapshot } from '../models/ux-inspector.models';
+import { UxInspectorCaptureIngressService } from './ux-inspector-capture-ingress.service';
 
 describe('UxInspectorCaptureIngressService', () => {
-  it('clears the fragment and accepts one exact-origin capture v2', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
+  let service: UxInspectorCaptureIngressService;
+  let http: HttpTestingController;
 
-    service.start();
-
-    expect(harness.replaceState).toHaveBeenCalledWith(null, '', '/ux-inspector?localRunId=crm-run');
-    expect(harness.posted[0]).toEqual({
-      message: {
-        type: 'TDW_UX_INSPECTOR_READY',
-        protocolVersion: 1,
-        nonce: VALID_NONCE
-      },
-      targetOrigin: 'https://crm.example.com'
-    });
-
-    const capture = captureFixture();
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE',
-      protocolVersion: 1,
-      nonce: VALID_NONCE,
-      captureId: capture.captureId,
-      capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
-    });
-
-    expect(service.capture()).toEqual(capture);
-    expect(service.status()).toBe('received');
-    expect(harness.posted.at(-1)).toEqual({
-      message: {
-        type: 'TDW_UX_INSPECTOR_RECEIVED',
-        protocolVersion: 1,
-        nonce: VALID_NONCE,
-        captureId: capture.captureId
-      },
-      targetOrigin: 'https://crm.example.com'
-    });
-    expect(harness.listener).toBeNull();
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [
+      provideHttpClient(), provideHttpClientTesting(), UxInspectorCaptureIngressService
+    ] });
+    service = TestBed.inject(UxInspectorCaptureIngressService);
+    http = TestBed.inject(HttpTestingController);
   });
+  afterEach(() => http.verify());
 
-  it('receives a bounded store after capture and keeps capture when a chunk is invalid', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
-    service.start();
-    const capture = captureFixture();
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'AVAILABLE', storeChunks: 2
-    });
-    expect(service.capture()).toEqual(capture);
-    expect(service.storeStatus()).toBe('receiving');
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, index: 0, total: 2, chunk: '{"feature":'
-    });
-    expect(harness.posted.at(-1)?.message).toMatchObject({ type: 'TDW_UX_INSPECTOR_STORE_ACK', index: 0 });
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, index: 1, total: 2, chunk: '{"enabled":true}}'
-    });
-    expect(service.storeState()).toEqual({ feature: { enabled: true } });
-    expect(service.storeStatus()).toBe('available');
-    expect(harness.listener).toBeNull();
-    service.consumeCapture();
-    expect(service.storeState()).toBeNull();
-  });
-
-  it('receives visible fields independently of store and preserves an empty successful result', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
-    service.start();
-    const capture = { ...captureFixture(), captureProfile: 'FORM_DIAGNOSTICS' as const };
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, storeStatus: 'UNAVAILABLE', storeChunks: 0,
-      formStatus: 'AVAILABLE', formChunks: 1
-    });
-    expect(service.formStatus()).toBe('receiving');
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_FORM_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, index: 0, total: 1, chunk: '[]'
-    });
-    expect(service.formFields()).toEqual([]);
+  it('loads one stored snapshot by ID and distinguishes empty available fields', () => {
+    const snapshot = fixture('cap-crm-1');
+    service.load('cap-crm-1');
+    expect(service.status()).toBe('loading');
+    const request = http.expectOne('/api/ux-inspector/captures/cap-crm-1');
+    expect(request.request.method).toBe('GET');
+    request.flush(snapshot);
+    expect(service.capture()?.target.tag).toBe('button');
     expect(service.formStatus()).toBe('available');
-    expect(service.storeStatus()).toBe('unavailable');
-    expect(harness.posted.at(-1)?.message).toMatchObject({ type: 'TDW_UX_INSPECTOR_FORM_ACK', index: 0 });
-    expect(harness.listener).toBeNull();
-  });
-
-  it('keeps capture and store when the form transfer has a wrong chunk index', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
-    service.start();
-    const capture = { ...captureFixture(), captureProfile: 'FORM_DIAGNOSTICS' as const };
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, storeStatus: 'AVAILABLE', storeChunks: 1,
-      formStatus: 'AVAILABLE', formChunks: 1
-    });
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_FORM_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, index: 1, total: 1, chunk: '[]'
-    });
-    expect(service.capture()).toEqual(capture);
-    expect(service.formStatus()).toBe('unavailable');
-    expect(service.storeStatus()).toBe('receiving');
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, index: 0, total: 1, chunk: '{}'
-    });
-    expect(service.storeState()).toEqual({});
+    expect(service.formFields()).toEqual([]);
     expect(service.storeStatus()).toBe('available');
-    expect(harness.listener).toBeNull();
+    expect(service.status()).toBe('received');
   });
 
-  it('retains capture when store transfer has an invalid chunk', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
-    service.start();
-    const capture = captureFixture();
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'AVAILABLE', storeChunks: 1
-    });
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_STORE_CHUNK', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, index: 1, total: 1, chunk: '{}'
-    });
-    expect(service.capture()).toEqual(capture);
-    expect(service.storeStatus()).toBe('unavailable');
-    expect(harness.listener).toBeNull();
+  it('ignores a stale response after capture ID changes', () => {
+    service.load('cap-crm-1');
+    const old = http.expectOne('/api/ux-inspector/captures/cap-crm-1');
+    service.load('cap-crm-2');
+    const current = http.expectOne('/api/ux-inspector/captures/cap-crm-2');
+    current.flush(fixture('cap-crm-2'));
+    old.flush(fixture('cap-crm-1'));
+    expect(service.snapshot()?.captureId).toBe('cap-crm-2');
   });
 
-  it('ignores a foreign source and rejects a nonce mismatch from the expected source', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
-    service.start();
-    const capture = captureFixture();
+  it('reports expired memory and supports retry', () => {
+    service.load('cap-crm-1');
+    http.expectOne('/api/ux-inspector/captures/cap-crm-1').flush({}, { status: 404, statusText: 'Not Found' });
+    expect(service.status()).toBe('invalid');
+    expect(service.error()).toContain('nie istnieje');
+    service.load('cap-crm-1');
+    http.expectOne('/api/ux-inspector/captures/cap-crm-1').flush(fixture('cap-crm-1'));
+    expect(service.status()).toBe('received');
+  });
 
-    harness.dispatch('https://evil.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
-    });
-    expect(service.status()).toBe('waiting');
-    expect(service.capture()).toBeNull();
-
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: 'n_invalid_invalid_invalid_123',
-      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
-    });
+  it('rejects a snapshot returned for a different ID', () => {
+    service.load('cap-crm-1');
+    http.expectOne('/api/ux-inspector/captures/cap-crm-1').flush(fixture('cap-crm-2'));
     expect(service.status()).toBe('invalid');
     expect(service.capture()).toBeNull();
-    expect(harness.posted.at(-1)?.message).toMatchObject({
-      type: 'TDW_UX_INSPECTOR_ERROR', code: 'HANDSHAKE_MISMATCH'
-    });
-  });
-
-  it('rejects unknown capture fields and oversized payloads without persistence', () => {
-    const harness = createWindowHarness();
-    const service = createService(harness.window);
-    service.start();
-    const capture = { ...captureFixture(), unknown: 'rejected' };
-
-    harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
-      captureId: capture.captureId, capture, formStatus: 'UNAVAILABLE', formChunks: 0, storeStatus: 'UNAVAILABLE', storeChunks: 0
-    });
-
-    expect(service.status()).toBe('invalid');
-    expect(service.capture()).toBeNull();
-    expect(JSON.stringify(harness.window)).not.toContain('localStorage');
-  });
-
-  it('fails closed when opener is unavailable', () => {
-    const harness = createWindowHarness();
-    harness.window.opener = null;
-    const service = createService(harness.window);
-    service.start();
-
-    expect(service.status()).toBe('invalid');
-    expect(service.error()).toContain('popup/COOP');
-    expect(harness.posted).toHaveLength(0);
   });
 });
 
-const VALID_NONCE = 'n_0123456789abcdefghijklmnop';
-
-function createService(windowValue: Window): UxInspectorCaptureIngressService {
-  TestBed.resetTestingModule();
-  TestBed.configureTestingModule({
-    providers: [
-      UxInspectorCaptureIngressService,
-      { provide: UX_INSPECTOR_WINDOW, useValue: windowValue }
-    ]
-  });
-  return TestBed.inject(UxInspectorCaptureIngressService);
-}
-
-function createWindowHarness() {
-  let listener: ((event: MessageEvent<unknown>) => void) | null = null;
-  const posted: Array<{ message: Record<string, unknown>; targetOrigin: string }> = [];
-  const opener = {
-    postMessage(message: Record<string, unknown>, targetOrigin: string) {
-      posted.push({ message, targetOrigin });
-    }
-  };
-  const replaceState = vi.fn();
-  const fakeWindow = {
-    location: {
-      hash: `#nonce=${VALID_NONCE}&sourceOrigin=https%3A%2F%2Fcrm.example.com`,
-      pathname: '/ux-inspector',
-      search: '?localRunId=crm-run'
-    },
-    history: { state: null, replaceState },
-    opener,
-    addEventListener(type: string, callback: (event: MessageEvent<unknown>) => void) {
-      if (type === 'message') listener = callback;
-    },
-    removeEventListener(type: string, callback: (event: MessageEvent<unknown>) => void) {
-      if (type === 'message' && listener === callback) listener = null;
-    },
-    setTimeout: vi.fn(() => 1),
-    clearTimeout: vi.fn()
-  } as unknown as Window;
+function fixture(id: string): UxInspectorCaptureSnapshot {
   return {
-    window: fakeWindow,
-    opener,
-    posted,
-    replaceState,
-    get listener() { return listener; },
-    dispatch(origin: string, source: object, data: Record<string, unknown>) {
-      listener?.({ origin, source, data } as unknown as MessageEvent<unknown>);
-    }
-  };
-}
-
-function captureFixture(): UxInspectorCapture {
-  return {
-    schema: 'tdw.ux-inspector-capture', version: 2, captureId: 'cap_crm_contact_save',
-    capturedAt: '2026-09-15T10:00:00Z',
-    captureProfile: 'ELEMENT_CONTEXT',
-    page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
-    target: {
-      tag: 'button', role: 'button', accessibleName: 'Zapisz kontakt', text: 'Zapisz kontakt',
-      domFingerprint: {
-        stableAttributes: { 'data-testid': 'contact-save' },
-        selectorCandidates: ['button[data-testid="contact-save"]'],
-        componentBoundaryTags: [], labelFor: null
-      },
-      state: { disabled: true, ariaDisabled: false, readOnly: false, required: false, invalid: false, checked: null, expanded: null, hidden: false },
-      bounds: { x: 20, y: 40, width: 180, height: 42 }
-    },
-    ancestors: [],
-    traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
-    signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] },
-    limits: [],
-    client: { name: 'TDW UX Inspector', version: '1.0.0', featureId: 'ux-inspector' }
+    captureId: id,
+    capture: { captureId: id, target: { tag: 'button' } } as UxInspectorCaptureSnapshot['capture'],
+    formFields: { status: 'AVAILABLE', fields: [], omittedSensitiveFields: 0, reason: null },
+    store: { status: 'AVAILABLE', state: {}, redactions: 0, reason: null }
   };
 }

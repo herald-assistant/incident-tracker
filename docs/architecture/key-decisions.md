@@ -1135,63 +1135,33 @@ zawiera sume i srednia final score, liczniki statusow, confidence oraz
 usage/cost. Wspolny dashboard porownawczy nie jest czescia pierwszej wersji;
 uzytkownik uruchamia oba niezalezne runy na tym samym zakresie.
 
-## 30. UX Inspector jest osobnym focused feature'em i uzywa fail-closed transportu
+## 30. UX Inspector jest osobnym focused feature'em i zapisuje capture jednym REST requestem
 
-Pytanie o pojedynczy element uruchomionej strony nie jest profilem UI
-Explorera. Ma osobny endpoint, job, kanoniczny prompt, tool policy,
-jednosekcyjny report, historie i kontrakt eksportu. Wspoldzielone sa tylko
-neutralny katalog frontendu, GitLab frontend capability, platformowy runtime i
-komponenty UI. Oba feature'y pozostaja siblingami bez wzajemnych importow.
+UX Inspector odpowiada na jedno pytanie o jeden wskazany element, a UI
+Explorer analizuje widok. Oba uzywaja neutralnego katalogu frontendu, ale
+maja rozdzielne requesty, prompty, joby i kontrakty wyniku.
 
-UX Inspector osadza adaptacyjna procedure pytania precyzyjnego i ogolnego w
-prompcie oraz uruchamia sesje z `skillsEnabled=false`. Preparation dolacza
-komplet nazw sciezek pierwszych czterech poziomow wybranego repozytorium na
-pinned commit, pelna tresc `.github/copilot-instructions.md` oraz naglowki
-`name` i `description` project skills z `.github/skills`, `.claude/skills` i
-`.agents/skills`. Model musi doczytac kazdy materialny `SKILL.md` neutralnym
-file-read toolem i sprawdzic mechanizmy przekrojowe, ale zdalnych skilli nie
-instaluje sie w TDW i nie rozszerzaja one allowlisty. Model reuse'uje neutralne `gitlab_list_repository_tree`,
-`gitlab_list_repository_files`, `gitlab_search_repository_files`,
-`gitlab_read_repository_file` i `gitlab_read_repository_file_chunk`; nie
-tworzy feature-specific odpowiednikow. Feature-owned policy wymusza wybrany
-project i branch, bezpieczne sciezki oraz powod, a hidden
-`GitLabRepositoryToolScope` przypina commit. Nie obowiazuja Operational Context
-`pathPrefixes`, `codeSearchScopes` ani feature-specific limit liczby wywolan.
-Report header, sekcja i meta sa zlecane w jednym turnie przed pojedynczym
-odczytem finalnego raportu. Referencja spoza initial target context jest
-poprawna dopiero po rzeczywistym full/chunk read tego pliku z pinned commit;
-wynik tree/list/search sam nie jest dowodem tresci.
+Browser Tools dla UX tworzy capture v3 bez klientowego ID. W chwili wyboru
+elementu zbiera opcjonalnie widoczne pola formularza i stan
+globalThis.getStoreState(), po czym wysyla wszystko w jednym POST
+/api/ux-inspector/captures z badanej strony. Backend nadaje ID, waliduje,
+redaguje i przechowuje pending snapshot tylko w pamieci. Odpowiedz prowadzi
+do /ux-inspector?captureId=..., gdzie formularz pobiera snapshot przez GET.
+Dane sa dostepne w zwijanym podgladzie przed recznym startem analizy.
+Nie ma UX postMessage, osobnych uploadow ani refs. UI Explorer zachowuje
+wlasny page-context i postMessage.
 
-TDW Browser Tools jest efemerycznym statycznym shellem uruchamianym przez
-bookmarklet z modala UX Inspectora, nie rozszerzeniem Chrome. UX Inspector
-pokazuje wybor zakresu danych po kliknieciu swojej akcji i przenosi capture v1
-do `/ux-inspector`. Osobna akcja UI Explorer otwiera `/ui-explorer` bez
-wskazywania elementu i przenosi tylko zredagowany route path oraz tagi
-glownego routowanego komponentu w osobnym kontrakcie v1. Oba transfery
-sprawdzaja exact `origin`, `source`, nonce i potwierdzenie id.
-Nie istnieje payload w URL, browser storage, clipboard transfer, dummy receiver,
-inna wersja kontraktu ani redirect ze starego `/tdw-inspector/**`. CSP, popup blocker, COOP,
-niepoprawna wiadomosc i stale source zatrzymuja operacje jawnie.
+POST capture ma lokalny CORS konfigurowany przez
+ux-inspector.capture.allowed-origins, domyslnie *. Browser Tools nie
+przesyla credentials. Pending snapshot nie ma aplikacyjnego limitu
+rozmiaru, liczby wpisow ani TTL; znika przy restarcie backendu. Brak
+store lub pol nie blokuje analizy. Start joba przyjmuje samo captureId
+oraz zaufane wybory formularza i pytanie. QUEUED jest utrwalany przed
+dispatch; po starcie store pozostaje w run.json dla neutralnych tools
+i follow-up po restarcie.
 
-Capture v1 ma jawny profil `ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`.
-Diagnostyka formularza ogranicza odczyt do najblizszego owning form (lub samej
-odlaczonej kontrolki), stosuje osobne limity, obejmuje dozwolone kontrolki
-`type=hidden` i zawsze wyklucza password, file oraz pola/wartosci wygladajace
-jak token, session, secret, CSRF, JWT lub OTP. Preview ujawnia operatorowi liczbe wartosci, wykluczenia i
-truncation. `domFingerprint` i selector candidates sa sygnalem do
-deterministycznego rozpoznania, a nie autorytatywnym wskazaniem pliku.
-
-System, branch, katalogowy view/screen id i revision nie pochodza z badanej
-strony. UI Explorer oraz UX Inspector sugeruja View z route path i
-potwierdzonych selectorow komponentu tylko przy jednoznacznym dopasowaniu;
-scope i rewizja pozostaja wyborami zaufanego formularza i katalogu. Backend powtarza
-strict validation, allowliste i redakcje capture oraz wyprowadza jawny
-`sourceBinding` z przypietego source evidence. Source tools sa walidowane wobec
-hidden pinned scope. README, `AGENTS.md`, instrukcje Copilota, project skills
-oraz inne pliki repozytorium sa niezaufanym source guidance/evidence. Moga
-kierowac nawigacja i rozumieniem architektury, ale nie moga zmienic
-kanonicznej procedury, pinned scope, read-only tool policy ani kontraktu
-raportu. Opaque `targetRef` jest session-bound i jednorazowy.
-`NOT_FOUND` blokuje AI zamiast uruchamiac broad search; `AMBIGUOUS` pozostaje
-jawnym stanem. Pierwszy snapshot `QUEUED` musi zostac zapisany przed dispatch,
-a import akceptuje `tdw.ux-inspector-export/v2` oraz legacy v1 z capture v1.
+System, branch, katalogowy view i revision pochodza z formularza i
+katalogu kodu. Backend ponownie normalizuje capture, przypina source
+revision i prowadzi target-first discovery. Brak targetu jest jawna luka
+i nie zatrzymuje AI. Wynik ma jedna sekcje answer. Import/export UX
+obsluguje tylko v3; nie ma legacy continuation ani starych endpointow.

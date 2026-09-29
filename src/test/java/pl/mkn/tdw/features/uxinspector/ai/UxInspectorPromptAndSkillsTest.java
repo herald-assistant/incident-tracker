@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import pl.mkn.tdw.features.uxinspector.ai.copilot.UxInspectorDurableSystemInstructions;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshot;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,25 +27,23 @@ class UxInspectorPromptAndSkillsTest {
         var formCapture = new UxInspectorCapture(capture.schema(), capture.version(), capture.captureId(),
                 capture.capturedAt(), UxInspectorCapture.CaptureProfile.FORM_DIAGNOSTICS, capture.page(),
                 capture.target(), capture.ancestors(), capture.traversal(), capture.signals(), capture.limits(), capture.client());
-        var request = new UxInspectorJobStartRequest(base.systemId(), base.branch(), base.viewId(),
+        var request = new UxInspectorAnalysisRequest(base.systemId(), base.branch(), base.viewId(),
                 base.sourceRevision(), base.question(), formCapture, base.model(), base.reasoningEffort());
         var fields = new ObjectMapper().createArrayNode();
         fields.addObject().put("label", "CRM contact").put("value", "CRM value");
-        var snapshot = new UxInspectorFormFieldsSnapshotService.Snapshot(capture.captureId(),
-                capture.page().origin(), fields);
+        var snapshot = new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", fields, 0, null);
 
         assertThat(service.prepare(request, targetContext(), "crm-run", null, snapshot).prompt())
                 .contains("kompletny zestaw", "widocznych na stronie w chwili capture", "CRM value");
         assertThat(service.prepare(request, targetContext(), "crm-run", null,
-                new UxInspectorFormFieldsSnapshotService.Snapshot(capture.captureId(), capture.page().origin(),
-                        new ObjectMapper().createArrayNode())).prompt()).contains("[] oznacza brak widocznych pol");
+                new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", new ObjectMapper().createArrayNode(), 0, null))
+                .prompt()).contains("[] oznacza brak widocznych pol");
         assertThat(service.prepare(request, targetContext(), "crm-run", null, null).prompt())
-                .contains("UNAVAILABLE: odczyt lub transfer pol nie powiodl sie");
+                .contains("UNAVAILABLE: odczyt lub walidacja pol nie powiodly sie");
         var oversized = new ObjectMapper().createArrayNode();
         oversized.addObject().put("value", "x".repeat(1_000_001));
         assertThat(service.prepare(request, targetContext(), "crm-run", null,
-                new UxInspectorFormFieldsSnapshotService.Snapshot(capture.captureId(), capture.page().origin(),
-                        oversized)).prompt())
+                new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", oversized, 0, null)).prompt())
                 .contains("UNAVAILABLE: caly wynik pol przekracza budzet initial promptu")
                 .doesNotContain("x".repeat(100));
     }
@@ -237,8 +235,8 @@ class UxInspectorPromptAndSkillsTest {
                 .doesNotContain("specialistSkill");
     }
 
-    private UxInspectorJobStartRequest request(String question) {
-        return new UxInspectorJobStartRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
+    private UxInspectorAnalysisRequest request(String question) {
+        return new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
                 question, capture(), "gpt-crm", "medium");
     }
 }

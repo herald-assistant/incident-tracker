@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, Subscription, catchError, finalize, forkJoin, of, switchMap } from 'rxjs';
+import { Observable, Subscription, finalize } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
@@ -81,9 +81,10 @@ export class UxInspectorFacade {
   readonly selectedReasoningEffort = signal('');
 
   readonly capture = computed<UxInspectorCapture | null>(
-    () => this.job()?.request.capture ?? this.ingress.capture()
+    () => this.ingress.capture() ?? this.job()?.request.capture ?? null
   );
   readonly captureStatus = this.ingress.status;
+  readonly captureSnapshot = this.ingress.snapshot;
   readonly storeStatus = this.ingress.storeStatus;
   readonly formStatus = this.ingress.formStatus;
   readonly formFields = this.ingress.formFields;
@@ -117,9 +118,7 @@ export class UxInspectorFacade {
   });
   readonly configurationReady = computed(
     () => Boolean(
-      this.ingress.capture() &&
-        this.ingress.storeStatus() !== 'receiving' &&
-        this.ingress.formStatus() !== 'receiving' &&
+      this.ingress.snapshot() &&
         this.selectedSystemId() &&
         this.branch().trim() &&
         this.selectedViewId() &&
@@ -164,9 +163,19 @@ export class UxInspectorFacade {
   }
 
   initialize(): void {
-    this.ingress.start();
     this.loadInputOptions();
     this.loadAiOptions();
+  }
+
+  loadCapture(captureId: string): void {
+    this.stopPolling();
+    this.job.set(null);
+    this.resultSource.set(null);
+    this.startedRunId.set('');
+    this.question.set('');
+    this.selectedViewId.set('');
+    this.viewMatchedFromCapture.set(false);
+    this.ingress.load(captureId);
   }
 
   loadInputOptions(): void {
@@ -285,18 +294,7 @@ export class UxInspectorFacade {
     this.isSubmitting.set(true);
     this.jobError.set('');
     this.portabilityError.set('');
-    const store = this.ingress.storeState();
-    const fields = this.ingress.formFields();
-    const scope = { captureId: request.capture.captureId, origin: request.capture.page.origin };
-    const start = forkJoin({
-      store: store ? this.api.uploadStoreSnapshot({ ...scope, state: store }).pipe(catchError(() => of(null))) : of(null),
-      form: fields ? this.api.uploadFormFieldsSnapshot({ ...scope, fields }).pipe(catchError(() => of(null))) : of(null)
-    }).pipe(switchMap(({ store: storeReceipt, form: formReceipt }) => this.api.startJob({
-      ...request,
-      ...(storeReceipt ? { storeSnapshotRef: storeReceipt.storeSnapshotRef } : {}),
-      ...(formReceipt ? { formFieldsSnapshotRef: formReceipt.formFieldsSnapshotRef } : {})
-    })));
-    start.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.startJob(request).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (snapshot) => {
         this.isSubmitting.set(false);
         this.job.set(snapshot);
@@ -339,9 +337,11 @@ export class UxInspectorFacade {
     ).subscribe({
       next: (snapshot) => {
         if (!isReadable(snapshot)) {
-          this.portabilityError.set('Import nie zawiera ukończonego raportu UX Inspectora v1.');
+          this.portabilityError.set('Import nie zawiera ukończonego raportu UX Inspectora v3.');
           return;
         }
+        this.ingress.consumeCapture();
+        this.startedRunId.set('');
         this.job.set(snapshot);
         this.resultSource.set({ origin: 'imported', fileName });
       },
@@ -409,12 +409,12 @@ export class UxInspectorFacade {
   }
 
   private buildRequest(): UxInspectorJobStartRequest | null {
-    const capture = this.ingress.capture();
+    const capture = this.ingress.snapshot();
     const revision = this.sourceRevision()?.revision;
     if (!capture || !revision || !this.catalogMatchesSelection()) return null;
     return {
       systemId: this.selectedSystemId(), branch: this.branch(), viewId: this.selectedViewId(),
-      sourceRevision: revision, question: this.question().trim(), capture,
+      sourceRevision: revision, question: this.question().trim(), captureId: capture.captureId,
       model: this.selectedModel(), reasoningEffort: this.selectedReasoningEffort()
     };
   }
@@ -443,6 +443,8 @@ export class UxInspectorFacade {
       const envelope = detail.exportEnvelope;
       if (!isUxInspectorExport(envelope)) throw new Error('Run ma nieobsługiwany kontrakt UX Inspectora.');
       const snapshot = envelope.payload.job;
+      this.ingress.consumeCapture();
+      this.startedRunId.set('');
       this.job.set(snapshot);
       this.resultSource.set({ origin: 'history', fileName: '', localRunId: detail.analysisId, localRunName: detail.name,
         continuationEnabled: detail.continuationEnabled });
@@ -506,8 +508,7 @@ function hasActiveChat(snapshot: UxInspectorJobStateSnapshot): boolean {
 function isUxInspectorExport(value: unknown): value is UxInspectorExportEnvelope {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const envelope = value as Partial<UxInspectorExportEnvelope>;
-  const contractSupported = (envelope.version === 1 && envelope.payload?.resultContract === 'ux-inspector-result-v1') ||
-    (envelope.version === 2 && envelope.payload?.resultContract === 'ux-inspector-result-v2');
+  const contractSupported = envelope.version === 3 && envelope.payload?.resultContract === 'ux-inspector-result-v3';
   return envelope.schema === 'tdw.ux-inspector-export' && contractSupported &&
     envelope.payload?.type === 'ux-inspector-analysis' &&
     Boolean(envelope.payload.job);

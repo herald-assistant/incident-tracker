@@ -16,155 +16,91 @@ w calym dokumencie strony w chwili capture.
 
 ## Publiczne wejscia i kontrakty
 
-- Modal na `/ux-inspector` udostepnia przeciagany bookmarklet Browser Tools.
-  W menu zakres danych pojawia sie jako mala opcja dopiero po wyborze
-  przycisku UX Inspector; pod nim jest osobna akcja UI Explorer. Przy kazdym
-  otwarciu menu zakres danych jest zwiniety, takze po przekazaniu wskazanego
-  elementu. Ostatnio wybrany profil pozostaje zapamietany po rozwinieciu.
-- `GET /api/ux-inspector/input-options` zwraca zarejestrowane frontendy.
-- `GET /api/ux-inspector/views?systemId=...&branch=...&refresh=...` zwraca
-  widoki i immutable source revision; `refresh=true` omija cache tego scope'u.
-- `POST /api/ux-inspector/jobs` tworzy run i zwraca snapshot `QUEUED`.
-- `POST /api/ux-inspector/store-snapshots` przyjmuje ograniczony JSON ze
-  zrzutem store'a i zwraca jednorazowy `storeSnapshotRef`. Opcjonalny ref
-  przekazany do startu joba jest przypinany do capture i biezacego kontekstu
-  autoryzacji workspace; brak
-  store'a nie wstrzymuje joba.
-- `POST /api/ux-inspector/form-fields-snapshots` przyjmuje osobny JSON pol
-  widocznych w chwili capture i zwraca jednorazowy `formFieldsSnapshotRef`.
-  Ref jest przypinany do capture, originu i kontekstu autoryzacji workspace.
-  Brak obserwacji formularza nie wstrzymuje joba.
-- `GET /api/ux-inspector/jobs/{jobId}` zwraca aktualny snapshot.
-- `GET /api/ux-inspector/jobs/{jobId}/export` zwraca
-  `tdw.ux-inspector-export` v2 z historia follow-up; import zachowuje
-  kompatybilnosc z wynikiem v1.
-- `POST /api/ux-inspector/imports` przyjmuje export v2 albo legacy v1 z capture v2 i
-  zapisuje nowy read-only wpis historii. Import nie naklada arbitralnego limitu
-  rozmiaru na caly poprawny envelope; nadal wymaga scislego kontraktu,
-  kanonicznego capture oraz spojnego, zakonczonego wyniku.
-- `/ux-inspector` jest jedynym receiverem capture i workspace'em feature'a.
+- Modal na /ux-inspector udostepnia przeciagany bookmarklet Browser Tools.
+  Menu pozwala wybrac profil UX Inspectora albo uruchomic UI Explorera.
+- POST /api/ux-inspector/captures jest jedynym zapisem obserwacji. Przyjmuje
+  jeden JSON z capture, formFields i store, waliduje i redaguje dane,
+  nadaje UUID i zwraca 201 z captureId. Klient nie nadaje ID.
+- GET /api/ux-inspector/captures/{captureId} odczytuje bezpieczny snapshot
+  z pamieci JVM dla formularza; odpowiedz ma Cache-Control: no-store.
+  Nieznane ID daje UX_INSPECTOR_CAPTURE_NOT_FOUND.
+- GET /api/ux-inspector/input-options zwraca zarejestrowane frontendy, a
+  GET /api/ux-inspector/views zwraca widoki i immutable source revision.
+- POST /api/ux-inspector/jobs przyjmuje captureId, wybor zrodla, pytanie
+  i preferencje AI. Odczytuje zamrozony snapshot z pamieci, zapisuje QUEUED
+  i zwraca snapshot joba. Start nie przesyla ponownie capture ani refs.
+- GET /api/ux-inspector/jobs/{jobId} zwraca aktualny snapshot. Export i
+  import uzywaja tylko tdw.ux-inspector-export v3 oraz kontraktu wyniku v3.
+  Import tworzy read-only wpis historii.
 
-Launcher i protocol maja wersje 1, capture ma wersje 2. Portable export ma wersje 2,
-z kontrolowanym odczytem legacy v1. Nie ma aliasow, legacy endpointow,
-recznego kanalu capture ani alternatywnego formatu uruchomienia. Kazda inna
-wersja jest odrzucana.
+Pending capture jest tylko w pamieci jednej instancji backendu: odczyt nie
+zuzywa ID, nie ma TTL, limitu liczby wpisow ani rozmiaru aplikacyjnego.
+Restart przed startem uniewaznia ID. Po rozpoczeciu runu capture pozostaje
+w request snapshot historii, a store nadal jest utrwalany w prywatnym polu
+storeSnapshot pliku runs/{id}/run.json dla tools i follow-up po restarcie.
+
+CORS dotyczy tylko POST capture. Property
+ux-inspector.capture.allowed-origins przyjmuje * albo liste originow
+rozdzielona przecinkami, domyslnie *. Browser Tools wykonuje request
+z credentials: omit. GET i start joba nie dziedzicza tej polityki.
+Domyslne * i brak limitow pamieci oznaczaja otwarty zapis oraz mozliwy
+wzrost heap. CSP connect-src, mixed content i polityka dostepu do sieci
+lokalnej badanej strony moga zablokowac fetch.
 
 ## Przeplyw Browser Tools
 
-```text
-/ux-inspector -> modal -> przeciagany bookmarklet
-  -> loader.js z originu TDW
-  -> protocol.js + runtime.js
-  -> Browser Tools shell w izolowanym Shadow DOM
-  -> przycisk UX Inspector -> wybor profilu -> selection shield + highlight
-  -> jeden capture v2 i opcjonalny odczyt pol formularza
-  -> opcjonalne jednokrotne globalThis.getStoreState()
-  -> popup /ux-inspector#nonce=...&sourceOrigin=...
-  -> READY / CAPTURE / RECEIVED przez exact-origin postMessage
-  -> opcjonalne FORM_CHUNK / FORM_ACK oraz STORE_CHUNK / STORE_ACK
-  -> osobne transfery porcjami po 32000 znakow
-  -> capture tylko w pamieci receivera
-```
+1. Bookmarklet laduje loader.js, protocol.js i runtime.js z originu TDW.
+2. Operator wybiera profil i element; selection shield przejmuje klik.
+3. Browser Tools tworzy capture v3 bez ID, czyta opcjonalne widoczne pola
+   i jednokrotnie globalThis.getStoreState().
+4. Jeden POST z badanej strony zapisuje calosc w TDW i zwraca captureId.
+5. Popup przechodzi na /ux-inspector?captureId=...; formularz wykonuje GET,
+   pokazuje zwijany podglad i startuje joba z samym ID.
 
-Bookmarklet zawiera publiczny origin TDW i adres statycznego `loader.js`, ale
-nie zawiera tokenu, cookies ani klienta REST. Loader pobiera `protocol.js` i
-`runtime.js` z tego samego originu. Klik w trybie selekcji jest przejmowany i
-nie uruchamia natywnej akcji badanej strony.
+Popup about:blank otwiera sie synchronicznie podczas kliku, a po POST jest
+kierowany na URL z ID. Jezeli popup jest zablokowany, link w overlayu
+pozwala przejsc recznie. Nieudany POST pozostawia zamrozona obserwacje
+i przycisk ponowienia. UX Inspector nie uzywa postMessage; odrebny
+page-context UI Explorera zachowuje swoj handshake.
 
-Transfer wymaga jednoczesnie:
+## Zamrozony store i pola formularza
 
-1. `event.origin` rownego skonfigurowanemu originowi TDW,
-2. `event.source` rownego dokladnie utworzonemu oknu,
-3. protokolu v1 i jednorazowego nonce,
-4. potwierdzenia `captureId` w wiadomosci `RECEIVED`.
+Po wyborze elementu Browser Tools wywoluje raz opcjonalny
+globalThis.getStoreState(), akceptuje obiekt/tablice albo Promise i czeka
+najwyzej 3 sekundy. Brak funkcji, blad i timeout daja UNAVAILABLE.
+Puste {} i [] sa poprawnym stanem AVAILABLE. Klucze rozpoznane jako
+sekrety sa redagowane w przegladarce i ponownie w backendzie. Eksporter
+aplikacji powinien zwracac stan przeznaczony do analizy AI.
 
-Obcy origin/source, niepoprawny nonce, replay, timeout, popup blocker albo COOP
-koncza operacje bez wyslania drugiego capture. Nie powstaje zastepczy kanal.
-Po sukcesie lub bledzie listenery, payload, overlay i referencja do okna sa
-usuwane.
+ELEMENT_CONTEXT nie odczytuje pol formularza. FORM_DIAGNOSTICS odczytuje
+widoczne input, textarea, select i san-select z calego dokumentu, wraz
+z zastanym stanem walidacji. Nie ma limitu liczby pol ani transportowego
+limitu rozmiaru. Pusta lista jest poprawnym AVAILABLE. Brak opcjonalnych
+danych lub niepoprawna ich czesc daje UNAVAILABLE odpowiedniego bloku
+i nie blokuje analizy.
 
-Receiver odczytuje z fragmentu tylko `nonce` i `sourceOrigin`, po czym od razu
-usuwa fragment przez `history.replaceState`. Sprawdza exact message shape,
-origin badanej strony, klienta, schema/version i limit 128 KiB. Capture nie
-trafia do URL, storage, clipboardu ani analytics.
+Backend utrwala store dopiero po starcie joba. Initial prompt zawiera
+status, origin, czas i ograniczona mape kluczy bez wartosci oraz ID runu.
+Neutralne tools run_store_list_paths i run_store_read_value czytaja
+run.json wedlug runId; skill ux-inspector-store-grounding laczy
+potwierdzony w kodzie warunek z wartoscia w chwili capture. Widoczne pola
+sa dolaczane inline do obecnego budzetu promptu; przekroczenie budzetu
+jest jawne UNAVAILABLE, bez ucinania tablicy.
 
-## Zamrozony store dla UX Inspectora
+## Capture v3
 
-Po wyborze elementu runtime UX wywoluje raz aplikacyjny
-`globalThis.getStoreState()`. Przyjmuje obiekt/tablice JSON albo Promise,
-czeka najwyzej 3 sekundy i ogranicza wynik do 16 MiB UTF-8. Brak funkcji,
-`null`, blad serializacji, timeout i przekroczenie limitu daja `UNAVAILABLE`;
-puste `{}` i `[]` sa dostepnym stanem. Nazwy znanych pol sekretow sa
-redagowane przed transferem, a backend powtarza redakcje. Eksporter aplikacji
-powinien zwracac stan przeznaczony do analizy AI, bo nie da sie automatycznie
-rozpoznac kazdej wrazliwej wartosci.
+Kanoniczny kontrakt ma schema=tdw.ux-inspector-capture, version=3,
+klienta TDW UX Inspector i featureId=ux-inspector. W uploadzie nie ma
+captureId; backend dodaje nadane ID do znormalizowanego capture dla runu,
+wyniku i historii. Obserwacja zawiera origin i route bez wartosci query,
+deskryptor targetu, pelny lancuch przodkow DOM i custom-element boundaries,
+stan, traversal, informacje o Shadow DOM, ograniczeniach i redakcji
+oraz profil i czas obserwacji.
 
-Capture v2 jest potwierdzany osobno. Store przechodzi przez te same exact
-origin/source, nonce i `captureId`, porcjami z ACK. Blad transferu store'a
-pozostawia poprawny capture. UI Explorer nie wywoluje `getStoreState()` i
-zachowuje swoj page-context 4 KiB. Karta TDW przechowuje store tylko do
-recznego startu joba, po czym uploaduje go do endpointu UX. Backend trzyma
-zredagowany snapshot w neutralnym polu `storeSnapshot` pliku
-`runs/{id}/run.json`, poza publicznym export envelope i portable exportem.
-Kolejne zapisy runu zachowuja to pole; follow-up po restarcie czyta ten sam
-stan po ID runu, a legacy/import kontynuuja bez niego. Ref uploadu wygasa
-po 15 minutach i mozna go zuzyc raz. Obecny
-resolver autoryzacji ma tozsamosc wspolna dla workspace; nie rozroznia
-poszczegolnych operatorow.
-
-Initial prompt zawiera status, origin, czas capture i ograniczona mape dwoch
-poziomow kluczy/typow bez wartosci oraz ID runu. Neutralne tools
-`run_store_list_paths` i `run_store_read_value` czytaja `run.json` wedlug
-model-facing `runId` i JSON Pointer, z ograniczona lista sciezek i fragmentami
-wartosci do 12000 znakow. UX Inspector dodaje je do allowlisty tylko gdy snapshot istnieje;
-inne feature'y moga uzyc tego samego mechanizmu. Skill `ux-inspector-store-grounding` uczy
-laczyc potwierdzony w kodzie warunek z wartoscia w chwili capture. Wartosc
-odczytana przez tool trafia do sesji Copilota oraz moze byc obecna w log
-preview, tool evidence i diagnostycznym OTLP przy `capture-content=true`.
-
-## Capture v2 i widoczne pola formularza
-
-Kanoniczny kontrakt ma `schema=tdw.ux-inspector-capture`, `version=2`, klienta
-`TDW UX Inspector` i `featureId=ux-inspector`. Zawiera:
-
-- origin oraz route bez wartosci query,
-- tag, role, accessible name i ograniczony tekst targetu,
-- `domFingerprint`: allowlistowane stabilne atrybuty, selector candidates,
-  label linkage i lancuch custom-element boundaries,
-- obserwowalny stan boolean/ARIA i bounds do preview,
-- pelny lancuch przodkow DOM, w tym wszystkie rozpoznane custom-element
-  boundaries; `omittedNodeCount=0` i nowe capture nie generuje
-  `ANCESTORS_TRUNCATED`,
-- informacje o truncation, Shadow DOM, ramce i redakcji,
-- `captureProfile`.
-
-`ELEMENT_CONTEXT` nie odczytuje pol. `FORM_DIAGNOSTICS` odczytuje w chwili
-capture widoczne kontrolki `input`, `textarea`, `select` oraz wartosci
-`san-select` z calego dokumentu. Odczyt bazuje na zalaczonym skrypcie,
-rozpoznaje etykiete, wartosc i zastany stan walidacji bez wywolywania
-walidacji. Nie ma limitu liczby pol ani obciecia listy. Pusta lista `[]`
-jest poprawna obserwacja.
-
-Pola ukryte, hasla, pliki oraz pola lub wartosci rozpoznane jako token,
-session, secret, CSRF/JWT albo jednorazowy kod sa wykluczane. Cookies,
-storage i ruch sieciowy nie sa odczytywane. Wartosc, etykieta i komunikat
-walidacji pozostaja niezaufanym runtime evidence.
-
-Po `RECEIVED` Browser Tools przesyla pola osobnym transferem `FORM_CHUNK` /
-`FORM_ACK`, niezaleznym od transferu store'a, z tym samym exact origin/source,
-nonce i `captureId`. Kazdy transfer ma limit 16 MiB. Karta TDW przechowuje
-pola do recznego startu joba, uploaduje je osobno, a backend wydaje ref
-jednorazowy z TTL 15 minut. Initial prompt dolacza kompletny bezpieczny JSON
-pol wraz z informacja, ze byly widoczne na stronie w chwili capture. Blad
-skryptu, transferu, uploadu, claim lub budzetu promptu jest jawna luka
-evidence i nie blokuje analizy.
-
-Frontend receiver i backend waliduja niezaleznie ten sam kontrakt. Backend
-odrzuca nieznane pola, inna wersje i payload wiekszy niz 128 KiB przed oraz po
-normalizacji.
-Browser Tools laduje skrypty przez URL-e z wersja runtime. Po aktualizacji
-operator ponownie przeciaga bookmarklet z modala, aby przegladarka pobrala
-aktualny loader i protokol.
+Backend odrzuca nieznane pola i inna wersje, normalizuje deskryptory DOM
+oraz powtarza redakcje. Nie ma dawnego limitu 128 KiB capture. Browser
+Tools nie czyta cookies, storage, ruchu sieciowego ani pelnego HTML.
+Po aktualizacji operator ponownie przeciaga bookmarklet z modala.
 
 ## Formularz analizy i katalog widokow
 
@@ -392,8 +328,8 @@ i akcja share pozostaja w naglowku wyniku. Dla `PARTIAL` ikona obok confidence
 udostepnia podpowiedz o brakujacych dowodach bez osobnego statusu i banera.
 
 Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Export
-zapisuje envelope v2 z historia chatu. Import akceptuje v2 oraz legacy v1,
-waliduje jednosekcyjny raport, capture v2 i spojny source revision, a nastepnie
+zapisuje envelope v3 z historia chatu. Import akceptuje tylko v3,
+waliduje jednosekcyjny raport, capture v3 i spojny source revision, a nastepnie
 tworzy wynik read-only bez prawa do wznowienia sesji.
 
 ## Granice pakietow
@@ -420,14 +356,14 @@ Minimalna macierz obejmuje:
   jawne liczniki pominietego grafu, deduplikacja ich pelnych plikow,
   kompaktowy effective route chain, jednopoziomowy direct
   base slice oraz nieblokujace braki,
-- origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
+- CORS/preflight, pojedynczy POST, retry i popup blocker w Browser Tools oraz GET po ID,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
 - pinned Copilot instructions, trzy standardowe korzenie project skills,
   walidacje frontmatter, katalog naglowkow i fail-closed guidance preparation,
 - jednosekcyjny report oraz pojedyncza prezentacje scalonych metadata,
 - business-first answer contract: zachowanie `as-is` versus wymaganie,
   frontend/backend, obserwowalne scenariusze oraz zweryfikowane `METHOD path`,
-- `QUEUED` przed dispatch, strict import/export v2 z odczytem legacy v1 i odrzucenie obcych wersji,
+- `QUEUED` przed dispatch, strict import/export v3 i odrzucenie obcych wersji,
 - modal bookmarkleta, brak alternatywnego launchera i brak osobnej karty
   read-only,
 - testy Angulara, build produkcyjny, `FrontendPageTest` i pakiet backend-dev.

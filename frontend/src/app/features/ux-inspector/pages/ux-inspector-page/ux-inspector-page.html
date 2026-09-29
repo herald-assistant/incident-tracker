@@ -39,9 +39,22 @@
               <span class="field-label">Element z Browser Tools</span>
               <h3>{{ targetLabel() }}</h3>
               <p><code>&lt;{{ capture.target.tag }}&gt;</code> · {{ capture.page.origin }}{{ capture.page.path }}</p>
-              @if (facade.captureStatus() === 'received') {
-                <p>Store: {{ facade.storeStatus() === 'available' ? 'dostępny dla tej analizy' :
-                  facade.storeStatus() === 'receiving' ? 'pobieranie…' : 'niedostępny w tej sesji' }}</p>
+              @if (facade.captureSnapshot()) {
+              <p>Store: {{ facade.storeStatus() === 'available' ? 'dostępny dla tej analizy' : 'niedostępny w tej sesji' }}</p>
+              <details class="ux-inspector-capture-preview" (toggle)="previewExpanded.set($any($event.target).open)">
+                <summary>Sprawdź dane capture przed wysłaniem pytania</summary>
+                @if (previewExpanded()) {
+                  <p>ID: <code>{{ facade.captureSnapshot()?.captureId ?? capture.captureId }}</code></p>
+                  <h4>Obserwacja elementu</h4>
+                  <pre>{{ captureJson() }}</pre>
+                  <h4>Store: {{ facade.storeStatus() === 'available' ? 'dostępny' : 'niedostępny' }}</h4>
+                  @if (facade.storeStatus() === 'available') { <pre>{{ storeJson() }}</pre> }
+                  @if (facade.captureSnapshot()?.store?.redactions; as redactions) {
+                    <p>Zredagowane klucze store: {{ redactions }}</p>
+                  }
+                  @if (facade.captureSnapshot()?.store?.reason; as reason) { <p>{{ reason }}</p> }
+                }
+              </details>
               }
               <div class="ux-inspector-capture__chips">
                 <span class="panel-chip">
@@ -55,14 +68,18 @@
                   <span class="panel-chip">{{ entry[0] }}={{ entry[1] }}</span>
                 }
               </div>
-              @if (capture.captureProfile === 'FORM_DIAGNOSTICS') {
+              @if (capture.captureProfile === 'FORM_DIAGNOSTICS' && facade.captureSnapshot()) {
                 <details class="ux-inspector-form-snapshot">
                   <summary>
                     Pola widoczne przy capture:
                     {{ facade.formStatus() === 'available' ? facade.formFields()?.length + ' ' + (facade.formFields()?.length === 1 ? 'pole' : 'pól') :
-                       facade.formStatus() === 'receiving' ? 'pobieranie…' : 'niedostępne' }}
+                       'niedostępne' }}
                   </summary>
                   <p>Obserwacja pól widocznych na stronie w chwili capture.</p>
+                  @if (facade.captureSnapshot()?.formFields?.omittedSensitiveFields; as omitted) {
+                    <p>Pominięte pola wrażliwe: {{ omitted }}</p>
+                  }
+                  @if (facade.captureSnapshot()?.formFields?.reason; as reason) { <p>{{ reason }}</p> }
                   @if (facade.formFields(); as fields) {
                     <dl>
                       @for (field of fields; track $index) {
@@ -107,10 +124,15 @@
           </div>
         }
 
+        @if (facade.captureStatus() === 'loading') {
+          <p class="field-hint" role="status">Pobieranie capture z pamięci TDW…</p>
+        }
+
         @if (facade.captureError()) {
           <div class="ux-inspector-message ux-inspector-message--error" role="alert">
             <span class="material-symbols-outlined" aria-hidden="true">error</span>
             <p>{{ facade.captureError() }}</p>
+            <button class="secondary-button secondary-button--compact" type="button" (click)="retryCapture()">Ponów</button>
           </div>
         }
 

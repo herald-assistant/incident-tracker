@@ -16,7 +16,7 @@ import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryTreeArtifact;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryTreeArtifactService;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorToolNames;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
@@ -39,7 +39,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         when(toolFactory.createToolDefinitions(any(), any(), anyList())).thenReturn(registeredTools());
         var targetContext = targetContext();
-        var request = new UxInspectorJobStartRequest(
+        var request = new UxInspectorAnalysisRequest(
                 "crm-agent-portal", "main", VIEW_ID, REVISION, "Skad biora sie dane?",
                 capture(), "gpt-5.6-terra", "medium"
         );

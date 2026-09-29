@@ -114,6 +114,17 @@
   font-weight: 800;
 }
 
+.ux-inspector-capture-preview pre {
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
 .ux-inspector-capture ul,
 .ux-inspector-limitations ul {
   margin: 7px 0 0;

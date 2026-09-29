@@ -10,11 +10,9 @@ import {
 } from '../../../core/models/analysis.models';
 
 export const UX_INSPECTOR_CAPTURE_SCHEMA = 'tdw.ux-inspector-capture' as const;
-export const UX_INSPECTOR_CAPTURE_VERSION = 2 as const;
+export const UX_INSPECTOR_CAPTURE_VERSION = 3 as const;
 export const UX_INSPECTOR_CLIENT_NAME = 'TDW UX Inspector' as const;
 export const UX_INSPECTOR_FEATURE_ID = 'ux-inspector' as const;
-export const UX_INSPECTOR_PROTOCOL_VERSION = 1 as const;
-export const UX_INSPECTOR_MAX_CAPTURE_BYTES = 128 * 1024;
 export type UxInspectorCaptureProfile = 'ELEMENT_CONTEXT' | 'FORM_DIAGNOSTICS';
 
 export type UxInspectorLoadingState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -113,6 +111,13 @@ export interface UxInspectorVisibleFormField {
   nativeValidationMessage: string;
 }
 
+export interface UxInspectorCaptureSnapshot {
+  captureId: string;
+  capture: UxInspectorCapture;
+  formFields: { status: 'NOT_REQUESTED' | 'AVAILABLE' | 'UNAVAILABLE'; fields: UxInspectorVisibleFormField[]; omittedSensitiveFields: number; reason: string | null };
+  store: { status: 'AVAILABLE' | 'UNAVAILABLE'; state: Record<string, unknown> | unknown[] | null; redactions: number; reason: string | null };
+}
+
 export interface UxInspectorSystemOption {
   systemId: string;
   label: string;
@@ -162,14 +167,12 @@ export interface UxInspectorViewCatalogResponse {
 }
 
 export interface UxInspectorJobStartRequest {
-  storeSnapshotRef?: string;
-  formFieldsSnapshotRef?: string;
   systemId: string;
   branch: string;
   viewId: string;
   sourceRevision: string;
   question: string;
-  capture: UxInspectorCapture;
+  captureId: string;
   model: string;
   reasoningEffort?: string;
 }
@@ -181,6 +184,7 @@ export interface UxInspectorJobRequestSnapshot {
   viewId: string;
   sourceRevision: string;
   question: string;
+  captureId: string;
   capture: UxInspectorCapture;
   aiModel: string | null;
   reasoningEffort: string | null;
@@ -241,11 +245,11 @@ export interface UxInspectorJobStateSnapshot {
 
 export interface UxInspectorExportEnvelope {
   schema: 'tdw.ux-inspector-export';
-  version: 1 | 2;
+  version: 3;
   exportedAt: string;
   payload: {
     type: 'ux-inspector-analysis';
-    resultContract: 'ux-inspector-result-v1' | 'ux-inspector-result-v2';
+    resultContract: 'ux-inspector-result-v3';
     job: UxInspectorJobStateSnapshot;
   };
 }
@@ -260,7 +264,6 @@ export interface UxInspectorResultSource {
 
 export type UxInspectorIngressStatus =
   | 'idle'
-  | 'waiting'
+  | 'loading'
   | 'received'
-  | 'invalid'
-  | 'unavailable';
+  | 'invalid';

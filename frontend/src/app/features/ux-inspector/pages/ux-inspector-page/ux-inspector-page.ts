@@ -11,7 +11,6 @@ import { AnalysisReportEditorComponent } from '../../../../components/analysis-r
 import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
-import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 import { UxInspectorCapture, UxInspectorJobStatus, UxInspectorVisibleFormField } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
@@ -43,7 +42,10 @@ export class UxInspectorPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly persistStartedRun = effect(() => {
     const runId = this.facade.startedRunId();
-    if (runId) rememberLocalRunId(this.router, this.route, runId);
+    if (runId) void this.router.navigate([], {
+      relativeTo: this.route, queryParams: { localRunId: runId, captureId: null },
+      queryParamsHandling: 'merge', replaceUrl: true
+    }).catch(() => undefined);
   });
 
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
@@ -53,6 +55,7 @@ export class UxInspectorPageComponent implements OnInit {
   readonly chatActive = computed(() => this.facade.chatMessages().some(
     (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'));
   readonly browserToolsModalOpen = signal(false);
+  readonly previewExpanded = signal(false);
   readonly openMenu = signal<OpenMenu>(null);
   readonly systemSearch = signal('');
   readonly viewSearch = signal('');
@@ -126,9 +129,22 @@ export class UxInspectorPageComponent implements OnInit {
     this.facade.initialize();
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const localRunId = params.get('localRunId')?.trim() ?? '';
-      if (localRunId && this.facade.job()?.jobId !== localRunId) this.facade.loadLocalRun(localRunId);
+      if (localRunId) {
+        if (this.facade.job()?.jobId !== localRunId) this.facade.loadLocalRun(localRunId);
+        return;
+      }
+      const captureId = params.get('captureId')?.trim() ?? '';
+      if (captureId && this.facade.captureSnapshot()?.captureId !== captureId) this.facade.loadCapture(captureId);
     });
   }
+
+  retryCapture(): void {
+    const id = this.route.snapshot.queryParamMap.get('captureId')?.trim();
+    if (id) this.facade.loadCapture(id);
+  }
+
+  captureJson(): string { return JSON.stringify(this.facade.captureSnapshot()?.capture ?? null, null, 2); }
+  storeJson(): string { return JSON.stringify(this.facade.captureSnapshot()?.store.state ?? null, null, 2); }
 
   @HostListener('document:click')
   closeMenus(): void {
@@ -183,7 +199,7 @@ export class UxInspectorPageComponent implements OnInit {
       const document = await readJsonFile(file, 'Importowany plik UX Inspectora nie jest poprawnym JSON.');
       void this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { localRunId: null },
+        queryParams: { localRunId: null, captureId: null },
         queryParamsHandling: 'merge',
         replaceUrl: true
       });

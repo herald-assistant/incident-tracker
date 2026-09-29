@@ -6,8 +6,8 @@ import org.springframework.core.task.TaskExecutor;
 import pl.mkn.tdw.features.uxinspector.ai.*;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshot;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshotService;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetEvidenceMapper;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
 import pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse;
@@ -93,41 +93,36 @@ class UxInspectorJobServiceTest {
     }
 
     @Test
-    void shouldClaimOpaqueStoreReferenceBeforeDispatchWithoutExposingItInSnapshot() {
+    void shouldPersistCapturedStoreAfterQueuedWithoutExposingStateInRequest() {
         var tasks = new ArrayList<Runnable>();
-        var stores = mock(pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService.class);
+        var captures = captureService();
         var persistence = mock(UxInspectorLocalRunPersistence.class);
         var storeSnapshot = new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot(
                 new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode().put("ready", true),
                 java.time.Instant.parse("2026-09-15T10:00:00Z"), "https://crm.example.com", 0);
-        when(stores.claim(eq("opaque-crm-ref"), any(), any())).thenReturn(storeSnapshot);
-        var service = service(tasks::add, persistence, stores);
-        var input = request();
-        var withStore = new UxInspectorJobStartRequest(input.systemId(), input.branch(), input.viewId(),
-                input.sourceRevision(), input.question(), input.capture(), input.model(),
-                input.reasoningEffort(), "opaque-crm-ref");
-        var accepted = service.startJob(withStore);
-        verify(stores).claim(eq("opaque-crm-ref"), any(), any());
+        when(captures.runStoreSnapshot(any())).thenReturn(storeSnapshot);
+        var service = service(tasks::add, persistence, captures);
+        var accepted = service.startJob(request());
         verify(persistence).persistStoreSnapshot(accepted.jobId(), storeSnapshot);
         var order = inOrder(persistence);
         order.verify(persistence).persistRunSnapshot(any(), any(), isNull());
         order.verify(persistence).persistStoreSnapshot(accepted.jobId(), storeSnapshot);
-        assertThat(accepted.request().toString()).doesNotContain("opaque-crm-ref");
+        assertThat(accepted.request().toString()).doesNotContain("ready=true");
         assertThat(tasks).hasSize(1);
     }
 
     @Test
     void shouldContinueWithoutStoreWhenRunJsonUpdateFails() {
         var tasks = new ArrayList<Runnable>();
-        var stores = mock(pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService.class);
+        var captures = captureService();
         var persistence = mock(UxInspectorLocalRunPersistence.class);
         var storeSnapshot = new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot(
                 new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode(),
                 java.time.Instant.parse("2026-09-15T10:00:00Z"), "https://crm.example.com", 0);
-        when(stores.claim(any(), any(), any())).thenReturn(storeSnapshot);
+        when(captures.runStoreSnapshot(any())).thenReturn(storeSnapshot);
         doThrow(new IllegalStateException("CRM test storage failure"))
                 .when(persistence).persistStoreSnapshot(anyString(), any());
-        var service = service(tasks::add, persistence, stores);
+        var service = service(tasks::add, persistence, captures);
 
         var accepted = service.startJob(request());
         assertThat(accepted.status()).isEqualTo(UxInspectorJobStatus.QUEUED);
@@ -138,13 +133,11 @@ class UxInspectorJobServiceTest {
 
     private UxInspectorJobService service(TaskExecutor executor, UxInspectorLocalRunPersistence persistence) {
         return service(executor, persistence,
-                mock(pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService.class));
+                captureService());
     }
 
     private UxInspectorJobService service(TaskExecutor executor, UxInspectorLocalRunPersistence persistence,
-                                          pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService stores) {
-        var normalizer = mock(UxInspectorCaptureNormalizer.class);
-        when(normalizer.normalize(any())).thenReturn(capture());
+                                          UxInspectorCaptureSnapshotService captures) {
         var selection = mock(UxInspectorAiSelectionValidator.class);
         var resolver = mock(UxInspectorTargetResolver.class);
         when(resolver.resolve(anyString(), anyString(), anyString(), anyString(), any())).thenReturn(targetContext());
@@ -152,18 +145,27 @@ class UxInspectorJobServiceTest {
         when(evidence.map(any())).thenReturn(List.of());
         var preparation = mock(UxInspectorPromptPreparationService.class);
         when(preparation.prepare(any(), any(), anyString(), nullable(pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot.class),
-                nullable(UxInspectorFormFieldsSnapshotService.Snapshot.class))).thenReturn(new UxInspectorPromptPreparation(
+                nullable(UxInspectorCaptureSnapshot.FormFields.class))).thenReturn(new UxInspectorPromptPreparation(
                 "Focused CRM prompt", java.util.Map.of("target", "CRM target")));
         var provider = mock(UxInspectorAnalysisProvider.class);
         when(provider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(completedAnalysis());
         var auth = mock(AnalysisAiAuthRefResolver.class);
         when(auth.resolveForCurrentRequest()).thenReturn(AnalysisAiAuthRef.localToken("CRM test"));
-        return new UxInspectorJobService(normalizer, selection, resolver, evidence, preparation, provider,
+        return new UxInspectorJobService(captures, selection, resolver, evidence, preparation, provider,
                 executor, auth, persistence, mock(UxInspectorFollowUpChatService.class),
                 new UxInspectorFollowUpReportProjection(new pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper()),
-                mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard(),
-                stores, mock(UxInspectorFormFieldsSnapshotService.class));
+                mock(UxInspectorFollowUpPromptService.class), new LocalAnalysisRunOperationGuard());
+    }
+
+    private UxInspectorCaptureSnapshotService captureService() {
+        var service = mock(UxInspectorCaptureSnapshotService.class);
+        when(service.get(capture().captureId())).thenReturn(new UxInspectorCaptureSnapshot(
+                capture().captureId(), capture(),
+                new UxInspectorCaptureSnapshot.FormFields("NOT_REQUESTED", new com.fasterxml.jackson.databind.ObjectMapper().createArrayNode(), 0, null),
+                new UxInspectorCaptureSnapshot.Store("UNAVAILABLE", null, 0, null)));
+        when(service.findRunStore(anyString())).thenReturn(java.util.Optional.empty());
+        return service;
     }
 
     private UxInspectorAiAnalysis completedAnalysis() {
@@ -182,6 +184,6 @@ class UxInspectorJobServiceTest {
 
     private UxInspectorJobStartRequest request() {
         return new UxInspectorJobStartRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
-                "Dlaczego przycisk jest zablokowany?", capture(), "gpt-crm", "medium");
+                "Dlaczego przycisk jest zablokowany?", capture().captureId(), "gpt-crm", "medium");
     }
 }

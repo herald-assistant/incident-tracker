@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
@@ -16,13 +16,13 @@ describe('UxInspectorFacade', () => {
   const captureSignal = signal<UxInspectorCapture | null>(captureFixture());
   const ingress = {
     capture: captureSignal,
+    snapshot: computed(() => captureSignal() ? { captureId: captureSignal()!.captureId, capture: captureSignal()! } : null),
     status: signal<'received' | 'idle'>('received'),
     error: signal(''),
-    storeState: signal<Record<string, unknown> | null>(null),
     storeStatus: signal<'unavailable' | 'receiving' | 'available'>('unavailable'),
     formFields: signal<UxInspectorVisibleFormField[] | null>(null),
     formStatus: signal<'unavailable' | 'receiving' | 'available'>('unavailable'),
-    start: vi.fn(),
+    load: vi.fn(),
     consumeCapture: vi.fn(() => captureSignal.set(null))
   };
   const api = {
@@ -39,8 +39,6 @@ describe('UxInspectorFacade', () => {
       diagnostics: [], limitations: []
     })),
     startJob: vi.fn((_request: UxInspectorJobStartRequest) => of(snapshot('QUEUED'))),
-    uploadStoreSnapshot: vi.fn(() => of({ storeSnapshotRef: 'store-ref' })),
-    uploadFormFieldsSnapshot: vi.fn(() => of({ formFieldsSnapshotRef: 'form-ref' })),
     getJob: vi.fn(() => of(snapshot('COMPLETED'))),
     sendChatMessage: vi.fn(() => of(chatSnapshot())),
     exportJob: vi.fn(), importAnalysis: vi.fn()
@@ -57,7 +55,6 @@ describe('UxInspectorFacade', () => {
     vi.clearAllMocks();
     captureSignal.set(captureFixture());
     ingress.status.set('received');
-    ingress.storeState.set(null);
     ingress.storeStatus.set('unavailable');
     ingress.formStatus.set('unavailable');
     ingress.formFields.set(null);
@@ -71,7 +68,7 @@ describe('UxInspectorFacade', () => {
     ] });
   });
 
-  it('requires capture and sends the exact capture v2 with confirmed source selection', () => {
+  it('requires capture and sends only its ID with confirmed source selection', () => {
     const facade = TestBed.inject(UxInspectorFacade);
     facade.initialize();
     facade.loadViews();
@@ -84,77 +81,13 @@ describe('UxInspectorFacade', () => {
     expect(api.startJob).toHaveBeenCalledWith({
       systemId: 'crm-agent-portal', branch: 'main', viewId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3', question: 'Dlaczego przycisk jest zablokowany?',
-      capture: captureFixture(), model: 'gpt-crm', reasoningEffort: 'medium'
+      captureId: 'cap_crm_contact_save', model: 'gpt-crm', reasoningEffort: 'medium'
     });
     expect(ingress.consumeCapture).toHaveBeenCalledTimes(1);
     expect(facade.startedRunId()).toBe('ux-crm-job');
     expect(polling.poll).toHaveBeenCalledTimes(1);
     expect(facade.job()?.status).toBe('COMPLETED');
     expect(facade.capture()?.captureId).toBe('cap_crm_contact_save');
-  });
-
-  it('uploads the captured store before starting the job', () => {
-    ingress.storeState.set({ contact: { editable: false } });
-    ingress.storeStatus.set('available');
-    const facade = TestBed.inject(UxInspectorFacade);
-    facade.initialize();
-    facade.loadViews();
-    facade.selectView('crm-contact-create');
-    facade.updateQuestion('Dlaczego nie można edytować kontaktu?');
-    facade.startJob();
-    expect(api.uploadStoreSnapshot).toHaveBeenCalledWith({
-      captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com',
-      state: { contact: { editable: false } }
-    });
-    expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({ storeSnapshotRef: 'store-ref' }));
-  });
-
-  it('uploads captured visible fields before the job', () => {
-    const field: UxInspectorVisibleFormField = {
-      tag: 'input', type: 'text', name: 'contactName', id: 'contactName', testId: '', label: 'Kontakt',
-      disabled: false, value: 'CRM contact', display: 'CRM contact', source: 'dom', checked: null,
-      indeterminate: null, invalid: null, errors: [], descriptions: [], nativeInvalid: null,
-      nativeValidationMessage: ''
-    };
-    ingress.formFields.set([field]);
-    ingress.formStatus.set('available');
-    const facade = TestBed.inject(UxInspectorFacade);
-    facade.initialize();
-    facade.loadViews();
-    facade.selectView('crm-contact-create');
-    facade.updateQuestion('Jakie pola są widoczne?');
-    facade.startJob();
-    expect(api.uploadFormFieldsSnapshot).toHaveBeenCalledWith({
-      captureId: 'cap_crm_contact_save', origin: 'https://crm.example.com', fields: [field]
-    });
-    expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({ formFieldsSnapshotRef: 'form-ref' }));
-  });
-
-  it('starts the job without form fields when their upload fails', () => {
-    ingress.formFields.set([]);
-    ingress.formStatus.set('available');
-    api.uploadFormFieldsSnapshot.mockReturnValueOnce(throwError(() => new Error('upload failed')));
-    const facade = TestBed.inject(UxInspectorFacade);
-    facade.initialize();
-    facade.loadViews();
-    facade.selectView('crm-contact-create');
-    facade.updateQuestion('Jakie pola są widoczne?');
-    facade.startJob();
-    expect(api.startJob).toHaveBeenCalledWith(expect.not.objectContaining({ formFieldsSnapshotRef: expect.anything() }));
-  });
-
-  it('starts a job without store when upload fails', () => {
-    ingress.storeState.set({ contact: { editable: false } });
-    ingress.storeStatus.set('available');
-    api.uploadStoreSnapshot.mockReturnValueOnce(throwError(() => new Error('upload failed')));
-    const facade = TestBed.inject(UxInspectorFacade);
-    facade.initialize();
-    facade.loadViews();
-    facade.selectView('crm-contact-create');
-    facade.updateQuestion('Dlaczego nie można edytować kontaktu?');
-    facade.startJob();
-    expect(api.startJob).toHaveBeenCalledWith(expect.not.objectContaining({ storeSnapshotRef: expect.anything() }));
-    expect(facade.startedRunId()).toBe('ux-crm-job');
   });
 
   it('does not create a manual or capture-less start path', () => {
@@ -334,7 +267,7 @@ function viewCatalog(views: ReturnType<typeof view>[]) {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 2, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
+    schema: 'tdw.ux-inspector-capture', version: 3, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
     target: { tag: 'button', role: 'button', accessibleName: 'Zapisz kontakt', text: 'Zapisz kontakt',
@@ -354,7 +287,8 @@ function snapshot(status: UxInspectorJobStateSnapshot['status']): UxInspectorJob
   return {
     jobId: 'ux-crm-job', request: { systemId: 'crm-agent-portal', systemLabel: 'CRM Agent Portal', branch: 'main',
       viewId: 'crm-contact-create', sourceRevision: 'crm-revision-a1b2c3', question: 'Dlaczego przycisk jest zablokowany?',
-      capture: captureFixture(), aiModel: 'gpt-crm', reasoningEffort: 'medium', targetResolutionStatus: 'RESOLVED', targetCandidateCount: 1 },
+      captureId: 'cap_crm_contact_save', capture: captureFixture(), aiModel: 'gpt-crm', reasoningEffort: 'medium',
+      targetResolutionStatus: 'RESOLVED', targetCandidateCount: 1 },
     status, currentStepCode: terminal ? null : 'TARGET_RESOLUTION', currentStepLabel: terminal ? null : 'Resolve target',
     errorCode: null, errorMessage: null, createdAt: '2026-09-15T10:00:00Z', updatedAt: '2026-09-15T10:00:01Z',
     completedAt: terminal ? '2026-09-15T10:00:02Z' : null, steps: [], contextSections: [], toolEvidenceSections: [],

@@ -27,8 +27,7 @@ public record UxInspectorCapture(
         Client client
 ) {
     public static final String SCHEMA = "tdw.ux-inspector-capture";
-    public static final int VERSION = 2;
-    public static final int MAX_BYTES = 128 * 1024;
+    public static final int VERSION = 3;
 
     public UxInspectorCapture {
         ancestors = ancestors != null ? List.copyOf(ancestors) : List.of();

@@ -8,7 +8,7 @@ import pl.mkn.tdw.features.uxinspector.ai.UxInspectorAiAnalysis;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorAiAnalysisStatus;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
 import pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse;
-import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobException;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
 import pl.mkn.tdw.features.uxinspector.job.localworkspace.UxInspectorLocalRunPersistence;
@@ -32,7 +32,7 @@ class UxInspectorImportServiceTest {
     private final LocalWorkspaceProperties properties = new LocalWorkspaceProperties();
     private final UxInspectorLocalRunPersistence persistence = mock(UxInspectorLocalRunPersistence.class);
     private final UxInspectorImportService service = new UxInspectorImportService(objectMapper, properties, persistence,
-            new UxInspectorCaptureNormalizer(objectMapper));
+            new UxInspectorCaptureNormalizer());
 
     @Test
     void shouldImportOnlyStrictUxInspectorExportAsReadOnlyHistoricalResult() {
@@ -61,7 +61,7 @@ class UxInspectorImportServiceTest {
     }
 
     @Test
-    void shouldRejectUiExplorerSchemaUnknownVersionUnknownFieldsAndCaptureV3() {
+    void shouldRejectUiExplorerSchemaUnknownVersionUnknownFieldsAndCaptureV2() {
         ObjectNode uiExplorer = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         uiExplorer.put("schema", "tdw.ui-explorer-export");
         ObjectNode future = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
@@ -70,21 +70,24 @@ class UxInspectorImportServiceTest {
         unknown.put("legacy", true);
         ObjectNode unknownNested = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         unknownNested.withObject("/payload/job").put("legacy", true);
-        ObjectNode captureV3 = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
-        captureV3.withObject("/payload/job/request/capture").put("version", 3);
+        ObjectNode captureV2 = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
+        captureV2.withObject("/payload/job/request/capture").put("version", 2);
         ObjectNode nonCanonicalCapture = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         nonCanonicalCapture.withObject("/payload/job/request/capture/target/domFingerprint/stableAttributes")
                 .put("data-testid", "secret-token");
         ObjectNode mismatchedResult = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         mismatchedResult.withObject("/payload/job/result").put("captureId", "cap_other_crm_target");
+        ObjectNode mismatchedRequest = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
+        mismatchedRequest.withObject("/payload/job/request").put("captureId", "cap_other_crm_target");
 
         assertInvalid(uiExplorer);
         assertInvalid(future);
         assertInvalid(unknown);
         assertInvalid(unknownNested);
-        assertInvalid(captureV3);
+        assertInvalid(captureV2);
         assertInvalid(nonCanonicalCapture);
         assertInvalid(mismatchedResult);
+        assertInvalid(mismatchedRequest);
     }
 
     private void assertInvalid(ObjectNode document) {
@@ -93,7 +96,7 @@ class UxInspectorImportServiceTest {
     }
 
     private pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStateSnapshot completedSnapshot() {
-        var request = new UxInspectorJobStartRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
+        var request = new UxInspectorAnalysisRequest("crm-agent-portal", "main", VIEW_ID, REVISION,
                 "Jak dziala zapis kontaktu?", capture(), "gpt-crm", "medium");
         var state = new UxInspectorJobState("ux-crm-completed", request);
         state.tryStart();

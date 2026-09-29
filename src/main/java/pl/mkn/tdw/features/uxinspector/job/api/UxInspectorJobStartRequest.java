@@ -1,12 +1,9 @@
 package pl.mkn.tdw.features.uxinspector.job.api;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 public record UxInspectorJobStartRequest(
@@ -15,23 +12,10 @@ public record UxInspectorJobStartRequest(
         @NotBlank @Size(max = 240) String viewId,
         @NotBlank @Size(max = 160) String sourceRevision,
         @NotBlank @Size(max = 4000) String question,
-        @NotNull @Valid UxInspectorCapture capture,
+        @NotBlank String captureId,
         @NotBlank @Size(max = 80) String model,
-        @Size(max = 40) String reasoningEffort,
-        @Size(max = 80) String storeSnapshotRef,
-        @Size(max = 80) String formFieldsSnapshotRef
+        @Size(max = 40) String reasoningEffort
 ) {
-    public UxInspectorJobStartRequest(String systemId, String branch, String viewId, String sourceRevision,
-                                      String question, UxInspectorCapture capture, String model, String reasoningEffort) {
-        this(systemId, branch, viewId, sourceRevision, question, capture, model, reasoningEffort, null, null);
-    }
-
-    public UxInspectorJobStartRequest(String systemId, String branch, String viewId, String sourceRevision,
-                                      String question, UxInspectorCapture capture, String model, String reasoningEffort,
-                                      String storeSnapshotRef) {
-        this(systemId, branch, viewId, sourceRevision, question, capture, model, reasoningEffort, storeSnapshotRef, null);
-    }
-
     public UxInspectorJobStartRequest {
         systemId = normalize(systemId);
         branch = normalize(branch);
@@ -40,8 +24,7 @@ public record UxInspectorJobStartRequest(
         question = normalize(question);
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
-        storeSnapshotRef = normalize(storeSnapshotRef);
-        formFieldsSnapshotRef = normalize(formFieldsSnapshotRef);
+        captureId = normalize(captureId);
     }
 
     public AnalysisAiOptions aiOptions() { return new AnalysisAiOptions(model, reasoningEffort); }

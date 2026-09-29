@@ -2,7 +2,7 @@
 
 ## Zakres
 
-Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v2,
+Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v3,
 wybor scope'u, resolver targetu, kanoniczny prompt, session-bound tools, job,
 report, historie oraz import/export.
 
@@ -16,13 +16,13 @@ report, historie oraz import/export.
 - `FORM_DIAGNOSTICS` odczytuje bez limitu liczby pol widoczne kontrolki z
   calego dokumentu w chwili capture. Pola ukryte, hasla, tokeny, pliki,
   cookies i storage sa poza kontraktem. Wartosc, etykieta i komunikat
-  walidacji sa niezaufanym runtime evidence. Transfer, upload i jednorazowy
-  ref sa osobne od capture oraz store'a; brak pol nie blokuje analizy.
+  walidacji sa niezaufanym runtime evidence. Pola ida z capture i store'em
+  jednym POST; brak pol nie blokuje analizy.
 - Opcjonalny zrzut `globalThis.getStoreState()` jest zamrozona obserwacja
-  sesji UX. Ref uploadu jest jednorazowy i scope'owany do capture, originu i
-  operatora. Zredagowany JSON jest w neutralnym polu `storeSnapshot` w
+  sesji UX. Pending snapshot po jednym POST jest tylko w pamieci backendu;
+  po starcie zredagowany JSON jest w neutralnym polu `storeSnapshot` w
   `run.json`; publiczne snapshoty i portable export nie zawieraja store'a.
-  Brak zrzutu ani blad transferu, uploadu lub storage nie blokuje analizy.
+  Brak zrzutu ani blad odczytu lub storage nie blokuje analizy.
 - Initial prompt przekazuje najwyzej dwa poziomy mapy store'a bez wartosci.
   Odczyt wartosci jest dozwolony przez neutralne `run_store_list_paths` i
   `run_store_read_value` z jawnym `runId`. Skill

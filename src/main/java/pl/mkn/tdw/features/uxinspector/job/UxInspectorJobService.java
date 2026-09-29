@@ -10,15 +10,14 @@ import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatRequest;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
 import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
-import pl.mkn.tdw.features.uxinspector.capture.UxInspectorFormFieldsSnapshotService;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshot;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshotService;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetEvidenceMapper;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobException;
 import pl.mkn.tdw.features.uxinspector.job.localworkspace.UxInspectorLocalRunPersistence;
 import pl.mkn.tdw.features.uxinspector.job.state.UxInspectorJobState;
-import pl.mkn.tdw.features.uxinspector.store.UxInspectorStoreSnapshotService;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence;
@@ -39,7 +38,7 @@ public class UxInspectorJobService {
     private final Map<String, UxInspectorJobState> jobs = new ConcurrentHashMap<>();
     private final Map<String, pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext> targetContexts = new ConcurrentHashMap<>();
     private final Map<String, AnalysisAiAuthRef> authRefs = new ConcurrentHashMap<>();
-    private final UxInspectorCaptureNormalizer captureNormalizer;
+    private final UxInspectorCaptureSnapshotService captureSnapshots;
     private final UxInspectorAiSelectionValidator aiSelectionValidator;
     private final UxInspectorTargetResolver targetResolver;
     private final UxInspectorTargetEvidenceMapper evidenceMapper;
@@ -52,18 +51,17 @@ public class UxInspectorJobService {
     private final UxInspectorFollowUpReportProjection followUpReportProjection;
     private final UxInspectorFollowUpPromptService followUpPromptService;
     private final LocalAnalysisRunOperationGuard operationGuard;
-    private final UxInspectorStoreSnapshotService storeSnapshots;
-    private final UxInspectorFormFieldsSnapshotService formFieldsSnapshots;
 
     public UxInspectorJobStateSnapshot startJob(UxInspectorJobStartRequest request) {
         var auth = authRefResolver.resolveForCurrentRequest();
         aiSelectionValidator.validate(request.model(), request.reasoningEffort(), auth);
-        var normalizedCapture = captureNormalizer.normalize(request.capture());
-        var normalizedRequest = new UxInspectorJobStartRequest(request.systemId(), request.branch(), request.viewId(),
+        var captureSnapshot = captureSnapshots.get(request.captureId());
+        var normalizedCapture = captureSnapshot.capture();
+        var normalizedRequest = new UxInspectorAnalysisRequest(request.systemId(), request.branch(), request.viewId(),
                 request.sourceRevision(), request.question(), normalizedCapture, request.model(), request.reasoningEffort());
         var id = UUID.randomUUID().toString();
-        var claimedStore = storeSnapshots.claim(request.storeSnapshotRef(), normalizedCapture, auth);
-        var claimedFormFields = formFieldsSnapshots.claim(request.formFieldsSnapshotRef(), normalizedCapture, auth);
+        var claimedStore = captureSnapshots.runStoreSnapshot(captureSnapshot);
+        var claimedFormFields = captureSnapshot.formFields();
         var state = new UxInspectorJobState(id, normalizedRequest);
         jobs.put(id, state);
         authRefs.put(id, auth);
@@ -93,8 +91,8 @@ public class UxInspectorJobService {
         return accepted;
     }
 
-    void runJob(String id, UxInspectorJobState state, UxInspectorJobStartRequest request, AnalysisAiAuthRef auth,
-                UxInspectorFormFieldsSnapshotService.Snapshot formFields) {
+    void runJob(String id, UxInspectorJobState state, UxInspectorAnalysisRequest request, AnalysisAiAuthRef auth,
+                UxInspectorCaptureSnapshot.FormFields formFields) {
         if (!state.tryStart()) return;
         persist(state);
         try {
@@ -105,7 +103,7 @@ public class UxInspectorJobService {
             persist(state);
             state.preparationStarted();
             persist(state);
-            var preparation = promptPreparationService.prepare(request, context, id, storeSnapshots.find(id).orElse(null), formFields);
+            var preparation = promptPreparationService.prepare(request, context, id, captureSnapshots.findRunStore(id).orElse(null), formFields);
             state.preparationCompleted(preparation.prompt(), preparation.artifactContents().size());
             persist(state);
             state.analysisStarted();

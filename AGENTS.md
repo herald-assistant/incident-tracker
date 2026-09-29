@@ -344,9 +344,10 @@ Zasady granic:
   `0-200`, job, historia/import-export i UI bez importow do drugiego
   assessmentu.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`
-  Focused analiza jednego elementu wskazanego przez Browser Tools: capture v2,
+  Focused analiza jednego elementu wskazanego przez Browser Tools: capture v3
+  zapisywany jednym POST i odczytywany po ID przed startem,
   deterministic target resolution, session-bound tools, one-section report,
-  job, historia i import/export v1.
+  job, historia i import/export v3.
 - `src/main/java/pl/mkn/tdw/frontendcatalog`
   Neutralny katalog zarejestrowanych frontendow i widokow, konsumowany przez
   UX Inspector oraz mapowany przez adaptery UI Explorera.

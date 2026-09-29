@@ -1,13 +1,9 @@
 package pl.mkn.tdw.features.uxinspector.capture;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -18,7 +14,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Component
-@RequiredArgsConstructor
 public class UxInspectorCaptureNormalizer {
     private static final Set<String> ATTRIBUTES = Set.of("id", "name", "type", "data-testid", "data-test",
             "data-cy", "formcontrolname", "aria-label", "aria-describedby");
@@ -28,7 +23,6 @@ public class UxInspectorCaptureNormalizer {
     private static final Pattern EMAIL = Pattern.compile("\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern UUID = Pattern.compile("\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern LONG_NUMBER = Pattern.compile("\\b\\d{6,}\\b");
-    private final ObjectMapper objectMapper;
 
     public UxInspectorCapture normalize(UxInspectorCapture capture) {
         if (capture == null) throw new IllegalArgumentException("capture is required");
@@ -52,8 +46,6 @@ public class UxInspectorCaptureNormalizer {
                 traversal, signals,
                 List.copyOf(limits), new UxInspectorCapture.Client("TDW UX Inspector",
                 bounded(capture.client().version(), 40, "unknown"), "ux-inspector"));
-        require(serializedBytes(normalized) <= UxInspectorCapture.MAX_BYTES,
-                "UX Inspector capture exceeds the 128 KiB post-normalization limit");
         return normalized;
     }
 
@@ -178,10 +170,6 @@ public class UxInspectorCaptureNormalizer {
     private double safeNumber(double value) { return Double.isFinite(value) ? Math.max(-1_000_000, Math.min(1_000_000, value)) : 0; }
     private UxInspectorCapture.TargetState emptyState() {
         return new UxInspectorCapture.TargetState(false, false, false, false, false, null, null, false);
-    }
-    private int serializedBytes(UxInspectorCapture value) {
-        try { return objectMapper.writeValueAsString(value).getBytes(StandardCharsets.UTF_8).length; }
-        catch (JsonProcessingException exception) { throw new IllegalArgumentException("Capture cannot be serialized", exception); }
     }
     private String nullToEmpty(String value) { return value != null ? value : ""; }
     private void require(boolean condition, String message) { if (!condition) throw new IllegalArgumentException(message); }

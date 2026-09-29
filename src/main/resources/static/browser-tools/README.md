@@ -33,37 +33,41 @@ usuwa Browser Tools i wszystkie jego listenery z badanej strony.
   originu i ustawia `referrerPolicy=no-referrer`.
 - Shell wyswietla publiczny `assets/brand/main-logo.png` z tego samego originu
   TDW, rowniez z `referrerPolicy=no-referrer`.
-- Badana strona nie otrzymuje cookies, tokenow, katalogu modeli ani klienta
-  REST.
+- Badana strona nie otrzymuje cookies, tokenow ani katalogu modeli. Runtime
+  wysyla jeden bezposredni POST capture do originu TDW bez credentials.
 - Profil `Element` nie czyta wartosci formularza. Profil `Formularz` zamraza
   pola widoczne w calym dokumencie w chwili capture, wraz z zastanym stanem
   walidacji. Nie ogranicza liczby pol. Wyklucza pola ukryte, hasla, tokeny,
   pliki, cookies i storage.
 - Dla UX Inspectora runtime po wskazaniu elementu wywoluje jednokrotnie
-  aplikacyjny `globalThis.getStoreState()`. Dostepny stan JSON (do 16 MiB)
-  przechodzi porcjami do karty TDW i jest dolaczany do recznie uruchomionego
-  joba. Aplikacja powinna wystawiac do tej funkcji stan odpowiedni do
+  aplikacyjny `globalThis.getStoreState()`. Dostepny stan JSON jest wysylany
+  razem z elementem i polami w jednym POST do TDW. Po recznym starcie joba
+  backend utrwala go w `run.json` dla analizy i follow-up. Aplikacja powinna
+  wystawiac do tej funkcji stan odpowiedni do
   analizy AI; znane pola sekretow sa redagowane. Blad, timeout lub brak
   funkcji pozostawia capture bez store'a.
 - Runtime nie czyta requestow ani screenshotow.
-- Capture, transfer pol i transfer store'a wymagaja zgodnosci `event.origin`,
-  `event.source`, nonce i protokolu v1. UX capture v2 ma limit 128 KiB,
-  kazdy z osobnych transferow ma limit 16 MiB, a wskazowka UI Explorera 4 KiB.
-  Blad odczytu lub przekazania pol nie zatrzymuje capture ani analizy.
+- UX capture v3 jest zapisywany jednym POST przez CORS. Odpowiedz zwraca
+  `captureId`, a karta TDW otwiera formularz z tym ID i pobiera snapshot
+  przez GET. Capture, pola i store nie maja transportowego limitu rozmiaru.
+  Blad odczytu pol lub store nie zatrzymuje capture ani analizy. Nieudany
+  POST mozna ponowic bez ponownego wybierania elementu.
 - UI Explorer nie pobiera store'a i przekazuje tylko dotychczasowa wskazowke
   widoku.
-- UX Inspector ponownie waliduje capture na zaufanym originie. UI Explorer
+- Backend UX Inspectora ponownie waliduje capture. UI Explorer
   odbiera osobny kontekst: zredagowany route path oraz tagi glownego
   routowanego komponentu. Nie zawiera elementu ani wartosci formularzy.
   Obserwacja nie jest kodowana w URL ani zapisywana w storage.
 
 ## Ograniczenia
 
-Zakladka albo pobranie statycznego runtime moze byc blokowane przez CSP,
-polityke enterprise lub Chrome Local Network Access. Popup blocker albo
-Cross-Origin-Opener-Policy moze odciac `window.opener`; operacja konczy sie
-wtedy bledem, a capture jest odrzucany. Nie ma alternatywnego transferu ani
-trybu DevTools.
+Zakladka, runtime albo POST moze byc blokowany przez CSP, mixed content,
+polityke enterprise lub Chrome Local Network Access. Gdy popup jest
+zablokowany, overlay pokazuje link do zapisanego capture. Pending capture
+jest tylko w pamieci backendu i znika po restarcie przed startem analizy.
+Domyslny CORS POST dopuszcza kazdy origin; administrator moze ustawic
+`ux-inspector.capture.allowed-origins`. Bez limitow liczby i rozmiaru
+snapshotow zuzycie pamieci backendu moze rosnac.
 
 Nie sa wspierane chronione strony Chrome, PDF viewer, `file://` ani
 cross-origin iframe.

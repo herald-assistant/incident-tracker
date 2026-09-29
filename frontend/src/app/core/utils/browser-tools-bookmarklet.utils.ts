@@ -1,5 +1,5 @@
 export const BROWSER_TOOLS_LAUNCHER_VERSION = 1 as const;
-export const BROWSER_TOOLS_RUNTIME_VERSION = '1.4.0' as const;
+export const BROWSER_TOOLS_RUNTIME_VERSION = '1.5.0' as const;
 
 export function buildBrowserToolsBookmarkletUrl(tdwOrigin: string): string {
   const origin = normalizeHttpOrigin(tdwOrigin);
