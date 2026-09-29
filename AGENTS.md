@@ -65,8 +65,8 @@ Przed wieksza zmiana zacznij od:
   przyjmuje `source`, dla `ELASTICSEARCH` wymagany `correlationId`, dla
   `CSV_UPLOAD` multipart `logFile`, opcjonalny opis objawu
   `problemDescription` oraz opcjonalne preferencje AI (`model`,
-  `reasoningEffort`). Legacy aliasy `/analysis/**` pozostaja dostepne tylko dla
-  kompatybilnosci.
+  `reasoningEffort`). Zastane aliasy `/analysis/**` sa mechanizmem poprzedniego
+  kontraktu do usuniecia przy zmianie tej granicy, zgodnie z polityka ponizej.
 - `gitLabBranch` i `environment` sa wyprowadzane z evidence, glownie z logow
   Elasticsearch.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji, nie z evidence.
@@ -381,6 +381,27 @@ Zasady granic:
   kanonicznym targetem relacji i code-search scope'ow.
 
 ## Zasady rozwoju
+
+### Kompatybilnosc przed pierwszym wdrozeniem
+
+- Do pierwszego wdrozenia domyslnie nie zachowuj kompatybilnosci wstecznej.
+  Utrzymuj ja tylko na jawne zadanie uzytkownika, ze wskazaniem konkretnego
+  kontraktu i zakresu starszych wersji. Samo istnienie starego kodu, danych,
+  testow lub dokumentacji nie jest takim zadaniem.
+- Przy zmianie kontraktu albo mechanizmu usun w tej samej zmianie jego stare
+  aliasy, migratory, fallbacki, rownolegle sciezki wykonania, nieaktualne
+  pola, testy i dokumentacje poprzednich wersji. Usun tez lokalne dane i
+  artefakty poprzednich wersji tego mechanizmu, zamiast dodawac ich odczyt lub
+  migracje. Dotyczy to rowniez zastanych mechanizmow kompatybilnosci, gdy
+  zmieniasz ich granice.
+- Biezacy kontrakt, format zapisu oraz import/export maja pozostawac w wersji
+  `1`; przed pierwszym wdrozeniem nie podbijaj numeru wersji po zmianie
+  ksztaltu. Jezeli kod uzywa juz wyzszej wersji, sprowadz go do `1` wraz z
+  najblizsza zmiana tego mechanizmu. Waliduj tylko aktualna wersje.
+- Zmiana kontraktu nadal wymaga aktualizacji wszystkich konsumentow i testow
+  biezacego zachowania. Wyjatek kompatybilnosci musi byc jawnie opisany w
+  planie i przetestowany. Po pierwszym wdrozeniu zaktualizuj te instrukcje i
+  kanoniczna dokumentacje przed zastosowaniem nowej polityki.
 
 ### Gdy dodajesz nowe zrodlo evidence
 

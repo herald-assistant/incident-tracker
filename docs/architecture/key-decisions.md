@@ -120,6 +120,21 @@ Konsekwencje UI:
   nie w lokalnych `workbench-header` cards.
 - Jasny motyw jest defaultem V1; tokeny CSS maja pozwalac na przyszle style.
 
+## 0b. Przed pierwszym wdrozeniem obowiazuje jeden aktualny kontrakt V1
+
+Do pierwszego wdrozenia nie zachowujemy domyslnie kompatybilnosci wstecznej.
+Wyjatek wymaga jawnego zadania uzytkownika dotyczacego konkretnej granicy i
+starszej wersji. Zmiana kontraktu obejmuje jednoczesna aktualizacje wszystkich
+konsumentow oraz usuniecie starych aliasow, migratorow, fallbackow, sciezek
+wykonania, testow i dokumentacji. Lokalne dane oraz artefakty poprzedniego
+formatu usuwamy zamiast podtrzymywac ich odczyt. Nowy lub zmieniany format
+zapisu, importu i eksportu ma wersje `1`, rowniez gdy zmienia sie jego ksztalt.
+
+To jest zasada dla kolejnych zmian, a nie twierdzenie, ze caly obecny kod juz
+jej odpowiada. Zastane wyzsze numery wersji i mechanizmy kompatybilnosci sa
+usuwane wraz ze zmiana danej granicy. Po pierwszym wdrozeniu polityka wymaga
+ponownej decyzji i aktualizacji dokumentacji.
+
 ## 1. Publiczny request analizy pozostaje minimalny
 
 `POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy.

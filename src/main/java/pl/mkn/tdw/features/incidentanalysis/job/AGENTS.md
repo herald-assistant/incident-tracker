@@ -9,8 +9,8 @@ Obejmuje:
 
 - `POST /api/analysis/jobs` i `GET /api/analysis/jobs/{analysisId}`,
 - `POST /api/analysis/jobs/{analysisId}/chat/messages`,
-- legacy aliasy `/analysis/jobs/**`, utrzymywane dla dotychczasowego
-  publicznego kontraktu,
+- zastane aliasy `/analysis/jobs/**`, do usuniecia przy zmianie tej granicy,
+  chyba ze uzytkownik jawnie zada kompatybilnosci,
 - `AnalysisJobFacade` jako glowna klasa wejscia feature'a i uruchamianie
   analizy w tle,
 - `api/` z kontrolerem oraz request/response DTO,

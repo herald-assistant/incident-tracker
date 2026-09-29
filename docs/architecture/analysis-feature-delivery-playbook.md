@@ -71,6 +71,20 @@ Incident Analysis jest wzorcem do czytania i porownania, ale nie jest
 importowalnym core. Nowy feature nie moze zalezec od
 `features.incidentanalysis`.
 
+### Polityka kompatybilnosci przed pierwszym wdrozeniem
+
+Domyslnie utrzymuj tylko jeden aktualny kontrakt w wersji `1`. Zmiana jego
+ksztaltu przed pierwszym wdrozeniem nie podbija wersji i nie utrzymuje
+czytania starszych formatow. Przy zmianie granicy usun jednoczesnie zastane
+aliasy, migratory, fallbacki, stare pola i sciezki wykonania, powiazane testy,
+fixture'y i opisy oraz lokalne dane i artefakty z poprzedniego formatu.
+Dotyczy to takze obecnych mechanizmow kompatybilnosci, gdy dana granica jest
+zmieniana. Zaktualizuj wszystkich konsumentow i przetestuj jeden biezacy
+kontrakt. Kompatybilnosc zachowaj tylko na jawne zadanie uzytkownika;
+udokumentuj wtedy zakres wyjatku i testy. Po pierwszym wdrozeniu polityka
+wymaga nowej decyzji i aktualizacji dokumentacji. Opisy obecnego runtime w
+tym playbooku nie sa nakazem utrzymywania jego historycznych wersji.
+
 Przed edycja:
 
 1. przeczytaj root `AGENTS.md`,
@@ -171,7 +185,7 @@ Zmiana job state/persistence/export:
 Zmiana shared FE/UX:
 Nowe lub usuniete zaleznosci:
 Konsumenci dotknietego shared mechanizmu:
-Kompatybilnosc i migracja:
+Usuniecie starszych wersji i lokalnych danych; jawnie zadany wyjatek kompatybilnosci:
 Testy regresji:
 Dokumentacja:
 Znany drift: naprawiany, izolowany albo nietkniety:
@@ -188,8 +202,9 @@ Przed zmiana L1-L3 potwierdz:
 - [ ] feature nie zaczyna importowac sibling feature'a,
 - [ ] platforma/tool/integracja nie otrzymuje semantyki jednego use case'u,
 - [ ] zmiana wspolnego kontraktu ma liste wszystkich konsumentow BE i FE,
-- [ ] publiczne DTO, export schema i local continuation maja plan
-  kompatybilnosci,
+- [ ] publiczne DTO, export schema i local continuation maja plan usuniecia
+  starszych wersji i lokalnych danych; wyjatek kompatybilnosci jest jawnie
+  zadany przez uzytkownika,
 - [ ] prompt, opcjonalny skill workflow i tool policy sa zmieniane jako jeden
   spojny runtime kontrakt, jesli zmiana dotyka AI,
 - [ ] hidden scope nie wraca przypadkiem do model-facing schema,
@@ -244,8 +259,8 @@ UX, nie przypadkowego historycznego ksztaltu kodu.
 Obowiazuje architecture-drift ratchet:
 
 - zmiana nie moze dodac nowego driftu ani rozszerzyc zasiegu istniejacego,
-- drift na bezposrednio zmienianej granicy napraw albo ogranicz adapterem i
-  testem kompatybilnosci; wyjatek wymaga jawnego uzasadnienia,
+- drift na bezposrednio zmienianej granicy napraw; adapter i test
+  kompatybilnosci dodaj tylko na jawne zadanie uzytkownika,
 - drift poza zakresem pozostaw nietkniety; jesli ma realny skutek, zapisz w
   `../plans/open-work.md` skutek, wlasciciela, nastepny krok i warunek
   usuniecia,
@@ -502,7 +517,7 @@ src/main/java/pl/mkn/tdw/features/<feature>/
     state/                     # thread-safe live state i snapshot projection
     error/                     # feature-owned bledy
     validation/                # walidacja/preflight requestu
-    export/                    # wersjonowany publiczny envelope
+    export/                    # publiczny envelope, przed wdrozeniem tylko V1
     localworkspace/            # adaptery do neutralnego store
   flow/ lub orchestration/     # jeden pionowy use-case flow
   context/ lub evidence/
@@ -557,7 +572,8 @@ GET  /api/<feature-slug>/jobs/input-options           # tylko gdy potrzebne
 `POST` zwraca `202 Accepted` i natychmiastowy snapshot, zamiast blokowac do
 konca AI. Controller jest cienki i deleguje do feature-owned facade/service.
 Prefix `/api` jest kanoniczny. Nie dodawaj nowego aliasu `/analysis/**`;
-istniejace aliasy sa tylko kompatybilnoscia historyczna.
+zastane aliasy usun przy zmianie tej granicy, chyba ze uzytkownik jawnie
+zada ich zachowania.
 
 Request:
 
@@ -1168,14 +1184,14 @@ Nowy feature:
 4. rejestruje chat handler, jesli wspiera continuation,
 5. pozwala `AnalysisRunHistoryService` wybrac handler po feature id,
 6. aktualizuje frontendowy routing/label/icon historii,
-7. testuje uszkodzony rekord, brak kontynuacji i migracje envelope.
+7. testuje uszkodzony rekord, brak kontynuacji i odrzucenie starego envelope.
 
 `LocalAnalysisRunContinuation` nie jest magazynem calego `ToolContext`. Ma
 zamkniety zestaw sanitizowanych metadata, np. auth ref, session id i wybrane
 runtime/scope fields. Nie persystuj tokenow ani pelnej hidden mapy. Feature
 odtwarza scope z sanitizowanego snapshotu/exportu i aktualnej konfiguracji.
 Nowe neutralne continuation metadata wymagaja jawnego rozszerzenia kontraktu,
-migracji oraz testow wszystkich konsumentow.
+usuniecia starych lokalnych danych oraz testow wszystkich konsumentow.
 
 Publiczny export musi byc sanitizowany i nie moze zawierac tokenow, auth
 secrets, hidden tool context, wewnetrznych sciezek ani danych, ktore nie sa
@@ -1194,11 +1210,17 @@ diagnostics
 job snapshot
 ```
 
+Przed pierwszym wdrozeniem oba numery wersji nowego lub zmienianego kontraktu
+musza byc `1`. Zmiana formatu aktualizuje ten jeden kontrakt i usuwa lokalne
+artefakty starszego ksztaltu.
+
 Frontendowy parser:
 
 - waliduje schema, version i payload type,
-- po walidacji wspieranej wersji normalizuje opcjonalne/brakujace pola,
-- obsluguje starsza wersje tylko przez jawna galaz migracji i jej test,
+- normalizuje tylko pola opcjonalne biezacego kontraktu, bez odtwarzania
+  historycznie brakujacych pol,
+- odrzuca starsze wersje; galaz migracji i jej test dodaje tylko na jawne
+  zadanie uzytkownika,
 - odrzuca niezgodny feature,
 - dla publicznego importu wymaga zakonczonego runu i reportu,
 - dla lokalnego restore moze przyjac stan nieterminalny,
@@ -1459,7 +1481,7 @@ Przed implementacja uzgodnij jednoznacznie:
 | error code/fields | transport error/validation | user-facing, bez stack trace |
 | chat message status | chat/polling | `IN_PROGRESS` utrzymuje polling |
 | local feature id | history routing | stabilny i unikalny |
-| export schema/version | import parser | jawna kompatybilnosc i normalizacja |
+| export schema/version | import parser | jedna biezaca wersja `1` i walidacja |
 
 Nie zmieniaj tylko jednej strony kontraktu. Kazda zmiana DTO wymaga wyszukania
 backendu, frontendowego modelu, parsera importu, persistence, fixture i testow.
@@ -1515,7 +1537,7 @@ diffem.
 
 - follow-up chat, jesli potrzebny,
 - local continuation,
-- versioned import/export,
+- import/export z jednym biezacym kontraktem V1,
 - read-only imported state.
 
 ### Inkrement 7: hardening
@@ -1633,7 +1655,8 @@ Drift mozna poprawic w ramach nowego feature'a tylko wtedy, gdy:
 
 - ekstrakcja ma neutralne ownership,
 - obejmuje wszystkich istniejacych konsumentow,
-- ma testy migracji/regresji,
+- ma testy regresji biezacego kontraktu; migracji tylko na jawne zadanie
+  uzytkownika,
 - nie rozszerza niepotrzebnie scope'u feature'a.
 
 W przeciwnym razie zapisz follow-up i nie kopiuj problemu.
@@ -1676,8 +1699,8 @@ rzeczywiscie nie zmienia.
 
 - [ ] poziom L0-L3 odpowiada rzeczywistemu zakresowi,
 - [ ] dla L1-L3 baseline i conformance delta zgadzaja sie z finalnym diffem,
-- [ ] zachowanie baseline jest zachowane albo zmienione jawnie z migracja i
-  testem,
+- [ ] zmiana baseline jest jawna, starsze implementacje i lokalne dane zostaly
+  usuniete, a biezacy kontrakt ma testy; kompatybilnosc ma osobne jawne zadanie,
 - [ ] wszyscy konsumenci zmienionego shared kontraktu zostali zweryfikowani,
 - [ ] realizuje opisany use case i success criteria,
 - [ ] ma wlasny request/result/prompt oraz - jesli uzywa tools - policy i
@@ -1721,7 +1744,8 @@ Gdy uzytkownik prosi o nowy feature albo rozwoj istniejacego, Codex powinien:
 8. porownac Incident Analysis oraz drugiego konsumenta tam, gdzie dotyczy to
    wspolnego lifecycle/UX/platformy,
 9. przygotowac w `docs/plans/` pionowy plan linkujacy do potrzeby, z testami,
-   kompatybilnoscia, non-goals i krokami `[ ]` / `[x]`,
+   usunieciem starszych wersji i lokalnych danych, ewentualnym jawnym wyjatkiem
+   kompatybilnosci, non-goals i krokami `[ ]` / `[x]`,
 10. uzyskac zatwierdzenie uzytkownika dla wykonywanego kroku albo jawnie
     wskazanego zakresu krokow,
 11. implementowac tylko zatwierdzone kroki, utrzymujac kompilowalny stan,
@@ -1729,7 +1753,8 @@ Gdy uzytkownik prosi o nowy feature albo rozwoj istniejacego, Codex powinien:
     dopiero po weryfikacji,
 13. wykonac testy celowane, architecture diff i weryfikacje poziomu L0-L3,
 14. zaktualizowac dokumentacje stanu, nie tylko plan,
-15. oddac wynik z lista plikow, testow, migracji i pozostalych ograniczen.
+15. oddac wynik z lista plikow, testow, usunietych starszych wersji i
+    pozostalych ograniczen.
 
 Przy braku decyzji wybieraj najmniejszy pionowy MVP, ktory:
 

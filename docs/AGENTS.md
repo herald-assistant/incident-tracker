@@ -70,6 +70,10 @@ architekturze. Kazdy plan musi:
   biznesowej,
 - opisac proponowane rozwiazanie, reuse obecnych mechanizmow i alternatywy,
 - zawierac zakres, non-goals, ograniczenia, ryzyka i kryteria akceptacji,
+- przy zmianie kontraktu przed pierwszym wdrozeniem zakladac brak
+  kompatybilnosci wstecznej, sprzatanie starych implementacji i lokalnych
+  danych oraz jeden aktualny kontrakt w wersji `1`; wyjatek opisac tylko na
+  jawne zadanie uzytkownika,
 - miec kroki wykonawcze zapisane jako checklista `[ ]` / `[x]`,
 - pozwalac wykonac i zweryfikowac jeden krok bez zgadywania zakresu kolejnego,
 - okreslac testy albo inny dowod wykonania kazdego kroku.
@@ -107,7 +111,8 @@ Source need: [<nazwa>](../needs/<nazwa>.md) | brak osobnego dokumentu
 
 ## Ograniczenia i ryzyka
 
-<Granice bezpieczenstwa, kompatybilnosc, zaleznosci i ryzyka.>
+<Granice bezpieczenstwa, domyslny brak kompatybilnosci albo jawnie zadany
+wyjatek, sprzatanie starszych wersji, zaleznosci i ryzyka.>
 
 ## Kryteria akceptacji
 

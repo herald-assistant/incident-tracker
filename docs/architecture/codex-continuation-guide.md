@@ -182,6 +182,11 @@ komponentu innego feature'a tylko dlatego, ze wyglada podobnie.
 10. Usun zakonczony plan, gdy nie ma juz roli operacyjnej; historie zachowuje
     Git.
 
+Do pierwszego wdrozenia domyslnie nie zachowuj kompatybilnosci wstecznej.
+Przy zmianie granicy usun jej stare implementacje i lokalne dane poprzednich
+formatow, utrzymujac jeden biezacy kontrakt V1. Wyjatek wymaga jawnego zadania
+uzytkownika. Szczegoly i bramki sa w root `AGENTS.md` oraz playbooku.
+
 ## Szczegolna ostroznosc przy Copilot SDK
 
 Gdy Java SDK, bytecode albo lokalny artefakt nie wyjasnia semantyki opcji,
