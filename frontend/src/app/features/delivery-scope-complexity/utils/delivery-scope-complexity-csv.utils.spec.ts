@@ -191,7 +191,9 @@ function snapshot(): DeliveryScopeComplexityJobStateSnapshot {
       errorMessage: null,
       startedAt: '2026-07-01T10:00:00Z',
       completedAt: '2026-07-01T10:01:00Z',
-      aiInvocations: [],
+      preparedPrompt: null,
+      promptPreparedAt: null,
+      rawAiResponse: null,
       usage: null
     }],
     aggregate: {

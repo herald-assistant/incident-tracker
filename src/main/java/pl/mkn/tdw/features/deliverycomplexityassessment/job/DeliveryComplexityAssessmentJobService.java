@@ -142,7 +142,6 @@ public class DeliveryComplexityAssessmentJobService {
             AnalysisAiAuthRef authRef,
             DeliveryUnit unit
     ) {
-        var deadline = java.time.Instant.now().plus(properties.getItemTimeout());
         job.markUnitCollecting(unit.unitId());
         persistSnapshot(job, false);
         var packet = evidencePacketBuilder.build(unit);
@@ -159,6 +158,8 @@ public class DeliveryComplexityAssessmentJobService {
         }
 
         var preparation = promptPreparationService.prepare(packet);
+        job.markUnitPreparedPrompt(unit.unitId(), preparation.prompt());
+        persistSnapshot(job, false);
         job.markUnitAnalyzing(unit.unitId());
         persistSnapshot(job, false);
         var analysis = assessmentProvider.analyze(
@@ -171,11 +172,10 @@ public class DeliveryComplexityAssessmentJobService {
                     job.markAiActivity(unit.unitId(), event);
                     persistSnapshot(job, false);
                 },
-                invocation -> {
-                    job.markUnitAiInvocation(unit.unitId(), invocation);
+                rawResponse -> {
+                    job.markUnitRawAiResponse(unit.unitId(), rawResponse);
                     persistSnapshot(job, false);
-                },
-                deadline
+                }
         );
         var classification = analysis.response().classification();
         if ("INSUFFICIENT_EVIDENCE".equals(classification)) {

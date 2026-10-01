@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @Component
 public class BoundedDeliveryAssessmentUnitExecutor implements DeliveryAssessmentUnitExecutor {
@@ -35,7 +34,7 @@ public class BoundedDeliveryAssessmentUnitExecutor implements DeliveryAssessment
     public CompletableFuture<Void> runAsync(Runnable task, Duration timeout) {
         var result = new CompletableFuture<Void>();
         try {
-            var submitted = executor.submit(() -> {
+            executor.execute(() -> {
                 result.orTimeout(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
                 try {
                     task.run();
@@ -43,9 +42,6 @@ public class BoundedDeliveryAssessmentUnitExecutor implements DeliveryAssessment
                 } catch (Throwable failure) {
                     result.completeExceptionally(failure);
                 }
-            });
-            result.whenComplete((ignored, failure) -> {
-                if (failure instanceof TimeoutException || result.isCancelled()) submitted.cancel(true);
             });
         } catch (RejectedExecutionException failure) {
             result.completeExceptionally(failure);

@@ -1,4 +1,3 @@
-import { AnalysisAiInvocationsComponent } from '../../../../components/analysis-ai-invocations/analysis-ai-invocations';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
@@ -55,7 +54,6 @@ type FilterOption = { value: string; label: string; issueCount: number; complexi
 @Component({
   selector: 'app-delivery-scope-complexity-page',
   imports: [
-    AnalysisAiInvocationsComponent,
     ReactiveFormsModule,
     DecimalPipe,
     MatTooltipModule,
@@ -122,12 +120,13 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
   });
   readonly preparedPrompts = computed<AnalysisPreparedPrompt[]>(() =>
     (this.job()?.units ?? [])
-      .flatMap((unit) => unit.aiInvocations.map((call) => ({
-        key: `${unit.unitId}:${call.invocationId}`,
-        title: `${unit.issues.map((issue) => issue.issueKey).join(', ') || unit.unitId} · ${call.invocationId}`,
-        preparedAt: call.startedAt,
-        prompt: call.preparedPrompt
-      })))
+      .filter((unit) => Boolean(unit.preparedPrompt))
+      .map((unit) => ({
+        key: unit.unitId,
+        title: `${unit.issues.map((issue) => issue.issueKey).join(', ') || unit.unitId} · ${unit.unitId}`,
+        preparedAt: unit.promptPreparedAt,
+        prompt: unit.preparedPrompt!
+      }))
   );
   readonly filtersActive = computed(() => {
     this.filterRevision();
@@ -533,7 +532,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
       || unit.mergeRequests.length
       || unit.visibilityLimits.length
       || this.unitWarnings(unit).length
-      || unit.aiInvocations.length > 0
+      || unit.rawAiResponse !== null
     );
   }
 

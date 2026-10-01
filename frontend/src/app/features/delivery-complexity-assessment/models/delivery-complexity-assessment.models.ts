@@ -1,6 +1,5 @@
 import {
   AnalysisAiActivityEvent,
-  AnalysisAiInvocation,
   AnalysisAiUsage,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse
@@ -75,7 +74,9 @@ export interface DeliveryAssessmentUnit {
   errorMessage: string | null;
   startedAt: string | null;
   completedAt: string | null;
-  aiInvocations: AnalysisAiInvocation[];
+  preparedPrompt: string | null;
+  promptPreparedAt: string | null;
+  rawAiResponse: string | null;
   usage: AnalysisAiUsage | null;
 }
 

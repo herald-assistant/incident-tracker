@@ -24,7 +24,9 @@ final class DeliveryScopeUnitState {
     private String errorMessage;
     private Instant startedAt;
     private Instant completedAt;
-    private final java.util.LinkedHashMap<String, pl.mkn.tdw.shared.ai.AnalysisAiInvocation> aiInvocations = new java.util.LinkedHashMap<>();
+    private String preparedPrompt;
+    private Instant promptPreparedAt;
+    private String rawAiResponse;
     private AnalysisAiUsage usage;
 
     DeliveryScopeUnitState(DeliveryUnit unit) {
@@ -52,11 +54,19 @@ final class DeliveryScopeUnitState {
         startedAt = startedAt != null ? startedAt : Instant.now();
     }
 
-    void aiInvocation(pl.mkn.tdw.shared.ai.AnalysisAiInvocation invocation) {
-        if (terminal() && !aiInvocations.containsKey(invocation.invocationId())) return;
-        aiInvocations.put(invocation.invocationId(), invocation);
-        usage = pl.mkn.tdw.shared.ai.AnalysisAiUsageTotals.sum(aiInvocations.values().stream()
-                .map(pl.mkn.tdw.shared.ai.AnalysisAiInvocation::usage).toList());
+    void preparedPrompt(String prompt) {
+        if (terminal() || prompt == null || prompt.isBlank()) {
+            return;
+        }
+        preparedPrompt = prompt;
+        promptPreparedAt = Instant.now();
+    }
+
+    void rawAiResponse(String response) {
+        if (terminal()) {
+            return;
+        }
+        rawAiResponse = response;
     }
 
     void completed(DeliveryScopeScore score, AnalysisAiUsage usage) {
@@ -198,7 +208,9 @@ final class DeliveryScopeUnitState {
                 errorMessage,
                 startedAt,
                 completedAt,
-                List.copyOf(aiInvocations.values()),
+                preparedPrompt,
+                promptPreparedAt,
+                rawAiResponse,
                 usage
         );
     }

@@ -108,8 +108,13 @@ public class DeliveryScopeComplexityJobState {
         touch();
     }
 
-    public synchronized void markUnitAiInvocation(String unitId, pl.mkn.tdw.shared.ai.AnalysisAiInvocation invocation) {
-        unit(unitId).aiInvocation(invocation);
+    public synchronized void markUnitPreparedPrompt(String unitId, String prompt) {
+        unit(unitId).preparedPrompt(prompt);
+        touch();
+    }
+
+    public synchronized void markUnitRawAiResponse(String unitId, String rawAiResponse) {
+        unit(unitId).rawAiResponse(rawAiResponse);
         touch();
     }
 
@@ -312,14 +317,13 @@ public class DeliveryScopeComplexityJobState {
         var assessmentStatus = completedAt != null ? ("FAILED".equals(status) ? "FAILED" : "COMPLETED")
                 : analysisStartedAt != null ? "RUNNING" : "PENDING";
         var preparedPrompts = snapshots.stream()
-                .flatMap(unit -> unit.aiInvocations().stream())
-                .filter(call -> call.preparedPrompt() != null && !call.preparedPrompt().isBlank())
+                .filter(unit -> unit.preparedPrompt() != null && !unit.preparedPrompt().isBlank())
                 .toList();
         var promptPreparationStatus = "FAILED".equals(status) ? "FAILED"
                 : promptPreparationCompletedAt != null ? "COMPLETED"
                 : analysisStartedAt != null ? "RUNNING" : "PENDING";
         var promptPreparationStartedAt = preparedPrompts.stream()
-                .map(pl.mkn.tdw.shared.ai.AnalysisAiInvocation::startedAt)
+                .map(DeliveryScopeUnitResponse::promptPreparedAt)
                 .filter(java.util.Objects::nonNull)
                 .min(Instant::compareTo)
                 .orElse(analysisStartedAt);
@@ -331,7 +335,7 @@ public class DeliveryScopeComplexityJobState {
                 ),
                 new AnalysisJobStepResponse(
                         "AI_INPUT_PREPARATION", "AI request preparation", "AI", promptPreparationStatus,
-                        preparedPrompts.size() + " prompts prepared for AI invocations.",
+                        preparedPrompts.size() + " one-shot prompts prepared before model execution.",
                         preparedPrompts.size(), promptPreparationStartedAt, promptPreparationCompletedAt,
                         List.of(), List.of()
                 ),
@@ -390,7 +394,7 @@ public class DeliveryScopeComplexityJobState {
             return;
         }
         var stillPreparing = units.values().stream().anyMatch(unit ->
-                !unit.terminal()
+                "PENDING".equals(unit.status()) || "COLLECTING_EVIDENCE".equals(unit.status())
         );
         if (!stillPreparing) {
             promptPreparationCompletedAt = Instant.now();

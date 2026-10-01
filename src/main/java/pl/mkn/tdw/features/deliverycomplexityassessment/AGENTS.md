@@ -30,26 +30,7 @@ zakresu dat.
   kazdy niezerowy wymiar wymaga referencji do artifactu, a backend wylicza
   Delivered Story Points.
 - Kazda istotna zmiana live state zapisuje ten sam local run snapshot.
-- Kazda jednostka posiada `aiInvocations` z prompt/raw, statusem, zakresem,
-  ustaleniami, usage i bledem kazdej proby. Prompt zapisuj przed wykonaniem,
-  raw przed parsowaniem; aktualizacja tego samego id nie sumuje usage ponownie.
-- Podzial MR/plikow nalezy do feature'a, neutralny budzet i wybor/potwierdzenie
-  tieru do platformy. Kazda czesc ma pelny Jira/Confluence i manifest, zwraca
-  ustalenia bez punktowania; synteza ocenia union raz. Kod nie jest przycinany,
-  zakres przekazanego materialu i referencje sa walidowane; nierozdzielny
-  material ma jawny blad. Coverage ustalen przypina aplikacja, nie model.
-- Bledy deklaracji coverage, confidence i pol opisowych sa jawnymi
-  ostrzezeniami w visibilityLimits; nie blokuja poprawnego rdzenia.
-  Niepoprawne confidence daje 0 z opisem przyczyny. Referencje poza zakresem,
-  niepoprawne wymiary i utrata zachowan/referencji/zaleznosci przy redukcji
-  nadal blokuja wynik. Raw pozostaje niezmieniony; nie ma ponowienia AI
-  dla korekty metadanych. Ostrzezenia sa przenoszone deterministycznie.
-- Czesci/redukcje/synteza sa sekwencyjne w bounded workerze, z jednym deadline,
-  nowymi sesjami i pustymi tools. Tylko typowany overflow koryguje podzial.
-  Awaria czesci blokuje finalna ocene, pozostawiajac partial evidence.
-- UI, agregaty, CSV i Trends licza jedna ocene jednostki niezaleznie od liczby
-  wywolan. Aktualny format V1 wymaga aiInvocations, bez migratora starego zapisu.
-- Surowa odpowiedz AI jest zapisywana przy wywolaniu Delivery Unit przed parsowaniem,
+- Surowa odpowiedz AI jest zapisywana przy Delivery Unit przed parsowaniem,
   pozostaje dostepna rowniez po bledzie kontraktu i jest prezentowana w UI
   jako domyslnie zwiniety material diagnostyczny.
 

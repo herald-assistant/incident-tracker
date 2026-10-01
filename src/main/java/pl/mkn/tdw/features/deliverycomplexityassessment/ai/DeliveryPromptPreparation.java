@@ -4,15 +4,10 @@ import java.util.Map;
 
 public record DeliveryPromptPreparation(
         String prompt,
-        Map<String, String> artifacts,
-        String effectiveSkill
+        Map<String, String> artifacts
 ) {
 
-    public DeliveryPromptPreparation(String prompt, Map<String, String> artifacts) {
-        this(prompt, artifacts, null);
-    }
-
     public DeliveryPromptPreparation {
-        artifacts = artifacts != null ? java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(artifacts)) : Map.of();
+        artifacts = artifacts != null ? Map.copyOf(artifacts) : Map.of();
     }
 }

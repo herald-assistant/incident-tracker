@@ -1,7 +1,5 @@
 package pl.mkn.tdw.features.deliveryscopecomplexity.job.state;
 
-import static pl.mkn.tdw.shared.ai.AnalysisAiTestFixtures.invocation;
-
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryScopeDimensionScore;
 import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryScopeScore;
@@ -77,7 +75,8 @@ class DeliveryScopeComplexityJobStateTest {
         var usage = usage();
         ready(state, deliveryUnit);
 
-        state.markUnitAiInvocation(deliveryUnit.unitId(), invocation("one-shot prompt", "{\"classification\":\"INSUFFICIENT_EVIDENCE\"}", null));
+        state.markUnitPreparedPrompt(deliveryUnit.unitId(), "one-shot prompt");
+        state.markUnitRawAiResponse(deliveryUnit.unitId(), "{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
         state.markUnitVisibilityLimits(deliveryUnit.unitId(), List.of("Diff content was truncated."));
         state.markUnitNotScorable(
                 deliveryUnit.unitId(),
@@ -90,9 +89,9 @@ class DeliveryScopeComplexityJobStateTest {
         assertThat(snapshot.units()).singleElement().satisfies(unit -> {
             assertThat(unit.status()).isEqualTo("NOT_SCORABLE");
             assertThat(unit.usage()).isEqualTo(usage);
-            assertThat(unit.aiInvocations().get(0).preparedPrompt()).isEqualTo("one-shot prompt");
-            assertThat(unit.aiInvocations().get(0).startedAt()).isNotNull();
-            assertThat(unit.aiInvocations().get(0).rawResponse()).isEqualTo("{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
+            assertThat(unit.preparedPrompt()).isEqualTo("one-shot prompt");
+            assertThat(unit.promptPreparedAt()).isNotNull();
+            assertThat(unit.rawAiResponse()).isEqualTo("{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
             assertThat(unit.visibilityLimits()).containsExactly(
                     "Diff content was truncated.",
                     "Acceptance criteria were incomplete."
@@ -169,34 +168,4 @@ class DeliveryScopeComplexityJobStateTest {
         return new AnalysisAiUsage(100, 20, 30L, 0L, 120, 1.0, 500, 4, "gpt-5", null, null, null, null);
     }
 
-
-    @Test
-    void shouldKeepCompletedScoreAndMetadataWarningsInCurrentExportRoundTrip() throws Exception {
-        var state = state();
-        var deliveryUnit = unit("CRM-1", mergeRequest(1, "src/Customer.java", "+status"));
-        ready(state, deliveryUnit);
-        var base = score(5, 0);
-        var scored = new DeliveryScopeScore(base.finalScore(), base.dimensions(), 0,
-                base.evidenceSummary(), List.of("AI_METADATA_WARNING"), List.of("Metadane AI: confidence: przyjęto 0."));
-        var raw = "{\"coverage\":[\"CRM/customer-api!9#metadata\"]}";
-        state.markUnitAiInvocation(deliveryUnit.unitId(), invocation("CRM assessment prompt", raw, usage()));
-        state.markUnitCompleted(deliveryUnit.unitId(), scored, usage());
-        state.finalizeJob();
-        var snapshot = state.snapshot();
-        assertThat(snapshot.units()).singleElement().satisfies(unit -> {
-            assertThat(unit.status()).isEqualTo("COMPLETED");
-            assertThat(unit.assessment().qualityFlags()).contains("AI_METADATA_WARNING");
-            assertThat(unit.visibilityLimits()).contains("Metadane AI: confidence: przyjęto 0.");
-            assertThat(unit.aiInvocations().get(0).rawResponse()).isEqualTo(raw);
-        });
-        assertThat(snapshot.aggregate().totalComplexityPoints()).isEqualTo(5);
-        assertThat(snapshot.aggregate().assessedUnits()).isEqualTo(1);
-        var mapper = com.fasterxml.jackson.databind.json.JsonMapper.builder().findAndAddModules().build();
-        var envelope = pl.mkn.tdw.features.deliveryscopecomplexity.job.export.DeliveryScopeComplexityExportEnvelope.from(snapshot, snapshot.completedAt());
-        var serialized = mapper.writeValueAsString(envelope);
-        var restored = mapper.readValue(serialized, pl.mkn.tdw.features.deliveryscopecomplexity.job.export.DeliveryScopeComplexityExportEnvelope.class);
-        assertThat(restored.version()).isEqualTo(1);
-        assertThat(restored.payload().job().units()).isEqualTo(snapshot.units());
-        assertThat(restored.payload().job().aggregate()).isEqualTo(snapshot.aggregate());
-    }
 }

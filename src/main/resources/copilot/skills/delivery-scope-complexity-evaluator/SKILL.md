@@ -27,29 +27,6 @@ jakosci ludzi, produktywnosci, czasu pracy ani tego, czy kod mogl powstac z AI.
   Zadanie bez potwierdzonych relacji oceniaj w aktualnym zakresie, bez
   zgadywania typu ani pelnego zakresu rodzica.
 
-## Analiza wieloczęściowa
-
-Prompt wskazuje jeden etap: `EVIDENCE_PART`, `REDUCTION` albo `SYNTHESIS`.
-W `EVIDENCE_PART` i `REDUCTION` zwracaj typowane ustalenia bez punktowania;
-kontrakt odpowiedzi tego etapu ma pierwszeństwo przed formatem finalnej oceny.
-Merytoryczne kotwice i wymiary tej rubryki obowiązują w każdym etapie.
-
-Pełny Jira/Confluence wyjaśnia intencję. Manifest całej dostawy jest tłem,
-nie dowodem kodu poza widoczną częścią. W części i redukcji `references`
-mogą wskazywać wyłącznie dokładne identyfikatory z `part-scope.json`.
-Nie zwracaj `coverage`: zakres przekazanego materiału przypisuje aplikacja.
-Podawaj referencje przy konkretnych faktach, nie kopiuj całego manifestu.
-
-W redukcji zachowaj każdy `behaviorId` i jego wymiary, wszystkie referencje
-tej pary oraz dokładne wpisy `dependencies` i ograniczenia. Skracaj opisy,
-nie usuwaj odmiennych zachowań ani dowodów.
-
-W `SYNTHESIS` oceń union zweryfikowanych ustaleń według tej samej rubryki.
-Zachowaj zależności między częściami i deduplikuj powtarzające się zachowania.
-Nie sumuj ani nie uśredniaj ocen części. Każdy niezerowy wymiar musi mieć
-referencję do ustaleń. Synteza nie czyta surowych diffów: zaznacz to ograniczenie
-i nie dopisuj dostarczonego zachowania na podstawie intencji Jira.
-
 ## Niedozwolone sygnaly
 
 Nie uzywaj jako bezposredniego sygnalu zlozonosci:

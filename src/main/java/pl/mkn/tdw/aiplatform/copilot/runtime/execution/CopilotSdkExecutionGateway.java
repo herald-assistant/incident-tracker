@@ -25,9 +25,6 @@ import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.time.Instant;
-import java.time.Duration;
-import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptBudget;
-import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptOverflowException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -60,19 +57,12 @@ public class CopilotSdkExecutionGateway {
     private final CopilotToolResultContentFactory toolResultContentFactory;
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
-        return execute(preparedSession, null, null);
-    }
-
-    public CopilotExecutionResult execute(CopilotPreparedSession preparedSession, CopilotPromptBudget budget, Duration timeout) {
-        if (budget != null && budget.known() && !budget.fits()) {
-            throw new CopilotPromptOverflowException(budget.estimatedInputTokens(), budget.promptTokenLimit(), null, null);
-        }
         var overallStart = System.nanoTime();
         var runReference = preparedSession.runReference();
         var usageAccumulator = new CopilotUsageAccumulator();
 
         try {
-            var contextTierSession = budget != null ? contextTierPolicy.prepare(preparedSession, budget) : contextTierPolicy.prepare(preparedSession);
+            var contextTierSession = contextTierPolicy.prepare(preparedSession);
             try (var client = new CopilotClient(preparedSession.clientOptions())) {
                 try {
                     client.onLifecycle(event -> logSession(event, runReference));
@@ -153,11 +143,7 @@ public class CopilotSdkExecutionGateway {
 
                                 try {
                                     var sendAndWaitStart = System.nanoTime();
-                                    var remainingMs = timeout != null ? timeout.toMillis() - nanosToMillis(overallStart) : sendAndWaitTimeoutMs();
-                                    if (remainingMs <= 0 || Thread.currentThread().isInterrupted()) {
-                                        throw new CopilotSdkInvocationException("AI execution deadline exceeded.");
-                                    }
-                                    var timeoutMs = Math.min(sendAndWaitTimeoutMs(), remainingMs);
+                                    var timeoutMs = sendAndWaitTimeoutMs();
                                     log.info(
                                             "Copilot sendAndWait configuration runReference={} timeoutMs={} runtimeResume={}",
                                             runReference,
@@ -232,18 +218,10 @@ public class CopilotSdkExecutionGateway {
                 }
             }
         } catch (CopilotRequiredContextTierException exception) {
-            if (budget != null && budget.requiresLongContext() && budget.defaultPromptTokenLimit() > 0) {
-                throw new CopilotPromptOverflowException(budget.estimatedInputTokens(), budget.defaultPromptTokenLimit(), exception, usageAccumulator.snapshot());
-            }
             throw exception;
         } catch (CopilotSdkInvocationException exception) {
-            var overflow = CopilotPromptOverflowException.fromProvider(exception, usageAccumulator.snapshot());
-            if (overflow != null) throw overflow;
-            if (exception instanceof CopilotPromptOverflowException) throw exception;
-            throw new CopilotSdkInvocationException(exception.getMessage(), exception, usageAccumulator.snapshot());
+            throw exception;
         } catch (Exception exception) {
-            var overflow = CopilotPromptOverflowException.fromProvider(exception, usageAccumulator.snapshot());
-            if (overflow != null) throw overflow;
             var rootCause = unwrapCompletionException(exception);
             log.error(
                     "Copilot SDK invocation failed runReference={} exceptionType={} rootCauseType={} rootCauseMessage={}",
@@ -253,7 +231,7 @@ public class CopilotSdkExecutionGateway {
                     rootCause.getMessage(),
                     exception
             );
-            throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception, usageAccumulator.snapshot());
+            throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception);
         }
     }
 

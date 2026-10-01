@@ -14,7 +14,6 @@ public interface DeliveryUnitAssessmentProvider {
             DeliveryEvidencePacket packet,
             DeliveryPromptPreparation preparation,
             AnalysisAiActivityListener activityListener,
-            pl.mkn.tdw.shared.ai.AnalysisAiInvocationListener invocationListener,
-            java.time.Instant deadline
+            DeliveryRawAiResponseListener rawResponseListener
     );
 }
