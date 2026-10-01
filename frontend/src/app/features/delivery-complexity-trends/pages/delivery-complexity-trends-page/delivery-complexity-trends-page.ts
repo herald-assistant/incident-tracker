@@ -56,7 +56,7 @@ export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
     this.filterStickyObserver.observe(element.nativeElement);
   }
 
-  readonly granularityControl = new FormControl<AssessmentTrendGranularity>('MONTH', {
+  readonly granularityControl = new FormControl<AssessmentTrendGranularity>('QUARTER', {
     nonNullable: true
   });
   readonly teamControl = new FormControl('', { nonNullable: true });

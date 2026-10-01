@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 public class DeploymentContextResolver {
 
     private static final Pattern IMAGE_PATTERN = Pattern.compile(
-            ".*/(?<namespace>[a-z0-9-]+-(?<environment>dev\\d+))/(?<project>[^:]+):"
+            ".*/(?<namespace>[a-z0-9-]+-(?<environment>dev\\d+|release))/(?<project>[^:]+):"
                     + "(?<build>\\d{8}-\\d{6}-\\d+)-(?<branchSlug>[a-z0-9][a-z0-9-]*)-(?<sha>[0-9a-f]{40})$"
     );
     private static final Pattern SPECIAL_NAMESPACE_PATTERN = Pattern.compile(

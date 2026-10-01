@@ -243,9 +243,12 @@ Dla kazdego niezerowego wymiaru AI zwraca `evidenceSummary` w formacie
 promptu i material wyjasniajacy wynik, ale nie wejscie do deterministycznego
 scoringu. Parser nie odrzuca poprawnej oceny przez wariant formatowania, brak
 lub nieugruntowana referencje w polach opisowych. Twardo waliduje tylko dane
-niezbedne do obliczen: klasyfikacje, komplet wymiarow `DELIVERY` w zakresie
-`0-4` oraz `confidence` w zakresie `0-1`. Niepoprawne opcjonalne kolekcje
-opisowe sa pomijane, a surowa odpowiedz pozostaje dostepna do diagnostyki.
+niezbedne do obliczen: klasyfikacje i komplet calkowitych wymiarow
+`DELIVERY` w zakresie `0-4`, bez zaokraglania lub obcinania ulamkow.
+Confidence jest metadana: brak, bledny typ lub liczba poza skonczonym zakresem
+`0-1` daje 0 z opisem przyczyny. W niepoprawnych kolekcjach opisowych zachowuje
+poprawne teksty i ostrzega o odrzuconych elementach. AI_METADATA_WARNING
+i visibilityLimits ujawniaja blad; surowa odpowiedz pozostaje do diagnostyki.
 Ogrodzenie kodu Markdown z etykieta `json` jest traktowane jako format
 transportowy i usuwane przez wybranie obiektu pomiedzy pierwsza `{` i ostatnia
 `}`.
@@ -254,7 +257,9 @@ parsowaniem normalizowane do legalnego whitespace JSON; surowa odpowiedz nie
 jest przy tym modyfikowana.
 Jezeli blad skladni JSON wystapi dopiero po kompletnych polach scoringowych,
 parser odzyskuje je przez strumieniowy parser Jacksona i pomija uszkodzony
-ogon opisowy. Nie odzyskuje ani nie zgaduje niekompletnych pol scoringowych.
+ogon opisowy z widocznym ostrzezeniem. Confidence nie jest warunkiem
+odzyskania kompletnej oceny. Nie odzyskuje ani nie zgaduje niekompletnych
+pol scoringowych.
 
 Ten sam zwalidowany skill jest widoczny w read-only ekranie `Platform / AI
 Skills`. Frontendowa projekcja grupuje
@@ -341,9 +346,24 @@ zakres implementacji. Kod nie jest przycinany. Nierozdzielny plik/metadata
 (`EVIDENCE_ATOM_TOO_LARGE`) albo sam bazowy kontekst
 (`JIRA_CONTEXT_TOO_LARGE`) konczy jednostke czytelna diagnostyka rozmiaru.
 
-Czesci zwracaja `DeliveryPartFindings`, bez punktow: coverage, sufficientEvidence,
+Prompt rozdziela `EVIDENCE_PART`, `REDUCTION` i `SYNTHESIS`, bez zmiany
+merytorycznych kotwic, skal i wag rubryki. Czesci zwracaja sufficientEvidence,
 findings (behaviorId, dimension, fact, references, dependencies), confidence
-i visibilityLimits. Parser wymaga dokladnej coverage i referencji z zakresu.
+i visibilityLimits, bez punktow i bez powtarzania coverage. Jedyna allowlista
+referencji czesci i redukcji to `part-scope.json`; manifest calej dostawy jest
+tlem, nie dowodem kodu poza zakresem. Parser tworzy `DeliveryPartFindings`
+z coverage przypisanym deterministycznie z przekazanego materialu.
+Sprawdza wymagane fakty, wymiary i niepuste referencje w tym zakresie.
+Coverage oznacza przekazany material, nie deklaracje jego przeczytania przez AI.
+
+Jezeli model mimo instrukcji zwroci coverage, rozbieznosc daje visibility limit
+z liczba brakujacych, nadmiarowych, powtorzonych i niepoprawnych elementow.
+Bledny typ deklaracji rowniez daje ostrzezenie. Raw pozostaje niezmieniony;
+nie przycina sie deklaracji modelu i nie ponawia AI dla korekty metadanych.
+Brak/niepoprawne confidence daje 0 z ostrzezeniem. Niepoprawne listy opisowe
+zachowuja poprawne teksty i jawna diagnoze odrzuconych elementow.
+SufficientEvidence=false nadal oznacza brak wyceny; brak opisu ograniczenia
+daje komunikat o niedostepnosci wyceny, nie syntetyczne punkty.
 `SYNTHESIS` otrzymuje pelny Jira, manifest i wszystkie zweryfikowane ustalenia;
 deduplikuje zachowania i zwraca dotychczasowy finalny kontrakt. Backend
 wykonuje scoring raz. `MULTIPART_SYNTHESIS` i visibilityLimits ujawniaja,
@@ -351,10 +371,15 @@ ze synteza korzysta z ustalen, bez bezposredniego odczytu calego surowego diffu.
 Confidence nie przekracza minimum confidence czesci i syntezy.
 
 Nadmierne ustalenia sa redukowane w budzetowanych grupach (`REDUCTION`),
-bez scoringu. Walidacja zachowuje coverage, referencje, pary behaviorId/wymiar
-i zaleznosci; wynik musi byc mniejszy. Nie ma ciecia listy ustalen.
-Awaria lub niepoprawny JSON jednej czesci blokuje finalna ocene, zachowujac
-dotychczasowy material. Niewystarczajace evidence daje `NOT_SCORABLE`.
+bez scoringu. Walidacja zachowuje zakres aplikacji, komplet referencji,
+pary behaviorId/wymiar oraz ich referencje i zaleznosci; wynik musi byc mniejszy.
+Nie ma ciecia listy ustalen. Ostrzezenia i ograniczenia wejscia sa przypinane
+do wywolania redukcji oraz finalnego wyniku nawet wtedy, gdy model ich nie
+powtorzy. Confidence nadal nie przekracza minimum czesci/redukcji/syntezy.
+Blad metadanych nie zatrzymuje czesci ani syntezy. Awaria, niepoprawny JSON,
+referencje poza zakresem lub utrata ustalen blokuja finalna ocene z konkretna
+diagnoza, zachowujac dotychczasowy material. Niewystarczajace evidence daje
+`NOT_SCORABLE`.
 
 Wywolania sa sekwencyjne w jednym bounded workerze jednostki, kazde w nowej
 sesji, z pusta allowlista tools i katalogow skilli. Effective rubric jest
@@ -371,6 +396,10 @@ Kazda jednostka zapisuje liste `aiInvocations`: id, rola, status, numer/liczba
 czesci, zakres MR/plikow, estymacja/limit/rezerwa, preparedPrompt, rawResponse,
 ustalenia, visibilityLimits, sessionId, usage, blad i timestamps. Prompt jest
 zapisany przed wykonaniem, rawResponse przed parsowaniem, takze po awarii.
+Poprawna ocena z ostrzezeniami metadanych pozostaje COMPLETED, wnosi jeden
+wynik do agregacji i jest widoczna wraz z visibilityLimits/qualityFlags
+w obecnym UI. Obecny ksztalt API, format V1 i zasady statusu joba pozostaja
+takie same. Historyczne runy nie sa korygowane ani przeliczane.
 Aktualizacja tego samego id nie zwielokrotnia usage. Zuzycie wywolan jest
 sumowane; obserwacje limitu/wypelnienia okna maja maksimum zamiast sumy.
 Nie ma niewidocznego magazynu sesyjnej telemetryki.

@@ -130,7 +130,8 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
         while (!pending.isEmpty()) {
             checkDeadline(state);
             var group = pending.removeFirst();
-            var prep = prompts.prepareReduction(packet, manifest, json(group), rubric);
+            var coverage = group.stream().flatMap(f -> f.coverage().stream()).toList();
+            var prep = prompts.prepareReduction(packet, manifest, json(group), coverage, rubric);
             var budget = measure(state, prep);
             if (!budget.fits()) {
                 if (group.size() <= 1) throw oversized(budget, "SYNTHESIS_ATOM_TOO_LARGE: pojedyncze ustalenia nie mieszczą się z kontekstem.");
@@ -138,20 +139,29 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
                 pending.addFirst(List.copyOf(group.subList(cut, group.size())));
                 pending.addFirst(List.copyOf(group.subList(0, cut))); continue;
             }
-            var coverage = group.stream().flatMap(f -> f.coverage().stream()).toList();
             var original = group.stream().flatMap(f -> f.findings().stream()).toList();
             try {
                 var reduced = call(state, prep, "REDUCTION", coverage, output.size() + 1, output.size() + pending.size() + 1,
-                        content -> findingsParser.parse(content, coverage, original));
-                if (!reduced.sufficientEvidence()) throw new IllegalArgumentException("Reduction could not preserve sufficient evidence.");
-                var preserved = new LinkedHashSet<>(limits(group)); preserved.addAll(reduced.visibilityLimits());
-                output.add(new DeliveryPartFindings(coverage, true, reduced.findings(), Math.min(minimumConfidence(group), reduced.confidence()), List.copyOf(preserved)));
+                        content -> {
+                            var parsed = findingsParser.parse(content, coverage, original);
+                            if (!parsed.sufficientEvidence()) throw new IllegalArgumentException("Reduction could not preserve sufficient evidence.");
+                            var preserved = new LinkedHashSet<>(limits(group));
+                            preserved.addAll(parsed.visibilityLimits());
+                            return new DeliveryPartFindings(coverage, true, parsed.findings(),
+                                    Math.min(minimumConfidence(group), parsed.confidence()), List.copyOf(preserved));
+                        });
+                output.add(reduced);
             } catch (CopilotPromptOverflowException overflow) {
                 correct(state, overflow, budget); pending.addFirst(group);
             }
         }
-        if (json(output).length() >= json(input).length()) throw new IllegalArgumentException("SYNTHESIS_REDUCTION_NO_PROGRESS: reduction did not reduce findings without losing evidence.");
+        if (reductionSize(output) >= reductionSize(input)) throw new IllegalArgumentException("SYNTHESIS_REDUCTION_NO_PROGRESS: reduction did not reduce findings without losing evidence.");
         return output;
+    }
+
+    private int reductionSize(List<DeliveryPartFindings> groups) {
+        // Diagnostic metadata may grow; progress is measured on the evidence and facts only.
+        return json(groups.stream().map(f -> Map.of("coverage", f.coverage(), "findings", f.findings())).toList()).length();
     }
 
     private <T> T call(RunState state, DeliveryPromptPreparation prep, String role, List<String> scope, int number, int count, Function<String,T> parser) {

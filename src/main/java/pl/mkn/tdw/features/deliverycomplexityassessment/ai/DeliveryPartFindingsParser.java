@@ -1,11 +1,18 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.ai;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.shared.ai.AnalysisAiFinding;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component("deliveryAssessmentPartFindingsParser")
 @RequiredArgsConstructor
@@ -14,49 +21,76 @@ public class DeliveryPartFindingsParser {
     private final ObjectMapper objectMapper;
 
     public DeliveryPartFindings parse(String content, List<String> expectedCoverage, List<AnalysisAiFinding> sourceFindings) {
+        final JsonNode root;
         try {
-            com.fasterxml.jackson.databind.JsonNode root = objectMapper.reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(content);
-            if (!root.isObject() || !root.path("coverage").isArray() || !root.path("findings").isArray()
-                    || !root.path("sufficientEvidence").isBoolean() || !root.path("confidence").isNumber()
-                    || !root.path("visibilityLimits").isArray()) throw invalid();
-            var result = objectMapper.treeToValue(root, DeliveryPartFindings.class);
-            if (result.confidence() < 0 || result.confidence() > 1 || !Double.isFinite(result.confidence())
-                    || new HashSet<>(result.coverage()).size() != result.coverage().size()
-                    || !new HashSet<>(result.coverage()).equals(new HashSet<>(expectedCoverage))) throw invalid();
-            var allowed = new HashSet<>(expectedCoverage);
-            for (var finding : result.findings()) {
-                if (finding.behaviorId() == null || finding.behaviorId().isBlank() || !DIMENSIONS.contains(finding.dimension())
-                        || finding.fact() == null || finding.fact().isBlank() || finding.references().isEmpty()
-                        || finding.references().stream().anyMatch(ref -> !allowed.contains(ref))) throw invalid();
-            }
-            if (!result.sufficientEvidence() && result.visibilityLimits().isEmpty()) throw invalid();
-            if (result.sufficientEvidence() && result.findings().isEmpty()) throw invalid();
-            if (sourceFindings != null) {
-                var originalRefs = new HashSet<String>();
-                sourceFindings.forEach(f -> originalRefs.addAll(f.references()));
-                var reducedRefs = new HashSet<String>();
-                result.findings().forEach(f -> reducedRefs.addAll(f.references()));
-                if (!originalRefs.equals(reducedRefs)) throw invalid();
-                var originalSignals = sourceFindings.stream().map(f -> f.behaviorId() + "|" + f.dimension()).collect(java.util.stream.Collectors.toSet());
-                var reducedSignals = result.findings().stream().map(f -> f.behaviorId() + "|" + f.dimension()).collect(java.util.stream.Collectors.toSet());
-                if (!reducedSignals.containsAll(originalSignals)) throw invalid();
-                var bySignal = result.findings().stream().collect(java.util.stream.Collectors.groupingBy(f -> f.behaviorId() + "|" + f.dimension()));
-                for (var original : sourceFindings) {
-                    var matching = bySignal.get(original.behaviorId() + "|" + original.dimension());
-                    var refs = matching.stream().flatMap(f -> f.references().stream()).collect(java.util.stream.Collectors.toSet());
-                    var deps = matching.stream().flatMap(f -> f.dependencies().stream()).collect(java.util.stream.Collectors.toSet());
-                    if (!refs.containsAll(original.references()) || !deps.containsAll(original.dependencies())) throw invalid();
-                }
-                var dependencies = sourceFindings.stream().flatMap(f -> f.dependencies().stream()).collect(java.util.stream.Collectors.toSet());
-                if (!result.findings().stream().flatMap(f -> f.dependencies().stream()).collect(java.util.stream.Collectors.toSet()).containsAll(dependencies)) throw invalid();
-                var dimensions = sourceFindings.stream().map(AnalysisAiFinding::dimension).collect(java.util.stream.Collectors.toSet());
-                if (!result.findings().stream().map(AnalysisAiFinding::dimension).collect(java.util.stream.Collectors.toSet()).containsAll(dimensions)) throw invalid();
-            }
-            return result;
-        } catch (Exception failure) {
-            throw new IllegalArgumentException("Invalid partial findings or incomplete evidence coverage.", failure);
+            root = objectMapper.reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(content);
+        } catch (JsonProcessingException failure) {
+            throw new IllegalArgumentException("Partial findings must contain one valid JSON object.", failure);
+        }
+        if (root == null || !root.isObject()) throw invalid("response must be an object");
+        if (!root.path("sufficientEvidence").isBoolean()) throw invalid("sufficientEvidence must be boolean");
+        if (!root.path("findings").isArray()) throw invalid("findings must be an array");
+        var allowed = new HashSet<>(expectedCoverage);
+        if (allowed.size() != expectedCoverage.size()) throw invalid("prepared evidence scope contains duplicates");
+        var facts = new ArrayList<AnalysisAiFinding>();
+        for (var node : root.path("findings")) {
+            var behavior = requiredText(node, "behaviorId");
+            var dimension = requiredText(node, "dimension");
+            if (!DIMENSIONS.contains(dimension)) throw invalid("unsupported dimension: " + dimension);
+            var fact = requiredText(node, "fact");
+            var refs = requiredTexts(node.path("references"), "references");
+            if (refs.isEmpty()) throw invalid("references must not be empty for " + behavior);
+            if (refs.stream().anyMatch(ref -> !allowed.contains(ref))) throw invalid("references outside current evidence scope for " + behavior);
+            var dependencies = node.get("dependencies");
+            facts.add(new AnalysisAiFinding(behavior, dimension, fact, refs,
+                    dependencies == null || dependencies.isNull() ? List.of() : requiredTexts(dependencies, "dependencies")));
+        }
+        var sufficient = root.path("sufficientEvidence").booleanValue();
+        if (sufficient && facts.isEmpty()) throw invalid("sufficientEvidence=true requires findings");
+        if (sourceFindings != null) validateReduction(sourceFindings, facts);
+
+        var metadata = new DeliveryResponseMetadata();
+        metadata.inspectCoverage(root.get("coverage"), expectedCoverage);
+        var confidence = metadata.confidence(root.get("confidence"));
+        var limits = metadata.textList(root.get("visibilityLimits"), "visibilityLimits");
+        if (!sufficient && limits.isEmpty()) {
+            metadata.warn("sufficientEvidence=false bez opisu ograniczenia; materiał nie pozwala ustalić dostarczonego zachowania, wycena nie jest dostępna.");
+        }
+        // This coverage describes the input supplied by the application, not a claim by the model.
+        return new DeliveryPartFindings(expectedCoverage, sufficient, facts, confidence, metadata.withWarnings(limits));
+    }
+
+    private void validateReduction(List<AnalysisAiFinding> original, List<AnalysisAiFinding> reduced) {
+        var originalRefs = original.stream().flatMap(f -> f.references().stream()).collect(Collectors.toSet());
+        var reducedRefs = reduced.stream().flatMap(f -> f.references().stream()).collect(Collectors.toSet());
+        if (!originalRefs.equals(reducedRefs)) throw invalid("reduction must preserve the complete reference union");
+        var bySignal = reduced.stream().collect(Collectors.groupingBy(f -> new Signal(f.behaviorId(), f.dimension())));
+        for (var finding : original) {
+            var matching = bySignal.get(new Signal(finding.behaviorId(), finding.dimension()));
+            if (matching == null) throw invalid("reduction lost behaviorId/dimension: " + finding.behaviorId() + "/" + finding.dimension());
+            var refs = matching.stream().flatMap(f -> f.references().stream()).collect(Collectors.toSet());
+            var deps = matching.stream().flatMap(f -> f.dependencies().stream()).collect(Collectors.toSet());
+            if (!refs.containsAll(finding.references())) throw invalid("reduction lost references for " + finding.behaviorId() + "/" + finding.dimension());
+            if (!deps.containsAll(finding.dependencies())) throw invalid("reduction lost dependencies for " + finding.behaviorId() + "/" + finding.dimension());
         }
     }
 
-    private IllegalArgumentException invalid() { return new IllegalArgumentException("Invalid partial findings or incomplete evidence coverage."); }
+    private String requiredText(JsonNode node, String field) {
+        var value = node.path(field);
+        if (!value.isTextual() || value.textValue().isBlank()) throw invalid(field + " must be non-blank text");
+        return value.textValue();
+    }
+
+    private List<String> requiredTexts(JsonNode node, String field) {
+        if (!node.isArray()) throw invalid(field + " must be an array of non-blank texts");
+        var values = new ArrayList<String>();
+        for (var item : node) {
+            if (!item.isTextual() || item.textValue().isBlank()) throw invalid(field + " must contain non-blank texts only");
+            values.add(item.textValue());
+        }
+        return List.copyOf(values);
+    }
+
+    private IllegalArgumentException invalid(String reason) { return new IllegalArgumentException("Invalid partial findings: " + reason + "."); }
+    private record Signal(String behaviorId, String dimension) {}
 }

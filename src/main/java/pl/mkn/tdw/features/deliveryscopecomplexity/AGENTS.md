@@ -37,7 +37,14 @@ zakresu dat.
 - Podzial MR/plikow nalezy do feature'a, neutralny budzet i wybor/potwierdzenie
   tieru do platformy. Kazda czesc ma pelny Jira/Confluence i manifest, zwraca
   ustalenia bez punktowania; synteza ocenia union raz. Kod nie jest przycinany,
-  coverage i referencje sa walidowane; nierozdzielny material ma jawny blad.
+  zakres przekazanego materialu i referencje sa walidowane; nierozdzielny
+  material ma jawny blad. Coverage ustalen przypina aplikacja, nie model.
+- Bledy deklaracji coverage, confidence i pol opisowych sa jawnymi
+  ostrzezeniami w visibilityLimits; nie blokuja poprawnego rdzenia.
+  Niepoprawne confidence daje 0 z opisem przyczyny. Referencje poza zakresem,
+  niepoprawne wymiary i utrata zachowan/referencji/zaleznosci przy redukcji
+  nadal blokuja wynik. Raw pozostaje niezmieniony; nie ma ponowienia AI
+  dla korekty metadanych. Ostrzezenia sa przenoszone deterministycznie.
 - Czesci/redukcje/synteza sa sekwencyjne w bounded workerze, z jednym deadline,
   nowymi sesjami i pustymi tools. Tylko typowany overflow koryguje podzial.
   Awaria czesci blokuje finalna ocene, pozostawiajac partial evidence.

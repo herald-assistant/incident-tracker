@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -31,14 +30,13 @@ public class DeliveryAiResponseParser {
         }
         try {
             var root = objectMapper.readTree(json);
-            return validatedResponse(
-                    text(root, "classification"),
-                    root.path("dimensions"),
-                    root.path("confidence").asDouble(-1),
-                    optionalTextList(root.path("evidenceSummary")),
-                    optionalTextList(root.path("qualityFlags")),
-                    optionalTextList(root.path("visibilityLimits"))
-            );
+            var metadata = new DeliveryResponseMetadata();
+            var confidence = metadata.confidence(root.get("confidence"));
+            var summary = metadata.textList(root.get("evidenceSummary"), "evidenceSummary");
+            var quality = metadata.textList(root.get("qualityFlags"), "qualityFlags");
+            var limits = metadata.textList(root.get("visibilityLimits"), "visibilityLimits");
+            return validatedResponse(text(root, "classification"), root.path("dimensions"), confidence,
+                    summary, metadata.qualityFlags(quality), metadata.withWarnings(limits));
         } catch (JsonProcessingException exception) {
             return recoverEssentialResponse(json, exception);
         }
@@ -47,47 +45,40 @@ public class DeliveryAiResponseParser {
     private DeliveryAiResponse recoverEssentialResponse(String json, JsonProcessingException originalFailure) {
         String classification = null;
         JsonNode dimensionValues = null;
-        Double confidence = null;
+        JsonNode confidence = null;
+        String activeField = null;
         try (JsonParser parser = objectMapper.getFactory().createParser(json)) {
-            while (parser.nextToken() != null && !essentialFieldsComplete(classification, dimensionValues, confidence)) {
-                if (parser.currentToken() != JsonToken.FIELD_NAME) {
-                    continue;
-                }
+            if (parser.nextToken() != JsonToken.START_OBJECT) throw unparsableResponse(originalFailure);
+            while (parser.nextToken() != JsonToken.END_OBJECT) {
+                if (parser.currentToken() != JsonToken.FIELD_NAME) break;
                 var fieldName = parser.currentName();
+                activeField = fieldName;
                 var valueToken = parser.nextToken();
                 if ("classification".equals(fieldName) && valueToken == JsonToken.VALUE_STRING) {
                     classification = parser.getValueAsString();
                 } else if ("dimensions".equals(fieldName) && valueToken == JsonToken.START_OBJECT) {
                     dimensionValues = objectMapper.readTree(parser);
-                } else if ("confidence".equals(fieldName) && valueToken != null && valueToken.isScalarValue()) {
-                    confidence = parser.getValueAsDouble(-1);
+                } else if ("confidence".equals(fieldName)) {
+                    confidence = objectMapper.readTree(parser);
                 } else {
                     parser.skipChildren();
                 }
             }
         } catch (IOException recoveryFailure) {
-            if (!essentialFieldsComplete(classification, dimensionValues, confidence)) {
-                throw unparsableResponse(originalFailure);
-            }
+            if ("classification".equals(activeField) || "dimensions".equals(activeField)
+                    || !essentialFieldsComplete(classification, dimensionValues)) throw unparsableResponse(originalFailure);
         }
-        if (!essentialFieldsComplete(classification, dimensionValues, confidence)) {
-            throw unparsableResponse(originalFailure);
-        }
-        return validatedResponse(
-                classification,
-                dimensionValues,
-                confidence,
-                List.of(),
-                List.of(),
-                List.of()
-        );
+        if (!essentialFieldsComplete(classification, dimensionValues)) throw unparsableResponse(originalFailure);
+        var metadata = new DeliveryResponseMetadata();
+        var recoveredConfidence = metadata.confidence(confidence);
+        metadata.warn("odzyskano kompletny rdzeń oceny przed uszkodzonym opisowym końcem JSON; pola opisowe nie były dostępne. Oryginał zachowano w rawResponse.");
+        return validatedResponse(classification, dimensionValues, recoveredConfidence, List.of(),
+                metadata.qualityFlags(List.of()), metadata.withWarnings(List.of()));
     }
 
-    private boolean essentialFieldsComplete(String classification, JsonNode dimensions, Double confidence) {
-        if (!StringUtils.hasText(classification) || confidence == null) {
-            return false;
-        }
-        return !"DELIVERY".equals(normalized(classification)) || dimensions != null;
+    private boolean essentialFieldsComplete(String classification, JsonNode dimensions) {
+        return StringUtils.hasText(classification)
+                && (!"DELIVERY".equals(normalized(classification)) || dimensions != null);
     }
 
     private DeliveryAiResponse validatedResponse(
@@ -101,9 +92,6 @@ public class DeliveryAiResponseParser {
         var classification = normalized(classificationValue);
         if (!CLASSIFICATIONS.contains(classification)) {
             throw new IllegalArgumentException("AI response classification is unsupported.");
-        }
-        if (confidence < 0 || confidence > 1) {
-            throw new IllegalArgumentException("AI response confidence must be between 0 and 1.");
         }
         var dimensions = "DELIVERY".equals(classification) ? dimensions(dimensionValues) : null;
         return new DeliveryAiResponse(
@@ -137,29 +125,10 @@ public class DeliveryAiResponseParser {
 
     private int requiredDimension(JsonNode node, String name) {
         var value = node.get(name);
-        if (value == null || !value.canConvertToInt()) {
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) {
             throw new IllegalArgumentException("AI response dimension " + name + " is missing.");
         }
-        return value.asInt();
-    }
-
-    private List<String> optionalTextList(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return List.of();
-        }
-        if (node.isTextual()) {
-            return StringUtils.hasText(node.asText()) ? List.of(node.asText()) : List.of();
-        }
-        if (!node.isArray()) {
-            return List.of();
-        }
-        var values = new ArrayList<String>();
-        for (var item : node) {
-            if (item.isTextual() && StringUtils.hasText(item.asText())) {
-                values.add(item.asText());
-            }
-        }
-        return List.copyOf(values);
+        return value.intValue();
     }
 
     private String extractJson(String content) {

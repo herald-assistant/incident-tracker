@@ -148,4 +148,36 @@ class DeliveryScopeRubricContractTest {
         assertThat(prompt.indexOf("## Zakres oceny i hierarchia zadan"))
                 .isLessThan(prompt.indexOf("----- BEGIN EFFECTIVE SKILL: delivery-scope-complexity-evaluator -----"));
     }
+
+    @Test
+    void shouldSeparateStagesAndUseOnlyCurrentScopeWithUnchangedEffectiveRubric() {
+        var packet = new DeliveryEvidencePacket(null, Map.of(
+                "delivery-scope-complexity/issues.md", "Full CRM Jira and Confluence material",
+                "delivery-scope-complexity/diffs.md", "Complete CRM Customer diff",
+                "delivery-scope-complexity/visibility.md", "CRM runtime unavailable"), true, false, List.of());
+        var prompts = new DeliveryPromptPreparationService(mock(CopilotSkillRuntimeLoader.class));
+        var custom = "CUSTOM rubric: kotwice bez zmian; zwroc coverage calej dostawy.";
+        var scope = List.of("CRM/customer-api!1#file:0:src/Customer.java");
+        var manifest = "Whole CRM delivery: Customer.java and Notification.java";
+        var part = prompts.prepareFindings(packet, manifest, scope, custom);
+        var reduction = prompts.prepareReduction(packet, manifest, "[]", scope, custom);
+
+        assertThat(part.prompt()).startsWith("ETAP: EVIDENCE_PART").contains("Nie zwracaj coverage", "part-scope.json", "CUSTOM");
+        assertThat(reduction.prompt()).startsWith("ETAP: REDUCTION")
+                .contains("Zachowaj każdy behaviorId i jego wymiary", "dokładne wpisy dependencies");
+        for (var prepared : List.of(part, reduction)) {
+            assertThat(prepared.effectiveSkill()).isEqualTo(custom);
+            assertThat(prepared.artifacts().get("delivery-scope-complexity/issues.md")).isEqualTo(packet.artifacts().get("delivery-scope-complexity/issues.md"));
+            assertThat(prepared.artifacts().get("delivery-scope-complexity/part-scope.json")).isEqualTo(scopeJson(scope));
+            assertThat(prepared.artifacts().get("delivery-scope-complexity/manifest.md")).isEqualTo(manifest);
+            assertThat(prepared.prompt().substring(prepared.prompt().indexOf("## Jedyna odpowiedź"))).doesNotContain("\"coverage\"", "Notification.java");
+        }
+        assertThat(part.artifacts().get("delivery-scope-complexity/diffs.md")).isEqualTo(packet.artifacts().get("delivery-scope-complexity/diffs.md"));
+        assertThat(reduction.artifacts()).doesNotContainKey("delivery-scope-complexity/diffs.md");
+    }
+
+    private String scopeJson(List<String> scope) {
+        try { return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(scope); }
+        catch (com.fasterxml.jackson.core.JsonProcessingException failure) { throw new AssertionError(failure); }
+    }
 }

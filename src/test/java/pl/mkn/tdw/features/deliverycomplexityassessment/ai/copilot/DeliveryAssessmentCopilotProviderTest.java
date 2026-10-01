@@ -181,7 +181,7 @@ class DeliveryAssessmentCopilotProviderTest {
 
     @Test void shouldPreserveMalformedPartialResponseAndStopBeforeSynthesis() {
         doReturn(result("invalid CRM partial JSON")).when(execution).execute(any(),any(),any());
-        assertThatThrownBy(() -> analyze(largePacket())).hasMessageContaining("Invalid partial findings");
+        assertThatThrownBy(() -> analyze(largePacket())).hasMessageContaining("one valid JSON object");
         assertThat(ledger.values()).singleElement().satisfies(call -> {
             assertThat(call.role()).isEqualTo("EVIDENCE_PART");
             assertThat(call.status()).isEqualTo("FAILED");
@@ -219,5 +219,101 @@ class DeliveryAssessmentCopilotProviderTest {
         assertThatThrownBy(() -> provider.analyze("crm-run",null,AnalysisAiAuthRef.localToken("test"),packet,prompts.prepare(packet),
                 AnalysisAiActivityListener.NO_OP, AnalysisAiInvocationListener.NO_OP, Instant.now().minusSeconds(1))).hasMessageContaining("deadline");
         verifyNoInteractions(execution);
+    }
+
+    @Test void shouldCompletePartsAndSynthesisWithWholeManifestCoverageAndPreserveDiagnostics() throws Exception {
+        doAnswer(call -> {
+            var session = (CopilotPreparedSession) call.getArgument(0);
+            var normal = answer(session);
+            if (session.prompt().startsWith("TRYB SYNTEZY")) {
+                var finalTree = mapper.createObjectNode();
+                finalTree.put("classification", "DELIVERY");
+                var dimensions = finalTree.putObject("dimensions");
+                for (var dimension : List.of("outcomeBreadth","domainDecisionComplexity","applicationFlowComplexity","boundaryAndDataComplexity","verificationStateSpace","implementedCompatibilityScope","parameterizationComplexity")) dimensions.put(dimension, 2);
+                finalTree.put("confidence", "unknown");
+                return new CopilotExecutionResult(finalTree.toString(), normal.usage(), normal.sessionId());
+            }
+            if (!session.artifactContents().containsKey("delivery-complexity/part-scope.json")) return normal;
+            var tree = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(normal.content());
+            var all = session.artifactContents().get("delivery-complexity/manifest.md").lines()
+                    .filter(line -> line.startsWith("id:")).toList();
+            tree.set("coverage", mapper.valueToTree(all));
+            return new CopilotExecutionResult(tree.toString(), normal.usage(), normal.sessionId());
+        }).when(execution).execute(any(), any(), any());
+        var packet = largePacket();
+        var analysis = analyze(packet);
+        assertThat(ledger.values()).hasSize(3).allMatch(call -> call.status().equals("COMPLETED"));
+        var parts = ledger.values().stream().filter(call -> call.role().equals("EVIDENCE_PART")).toList();
+        assertThat(parts).hasSize(2).allSatisfy(call -> {
+            assertThat(call.visibilityLimits()).anyMatch(limit -> limit.contains("nadmiarowe="));
+            assertThat(mapper.readTree(call.rawResponse()).path("coverage").size()).isGreaterThan(call.evidenceScope().size());
+        });
+        assertThat(analysis.response().visibilityLimits()).anyMatch(limit -> limit.contains("coverage:"));
+        assertThat(analysis.response().classification()).isEqualTo("DELIVERY");
+        assertThat(analysis.response().qualityFlags()).contains("AI_METADATA_WARNING");
+        assertThat(new DeliveryAssessmentScoringService().score(analysis.response()).score100()).isEqualTo(50);
+        assertThat(analysis.usage().apiCallCount()).isEqualTo(3);
+        assertThat(analysis.usage().inputTokens()).isEqualTo(300);
+        verify(execution, times(3)).execute(any(), any(), any());
+    }
+
+    @Test void shouldPreservePartWarningsAndConfidenceAcrossReductionEvenWhenModelOmitsThem() throws Exception {
+        largeFindings = true;
+        doAnswer(call -> {
+            var session = (CopilotPreparedSession) call.getArgument(0);
+            var normal = answer(session);
+            if (!session.prompt().startsWith("ETAP: EVIDENCE_PART")) return normal;
+            var tree = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(normal.content());
+            tree.put("confidence", "unknown");
+            tree.putArray("visibilityLimits").add("CRM runtime unavailable");
+            return new CopilotExecutionResult(tree.toString(), normal.usage(), normal.sessionId());
+        }).when(execution).execute(any(), any(), any());
+        var analysis = analyze(largePacket());
+        assertThat(ledger.values().stream().filter(call -> call.role().equals("REDUCTION"))).isNotEmpty()
+                .allSatisfy(call -> assertThat(call.visibilityLimits()).contains("CRM runtime unavailable")
+                        .anyMatch(limit -> limit.contains("confidence:")));
+        assertThat(analysis.response().confidence()).isZero();
+        assertThat(analysis.response().visibilityLimits()).contains("CRM runtime unavailable")
+                .anyMatch(limit -> limit.contains("confidence:"));
+        assertThat(analysis.usage().apiCallCount()).isEqualTo(ledger.size());
+    }
+
+    @Test void shouldReduceFactsWhenDiagnosticMetadataGrows() throws Exception {
+        doAnswer(call -> {
+            CopilotPreparedSession session = call.getArgument(0);
+            var needsReduction = session.prompt().startsWith("TRYB SYNTEZY")
+                    && ledger.values().stream().noneMatch(invocation -> invocation.role().equals("REDUCTION"));
+            return new CopilotPromptBudget(needsReduction ? limit + 1 : session.prompt().length(), limit, limit, 1000, 0, 1.0, false);
+        }).when(budgets).measure(any());
+        doAnswer(call -> {
+            var session = (CopilotPreparedSession) call.getArgument(0);
+            var normal = answer(session);
+            if (!session.prompt().startsWith("ETAP: REDUCTION")) return normal;
+            var tree = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(normal.content());
+            tree.putArray("coverage").add("CRM/customer-api!99#metadata");
+            return new CopilotExecutionResult(tree.toString(), normal.usage(), normal.sessionId());
+        }).when(execution).execute(any(), any(), any());
+        var analysis = analyze(largePacket());
+        assertThat(ledger.values()).extracting(AnalysisAiInvocation::role)
+                .containsExactly("EVIDENCE_PART", "EVIDENCE_PART", "REDUCTION", "SYNTHESIS");
+        assertThat(analysis.response().visibilityLimits()).anyMatch(limit -> limit.contains("coverage:"));
+        assertThat(analysis.usage().apiCallCount()).isEqualTo(4);
+    }
+
+    @Test void shouldFailOnInventedPartReferenceAndPreserveRawBeforeSynthesis() throws Exception {
+        doAnswer(call -> {
+            var normal = answer(call.getArgument(0));
+            var tree = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(normal.content());
+            ((com.fasterxml.jackson.databind.node.ObjectNode) tree.path("findings").get(0)).putArray("references")
+                    .add("CRM/customer-api!99#metadata");
+            return new CopilotExecutionResult(tree.toString(), normal.usage(), normal.sessionId());
+        }).when(execution).execute(any(), any(), any());
+        assertThatThrownBy(() -> analyze(largePacket())).hasMessageContaining("references outside current evidence scope");
+        assertThat(ledger.values()).singleElement().satisfies(call -> {
+            assertThat(call.status()).isEqualTo("FAILED");
+            assertThat(call.rawResponse()).contains("CRM/customer-api!99#metadata");
+            assertThat(call.usage().apiCallCount()).isEqualTo(1);
+        });
+        verify(execution, times(1)).execute(any(), any(), any());
     }
 }

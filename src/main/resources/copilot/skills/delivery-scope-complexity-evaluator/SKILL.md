@@ -29,12 +29,20 @@ jakosci ludzi, produktywnosci, czasu pracy ani tego, czy kod mogl powstac z AI.
 
 ## Analiza wieloczęściowa
 
-Prompt wskazuje tryb pracy. W `EVIDENCE_PART` oraz `REDUCTION` zwracaj tylko
-typowane ustalenia zgodne z kontraktem promptu, bez punktowania. Każda część
-ma pełny Jira/Confluence, lecz potwierdza implementację tylko w swoim zakresie
-MR-ów albo plików. Manifest wskazuje całą dostawę; nie jest dowodem kodu poza
-widoczną częścią. Zachowaj dokładne coverage, referencje, behaviorId, wymiary,
-zależności i ograniczenia. Redukcja skraca opisy bez usuwania odmiennych faktów.
+Prompt wskazuje jeden etap: `EVIDENCE_PART`, `REDUCTION` albo `SYNTHESIS`.
+W `EVIDENCE_PART` i `REDUCTION` zwracaj typowane ustalenia bez punktowania;
+kontrakt odpowiedzi tego etapu ma pierwszeństwo przed formatem finalnej oceny.
+Merytoryczne kotwice i wymiary tej rubryki obowiązują w każdym etapie.
+
+Pełny Jira/Confluence wyjaśnia intencję. Manifest całej dostawy jest tłem,
+nie dowodem kodu poza widoczną częścią. W części i redukcji `references`
+mogą wskazywać wyłącznie dokładne identyfikatory z `part-scope.json`.
+Nie zwracaj `coverage`: zakres przekazanego materiału przypisuje aplikacja.
+Podawaj referencje przy konkretnych faktach, nie kopiuj całego manifestu.
+
+W redukcji zachowaj każdy `behaviorId` i jego wymiary, wszystkie referencje
+tej pary oraz dokładne wpisy `dependencies` i ograniczenia. Skracaj opisy,
+nie usuwaj odmiennych zachowań ani dowodów.
 
 W `SYNTHESIS` oceń union zweryfikowanych ustaleń według tej samej rubryki.
 Zachowaj zależności między częściami i deduplikuj powtarzające się zachowania.
