@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Component
 public class BoundedDeliveryScopeUnitExecutor implements DeliveryScopeUnitExecutor {
@@ -34,7 +35,7 @@ public class BoundedDeliveryScopeUnitExecutor implements DeliveryScopeUnitExecut
     public CompletableFuture<Void> runAsync(Runnable task, Duration timeout) {
         var result = new CompletableFuture<Void>();
         try {
-            executor.execute(() -> {
+            var submitted = executor.submit(() -> {
                 result.orTimeout(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
                 try {
                     task.run();
@@ -42,6 +43,9 @@ public class BoundedDeliveryScopeUnitExecutor implements DeliveryScopeUnitExecut
                 } catch (Throwable failure) {
                     result.completeExceptionally(failure);
                 }
+            });
+            result.whenComplete((ignored, failure) -> {
+                if (failure instanceof TimeoutException || result.isCancelled()) submitted.cancel(true);
             });
         } catch (RejectedExecutionException failure) {
             result.completeExceptionally(failure);

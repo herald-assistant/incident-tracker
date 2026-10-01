@@ -68,11 +68,11 @@ MR-y jednostki bez zwielokrotnienia wyniku przez podzial na zadania.
 Kontrakt zakresu oceny w prompcie ma pierwszenstwo przed sprzeczna definicja
 jednostki w customowym effective skillu.
 
-Kazda ocenialna Delivery Unit uruchamia jedna nowa sesje Copilota. Prompt
-zawiera effective tresc skilla `delivery-scope-complexity-evaluator`, kontrakt
-JSON i wszystkie artefakty. Allowlista tools i katalogi skilli sa puste.
-Pierwsza odpowiedz modelu jest odpowiedzia finalna. Prepared prompt i raw AI
-response sa zapisywane przy jednostce przed dalszym przetwarzaniem.
+Prompt zawiera snapshot effective skilla `delivery-scope-complexity-evaluator`,
+kontrakt JSON i inline artifacts danego etapu. Kazde wywolanie ma nowa sesje,
+pusta allowliste tools i katalogow skilli. Odpowiedz jest finalnym JSON-em
+danego etapu; prepared prompt oraz raw response sa zapisywane przed dalszym
+przetwarzaniem przy odpowiednim wywolaniu jednostki.
 
 ## Kontrakt i scoring
 
@@ -112,9 +112,7 @@ wykonania. Discovery, przygotowanie promptow, wyniki jednostek, raw responses,
 usage i status terminalny aktualizuja ten sam run czastkowo.
 Kazdy issue snapshot zawiera opcjonalne `timeSpentSeconds`,
 `originalEstimateSeconds`, `remainingEstimateSeconds` oraz
-`timeTrackingCapturedAt` pobrane z Jira. Pola sa addytywne w envelope V1:
-starszy eksport bez nich pozostaje czytelny, a brak wartosci mapuje sie na
-`null`. Nie sa uzywane przez scoring ani UI raportu.
+`timeTrackingCapturedAt` pobrane z Jira. Pola sa opcjonalne w aktualnym envelope V1; brak danych Jira mapuje sie na `null`. Nie sa uzywane przez scoring ani UI raportu.
 
 UI ma wlasna route i API service. Pokazuje jedna rozwijalna tabele Delivery
 Units, linki Jira/MR, final score `0-200`, rozklad wymiarow, evidence, quality
@@ -140,6 +138,73 @@ importu; uzywa separatora `;`, UTF-8 z BOM i cytowania wartosci z separatorem,
 cudzyslowem albo nowa linia. Ten biznesowy CSV moze byc lokalnie wczytany
 przez `Delivery Complexity Trends`; nie staje sie przez to wersjonowanym
 kontraktem backendowego importu.
+
+## Material przekraczajacy budzet modelu
+
+`CopilotPromptBudgetService` dostarcza neutralna estymacje pelnego wejscia:
+prompt, durable system instructions, definicje tools i rezerwa. Limit promptu
+oraz outputu pochodzi z dynamicznego `models.list`, rowniez bez long tieru.
+Domyslny `prompt-budget-safety-ratio=0.80` i rezerwa 16000 tokenow chronia
+przed roznica estymacji i rzeczywistego tokenizowania. Limit UNKNOWN pozwala
+na jedna zwykla probe; nie oznacza potwierdzonej pojemnosci. Platforma wybiera
+i potwierdza `long_context`; odrzucenie tieru zwraca zwykly budzet przed
+wyslaniem nadmiernego promptu. Feature nie ustawia tieru i nie koduje modeli.
+
+Mala jednostka nadal ma jedno wywolanie `ASSESSMENT` z finalnym JSON-em.
+Duza jednostka jest planowana wedlug rozmiaru pelnych promptow: najpierw
+rozlaczne MR-y, a gdy pojedynczy MR nie miesci sie, jego pelne zmienione
+pliki. Metadata MR sa zachowane. Kazda `EVIDENCE_PART` dostaje identyczny
+pelny Jira/Confluence, hierarchie semantyczna, manifest calej dostawy i jawny
+zakres implementacji. Kod nie jest przycinany. Nierozdzielny plik/metadata
+(`EVIDENCE_ATOM_TOO_LARGE`) albo sam bazowy kontekst
+(`JIRA_CONTEXT_TOO_LARGE`) konczy jednostke czytelna diagnostyka rozmiaru.
+
+Czesci zwracaja `DeliveryPartFindings`, bez punktow: coverage, sufficientEvidence,
+findings (behaviorId, dimension, fact, references, dependencies), confidence
+i visibilityLimits. Parser wymaga dokladnej coverage i referencji z zakresu.
+`SYNTHESIS` otrzymuje pelny Jira, manifest i wszystkie zweryfikowane ustalenia;
+deduplikuje zachowania i zwraca dotychczasowy finalny kontrakt. Backend
+wykonuje scoring raz. `MULTIPART_SYNTHESIS` i visibilityLimits ujawniaja,
+ze synteza korzysta z ustalen, bez bezposredniego odczytu calego surowego diffu.
+Confidence nie przekracza minimum confidence czesci i syntezy.
+
+Nadmierne ustalenia sa redukowane w budzetowanych grupach (`REDUCTION`),
+bez scoringu. Walidacja zachowuje coverage, referencje, pary behaviorId/wymiar
+i zaleznosci; wynik musi byc mniejszy. Nie ma ciecia listy ustalen.
+Awaria lub niepoprawny JSON jednej czesci blokuje finalna ocene, zachowujac
+dotychczasowy material. Niewystarczajace evidence daje `NOT_SCORABLE`.
+
+Wywolania sa sekwencyjne w jednym bounded workerze jednostki, kazde w nowej
+sesji, z pusta allowlista tools i katalogow skilli. Effective rubric jest
+snapshotem pobranym raz dla jednostki. Jeden `item-timeout` od startu workera
+obejmuje przygotowanie, czesci i synteze; timeout przerywa worker, a deadline
+blokuje nowe sesje i ogranicza pozostaly czas `sendAndWait`.
+Domyslne limity: 32 wywolania na jednostke, 3 korekty context overflow,
+4 poziomy redukcji. Tylko jednoznaczny `CopilotPromptOverflowException`
+koryguje budzet i podzial odrzuconej czesci, w nowej sesji. Rate limit,
+auth, transport i parsowanie nie sa ponawiane jako context overflow.
+`oversized-evidence-enabled=false` wylacza podzial z jawna diagnostyka.
+
+Kazda jednostka zapisuje liste `aiInvocations`: id, rola, status, numer/liczba
+czesci, zakres MR/plikow, estymacja/limit/rezerwa, preparedPrompt, rawResponse,
+ustalenia, visibilityLimits, sessionId, usage, blad i timestamps. Prompt jest
+zapisany przed wykonaniem, rawResponse przed parsowaniem, takze po awarii.
+Aktualizacja tego samego id nie zwielokrotnia usage. Zuzycie wywolan jest
+sumowane; obserwacje limitu/wypelnienia okna maja maksimum zamiast sumy.
+Nie ma niewidocznego magazynu sesyjnej telemetryki.
+
+Aktualny publiczny format oraz import/export pozostaja V1. `aiInvocations`
+zastepuje pojedyncze unit-level preparedPrompt/promptPreparedAt/rawAiResponse;
+brak tej listy jest bledem importu. Nie ma migratora starego formatu.
+Zatwierdzony cleanup dotyczy tylko starych lokalnych wynikow i artefaktow obu
+assessmentow; inne feature'y i CUSTOM skille pozostaja poza nim.
+
+UI zachowuje jeden wiersz i jedna finalna ocene Delivery Unit. Etykieta
+`Analiza w N czesciach` wskazuje podzial. Wspolny `analysis-ai-invocations`
+pokazuje zakres, status, ustalenia, raw response oraz wejscie kazdego wywolania;
+shared aside udostepnia wszystkie prepared prompts i caly koszt. Progress
+pokazuje czesci oraz laczenie wynikow. Agregaty, CSV i Trends nadal licza
+jednostke raz, niezaleznie od liczby wywolan AI.
 
 ## Ownership i usuniecie eksperymentu
 

@@ -14,6 +14,10 @@ import java.time.Duration;
 public class DeliveryComplexityAssessmentProperties {
 
     private boolean enabled = true;
+    private boolean oversizedEvidenceEnabled = true;
+    private int maxAiInvocationsPerUnit = 32;
+    private int maxContextCorrections = 3;
+    private int maxReductionLevels = 4;
     private String timeZone = "Europe/Warsaw";
     private int maxRangeDays = 92;
     private int maxIssuesPerJob = 200;

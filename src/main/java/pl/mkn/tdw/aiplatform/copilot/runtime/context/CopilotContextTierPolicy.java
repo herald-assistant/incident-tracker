@@ -1,7 +1,5 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.context;
 
-import com.github.copilot.rpc.SystemMessageConfig;
-import com.github.copilot.rpc.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -10,7 +8,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOption;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsProvider;
 
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -24,7 +21,18 @@ public class CopilotContextTierPolicy {
     private final CopilotContextTierActivator contextTierActivator;
 
     public CopilotContextTierSession prepare(CopilotPreparedSession preparedSession) {
+        return prepare(preparedSession, null);
+    }
+
+    public CopilotContextTierSession prepare(CopilotPreparedSession preparedSession, CopilotPromptBudget budget) {
         var decision = decide(preparedSession);
+        if (budget != null && budget.known() && decision.preference() == CopilotContextTierPreference.AUTO) {
+            decision = new CopilotContextTierDecision(decision.policyEnabled(), decision.preference(),
+                    decision.modelMetadataAvailable(), decision.modelId(), decision.defaultWindowTokens(),
+                    decision.longContextWindowTokens(), budget.estimatedInputTokens(), decision.initialThresholdTokens(),
+                    decision.runtimeUsageThreshold(), decision.switchTimeoutMillis(), budget.requiresLongContext(),
+                    "The prepared input uses the measured prompt budget and requires only its selected tier.");
+        }
         if (decision.useLongContextInitially()) {
             if (preparedSession.sessionConfig() != null) {
                 preparedSession.sessionConfig().setContextTier(LONG_CONTEXT);
@@ -58,7 +66,7 @@ public class CopilotContextTierPolicy {
             return unsupported(false, preference, modelId, "Platform context-tier policy is disabled.");
         }
 
-        var estimatedTokens = estimateInitialTokens(preparedSession, settings);
+        var estimatedTokens = CopilotInitialContextEstimator.estimate(preparedSession, settings);
         if (preference == CopilotContextTierPreference.LONG_CONTEXT_REQUIRED) {
             var profile = findAnyProfileBestEffort(preparedSession, modelId);
             if (profile != null && !profile.supportsLongContext()) {
@@ -134,57 +142,6 @@ public class CopilotContextTierPolicy {
         );
     }
 
-    private long estimateInitialTokens(
-            CopilotPreparedSession preparedSession,
-            CopilotSdkProperties.ContextTierPolicy settings
-    ) {
-        long characters = preparedSession.prompt() != null ? preparedSession.prompt().length() : 0L;
-        var tools = preparedSession.sessionConfig() != null
-                ? preparedSession.sessionConfig().getTools()
-                : List.<ToolDefinition>of();
-        if (tools != null) {
-            for (var tool : tools) {
-                if (tool == null) {
-                    continue;
-                }
-                characters += length(tool.name());
-                characters += length(tool.description());
-                characters += length(tool.parameters());
-            }
-        }
-        characters += systemMessageCharacters(selectedSystemMessage(preparedSession));
-        return (long) Math.ceil(characters / settings.getEstimatedCharactersPerToken())
-                + settings.getReservedTokens();
-    }
-
-    private SystemMessageConfig selectedSystemMessage(CopilotPreparedSession preparedSession) {
-        if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
-            return preparedSession.resumeSessionConfig() != null
-                    ? preparedSession.resumeSessionConfig().getSystemMessage()
-                    : null;
-        }
-        return preparedSession.sessionConfig() != null
-                ? preparedSession.sessionConfig().getSystemMessage()
-                : null;
-    }
-
-    private long systemMessageCharacters(SystemMessageConfig systemMessage) {
-        if (systemMessage == null) {
-            return 0L;
-        }
-        long characters = length(systemMessage.getContent());
-        if (systemMessage.getSections() != null) {
-            for (var entry : systemMessage.getSections().entrySet()) {
-                characters += length(entry.getKey());
-                if (entry.getValue() != null) {
-                    characters += length(entry.getValue().getAction());
-                    characters += length(entry.getValue().getContent());
-                }
-            }
-        }
-        return characters;
-    }
-
     private CopilotModelOption findProfile(CopilotPreparedSession preparedSession, String modelId) {
         if (!StringUtils.hasText(modelId)) {
             return null;
@@ -226,10 +183,6 @@ public class CopilotContextTierPolicy {
             return preparedSession.sessionConfig().getModel().trim();
         }
         return StringUtils.hasText(properties.getModel()) ? properties.getModel().trim() : null;
-    }
-
-    private int length(Object value) {
-        return value != null ? String.valueOf(value).length() : 0;
     }
 
 }

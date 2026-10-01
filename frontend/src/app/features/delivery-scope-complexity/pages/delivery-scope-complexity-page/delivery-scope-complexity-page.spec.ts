@@ -1,3 +1,4 @@
+import { invocationFixture } from '../../../../core/testing/analysis-ai-invocation.fixture';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -274,7 +275,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     unit.assessment = null;
     unit.errorCode = 'DELIVERY_UNIT_EXECUTION_FAILED';
     unit.errorMessage = 'AI response did not contain JSON assessment.';
-    unit.rawAiResponse = '{"classification":"DELIVERY","confidence":0.85}';
+    unit.aiInvocations[0].rawResponse = '{"classification":"DELIVERY","confidence":0.85}';
     const completed = snapshot('COMPLETED_WITH_WARNINGS', 0, [unit]);
     const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
 
@@ -723,9 +724,7 @@ function completedUnit(): DeliveryScopeComplexityJobStateSnapshot['units'][numbe
     errorMessage: null,
     startedAt: '2026-07-01T10:00:00Z',
     completedAt: '2026-07-01T10:01:00Z',
-    preparedPrompt: 'one-shot prompt with effective skill, Jira and MR code',
-    promptPreparedAt: '2026-07-01T10:00:01Z',
-    rawAiResponse: null,
+    aiInvocations: [invocationFixture('one-shot prompt with effective skill, Jira and MR code')],
     usage: null
   };
 }

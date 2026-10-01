@@ -22,6 +22,21 @@ Oceniaj wylacznie evidence przekazane dla biezacej Delivery Unit.
   Zadanie bez potwierdzonych relacji oceniaj w aktualnym zakresie, bez
   zgadywania typu ani pelnego zakresu rodzica.
 
+## Analiza wieloczęściowa
+
+Prompt wskazuje tryb pracy. W `EVIDENCE_PART` oraz `REDUCTION` zwracaj tylko
+typowane ustalenia zgodne z kontraktem promptu, bez punktowania. Każda część
+ma pełny Jira/Confluence, lecz potwierdza implementację tylko w swoim zakresie
+MR-ów albo plików. Manifest wskazuje całą dostawę; nie jest dowodem kodu poza
+widoczną częścią. Zachowaj dokładne coverage, referencje, behaviorId, wymiary,
+zależności i ograniczenia. Redukcja skraca opisy bez usuwania odmiennych faktów.
+
+W `SYNTHESIS` oceń union zweryfikowanych ustaleń według tej samej rubryki.
+Zachowaj zależności między częściami i deduplikuj powtarzające się zachowania.
+Nie sumuj ani nie uśredniaj ocen części. Każdy niezerowy wymiar musi mieć
+referencję do ustaleń. Synteza nie czyta surowych diffów: zaznacz to ograniczenie
+i nie dopisuj dostarczonego zachowania na podstawie intencji Jira.
+
 ## Zasady
 
 1. Nie estymuj czasu pracy, dni, seniority ani produktywnosci ludzi.

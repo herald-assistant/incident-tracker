@@ -43,6 +43,24 @@ class BoundedDeliveryAssessmentUnitExecutorTest {
         }
     }
 
+    @Test
+    void shouldInterruptTimedOutWorkAndReleaseItsWorker() throws Exception {
+        var properties = new DeliveryComplexityAssessmentProperties();
+        properties.setMaxParallelAnalyses(1);
+        var executor = new BoundedDeliveryAssessmentUnitExecutor(properties);
+        var interrupted = new CountDownLatch(1);
+        try {
+            var first = executor.runAsync(() -> {
+                try { new CountDownLatch(1).await(); }
+                catch (InterruptedException failure) { interrupted.countDown(); Thread.currentThread().interrupt(); }
+            }, Duration.ofMillis(50));
+            org.assertj.core.api.Assertions.assertThatThrownBy(first::join)
+                    .hasCauseInstanceOf(java.util.concurrent.TimeoutException.class);
+            assertThat(interrupted.await(2, TimeUnit.SECONDS)).isTrue();
+            executor.runAsync(() -> {}, Duration.ofSeconds(1)).get(2, TimeUnit.SECONDS);
+        } finally { executor.shutdown(); }
+    }
+
     private void await(CountDownLatch latch) {
         try {
             latch.await(2, TimeUnit.SECONDS);

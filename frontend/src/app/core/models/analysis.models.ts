@@ -347,3 +347,32 @@ export interface LocalAnalysisRunDetailResponse extends LocalAnalysisRunListItem
 export interface RenameLocalAnalysisRunRequest {
   name: string;
 }
+
+export interface AnalysisAiFinding {
+  behaviorId: string;
+  dimension: string;
+  fact: string;
+  references: string[];
+  dependencies: string[];
+}
+
+export interface AnalysisAiInvocation {
+  invocationId: string;
+  role: 'ASSESSMENT' | 'EVIDENCE_PART' | 'REDUCTION' | 'SYNTHESIS';
+  status: string;
+  partNumber: number;
+  partCount: number;
+  evidenceScope: string[];
+  estimatedInputTokens: number;
+  promptTokenLimit: number;
+  reservedTokens: number;
+  preparedPrompt: string;
+  rawResponse: string | null;
+  findings: AnalysisAiFinding[];
+  visibilityLimits: string[];
+  sessionId: string | null;
+  usage: AnalysisAiUsage | null;
+  errorMessage: string | null;
+  startedAt: string;
+  completedAt: string | null;
+}

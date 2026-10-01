@@ -13,6 +13,11 @@ chat, evidence/tool feedback, usage/cost, import/export i powtarzalne fragmenty
 prezentacji wyniku. Feature screen powinien dostarczac dane, copy i handler
 akcji, ale nie duplikowac struktury, zachowan ani styli tych samych elementow.
 
+`analysis-ai-invocations` prezentuje neutralny zapis wielu wywolan przy jednej
+jednostce wyniku: status, zakres, ustalenia, raw response i input diagnostics.
+Oba assessmenty reuse'uja komponent. Podzial techniczny nie dodaje punktowanych
+wierszy ani wkladow do agregatu; prepared prompts i usage pozostaja w aside.
+
 ## App shell
 
 `app-shell` jest jedynym wlascicielem:

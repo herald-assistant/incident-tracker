@@ -31,7 +31,19 @@ zakresu dat.
 - Backend deterministycznie liczy `scope`, `scaledScore`, wazone punkty i
   finalny wynik `0-200`; AI nie zwraca wyliczonych skladowych.
 - Kazda istotna zmiana live state zapisuje ten sam local run snapshot.
-- Surowa odpowiedz AI jest zapisywana przy Delivery Unit przed parsowaniem,
+- Kazda jednostka posiada `aiInvocations` z prompt/raw, statusem, zakresem,
+  ustaleniami, usage i bledem kazdej proby. Prompt zapisuj przed wykonaniem,
+  raw przed parsowaniem; aktualizacja tego samego id nie sumuje usage ponownie.
+- Podzial MR/plikow nalezy do feature'a, neutralny budzet i wybor/potwierdzenie
+  tieru do platformy. Kazda czesc ma pelny Jira/Confluence i manifest, zwraca
+  ustalenia bez punktowania; synteza ocenia union raz. Kod nie jest przycinany,
+  coverage i referencje sa walidowane; nierozdzielny material ma jawny blad.
+- Czesci/redukcje/synteza sa sekwencyjne w bounded workerze, z jednym deadline,
+  nowymi sesjami i pustymi tools. Tylko typowany overflow koryguje podzial.
+  Awaria czesci blokuje finalna ocene, pozostawiajac partial evidence.
+- UI, agregaty, CSV i Trends licza jedna ocene jednostki niezaleznie od liczby
+  wywolan. Aktualny format V1 wymaga aiInvocations, bez migratora starego zapisu.
+- Surowa odpowiedz AI jest zapisywana przy wywolaniu Delivery Unit przed parsowaniem,
   pozostaje dostepna rowniez po bledzie kontraktu i jest prezentowana w UI
   jako domyslnie zwiniety material diagnostyczny.
 

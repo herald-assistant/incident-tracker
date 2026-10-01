@@ -103,7 +103,11 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
 - `src/main/java/pl/mkn/tdw/aiplatform`
   neutralny runtime AI, sesje, tools invocation, policies, budgets i usage.
   `copilot/runtime/context` posiada wspolna polityke `long_context`; feature nie
-  moze kopiowac progow ani metadanych modeli do swojego kodu.
+  moze kopiowac progow ani metadanych modeli do swojego kodu. Neutralny
+  `CopilotPromptBudgetService` zachowuje zwykle limity bez long tieru, estymacje
+  i margines, a gateway normalizuje tylko jednoznaczny prompt overflow.
+  Oba assessmenty posiadaja lokalny podzial MR/plikow, ustalenia i synteze;
+  jeden wiersz jednostki ma `aiInvocations` i jeden finalny scoring, format V1.
 - `src/main/java/pl/mkn/tdw/agenttools`
   neutralne capability tools oraz MCP exposure nad integracjami, w tym
   frontendowy route slice oparty o bezpieczny screen `sliceRef` oraz TypeScript

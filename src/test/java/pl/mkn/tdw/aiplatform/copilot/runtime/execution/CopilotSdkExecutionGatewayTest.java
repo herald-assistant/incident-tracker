@@ -625,6 +625,63 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
+    void shouldReturnOrdinaryBudgetForAssessmentWhenLongTierIsRejected() {
+        var properties = new CopilotSdkProperties();
+        var effectiveTierReader = mock(CopilotEffectiveContextTierReader.class);
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
+                new CopilotReportSessionStore(),
+                effectiveTierReader
+        );
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var sessionConfig = new SessionConfig()
+                .setSessionId("crm-context-rejected-session")
+                .setModel("gpt-synthetic-crm");
+        var preparedRequest = new CopilotPreparedSession(
+                "crm-context-rejected-run",
+                CopilotSessionTarget.newSession(),
+                new CopilotClientOptions(),
+                sessionConfig,
+                new ResumeSessionConfig().setModel("gpt-synthetic-crm"),
+                new MessageOptions().setPrompt("Review the synthetic CRM contact screen."),
+                "Review the synthetic CRM contact screen.",
+                Map.of(),
+                null,
+                evidence -> {
+                },
+                activities::add,
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.AUTO
+        );
+        var sessionRef = new AtomicReference<CopilotSession>();
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+            sessionRef.set(session);
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(same(sessionConfig))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(effectiveTierReader.read(session)).thenReturn(new CopilotEffectiveContextTier(
+                    "gpt-synthetic-crm",
+                    "medium",
+                    "default"
+            ));
+        })) {
+            assertThatThrownBy(() -> gateway.execute(preparedRequest, new pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptBudget(200, 900, 100, 20, 16, .8, true), Duration.ofSeconds(1)))
+                    .isInstanceOf(pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptOverflowException.class)
+                    .satisfies(failure -> assertThat(((pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptOverflowException) failure).promptTokenLimit()).isEqualTo(100));
+
+            verify(sessionRef.get(), never()).sendAndWait(any(MessageOptions.class), eq(300_000L));
+            assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .extracting(AnalysisAiActivityEvent::status)
+                    .containsExactly("COMPLETED", "FAILED");
+        }
+    }
+
+    @Test
     void shouldPublishReasoningTextInActivityEvents() {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
@@ -956,6 +1013,16 @@ class CopilotSdkExecutionGatewayTest {
                     .containsEntry("cliVersion", "1.0.56-9")
                     .containsEntry("compatible", false);
         });
+    }
+
+    @Test
+    void shouldRejectOversizedPreparedInputBeforeStartingAClient() {
+        var gateway = executionGateway(new CopilotSdkProperties(), new CopilotToolEvidenceSessionStore());
+        try (var clients = mockConstruction(CopilotClient.class)) {
+            assertThatThrownBy(() -> gateway.execute(null, new pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptBudget(450, 500, 500, 100, 16, .8, false), Duration.ofSeconds(1)))
+                    .isInstanceOf(pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotPromptOverflowException.class);
+            assertThat(clients.constructed()).isEmpty();
+        }
     }
 
     private CopilotSdkExecutionGateway executionGateway(

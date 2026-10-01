@@ -16,13 +16,12 @@ public record DeliveryScopeUnitResponse(
         String errorMessage,
         Instant startedAt,
         Instant completedAt,
-        String preparedPrompt,
-        Instant promptPreparedAt,
-        String rawAiResponse,
+        List<pl.mkn.tdw.shared.ai.AnalysisAiInvocation> aiInvocations,
         AnalysisAiUsage usage
 ) {
 
     public DeliveryScopeUnitResponse {
+        aiInvocations = List.copyOf(java.util.Objects.requireNonNull(aiInvocations, "aiInvocations are required in the current contract"));
         issues = issues != null ? List.copyOf(issues) : List.of();
         mergeRequests = mergeRequests != null ? List.copyOf(mergeRequests) : List.of();
         visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();

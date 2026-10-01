@@ -1,0 +1,42 @@
+@if (summaryOnly()) {
+  @if (partCount() > 0) {
+    <small class="analysis-parts-label">{{ partCount() > 1 ? 'Analiza w ' + partCount() + ' częściach' : 'Analiza etapowa' }}</small>
+  }
+} @else {
+  @for (call of invocations(); track call.invocationId) {
+    <details class="analysis-invocation" [attr.data-status]="call.status">
+      <summary><span>{{ title(call) }}</span><small>{{ status(call) }}</small></summary>
+      @if (call.evidenceScope.length) {
+        <details class="analysis-invocation-scope">
+          <summary>Zakres materiału</summary>
+          <ul>@for (reference of call.evidenceScope; track reference) { <li>{{ reference }}</li> }</ul>
+        </details>
+      }
+      @if (call.findings.length) {
+        <ul class="analysis-invocation-findings">
+          @for (finding of call.findings; track $index) {
+            <li>{{ finding.fact }}
+              <small>{{ finding.references.join(', ') }}</small>
+              @for (dependency of finding.dependencies; track $index) { <small>{{ dependency }}</small> }
+            </li>
+          }
+        </ul>
+      }
+      @if (call.visibilityLimits.length) {
+        <ul>@for (limit of call.visibilityLimits; track $index) { <li>{{ limit }}</li> }</ul>
+      }
+      @if (call.errorMessage) { <p class="analysis-invocation-error">{{ call.errorMessage }}</p> }
+      @if (call.rawResponse !== null) {
+        <details class="unit-raw-response">
+          <summary>Raw AI response</summary>
+          <pre>{{ call.rawResponse || '(empty response)' }}</pre>
+        </details>
+      }
+      <details class="analysis-invocation-prompt">
+        <summary>Wejście analizy</summary>
+        <p>Szacowane tokeny: {{ call.estimatedInputTokens }} · Limit wejścia: {{ call.promptTokenLimit || 'nieznany' }} · Rezerwa: {{ call.reservedTokens }}</p>
+        <pre>{{ call.preparedPrompt }}</pre>
+      </details>
+    </details>
+  }
+}

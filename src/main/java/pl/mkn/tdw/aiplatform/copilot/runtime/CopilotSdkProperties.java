@@ -42,6 +42,7 @@ public class CopilotSdkProperties {
     private String skillResourceRoot = "copilot/skills";
     private String skillResourceProjectDirectory = System.getProperty("user.dir");
     private List<String> disabledSkills = List.of();
+    private double promptBudgetSafetyRatio = 0.80D;
     private ContextTierPolicy contextTier = new ContextTierPolicy();
     private InfiniteSessions infiniteSessions = new InfiniteSessions();
     private Telemetry telemetry = new Telemetry();
@@ -105,6 +106,9 @@ public class CopilotSdkProperties {
     }
 
     public void validateContextManagementConfiguration() {
+        if (!Double.isFinite(promptBudgetSafetyRatio) || promptBudgetSafetyRatio <= 0 || promptBudgetSafetyRatio > 1) {
+            throw new IllegalStateException("analysis.ai.copilot.prompt-budget-safety-ratio must be in (0, 1]");
+        }
         if (contextTier == null) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier must be configured");
         }

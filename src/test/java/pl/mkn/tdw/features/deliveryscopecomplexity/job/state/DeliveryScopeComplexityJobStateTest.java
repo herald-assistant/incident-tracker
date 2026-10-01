@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.deliveryscopecomplexity.job.state;
 
+import static pl.mkn.tdw.shared.ai.AnalysisAiTestFixtures.invocation;
+
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryScopeDimensionScore;
 import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryScopeScore;
@@ -75,8 +77,7 @@ class DeliveryScopeComplexityJobStateTest {
         var usage = usage();
         ready(state, deliveryUnit);
 
-        state.markUnitPreparedPrompt(deliveryUnit.unitId(), "one-shot prompt");
-        state.markUnitRawAiResponse(deliveryUnit.unitId(), "{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
+        state.markUnitAiInvocation(deliveryUnit.unitId(), invocation("one-shot prompt", "{\"classification\":\"INSUFFICIENT_EVIDENCE\"}", null));
         state.markUnitVisibilityLimits(deliveryUnit.unitId(), List.of("Diff content was truncated."));
         state.markUnitNotScorable(
                 deliveryUnit.unitId(),
@@ -89,9 +90,9 @@ class DeliveryScopeComplexityJobStateTest {
         assertThat(snapshot.units()).singleElement().satisfies(unit -> {
             assertThat(unit.status()).isEqualTo("NOT_SCORABLE");
             assertThat(unit.usage()).isEqualTo(usage);
-            assertThat(unit.preparedPrompt()).isEqualTo("one-shot prompt");
-            assertThat(unit.promptPreparedAt()).isNotNull();
-            assertThat(unit.rawAiResponse()).isEqualTo("{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
+            assertThat(unit.aiInvocations().get(0).preparedPrompt()).isEqualTo("one-shot prompt");
+            assertThat(unit.aiInvocations().get(0).startedAt()).isNotNull();
+            assertThat(unit.aiInvocations().get(0).rawResponse()).isEqualTo("{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
             assertThat(unit.visibilityLimits()).containsExactly(
                     "Diff content was truncated.",
                     "Acceptance criteria were incomplete."

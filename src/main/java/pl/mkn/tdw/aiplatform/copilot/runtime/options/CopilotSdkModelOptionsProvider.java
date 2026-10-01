@@ -107,7 +107,10 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
                 contextWindows.defaultWindowTokens(),
                 contextWindows.longContextWindowTokens(),
                 modelInfo.modelPickerCategory() != null ? modelInfo.modelPickerCategory().getValue() : "",
-                pricing(modelInfo)
+                pricing(modelInfo),
+                contextWindows.defaultPromptTokens(),
+                contextWindows.longPromptTokens(),
+                contextWindows.outputTokens()
         );
     }
 
@@ -121,7 +124,7 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
         return new CopilotModelPricing(
                 rates(tokenPrices, batchSize),
                 longContext != null ? rates(longContext, batchSize) : null,
-                longContext != null ? positive(tokenPrices.contextMax()) : null
+                longContext != null ? defaultPromptBudget(tokenPrices) : null
         );
     }
 
@@ -185,29 +188,24 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
     private ContextWindows contextWindows(Model modelInfo) {
         var limits = modelInfo.capabilities() != null ? modelInfo.capabilities().limits() : null;
         var tokenPrices = modelInfo.billing() != null ? modelInfo.billing().tokenPrices() : null;
-        if (limits == null || tokenPrices == null) {
-            return ContextWindows.unsupported();
-        }
-
-        var defaultPromptTokens = positive(tokenPrices.contextMax());
-        if (defaultPromptTokens == 0L) {
-            return ContextWindows.unsupported();
-        }
-
+        if (limits == null) return ContextWindows.unsupported();
         var outputTokens = positive(limits.maxOutputTokens());
-        var defaultWindowTokens = safeAdd(defaultPromptTokens, outputTokens);
-        var longPromptTokens = Math.max(
-                positive(limits.maxPromptTokens()),
-                tokenPrices.longContext() != null ? positive(tokenPrices.longContext().contextMax()) : 0L
-        );
-        var longWindowTokens = Math.max(
-                positive(limits.maxContextWindowTokens()),
-                safeAdd(longPromptTokens, outputTokens)
-        );
+        var capabilityPrompt = positive(limits.maxPromptTokens());
+        var capabilityWindow = positive(limits.maxContextWindowTokens());
+        var pricedDefault = tokenPrices != null ? defaultPromptBudget(tokenPrices) : 0L;
+        var defaultPrompt = pricedDefault > 0 ? pricedDefault : capabilityPrompt > 0 ? capabilityPrompt
+                : Math.max(0L, capabilityWindow - outputTokens);
+        var defaultWindow = defaultPrompt > 0 ? safeAdd(defaultPrompt, outputTokens) : capabilityWindow;
+        var longPrompt = pricedDefault > 0 ? Math.max(capabilityPrompt,
+                tokenPrices.longContext() != null ? (tokenPrices.longContext().maxPromptTokens() != null ? positive(tokenPrices.longContext().maxPromptTokens()) : positive(tokenPrices.longContext().contextMax())) : 0L) : 0L;
+        var longWindow = pricedDefault > 0 ? Math.max(capabilityWindow, safeAdd(longPrompt, outputTokens)) : 0L;
+        var extended = longWindow > defaultWindow && longPrompt > defaultPrompt;
+        return new ContextWindows(defaultWindow, extended ? longWindow : 0,
+                defaultPrompt, extended ? longPrompt : 0, outputTokens);
+    }
 
-        return longWindowTokens > defaultWindowTokens
-                ? new ContextWindows(defaultWindowTokens, longWindowTokens)
-                : ContextWindows.unsupported();
+    private long defaultPromptBudget(ModelBillingTokenPrices prices) {
+        return prices.maxPromptTokens() != null ? positive(prices.maxPromptTokens()) : positive(prices.contextMax());
     }
 
     private long positive(Number value) {
@@ -262,11 +260,14 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
 
     private record ContextWindows(
             long defaultWindowTokens,
-            long longContextWindowTokens
+            long longContextWindowTokens,
+            long defaultPromptTokens,
+            long longPromptTokens,
+            long outputTokens
     ) {
 
         private static ContextWindows unsupported() {
-            return new ContextWindows(0L, 0L);
+            return new ContextWindows(0L, 0L, 0L, 0L, 0L);
         }
     }
 }

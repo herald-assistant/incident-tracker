@@ -63,27 +63,6 @@ class DeliveryAssessmentImportServiceTest {
     }
 
     @Test
-    void shouldReadLegacyV1IssueWithoutTimeTrackingFields() throws Exception {
-        var objectMapper = JsonMapper.builder().findAndAddModules().build();
-
-        var issue = objectMapper.readValue("""
-                {
-                  "issueKey": "CRM-1",
-                  "issueUrl": "https://jira.example.com/browse/CRM-1",
-                  "summary": "Legacy issue",
-                  "issueType": "Story",
-                  "doneAt": "2026-07-10T10:00:00Z",
-                  "team": null
-                }
-                """, DeliveryAssessmentIssueResponse.class);
-
-        assertThat(issue.timeSpentSeconds()).isNull();
-        assertThat(issue.originalEstimateSeconds()).isNull();
-        assertThat(issue.remainingEstimateSeconds()).isNull();
-        assertThat(issue.timeTrackingCapturedAt()).isNull();
-    }
-
-    @Test
     void shouldRejectUnsupportedVersion() {
         var objectMapper = JsonMapper.builder().findAndAddModules().build();
         var document = (ObjectNode) objectMapper.valueToTree(
@@ -157,6 +136,37 @@ class DeliveryAssessmentImportServiceTest {
         doThrow(new IllegalStateException("disk unavailable")).when(localRunPersistence).persistRunSnapshot(any());
         assertThatThrownBy(() -> service.importReadOnly(document))
                 .isInstanceOf(DeliveryAssessmentImportPersistenceException.class);
+    }
+
+    @Test
+    void shouldRoundTripEveryInvocationAndRejectThePreviousSinglePromptShape() {
+        var mapper = JsonMapper.builder().findAndAddModules().build();
+        var state = new pl.mkn.tdw.features.deliverycomplexityassessment.job.state.DeliveryComplexityAssessmentJobState("crm-run",
+                new pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexityAssessmentJobStartRequest("CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"), "crm-model", "medium"));
+        var unit = pl.mkn.tdw.features.deliverycomplexityassessment.DeliveryAssessmentTestFixtures.unit("CRM-1",
+                pl.mkn.tdw.features.deliverycomplexityassessment.DeliveryAssessmentTestFixtures.mergeRequest(1, "src/Customer.java", "+ customer status"));
+        state.markDiscoveryStarted();
+        state.markUnitsReady(new pl.mkn.tdw.features.deliverycomplexityassessment.source.DeliveryAssessmentSourceResult("project = CRM", 1, false, List.of(), List.of()), List.of(unit));
+        state.markUnitAnalyzing(unit.unitId());
+        var when = Instant.parse("2026-08-17T10:00:00Z");
+        var fact = new pl.mkn.tdw.shared.ai.AnalysisAiFinding("customer-status", "outcomeBreadth", "Customer status validation", List.of("CRM/customer-api!1#metadata"), List.of("customer event"));
+        var part = new pl.mkn.tdw.shared.ai.AnalysisAiInvocation("call-1", "EVIDENCE_PART", "COMPLETED", 1, 2,
+                fact.references(), 100, 500, 16, "CRM part prompt", "{CRM part}", List.of(fact), List.of("CRM visibility"), "crm-session-1", null, null, when, when);
+        var synthesis = new pl.mkn.tdw.shared.ai.AnalysisAiInvocation("call-2", "SYNTHESIS", "FAILED", 1, 1,
+                fact.references(), 200, 500, 16, "CRM synthesis prompt", "invalid JSON", List.of(), List.of(), "crm-session-2", null, "Malformed result", when, when);
+        state.markUnitAiInvocation(unit.unitId(), part);
+        state.markUnitAiInvocation(unit.unitId(), synthesis);
+        state.markUnitFailed(unit.unitId(), "AI_FAILURE", "Malformed result");
+        state.finalizeJob();
+        var document = (ObjectNode) mapper.valueToTree(pl.mkn.tdw.features.deliverycomplexityassessment.job.export.DeliveryComplexityAssessmentExportEnvelope.from(state.snapshot(), when));
+
+        var imported = service.importReadOnly(document);
+        assertThat(imported.units().get(0).aiInvocations()).containsExactly(part, synthesis);
+        var unitJson = (ObjectNode) document.path("payload").path("job").path("units").path(0);
+        unitJson.remove("aiInvocations");
+        unitJson.put("preparedPrompt", "CRM previous prompt");
+        unitJson.put("rawAiResponse", "CRM previous response");
+        assertThatThrownBy(() -> service.importReadOnly(document)).isInstanceOf(DeliveryAssessmentImportException.class);
     }
 
     private DeliveryComplexityAssessmentJobStateSnapshot snapshot(

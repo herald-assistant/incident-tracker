@@ -24,9 +24,7 @@ final class DeliveryAssessmentUnitState {
     private String errorMessage;
     private Instant startedAt;
     private Instant completedAt;
-    private String preparedPrompt;
-    private Instant promptPreparedAt;
-    private String rawAiResponse;
+    private final java.util.LinkedHashMap<String, pl.mkn.tdw.shared.ai.AnalysisAiInvocation> aiInvocations = new java.util.LinkedHashMap<>();
     private AnalysisAiUsage usage;
 
     DeliveryAssessmentUnitState(DeliveryUnit unit) {
@@ -54,19 +52,11 @@ final class DeliveryAssessmentUnitState {
         startedAt = startedAt != null ? startedAt : Instant.now();
     }
 
-    void preparedPrompt(String prompt) {
-        if (terminal() || prompt == null || prompt.isBlank()) {
-            return;
-        }
-        preparedPrompt = prompt;
-        promptPreparedAt = Instant.now();
-    }
-
-    void rawAiResponse(String response) {
-        if (terminal()) {
-            return;
-        }
-        rawAiResponse = response;
+    void aiInvocation(pl.mkn.tdw.shared.ai.AnalysisAiInvocation invocation) {
+        if (terminal() && !aiInvocations.containsKey(invocation.invocationId())) return;
+        aiInvocations.put(invocation.invocationId(), invocation);
+        usage = pl.mkn.tdw.shared.ai.AnalysisAiUsageTotals.sum(aiInvocations.values().stream()
+                .map(pl.mkn.tdw.shared.ai.AnalysisAiInvocation::usage).toList());
     }
 
     void completed(DeliveryAssessmentScore score, AnalysisAiUsage usage) {
@@ -209,9 +199,7 @@ final class DeliveryAssessmentUnitState {
                 errorMessage,
                 startedAt,
                 completedAt,
-                preparedPrompt,
-                promptPreparedAt,
-                rawAiResponse,
+                List.copyOf(aiInvocations.values()),
                 usage
         );
     }

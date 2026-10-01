@@ -10,6 +10,11 @@ Obecnie obejmuje:
 - `AnalysisAiOptions` jako preferencje wykonania AI z requestow/operatora,
 - `AnalysisAiUsage` jako generyczny usage/token/cost contract dla UI,
   runtime i feature'ow,
+- `AnalysisAiInvocation`, listener i `AnalysisAiFinding` jako neutralny zapis
+  kazdego wywolania AI, prompt/raw, ustalen, statusu, scope, usage i bledow,
+  wspolny dla obu assessmentow. `AnalysisAiUsageTotals` sumuje konsumpcje,
+  a obserwacje okna agreguje maksimum; aktualizacja tego samego invocation id
+  nie tworzy nowej konsumpcji. Rubryki i orkiestracja pozostaja feature-owned.
 - `AnalysisAiAuthRef` i `AnalysisAiAuthRefResolver` jako non-secret kontrakt
   przekazywania odniesienia do auth bez tokenow w publicznych payloadach,
 - `AnalysisAiActivityEvent` i `AnalysisAiActivityListener` jako neutralny,

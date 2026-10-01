@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.job.localworkspace;
 
+import static pl.mkn.tdw.shared.ai.AnalysisAiTestFixtures.invocation;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
@@ -79,7 +81,7 @@ class DeliveryAssessmentLocalRunPersisterTest {
                 List.of(deliveryUnit)
         );
         state.markUnitAnalyzing(deliveryUnit.unitId());
-        state.markUnitRawAiResponse(deliveryUnit.unitId(), "not valid JSON");
+        state.markUnitAiInvocation(deliveryUnit.unitId(), invocation("CRM prompt", "not valid JSON", null));
 
         persister.persistRunSnapshot(state.snapshot());
 
@@ -89,7 +91,7 @@ class DeliveryAssessmentLocalRunPersisterTest {
         assertThat(envelope.path("version").asInt()).isEqualTo(1);
         assertThat(envelope.path("payload").path("resultContract").asText())
                 .isEqualTo("delivery-complexity-assessment-v1");
-        assertThat(envelope.path("payload").path("job").path("units").path(0).path("rawAiResponse").asText())
+        assertThat(envelope.path("payload").path("job").path("units").path(0).path("aiInvocations").path(0).path("rawResponse").asText())
                 .isEqualTo("not valid JSON");
         var issue = envelope.path("payload").path("job").path("units").path(0).path("issues").path(0);
         assertThat(issue.path("timeSpentSeconds").asLong()).isEqualTo(14400L);

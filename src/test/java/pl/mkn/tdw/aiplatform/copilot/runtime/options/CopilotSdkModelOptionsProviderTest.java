@@ -106,6 +106,34 @@ class CopilotSdkModelOptionsProviderTest {
         assertEquals(2, lister.calls);
     }
 
+    @Test
+    void shouldRetainOrdinaryPromptAndOutputLimitsWithoutLongContextBilling() {
+        var model = new Model("crm-basic-model", "CRM model",
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+                        new ModelCapabilitiesLimits(500L, 100L, 600L, null)), null, null, null, null, null);
+        var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model), new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
+        var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
+        assertEquals(500, option.defaultPromptTokens());
+        assertEquals(100, option.maxOutputTokens());
+        assertEquals(600, option.defaultContextWindowTokens());
+        assertFalse(option.supportsLongContext());
+    }
+
+    @Test
+    void shouldPreferExplicitPromptBudgetsOverBillingContextThresholds() {
+        var model = new Model("crm-large-model", "CRM model",
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+                        new ModelCapabilitiesLimits(980L, 20L, 1000L, null)), null,
+                new ModelBilling(1D, new ModelBillingTokenPrices(.2, .4, null, null, null, 1000L, 90L, 80L,
+                        new ModelBillingTokenPricesLongContext(.4, .8, null, null, null, 990L, 980L)), null, null), null, null, null);
+        var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model), new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
+        var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
+        assertEquals(80, option.defaultPromptTokens());
+        assertEquals(980, option.longPromptTokens());
+        assertEquals(100, option.defaultContextWindowTokens());
+        assertTrue(option.supportsLongContext());
+    }
+
     private static Model reasoningModel(
             String id,
             String name,

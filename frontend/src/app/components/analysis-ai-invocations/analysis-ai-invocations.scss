@@ -1,0 +1,9 @@
+:host { display: block; min-width: 0; }
+.analysis-parts-label { font-weight: 600; }
+.analysis-invocation { margin-block: .5rem; }
+summary { cursor: pointer; padding-block: .35rem; }
+summary small { margin-left: .75rem; }
+li { margin-block: .35rem; overflow-wrap: anywhere; }
+li small { display: block; opacity: .75; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 32rem; overflow: auto; }
+.analysis-invocation-error { font-weight: 600; }

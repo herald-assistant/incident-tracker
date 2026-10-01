@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.job;
 
+import static pl.mkn.tdw.shared.ai.AnalysisAiTestFixtures.invocation;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
@@ -10,7 +12,7 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAssessmentSco
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAiResponse;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryPromptPreparation;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryPromptPreparationService;
-import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryRawAiResponseListener;
+import pl.mkn.tdw.shared.ai.AnalysisAiInvocationListener;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryUnitAssessmentProvider;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryUnitAiAnalysis;
 import pl.mkn.tdw.features.deliverycomplexityassessment.deliveryunit.DeliveryUnitBuilder;
@@ -114,14 +116,16 @@ class DeliveryComplexityAssessmentJobServiceTest {
                 List.of(source("CRM-1", mergeRequest(1, "src/A.java", "+A"))),
                 List.of()
         ));
-        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any(), any())).thenReturn(new DeliveryUnitAiAnalysis(
+        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
+            AnalysisAiInvocationListener listener = call.getArgument(6);
+            listener.onInvocation(invocation("one-shot prompt with skill and evidence", null, usage));
+            return new DeliveryUnitAiAnalysis(
                 new DeliveryAiResponse(
                         "INSUFFICIENT_EVIDENCE", null, 0.2, List.of(), List.of(), List.of("Diff was incomplete.")
                 ),
-                usage,
-                "prompt",
-                "session-1"
-        ));
+                usage
+        );
+        });
         DeliveryAssessmentUnitExecutor directUnitExecutor = task -> {
             task.run();
             return CompletableFuture.completedFuture(null);
@@ -151,8 +155,8 @@ class DeliveryComplexityAssessmentJobServiceTest {
             assertThat(unit.status()).isEqualTo("NOT_SCORABLE");
             assertThat(unit.usage()).isEqualTo(usage);
             assertThat(unit.visibilityLimits()).contains("Diff was incomplete.");
-            assertThat(unit.preparedPrompt()).isEqualTo("one-shot prompt with skill and evidence");
-            assertThat(unit.promptPreparedAt()).isNotNull();
+            assertThat(unit.aiInvocations().get(0).preparedPrompt()).isEqualTo("one-shot prompt with skill and evidence");
+            assertThat(unit.aiInvocations().get(0).startedAt()).isNotNull();
         });
         assertThat(snapshot.steps()).anySatisfy(step -> {
             assertThat(step.code()).isEqualTo("AI_INPUT_PREPARATION");
@@ -171,10 +175,10 @@ class DeliveryComplexityAssessmentJobServiceTest {
                 List.of(source("CRM-1", mergeRequest(1, "src/A.java", "+A"))),
                 List.of()
         ));
-        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
+        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(invocation -> {
-                    DeliveryRawAiResponseListener listener = invocation.getArgument(6);
-                    listener.onRawAiResponse(rawResponse);
+                    AnalysisAiInvocationListener listener = invocation.getArgument(6);
+                    listener.onInvocation(invocation("CRM prompt", rawResponse, null));
                     throw new IllegalArgumentException("AI response did not contain JSON assessment.");
                 });
         DeliveryAssessmentUnitExecutor directUnitExecutor = task -> {
@@ -208,7 +212,7 @@ class DeliveryComplexityAssessmentJobServiceTest {
         assertThat(snapshot.units()).singleElement().satisfies(unit -> {
             assertThat(unit.status()).isEqualTo("FAILED");
             assertThat(unit.errorMessage()).isEqualTo("AI response did not contain JSON assessment.");
-            assertThat(unit.rawAiResponse()).isEqualTo(rawResponse);
+            assertThat(unit.aiInvocations().get(0).rawResponse()).isEqualTo(rawResponse);
         });
     }
 

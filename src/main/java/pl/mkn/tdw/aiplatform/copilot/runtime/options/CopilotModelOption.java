@@ -11,14 +11,26 @@ public record CopilotModelOption(
         long defaultContextWindowTokens,
         long longContextWindowTokens,
         String modelPickerCategory,
-        CopilotModelPricing pricing
+        CopilotModelPricing pricing,
+        long defaultPromptTokens,
+        long longPromptTokens,
+        long maxOutputTokens
 ) {
 
     public CopilotModelOption(String id, String name, boolean supportsReasoningEffort,
                               List<String> reasoningEfforts, String defaultReasoningEffort,
                               long defaultContextWindowTokens, long longContextWindowTokens) {
         this(id, name, supportsReasoningEffort, reasoningEfforts, defaultReasoningEffort,
-                defaultContextWindowTokens, longContextWindowTokens, "", null);
+                defaultContextWindowTokens, longContextWindowTokens, "", null, defaultContextWindowTokens, longContextWindowTokens, 0);
+    }
+
+    public CopilotModelOption(String id, String name, boolean supportsReasoningEffort,
+                              List<String> reasoningEfforts, String defaultReasoningEffort,
+                              long defaultContextWindowTokens, long longContextWindowTokens,
+                              String modelPickerCategory, CopilotModelPricing pricing) {
+        this(id, name, supportsReasoningEffort, reasoningEfforts, defaultReasoningEffort,
+                defaultContextWindowTokens, longContextWindowTokens, modelPickerCategory, pricing,
+                defaultContextWindowTokens, longContextWindowTokens, 0);
     }
 
     public CopilotModelOption {
@@ -28,6 +40,9 @@ public record CopilotModelOption(
         defaultReasoningEffort = defaultReasoningEffort != null ? defaultReasoningEffort : "";
         defaultContextWindowTokens = Math.max(defaultContextWindowTokens, 0L);
         longContextWindowTokens = Math.max(longContextWindowTokens, 0L);
+        defaultPromptTokens = Math.max(defaultPromptTokens, 0L);
+        longPromptTokens = Math.max(longPromptTokens, 0L);
+        maxOutputTokens = Math.max(maxOutputTokens, 0L);
         modelPickerCategory = modelPickerCategory != null ? modelPickerCategory : "";
     }
 

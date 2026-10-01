@@ -270,6 +270,7 @@
                     <a [href]="issue.issueUrl" target="_blank" rel="noreferrer">{{ issue.issueKey }}</a>
                   }
                   <small>{{ unit.issues[0]?.summary || unit.unitId }}</small>
+                  <app-analysis-ai-invocations [invocations]="unit.aiInvocations" [summaryOnly]="true" />
                 </div>
                 <div class="unit-row__mrs" role="cell">
                   <strong>{{ unit.mergeRequests.length }}</strong>
@@ -429,15 +430,7 @@
                         </ul>
                       </section>
                     }
-                    @if (unit.rawAiResponse !== null) {
-                      <details class="unit-raw-response">
-                        <summary>
-                          <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-                          <span>Raw AI response</span>
-                        </summary>
-                        <pre>{{ unit.rawAiResponse || '(empty response)' }}</pre>
-                      </details>
-                    }
+                    <app-analysis-ai-invocations [invocations]="unit.aiInvocations" />
                   </div>
                 </div>
               }

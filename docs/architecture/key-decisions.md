@@ -226,6 +226,22 @@ Rollbackiem wyboru tieru jest
 `analysis.ai.copilot.context-tier.enabled=false`; pelny powrot do progow SDK
 wymaga dodatkowo ustawienia background compaction 80% i buffer exhaustion 95%.
 
+Budzet poczatkowej wiadomosci jest osobna neutralna capability platformy:
+`CopilotPromptBudgetService` i `CopilotInitialContextEstimator`. Katalog
+zachowuje ordinary prompt/output limits takze bez billing/long tieru, a
+`maxPromptTokens` ma pierwszenstwo przed billing `contextMax`. Estymacja
+obejmuje prompt, system instructions, tools i rezerwe; margines
+`analysis.ai.copilot.prompt-budget-safety-ratio` domyslnie wynosi 0.80.
+Nie jest dokladnym licznikiem providera; brak limitu oznacza UNKNOWN.
+Opcjonalny budzet przekazany do gateway dla AUTO wybiera long dopiero po
+przekroczeniu bezpiecznego zwyklego budzetu, a platforma potwierdza tier przed
+wyslaniem. Niepotwierdzony wymagany budzet long zwraca typowany overflow ze
+zwyklym limitem. Pozostali konsumenci zachowuja dotychczasowa polityke 70%.
+Jednoznaczny provider prompt overflow jest normalizowany do
+`CopilotPromptOverflowException`, z dostepnym usage nieudanej proby;
+auth, rate limit i inne bledy nie sa tak klasyfikowane. Feature moze podzielic
+swoje evidence, ale platforma nie zna MR-ow, Jira ani scoringu.
+
 Platforma jawnie konfiguruje tez `InfiniteSessionConfig` dla create i resume.
 Background compaction zaczyna sie od 95%, a blokujacy
 `bufferExhaustionThreshold` od 98%. Walidacja wymusza kolejnosc

@@ -781,7 +781,12 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Deweloperski fallback zasobow skilli ma osobny katalog projektu; effective
   skille pozostaja pod `copilot-home`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
-  Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
+  Neutralna polityka context tier oraz `CopilotPromptBudgetService`: ordinary
+  prompt/output metadata z models.list, konserwatywna estymacja z marginesem
+  0.80 i typowany overflow z dostepnym usage. Assessmenty dziela wlasne
+  evidence wedlug budzetu; platforma nie zna Jira ani MR-ow.
+  Konsumenci z opcjonalnym budzetem AUTO wybieraja long po przekroczeniu
+  bezpiecznego zwyklego budzetu; pozostali zachowuja prog 70%. Dla preference `AUTO` estymuje initial
   prompt razem z durable system instructions, definicjami tools i rezerwa oraz
   ustawia `long_context` przed create/resume od 70% zwyklego okna z
   dynamicznego katalogu modeli. UI Explorer korzysta z `AUTO`; feature, ktory

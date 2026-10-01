@@ -49,6 +49,14 @@ Obecnie obejmuje:
   `bufferExhaustionThreshold` 98%; walidacja ma odrzucac konfiguracje, w ktorej
   compaction moze wyprzedzic upgrade. Nie przywracaj `infiniteSessions=null`,
   bo oznacza to zaleznosc od zmiennych domyslow CLI.
+  `CopilotPromptBudgetService` i `CopilotInitialContextEstimator` sa neutralna
+  capability pomiaru pelnego initial inputu z ordinary prompt/output limits
+  katalogu, takze bez long tieru, i marginesem 0.80. UNKNOWN nie potwierdza
+  pojemnosci. Opcjonalny budzet w AUTO wybiera long po przekroczeniu zwyklego
+  bezpiecznego budzetu, a gateway potwierdza tier przed wyslaniem. Typowany
+  `CopilotPromptOverflowException` przenosi limit i dostepne usage; tylko
+  jednoznaczny provider prompt overflow albo odrzucony long budget go tworzy.
+  Platforma nie planuje podzialu evidence i nie zna Jira/MR/scoringu.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception oraz `CopilotExecutionResult`
