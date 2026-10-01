@@ -9,8 +9,6 @@ export interface DeliveryScopeComplexityJobStartRequest {
   jiraProject: string;
   fromDate: string;
   toDate: string;
-  model?: string;
-  reasoningEffort?: string;
 }
 
 export interface DeliveryScopeDimensionScore {
@@ -85,6 +83,8 @@ export interface DeliveryScopeUnit {
   preparedPrompt: string | null;
   promptPreparedAt: string | null;
   rawAiResponse: string | null;
+  aiModel: string | null;
+  reasoningEffort: string | null;
   usage: AnalysisAiUsage | null;
 }
 
@@ -106,8 +106,6 @@ export interface DeliveryScopeComplexityJobStateSnapshot {
   jiraProject: string;
   fromDate: string;
   toDate: string;
-  aiModel: string;
-  reasoningEffort: string;
   status: string;
   currentStepCode: string;
   currentStepLabel: string;

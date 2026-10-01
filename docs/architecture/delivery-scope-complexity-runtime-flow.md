@@ -26,8 +26,9 @@ assessmentu i nie ma aliasow migracyjnych.
 
 ## Discovery i Delivery Units
 
-Request zawiera `jiraProject`, `fromDate`, `toDate`, model i opcjonalny
-`reasoningEffort`. Feature mapuje kryteria na typowany Jira search, potwierdza
+Request zawiera tylko `jiraProject`, `fromDate` i `toDate`. UI nie ma wyboru
+modelu/effort ani wywolania katalogu AI options; backend odrzuca usuniete pola.
+Feature mapuje kryteria na typowany Jira search, potwierdza
 przejscie issue do statusu Done w lokalnym zakresie dat i pobiera material Jira
 oraz merged MR-y przez neutralne integracje.
 
@@ -74,6 +75,45 @@ JSON i wszystkie artefakty. Allowlista tools i katalogi skilli sa puste.
 Pierwsza odpowiedz modelu jest odpowiedzia finalna. Prepared prompt i raw AI
 response sa zapisywane przy jednostce przed dalszym przetwarzaniem.
 
+## Dobor modelu przed sesja
+
+Konfiguracja pod prefixem `delivery-scope-complexity.ai` zawiera
+`default-model`, `default-reasoning-effort`, `long-context-model` i
+`long-context-reasoning-effort`. Domyslne pary to `gpt-5.4-mini/high` oraz
+`gpt-6.1-sol/high`; ich dostepnosc i limity potwierdza dynamiczny katalog
+Copilota, bez tabel modeli zaszytych w feature'ze.
+
+Po przygotowaniu dokladnego promptu kazdej Delivery Unit neutralny
+`CopilotInitialContextModelSelector` szacuje caly inline material, effective
+skill, instrukcje sesji oraz platformowa rezerwe. Artefakty juz osadzone w
+promptcie sa liczone raz. Estymacja korzysta z
+`analysis.ai.copilot.context-tier.estimated-characters-per-token` i
+`reserved-tokens`; sprawdza zarowno limit promptu, jak i calkowite okno.
+Granica `>=` jest traktowana jako brak bezpiecznego miejsca.
+
+Material mieszczacy sie w zwyklym oknie korzysta z defaultu i jego effort.
+Przy przekroczeniu okna default bez `long_context` jest zastepowany
+skonfigurowana para long-context tylko dla tej jednostki. Default wspierajacy
+rozszerzony tier zachowuje model i effort. Platforma ustawia wtedy
+`LONG_CONTEXT_REQUIRED` i potwierdza tier przed pierwszym wyslaniem.
+Prog `AUTO` 70% nadal moze wlaczyc tier tego samego modelu; sam nie powoduje
+zmiany modelu. Nieznany model/effort, brak wiarygodnych limitow, wylaczona
+polityka wymaganego tieru lub przekroczenie rozszerzonego okna koncza tylko
+jednostke kontrolowanym bledem przed send.
+
+Activity `platform.model_selection` z phase `INITIAL_MODEL_SELECTION`
+zapisuje wybor i estymacje przed utworzeniem sesji. `aiModel` i
+`reasoningEffort` naleza do snapshotu jednostki i sa widoczne jako read-only
+metadata w jej szczegolach, takze po pozniejszym bledzie. Snapshot runu nie
+ma globalnych pol modelu/effort; aggregate usage przy roznych modelach ma
+`model=null`, zachowujac sume tokenow i kredytow. Historia i import/export
+V1 zachowuja metadata jednostek i odrzucaja poprzedni ksztalt kontraktu.
+
+Dobor modelu nie zmienia promptu, effective skilla, evidence, scoringu,
+liczby wywolan ani procedury one-shot. Nie przycina materialu ani nie
+wykonuje retry z innym modelem. Pozostale feature'y nie wywoluja tego
+preflightu i zachowuja swoj wybor modelu.
+
 ## Kontrakt i scoring
 
 AI zwraca klasyfikacje, confidence, ograniczenia oraz szesc wymiarow:
@@ -112,9 +152,8 @@ wykonania. Discovery, przygotowanie promptow, wyniki jednostek, raw responses,
 usage i status terminalny aktualizuja ten sam run czastkowo.
 Kazdy issue snapshot zawiera opcjonalne `timeSpentSeconds`,
 `originalEstimateSeconds`, `remainingEstimateSeconds` oraz
-`timeTrackingCapturedAt` pobrane z Jira. Pola sa addytywne w envelope V1:
-starszy eksport bez nich pozostaje czytelny, a brak wartosci mapuje sie na
-`null`. Nie sa uzywane przez scoring ani UI raportu.
+`timeTrackingCapturedAt` pobrane z Jira. Biezacy envelope V1 zachowuje te pola;
+brak dostepnej wartosci jest reprezentowany przez `null`. Nie sa uzywane przez scoring ani UI raportu.
 
 UI ma wlasna route i API service. Pokazuje jedna rozwijalna tabele Delivery
 Units, linki Jira/MR, final score `0-200`, rozklad wymiarow, evidence, quality

@@ -61,6 +61,15 @@ public class DeliveryScopeImportService {
         if (document == null || document.isNull()) {
             throw invalid("Delivery Scope Complexity export is required.");
         }
+        var job = document.path("payload").path("job");
+        if (job.has("aiModel") || job.has("reasoningEffort")) {
+            throw invalid("Unsupported assessment snapshot: model selection belongs to each Delivery Unit.");
+        }
+        for (var unit : job.path("units")) {
+            if (!unit.has("aiModel") || !unit.has("reasoningEffort")) {
+                throw invalid("Assessment units must contain their model selection metadata.");
+            }
+        }
         if (!document.isObject() || document.toString().length() > MAX_IMPORT_CHARACTERS) {
             throw invalid("Delivery Scope Complexity export has an invalid or oversized structure.");
         }
@@ -135,8 +144,6 @@ public class DeliveryScopeImportService {
                 source.jiraProject(),
                 source.fromDate(),
                 source.toDate(),
-                source.aiModel(),
-                source.reasoningEffort(),
                 source.status(),
                 source.currentStepCode(),
                 source.currentStepLabel(),

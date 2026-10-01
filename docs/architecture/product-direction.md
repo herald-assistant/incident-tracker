@@ -189,7 +189,7 @@ jobem ani historia analizy.
 
 ### Delivery Complexity Assessment
 
-Operator wybiera projekt Jira, zakres lokalnych dat oraz model AI. Feature
+Operator wybiera projekt Jira i zakres lokalnych dat. Feature
 wyszukuje issue aktualnie w kategorii `Done`, potwierdza ich ostatnie
 przejscie do tej kategorii, pobiera jawnie powiazane zmergowane MR-y i buduje
 unikalne Delivery Units. Wspolny MR laczy issue w jedna jednostke i nie jest
@@ -217,6 +217,13 @@ Feature ma wlasny endpoint, historie, skill, prompt, kontrakt, import/export i
 ekran. Swiadomie nie reuse'uje feature-owned orchestration drugiego
 assessmentu. Pozwala to porownac stabilnosc, evidence i koszt obu metod, a
 nastepnie usunac jedna z nich bez migracji pozostawionej.
+
+W obu assessmentach konfiguracja administracyjna okresla default oraz pare
+model/effort dla long context. Przed analiza kazdej Delivery Unit platforma
+konserwatywnie sprawdza pelny material; przy przekroczeniu zwyklego okna
+modelu bez long context wybiera skonfigurowany model rozszerzonego kontekstu.
+Operator widzi rzeczywisty model przy jednostce. Procedury oceny i scoring
+pozostaja wlasnoscia poszczegolnych feature'ow.
 
 ### Delivery Complexity Trends
 

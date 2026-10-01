@@ -176,6 +176,11 @@ public class DeliveryComplexityAssessmentJobState {
         if (event == null) {
             return;
         }
+        if ("platform.model_selection".equals(event.type())
+                && "INITIAL_MODEL_SELECTION".equals(event.details().get("phase"))) {
+            unit(unitId).selectModel((String) event.details().get("selectedModel"),
+                    (String) event.details().get("reasoningEffort"));
+        }
         var details = new LinkedHashMap<>(event.details());
         details.put("deliveryUnitId", unitId);
         aiActivityEvents.add(new AnalysisAiActivityEvent(
@@ -227,8 +232,6 @@ public class DeliveryComplexityAssessmentJobState {
                 request.jiraProject(),
                 request.fromDate(),
                 request.toDate(),
-                request.model(),
-                request.reasoningEffort(),
                 status,
                 currentStepCode,
                 currentStepLabel,
@@ -299,7 +302,8 @@ public class DeliveryComplexityAssessmentJobState {
                         ? usages.stream().mapToDouble(AnalysisAiUsage::aiCredits).sum() : null,
                 usages.stream().mapToLong(AnalysisAiUsage::apiDurationMs).sum(),
                 usages.stream().mapToInt(AnalysisAiUsage::apiCallCount).sum(),
-                usages.stream().map(AnalysisAiUsage::model).filter(java.util.Objects::nonNull).findFirst().orElse(null),
+                usages.stream().map(AnalysisAiUsage::model).filter(java.util.Objects::nonNull).distinct().count() == 1
+                        ? usages.stream().map(AnalysisAiUsage::model).filter(java.util.Objects::nonNull).findFirst().orElse(null) : null,
                 usages.stream().map(AnalysisAiUsage::contextTokenLimit).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null),
                 usages.stream().map(AnalysisAiUsage::contextCurrentTokens).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null),
                 usages.stream().map(AnalysisAiUsage::contextMessages).filter(java.util.Objects::nonNull).max(Long::compareTo).orElse(null),

@@ -5,7 +5,6 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Observable, delay, of } from 'rxjs';
 
 import {
-  AnalysisAiModelOptionsResponse,
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
@@ -62,9 +61,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     expect(api.startJob).toHaveBeenCalledWith({
       jiraProject: 'CRM',
       fromDate: '2026-07-01',
-      toDate: '2026-07-31',
-      model: 'gpt-5',
-      reasoningEffort: 'medium'
+      toDate: '2026-07-31'
     });
     expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([], {
       relativeTo: expect.anything(),
@@ -77,52 +74,21 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Zakończona');
   });
 
-  it('should clear and disable reasoning effort for a model that does not support it', async () => {
-    const { fixture, api } = await createComponent({
-      aiOptions: modelOptionsWithNonReasoningModel()
-    });
-
-    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('medium');
-    expect(fixture.componentInstance.reasoningEffortControl.enabled).toBe(true);
-
-    fixture.componentInstance.aiModelControl.setValue('gpt-basic');
+  it('should start without model selectors or a model catalog request', async () => {
+    const { fixture, aiOptions } = await createComponent({});
     fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.assessment-form-grid select')).toHaveLength(0);
+    expect(aiOptions.getOptions).not.toHaveBeenCalled();
+  });
 
-    expect(fixture.componentInstance.reasoningEffortOptions()).toEqual([]);
-    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('');
-    expect(fixture.componentInstance.reasoningEffortControl.disabled).toBe(true);
-    const reasoningSelect = Array.from(
-      fixture.nativeElement.querySelectorAll('.field-control') as NodeListOf<HTMLElement>
-    ).find((field) => field.querySelector('.field-label')?.textContent?.includes('Reasoning effort'))
-      ?.querySelector('select') as HTMLSelectElement;
-    expect(reasoningSelect.disabled).toBe(true);
-    expect(reasoningSelect.value).toBe('');
-
-    fixture.componentInstance.aiModelControl.setValue('gpt-5');
+  it('should show the selected model and effort in unit details', async () => {
+    const { fixture } = await createComponent({ localRun: snapshot('COMPLETED', 8, [completedUnit()]), localRunId: 'job-1' });
+    await fixture.whenStable();
     fixture.detectChanges();
-
-    expect(fixture.componentInstance.reasoningEffortOptions()).toEqual(['low', 'medium', 'high']);
-    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('medium');
-    expect(fixture.componentInstance.reasoningEffortControl.enabled).toBe(true);
-
-    fixture.componentInstance.aiModelControl.setValue('gpt-basic');
+    (fixture.nativeElement.querySelector('button[aria-label="Rozwiń szczegóły"]') as HTMLButtonElement).click();
     fixture.detectChanges();
-
-    fixture.componentInstance.jiraProjectControl.setValue('crm');
-    fixture.componentInstance.fromDateControl.setValue('2026-07-01');
-    fixture.componentInstance.toDateControl.setValue('2026-07-31');
-    fixture.detectChanges();
-    (fixture.nativeElement.querySelector('.primary-button') as HTMLButtonElement).click();
-
-    await vi.waitFor(() => {
-      expect(api.startJob).toHaveBeenCalledWith({
-        jiraProject: 'CRM',
-        fromDate: '2026-07-01',
-        toDate: '2026-07-31',
-        model: 'gpt-basic',
-        reasoningEffort: undefined
-      });
-    });
+    expect(fixture.nativeElement.querySelector('.unit-ai-model')?.textContent).toContain('crm-default');
+    expect(fixture.nativeElement.querySelector('.unit-ai-model')?.textContent).toContain('high');
   });
 
   it('should restore an active local run and continue live polling', async () => {
@@ -144,6 +110,26 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Stored CRM assessment');
     expect(fixture.nativeElement.textContent).toContain('CRM-1');
   });
+
+  it.each(['global selection', 'missing unit selection', 'null unit'])(
+    'should reject the unsupported history shape: %s', async (shape) => {
+      const localRun = snapshot('COMPLETED', 8, [completedUnit()]);
+      if (shape === 'global selection') {
+        Reflect.set(localRun, 'aiModel', 'crm-default');
+      } else if (shape === 'missing unit selection') {
+        Reflect.deleteProperty(localRun.units[0], 'reasoningEffort');
+      } else {
+        Reflect.set(localRun.units, 0, null);
+      }
+      const { fixture, api } = await createComponent({ localRun, localRunId: 'job-1' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.job()).toBeNull();
+      expect(fixture.componentInstance.jobError()).toContain('nieobsługiwany albo uszkodzony format');
+      expect(api.getJob).not.toHaveBeenCalled();
+    }
+  );
 
   it('should reject a local run owned by another feature', async () => {
     const { fixture, history } = await createComponent({
@@ -520,7 +506,6 @@ async function createComponent(options: {
   importResult?: DeliveryScopeComplexityJobStateSnapshot;
   localRunId?: string;
   localFeature?: string;
-  aiOptions?: AnalysisAiModelOptionsResponse;
 }) {
   const queued = options.queued ?? snapshot('QUEUED', 0, []);
   const completed = options.completed ?? snapshot('COMPLETED', 0, []);
@@ -535,20 +520,8 @@ async function createComponent(options: {
       () => of(options.importResult ?? completed).pipe(delay(0))
     )
   };
-  const aiOptions = {
-    getOptions: vi.fn<() => Observable<AnalysisAiModelOptionsResponse>>(() => of(options.aiOptions ?? {
-      defaultModel: 'gpt-5',
-      defaultReasoningEffort: 'medium',
-      defaultReasoningEfforts: ['low', 'medium', 'high'],
-      models: [{
-        id: 'gpt-5',
-        name: 'GPT-5',
-        supportsReasoningEffort: true,
-        reasoningEfforts: ['low', 'medium', 'high'],
-        defaultReasoningEffort: 'medium'
-      }]
-    }))
-  };
+  const aiOptions = { getOptions: vi.fn() };
+
   const authStatus: GitHubAuthStatus = {
     configured: true,
     settingsUrl: '/workspace-settings'
@@ -597,32 +570,9 @@ async function createComponent(options: {
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
-  return { fixture, api, history };
+  return { fixture, api, aiOptions, history };
 }
 
-function modelOptionsWithNonReasoningModel(): AnalysisAiModelOptionsResponse {
-  return {
-    defaultModel: 'gpt-5',
-    defaultReasoningEffort: 'medium',
-    defaultReasoningEfforts: ['low', 'medium', 'high'],
-    models: [
-      {
-        id: 'gpt-5',
-        name: 'GPT-5',
-        supportsReasoningEffort: true,
-        reasoningEfforts: ['low', 'medium', 'high'],
-        defaultReasoningEffort: 'medium'
-      },
-      {
-        id: 'gpt-basic',
-        name: 'GPT Basic',
-        supportsReasoningEffort: false,
-        reasoningEfforts: [],
-        defaultReasoningEffort: ''
-      }
-    ]
-  };
-}
 
 function envelope(job: DeliveryScopeComplexityJobStateSnapshot): DeliveryScopeComplexityExportEnvelope {
   return {
@@ -648,8 +598,7 @@ function snapshot(
     jiraProject: 'CRM',
     fromDate: '2026-07-01',
     toDate: '2026-07-31',
-    aiModel: 'gpt-5',
-    reasoningEffort: 'medium',
+
     status,
     currentStepCode: terminal ? 'COMPLETED' : 'UNIT_ASSESSMENT',
     currentStepLabel: terminal ? 'Completed' : 'Delivery Unit assessment',
@@ -726,6 +675,8 @@ function completedUnit(): DeliveryScopeComplexityJobStateSnapshot['units'][numbe
     preparedPrompt: 'one-shot prompt with effective skill, Jira and MR code',
     promptPreparedAt: '2026-07-01T10:00:01Z',
     rawAiResponse: null,
+    aiModel: 'crm-default',
+    reasoningEffort: 'high',
     usage: null
   };
 }

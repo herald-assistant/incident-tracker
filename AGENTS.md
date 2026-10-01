@@ -277,6 +277,14 @@ Zasady granic:
   wzrost rzeczywistego okna potwierdza dopiero kolejne `session.usage_info`;
   rollbackiem jest `analysis.ai.copilot.context-tier.enabled=false`.
 
+- Oba assessmenty Delivery Complexity/Scope przyjmuja w start API/UI tylko
+  projekt Jira i daty. Pary default/long-context model i reasoning effort
+  pochodza z properties danego feature'a. Neutralny preflight platformy
+  sprawdza pelny prepared prompt przed sesja jednostki; gdy default bez
+  long context nie pomiesci materialu, wybiera skonfigurowana pare overflow.
+  Wybor jest zapisywany per-unit w activity, historii i aktualnym V1 eksporcie.
+  Dobor modelu nie zmienia promptow, skilli, scoringu ani one-shot procedury.
+
 ## Gdzie czego szukac
 
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/job`

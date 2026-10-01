@@ -1,11 +1,10 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.job.api;
 
 import jakarta.validation.constraints.AssertTrue;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 import java.time.LocalDate;
 
@@ -16,17 +15,11 @@ public record DeliveryComplexityAssessmentJobStartRequest(
         @NotNull(message = "fromDate is required")
         LocalDate fromDate,
         @NotNull(message = "toDate is required")
-        LocalDate toDate,
-        @Size(max = 80, message = "model must not exceed 80 characters")
-        String model,
-        @Size(max = 40, message = "reasoningEffort must not exceed 40 characters")
-        String reasoningEffort
+        LocalDate toDate
 ) {
 
     public DeliveryComplexityAssessmentJobStartRequest {
         jiraProject = normalize(jiraProject);
-        model = normalize(model);
-        reasoningEffort = normalize(reasoningEffort);
     }
 
     @AssertTrue(message = "fromDate must not be after toDate")
@@ -34,8 +27,9 @@ public record DeliveryComplexityAssessmentJobStartRequest(
         return fromDate == null || toDate == null || !fromDate.isAfter(toDate);
     }
 
-    public AnalysisAiOptions aiOptions() {
-        return new AnalysisAiOptions(model, reasoningEffort);
+    @JsonAnySetter
+    public void rejectUnknownField(String name, Object value) {
+        throw new IllegalArgumentException("Unsupported assessment start field: " + name);
     }
 
     private static String normalize(String value) {

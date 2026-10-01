@@ -19,7 +19,9 @@ public record DeliveryScopeUnitResponse(
         String preparedPrompt,
         Instant promptPreparedAt,
         String rawAiResponse,
-        AnalysisAiUsage usage
+        AnalysisAiUsage usage,
+        String aiModel,
+        String reasoningEffort
 ) {
 
     public DeliveryScopeUnitResponse {

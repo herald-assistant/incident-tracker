@@ -441,7 +441,7 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
   Waliduje kompletny kontrakt V1 calego batcha i zwraca snapshot read-only.
 - `GET /delivery-complexity-assessment`
   Angularowy workspace `Analysis Features / Delivery Complexity Assessment`
-  z projektem Jira, zakresem dat, modelem/effort, pollingiem i czastkowymi
+  z projektem Jira, zakresem dat, pollingiem i czastkowymi
   wynikami jednostek.
 - `POST /api/delivery-complexity-assessment/jobs`
   Tworzy job dopiero po synchronicznym zapisie snapshotu `QUEUED` w
@@ -450,7 +450,7 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
   effective JQL, steps/activity, Delivery Units, aggregate, usage, visibility
   limits i report.
 - `GET /delivery-scope-complexity`
-  Angularowy workspace niezaleznego eksperymentu score x scope.
+  Angularowy workspace niezaleznego eksperymentu score x scope z projektem i datami.
 - `POST /api/delivery-scope-complexity/jobs`
   Zapisuje `QUEUED` w Analysis History i uruchamia wlasny lifecycle. Polling
   `GET /api/delivery-scope-complexity/jobs/{jobId}` zwraca czastkowe jednostki,
@@ -458,6 +458,13 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
 - `POST /api/delivery-scope-complexity/imports`
   Waliduje read-only envelope `tdw.delivery-scope-complexity-export` V1 bez
   kompatybilnosci z eksportem drugiego assessmentu.
+  Oba assessmenty przyjmuja tylko `jiraProject`, `fromDate` i `toDate`.
+  Pary default/long-context model i reasoning effort pochodza z properties
+  kazdego feature'a. Neutralny preflight platformy sprawdza pelny prompt i
+  dynamiczne limity przed utworzeniem sesji jednostki; moze wybrac
+  long-context model, gdy default bez takiego tieru nie pomiesci materialu.
+  Decyzja i rzeczywiste `aiModel`/`reasoningEffort` sa zapisywane per-unit,
+  bez zmiany algorytmow promptow, skilli, scoringu ani one-shot lifecycle.
 - `GET /delivery-complexity-trends`
   Angularowy, client-only workspace laczacy wiele niewersjonowanych biznesowych
   CSV jednego assessmentu. Deduplikuje `issueKey`, odtwarza addytywne Delivery
@@ -781,8 +788,13 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Deweloperski fallback zasobow skilli ma osobny katalog projektu; effective
   skille pozostaja pod `copilot-home`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
-  Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
-  prompt razem z durable system instructions, definicjami tools i rezerwa oraz
+  Neutralna polityka context tier i opcjonalny preflight doboru modelu nowych
+  sesji. `CopilotInitialContextModelSelector` porownuje pelny initial context
+  z dynamicznymi limitami promptu/okna i wybiera jawnie skonfigurowany overflow
+  model dla defaultu bez tieru; publikuje decyzje przed prepare/create.
+  Wspoldzielony estymator liczy inline artifacts tylko w wykonanym prompcie.
+  Dla preference `AUTO` polityka estymuje initial prompt razem z durable
+  system instructions, definicjami tools i rezerwa oraz
   ustawia `long_context` przed create/resume od 70% zwyklego okna z
   dynamicznego katalogu modeli. UI Explorer korzysta z `AUTO`; feature, ktory
   wymaga rozszerzonego okna od pierwszej wiadomosci, moze przekazac

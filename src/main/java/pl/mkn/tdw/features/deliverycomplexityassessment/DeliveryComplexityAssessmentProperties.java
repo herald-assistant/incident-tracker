@@ -24,4 +24,14 @@ public class DeliveryComplexityAssessmentProperties {
     private int maxParallelAnalyses = 4;
     private int maxMergeRequestsPerIssue = 20;
     private Duration itemTimeout = Duration.ofMinutes(5);
+    private Ai ai = new Ai();
+
+    @Getter
+    @Setter
+    public static class Ai {
+        private String defaultModel = "gpt-5.4-mini";
+        private String defaultReasoningEffort = "high";
+        private String longContextModel = "gpt-6.1-sol";
+        private String longContextReasoningEffort = "high";
+    }
 }

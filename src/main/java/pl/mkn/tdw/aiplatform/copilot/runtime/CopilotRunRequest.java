@@ -150,4 +150,14 @@ public record CopilotRunRequest(
         );
     }
 
+    public CopilotRunRequest withSessionConfigRequest(CopilotSessionConfigRequest config) {
+        return new CopilotRunRequest(runReference, auth, sessionTarget, prompt, config, artifactContents,
+                initialReport, evidenceSink, activitySink);
+    }
+
+    public CopilotRunRequest withActivitySink(Consumer<AnalysisAiActivityEvent> sink) {
+        return new CopilotRunRequest(runReference, auth, sessionTarget, prompt, sessionConfigRequest, artifactContents,
+                initialReport, evidenceSink, sink);
+    }
+
 }

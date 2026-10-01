@@ -1,7 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.context;
 
 import com.github.copilot.rpc.SystemMessageConfig;
-import com.github.copilot.rpc.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -138,23 +137,11 @@ public class CopilotContextTierPolicy {
             CopilotPreparedSession preparedSession,
             CopilotSdkProperties.ContextTierPolicy settings
     ) {
-        long characters = preparedSession.prompt() != null ? preparedSession.prompt().length() : 0L;
-        var tools = preparedSession.sessionConfig() != null
-                ? preparedSession.sessionConfig().getTools()
-                : List.<ToolDefinition>of();
-        if (tools != null) {
-            for (var tool : tools) {
-                if (tool == null) {
-                    continue;
-                }
-                characters += length(tool.name());
-                characters += length(tool.description());
-                characters += length(tool.parameters());
-            }
-        }
-        characters += systemMessageCharacters(selectedSystemMessage(preparedSession));
-        return (long) Math.ceil(characters / settings.getEstimatedCharactersPerToken())
-                + settings.getReservedTokens();
+        return CopilotInitialContextEstimator.estimate(
+                preparedSession.prompt(), selectedSystemMessage(preparedSession),
+                preparedSession.sessionConfig() != null ? preparedSession.sessionConfig().getTools() : List.of(),
+                settings
+        ).totalTokens();
     }
 
     private SystemMessageConfig selectedSystemMessage(CopilotPreparedSession preparedSession) {
@@ -166,23 +153,6 @@ public class CopilotContextTierPolicy {
         return preparedSession.sessionConfig() != null
                 ? preparedSession.sessionConfig().getSystemMessage()
                 : null;
-    }
-
-    private long systemMessageCharacters(SystemMessageConfig systemMessage) {
-        if (systemMessage == null) {
-            return 0L;
-        }
-        long characters = length(systemMessage.getContent());
-        if (systemMessage.getSections() != null) {
-            for (var entry : systemMessage.getSections().entrySet()) {
-                characters += length(entry.getKey());
-                if (entry.getValue() != null) {
-                    characters += length(entry.getValue().getAction());
-                    characters += length(entry.getValue().getContent());
-                }
-            }
-        }
-        return characters;
     }
 
     private CopilotModelOption findProfile(CopilotPreparedSession preparedSession, String modelId) {
@@ -226,10 +196,6 @@ public class CopilotContextTierPolicy {
             return preparedSession.sessionConfig().getModel().trim();
         }
         return StringUtils.hasText(properties.getModel()) ? properties.getModel().trim() : null;
-    }
-
-    private int length(Object value) {
-        return value != null ? String.valueOf(value).length() : 0;
     }
 
 }

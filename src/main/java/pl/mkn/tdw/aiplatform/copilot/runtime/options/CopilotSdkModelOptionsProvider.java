@@ -107,7 +107,9 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
                 contextWindows.defaultWindowTokens(),
                 contextWindows.longContextWindowTokens(),
                 modelInfo.modelPickerCategory() != null ? modelInfo.modelPickerCategory().getValue() : "",
-                pricing(modelInfo)
+                pricing(modelInfo),
+                contextWindows.defaultPromptTokens(),
+                contextWindows.longPromptTokens()
         );
     }
 
@@ -185,29 +187,37 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
     private ContextWindows contextWindows(Model modelInfo) {
         var limits = modelInfo.capabilities() != null ? modelInfo.capabilities().limits() : null;
         var tokenPrices = modelInfo.billing() != null ? modelInfo.billing().tokenPrices() : null;
-        if (limits == null || tokenPrices == null) {
+        if (limits == null) {
             return ContextWindows.unsupported();
         }
-
-        var defaultPromptTokens = positive(tokenPrices.contextMax());
-        if (defaultPromptTokens == 0L) {
-            return ContextWindows.unsupported();
-        }
-
         var outputTokens = positive(limits.maxOutputTokens());
-        var defaultWindowTokens = safeAdd(defaultPromptTokens, outputTokens);
-        var longPromptTokens = Math.max(
-                positive(limits.maxPromptTokens()),
-                tokenPrices.longContext() != null ? positive(tokenPrices.longContext().contextMax()) : 0L
-        );
-        var longWindowTokens = Math.max(
-                positive(limits.maxContextWindowTokens()),
-                safeAdd(longPromptTokens, outputTokens)
-        );
+        var billedDefaultPrompt = tokenPrices != null
+                ? promptBudget(tokenPrices.maxPromptTokens(), tokenPrices.contextMax()) : 0L;
+        var maximumPrompt = positive(limits.maxPromptTokens());
+        var maximumWindow = positive(limits.maxContextWindowTokens());
+        if (billedDefaultPrompt == 0L) {
+            var window = maximumWindow > 0L ? maximumWindow
+                    : maximumPrompt > 0L ? safeAdd(maximumPrompt, outputTokens) : 0L;
+            return new ContextWindows(window, 0L, maximumPrompt, 0L);
+        }
+        var defaultWindow = boundedWindow(safeAdd(billedDefaultPrompt, outputTokens), maximumWindow);
+        var defaultPrompt = boundedWindow(billedDefaultPrompt, maximumPrompt);
+        var extendedPrices = tokenPrices.longContext();
+        var extendedPrompt = extendedPrices != null
+                ? promptBudget(extendedPrices.maxPromptTokens(), extendedPrices.contextMax()) : 0L;
+        extendedPrompt = extendedPrompt > 0L ? boundedWindow(extendedPrompt, maximumPrompt) : maximumPrompt;
+        var extendedWindow = extendedPrompt > 0L
+                ? boundedWindow(safeAdd(extendedPrompt, outputTokens), maximumWindow) : maximumWindow;
+        return new ContextWindows(defaultWindow, extendedWindow > defaultWindow ? extendedWindow : 0L,
+                defaultPrompt, extendedWindow > defaultWindow ? extendedPrompt : 0L);
+    }
 
-        return longWindowTokens > defaultWindowTokens
-                ? new ContextWindows(defaultWindowTokens, longWindowTokens)
-                : ContextWindows.unsupported();
+    private long promptBudget(Number current, Number legacy) {
+        return positive(current) > 0L ? positive(current) : positive(legacy);
+    }
+
+    private long boundedWindow(long derivedWindow, long maximumWindow) {
+        return maximumWindow > 0L ? Math.min(derivedWindow, maximumWindow) : derivedWindow;
     }
 
     private long positive(Number value) {
@@ -262,11 +272,13 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
 
     private record ContextWindows(
             long defaultWindowTokens,
-            long longContextWindowTokens
+            long longContextWindowTokens,
+            long defaultPromptTokens,
+            long longPromptTokens
     ) {
 
         private static ContextWindows unsupported() {
-            return new ContextWindows(0L, 0L);
+            return new ContextWindows(0L, 0L, 0L, 0L);
         }
     }
 }

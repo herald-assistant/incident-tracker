@@ -9,8 +9,6 @@ export interface DeliveryComplexityAssessmentJobStartRequest {
   jiraProject: string;
   fromDate: string;
   toDate: string;
-  model?: string;
-  reasoningEffort?: string;
 }
 
 export interface DeliveryAssessmentDimensions {
@@ -77,6 +75,8 @@ export interface DeliveryAssessmentUnit {
   preparedPrompt: string | null;
   promptPreparedAt: string | null;
   rawAiResponse: string | null;
+  aiModel: string | null;
+  reasoningEffort: string | null;
   usage: AnalysisAiUsage | null;
 }
 
@@ -98,8 +98,6 @@ export interface DeliveryComplexityAssessmentJobStateSnapshot {
   jiraProject: string;
   fromDate: string;
   toDate: string;
-  aiModel: string;
-  reasoningEffort: string;
   status: string;
   currentStepCode: string;
   currentStepLabel: string;

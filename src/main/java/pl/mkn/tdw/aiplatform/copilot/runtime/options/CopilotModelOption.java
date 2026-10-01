@@ -11,7 +11,9 @@ public record CopilotModelOption(
         long defaultContextWindowTokens,
         long longContextWindowTokens,
         String modelPickerCategory,
-        CopilotModelPricing pricing
+        CopilotModelPricing pricing,
+        long defaultPromptTokens,
+        long longContextPromptTokens
 ) {
 
     public CopilotModelOption(String id, String name, boolean supportsReasoningEffort,
@@ -21,6 +23,14 @@ public record CopilotModelOption(
                 defaultContextWindowTokens, longContextWindowTokens, "", null);
     }
 
+    public CopilotModelOption(String id, String name, boolean supportsReasoningEffort,
+                              List<String> reasoningEfforts, String defaultReasoningEffort,
+                              long defaultContextWindowTokens, long longContextWindowTokens,
+                              String modelPickerCategory, CopilotModelPricing pricing) {
+        this(id, name, supportsReasoningEffort, reasoningEfforts, defaultReasoningEffort,
+                defaultContextWindowTokens, longContextWindowTokens, modelPickerCategory, pricing, 0L, 0L);
+    }
+
     public CopilotModelOption {
         id = id != null ? id : "";
         name = name != null ? name : "";
@@ -28,6 +38,8 @@ public record CopilotModelOption(
         defaultReasoningEffort = defaultReasoningEffort != null ? defaultReasoningEffort : "";
         defaultContextWindowTokens = Math.max(defaultContextWindowTokens, 0L);
         longContextWindowTokens = Math.max(longContextWindowTokens, 0L);
+        defaultPromptTokens = Math.max(defaultPromptTokens, 0L);
+        longContextPromptTokens = Math.max(longContextPromptTokens, 0L);
         modelPickerCategory = modelPickerCategory != null ? modelPickerCategory : "";
     }
 

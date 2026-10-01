@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeAggregateResponse;
+import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeUnitResponse;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeIssueResponse;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeComplexityJobStateSnapshot;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.error.DeliveryScopeImportException;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class DeliveryScopeImportServiceTest {
@@ -62,17 +64,21 @@ class DeliveryScopeImportServiceTest {
     }
 
     @Test
-    void shouldReadLegacyV1IssueWithoutTimeTrackingFields() throws Exception {
+    void shouldReadIssueWithUnavailableTimeTracking() throws Exception {
         var objectMapper = JsonMapper.builder().findAndAddModules().build();
 
         var issue = objectMapper.readValue("""
                 {
                   "issueKey": "CRM-1",
                   "issueUrl": "https://jira.example.com/browse/CRM-1",
-                  "summary": "Legacy issue",
+                  "summary": "CRM contact update",
                   "issueType": "Story",
                   "doneAt": "2026-07-10T10:00:00Z",
-                  "team": null
+                  "team": null,
+                  "timeSpentSeconds": null,
+                  "originalEstimateSeconds": null,
+                  "remainingEstimateSeconds": null,
+                  "timeTrackingCapturedAt": null
                 }
                 """, DeliveryScopeIssueResponse.class);
 
@@ -158,6 +164,49 @@ class DeliveryScopeImportServiceTest {
                 .isInstanceOf(DeliveryScopeImportPersistenceException.class);
     }
 
+
+    @Test
+    void shouldPreserveUnitModelSelectionThroughCurrentV1Import() {
+        var imported = service.importReadOnly(documentWithModelSelection());
+
+        assertThat(imported.units()).singleElement().satisfies(unit -> {
+            assertThat(unit.aiModel()).isEqualTo("crm-extended");
+            assertThat(unit.reasoningEffort()).isEqualTo("high");
+            assertThat(unit.status()).isEqualTo("FAILED");
+        });
+        verify(localRunPersistence).persistRunSnapshot(imported);
+    }
+
+    @Test
+    void shouldRejectGlobalModelSelectionAndUnitsWithoutSelectionMetadata() {
+        var document = documentWithModelSelection();
+        var job = (ObjectNode) document.path("payload").path("job");
+        job.put("aiModel", "crm-default");
+        assertThatThrownBy(() -> service.importReadOnly(document))
+                .isInstanceOf(DeliveryScopeImportException.class)
+                .hasMessageContaining("model selection belongs to each Delivery Unit");
+
+        job.remove("aiModel");
+        ((ObjectNode) job.path("units").get(0)).remove("reasoningEffort");
+        assertThatThrownBy(() -> service.importReadOnly(document))
+                .isInstanceOf(DeliveryScopeImportException.class)
+                .hasMessageContaining("model selection metadata");
+        verifyNoInteractions(localRunPersistence);
+    }
+
+    private ObjectNode documentWithModelSelection() {
+        var objectMapper = JsonMapper.builder().findAndAddModules().build();
+        var source = snapshot("FAILED", aggregate(1));
+        var document = (ObjectNode) objectMapper.valueToTree(
+                DeliveryScopeComplexityExportEnvelope.from(source, source.completedAt()));
+        var job = (ObjectNode) document.path("payload").path("job");
+        job.putArray("units").add(objectMapper.valueToTree(new DeliveryScopeUnitResponse(
+                "crm-unit", "FAILED", List.of(), List.of(), null, List.of(),
+                "CRM_AI_FAILURE", "CRM response validation failed", source.createdAt(), source.completedAt(),
+                "CRM prompt", source.createdAt(), "CRM raw response", null, "crm-extended", "high")));
+        return document;
+    }
+
     private DeliveryScopeComplexityJobStateSnapshot snapshot(
             String status,
             DeliveryScopeAggregateResponse aggregate
@@ -168,8 +217,6 @@ class DeliveryScopeImportServiceTest {
                 "CRM",
                 LocalDate.parse("2026-07-01"),
                 LocalDate.parse("2026-07-31"),
-                "gpt-5.4-mini",
-                "medium",
                 status,
                 terminal ? "COMPLETED" : "UNIT_ASSESSMENT",
                 terminal ? "Completed" : "Delivery Unit assessment",

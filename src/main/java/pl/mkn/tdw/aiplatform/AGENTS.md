@@ -99,6 +99,14 @@ Nie obejmuje:
 - evidence pipeline konkretnego feature'a,
 - implementacji capability tools ani adapterow integracyjnych.
 
+`CopilotInitialContextModelSelector` jest jawnym preflightem nowych sesji dla
+konsumentow przekazujacych pare overflow model/effort. Wspoldzieli estymator
+z polityka tieru, zachowuje zwykle limity modeli bez tieru i nie liczy drugi
+raz inline artifacts. Pojemnosc, limity promptu, wsparcie tieru i effort
+pochodza z dynamicznego katalogu. Publikuje decyzje przed prepare/create;
+nie zna nazw feature'ow ani nie zmienia tresci promptu. Nie podpinaj go
+globalnie do konsumentow bez konfiguracji overflow.
+
 ## Zasady
 
 - `aiplatform.*` nie moze importowac `analysis.*`, `features.*` ani

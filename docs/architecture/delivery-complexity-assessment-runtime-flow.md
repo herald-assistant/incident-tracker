@@ -17,15 +17,13 @@ Publiczne wejscia:
   `GET /api/analysis/runs/{analysisId}/export`,
 - biznesowy export CSV: generowany przez UI z terminalnego snapshotu bez
   dodatkowego endpointu,
-- modele AI: wspolny `GET /api/analysis/ai/options`,
 - historia: wspolne `/api/analysis/runs/**` z feature id
   `delivery-complexity-assessment`.
 
-Request startu zawiera tylko `jiraProject`, `fromDate`, `toDate`, `model` i
-opcjonalny `reasoningEffort`. UI nie przyjmuje JQL.
-Po wyborze modelu bez wsparcia reasoning UI czysci i wylacza pole effort, a
-backend nie uzupelnia go globalnym defaultem. Do Copilot SDK trafia wtedy
-jawny model bez `reasoningEffort`.
+Request startu zawiera tylko `jiraProject`, `fromDate` i `toDate`. UI nie
+przyjmuje JQL ani wyboru modelu/effort i nie pobiera katalogu AI options.
+Backend odrzuca usuniete pola startu. Administrator konfiguruje pary
+model/effort dla defaultu i rozszerzonego kontekstu w properties feature'a.
 Filtry raportu po zespole Jira i autorze MR sa lokalnym zawezeniem
 widocznego wyniku po wykonaniu analizy; nie zmieniaja requestu startu,
 JQL ani promptu AI.
@@ -74,8 +72,8 @@ nie dodaje continuation. Gdy local workspace jest wylaczony albo zapis sie nie
 powiedzie, import jest odrzucany zamiast zwracac wynik niewidoczny w historii.
 Issue snapshot zawiera opcjonalne `timeSpentSeconds`,
 `originalEstimateSeconds`, `remainingEstimateSeconds` oraz
-`timeTrackingCapturedAt`. Pola sa addytywne w envelope V1: starszy eksport bez
-nich pozostaje czytelny, a brak wartosci mapuje sie na `null`.
+`timeTrackingCapturedAt`. Biezacy envelope V1 zachowuje te pola;
+brak dostepnej wartosci jest reprezentowany przez `null`.
 
 Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
 z jednym wierszem na issue. CSV nie jest formatem importu i nie zalezy od
@@ -213,6 +211,45 @@ Artifacts i prompt nie zawieraja istniejacych Story Points, snapshotu
 ani pola zespolu. Wynik nie moze
 sluzyc do rankingu osob lub zespolow. Team Jira i autor MR pozostaja tylko
 deterministycznymi metadanymi UI do filtrowania obserwowalnej zlozonosci.
+
+## Dobor modelu przed sesja
+
+Konfiguracja pod prefixem `delivery-complexity-assessment.ai` zawiera
+`default-model`, `default-reasoning-effort`, `long-context-model` i
+`long-context-reasoning-effort`. Domyslne pary to `gpt-5.4-mini/high` oraz
+`gpt-6.1-sol/high`; ich dostepnosc i limity potwierdza dynamiczny katalog
+Copilota, bez tabel modeli zaszytych w feature'ze.
+
+Po przygotowaniu dokladnego promptu kazdej Delivery Unit neutralny
+`CopilotInitialContextModelSelector` szacuje caly inline material, effective
+skill, instrukcje sesji oraz platformowa rezerwe. Artefakty juz osadzone w
+promptcie sa liczone raz. Estymacja korzysta z
+`analysis.ai.copilot.context-tier.estimated-characters-per-token` i
+`reserved-tokens`; sprawdza zarowno limit promptu, jak i calkowite okno.
+Granica `>=` jest traktowana jako brak bezpiecznego miejsca.
+
+Material mieszczacy sie w zwyklym oknie korzysta z defaultu i jego effort.
+Przy przekroczeniu okna default bez `long_context` jest zastepowany
+skonfigurowana para long-context tylko dla tej jednostki. Default wspierajacy
+rozszerzony tier zachowuje model i effort. Platforma ustawia wtedy
+`LONG_CONTEXT_REQUIRED` i potwierdza tier przed pierwszym wyslaniem.
+Prog `AUTO` 70% nadal moze wlaczyc tier tego samego modelu; sam nie powoduje
+zmiany modelu. Nieznany model/effort, brak wiarygodnych limitow, wylaczona
+polityka wymaganego tieru lub przekroczenie rozszerzonego okna koncza tylko
+jednostke kontrolowanym bledem przed send.
+
+Activity `platform.model_selection` z phase `INITIAL_MODEL_SELECTION`
+zapisuje wybor i estymacje przed utworzeniem sesji. `aiModel` i
+`reasoningEffort` naleza do snapshotu jednostki i sa widoczne jako read-only
+metadata w jej szczegolach, takze po pozniejszym bledzie. Snapshot runu nie
+ma globalnych pol modelu/effort; aggregate usage przy roznych modelach ma
+`model=null`, zachowujac sume tokenow i kredytow. Historia i import/export
+V1 zachowuja metadata jednostek i odrzucaja poprzedni ksztalt kontraktu.
+
+Dobor modelu nie zmienia promptu, effective skilla, evidence, scoringu,
+liczby wywolan ani procedury one-shot. Nie przycina materialu ani nie
+wykonuje retry z innym modelem. Pozostale feature'y nie wywoluja tego
+preflightu i zachowuja swoj wybor modelu.
 
 ## AI i scoring
 

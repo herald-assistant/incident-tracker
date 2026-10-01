@@ -11,23 +11,14 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
 import {
-  AnalysisAiModelOptionsResponse,
   AnalysisPreparedPrompt,
   ApiErrorResponse,
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
-import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { GithubAuthService } from '../../../../core/services/github-auth.service';
-import {
-  EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
-  defaultReasoningEffortForAiModel,
-  listedDefaultAiModel,
-  normalizeAnalysisAiModelOptions,
-  reasoningEffortsForAiModel
-} from '../../../../core/utils/analysis-ai-model-options.utils';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { buildDeliveryShareDocument } from '../../../../core/utils/analysis-share.utils';
 import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
@@ -46,7 +37,6 @@ import {
 import { DeliveryComplexityAssessmentApiService } from '../../services/delivery-complexity-assessment-api.service';
 import { downloadDeliveryComplexityAssessmentCsv } from '../../utils/delivery-complexity-assessment-csv.utils';
 
-type SelectOption = { value: string; label: string };
 type DimensionRow = { label: string; value: number };
 type FilterOption = { value: string; label: string; issueCount: number; deliveredStoryPoints: number };
 
@@ -65,7 +55,6 @@ type FilterOption = { value: string; label: string; issueCount: number; delivere
 })
 export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   private readonly api = inject(DeliveryComplexityAssessmentApiService);
-  private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly githubAuth = inject(GithubAuthService);
@@ -77,14 +66,9 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   readonly jiraProjectControl = new FormControl('', { nonNullable: true });
   readonly fromDateControl = new FormControl(defaultDate(-30), { nonNullable: true });
   readonly toDateControl = new FormControl(defaultDate(0), { nonNullable: true });
-  readonly aiModelControl = new FormControl('', { nonNullable: true });
-  readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
   readonly teamFilterControl = new FormControl('', { nonNullable: true });
   readonly authorFilterControl = new FormControl('', { nonNullable: true });
 
-  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
-  readonly aiOptionsLoading = signal(true);
-  readonly aiOptionsError = signal('');
   readonly githubAuthStatus = signal<GitHubAuthStatus | null>(null);
   readonly githubAuthError = signal('');
   readonly job = signal<DeliveryComplexityAssessmentJobStateSnapshot | null>(null);
@@ -93,16 +77,9 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   readonly portabilityBusy = signal(false);
   readonly localRunName = signal('');
   readonly expandedUnits = signal<ReadonlySet<string>>(new Set());
-  private readonly selectedAiModel = signal('');
   private readonly formRevision = signal(0);
   private readonly filterRevision = signal(0);
 
-  readonly aiModelOptions = computed<SelectOption[]>(() =>
-    this.aiModelCatalog().models.map((model) => ({ value: model.id, label: model.name }))
-  );
-  readonly reasoningEffortOptions = computed(() =>
-    reasoningEffortsForAiModel(this.aiModelCatalog(), this.selectedAiModel())
-  );
   readonly workflowRunning = computed(() => {
     const job = this.job();
     return Boolean(job && !this.isTerminal(job.status));
@@ -231,7 +208,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
         && from
         && to
         && from <= to
-        && this.aiModelControl.value
         && !this.submitting()
         && !this.portabilityBusy()
         && auth?.configured === true
@@ -243,8 +219,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
       this.jiraProjectControl,
       this.fromDateControl,
       this.toDateControl,
-      this.aiModelControl,
-      this.reasoningEffortControl,
       this.teamFilterControl,
       this.authorFilterControl
     ].forEach((control) => control.valueChanges
@@ -253,13 +227,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
         this.formRevision.update((revision) => revision + 1);
         this.filterRevision.update((revision) => revision + 1);
       }));
-    this.aiModelControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((model) => {
-        this.selectedAiModel.set(model.trim());
-        this.syncReasoningEffort();
-      });
-    this.loadAiOptions();
     this.loadGithubAuthStatus();
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -522,7 +489,8 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
 
   protected unitHasDetails(unit: DeliveryAssessmentUnit): boolean {
     return Boolean(
-      unit.assessment
+      unit.aiModel
+      || unit.assessment
       || unit.mergeRequests.length
       || unit.visibilityLimits.length
       || this.unitWarnings(unit).length
@@ -565,39 +533,11 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   }
 
   private startRequest(): DeliveryComplexityAssessmentJobStartRequest {
-    const effort = this.reasoningEffortControl.enabled
-      ? this.reasoningEffortControl.value.trim()
-      : '';
     return {
       jiraProject: this.jiraProjectControl.value.trim().toUpperCase(),
       fromDate: this.fromDateControl.value,
-      toDate: this.toDateControl.value,
-      model: this.aiModelControl.value || undefined,
-      reasoningEffort: effort || undefined
+      toDate: this.toDateControl.value
     };
-  }
-
-  private loadAiOptions(): void {
-    this.aiOptionsLoading.set(true);
-    this.aiOptionsApi
-      .getOptions()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.aiOptionsLoading.set(false))
-      )
-      .subscribe({
-        next: (options) => {
-          this.aiModelCatalog.set(normalizeAnalysisAiModelOptions(options));
-          const defaultModel = listedDefaultAiModel(this.aiModelCatalog());
-          this.aiModelControl.setValue(defaultModel, {
-            emitEvent: false
-          });
-          this.selectedAiModel.set(defaultModel);
-          this.syncReasoningEffort();
-          this.formRevision.update((revision) => revision + 1);
-        },
-        error: (error: HttpErrorResponse) => this.aiOptionsError.set(this.errorMessage(error))
-      });
   }
 
   private loadGithubAuthStatus(): void {
@@ -608,24 +548,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
         next: (status) => this.githubAuthStatus.set(status),
         error: (error: HttpErrorResponse) => this.githubAuthError.set(this.errorMessage(error))
       });
-  }
-
-  private syncReasoningEffort(): void {
-    const efforts = this.reasoningEffortOptions();
-    const currentEffort = this.reasoningEffortControl.value.trim();
-    if (!efforts.length) {
-      this.reasoningEffortControl.setValue('', { emitEvent: false });
-      this.reasoningEffortControl.disable({ emitEvent: false });
-      return;
-    }
-    this.reasoningEffortControl.enable({ emitEvent: false });
-    if (currentEffort && efforts.includes(currentEffort)) {
-      return;
-    }
-    this.reasoningEffortControl.setValue(
-      defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.selectedAiModel()),
-      { emitEvent: false }
-    );
   }
 
   private startPolling(jobId: string): void {
@@ -694,10 +616,6 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     this.jiraProjectControl.setValue(job.jiraProject ?? '', { emitEvent: false });
     this.fromDateControl.setValue(job.fromDate ?? '', { emitEvent: false });
     this.toDateControl.setValue(job.toDate ?? '', { emitEvent: false });
-    this.aiModelControl.setValue(job.aiModel ?? '', { emitEvent: false });
-    this.selectedAiModel.set(job.aiModel ?? '');
-    this.reasoningEffortControl.setValue(job.reasoningEffort ?? '', { emitEvent: false });
-    this.syncReasoningEffort();
     this.formRevision.update((revision) => revision + 1);
   }
 
@@ -761,7 +679,14 @@ function jobFromEnvelope(value: unknown): DeliveryComplexityAssessmentJobStateSn
   ) {
     return null;
   }
-  return envelope.payload.job;
+  const job = envelope.payload.job;
+  if ('aiModel' in job || 'reasoningEffort' in job || !Array.isArray(job.units)
+    || job.units.some((unit) => !unit || typeof unit !== 'object'
+      || !Object.prototype.hasOwnProperty.call(unit, 'aiModel')
+      || !Object.prototype.hasOwnProperty.call(unit, 'reasoningEffort'))) {
+    return null;
+  }
+  return job;
 }
 
 function aggregateForUnits(units: DeliveryAssessmentUnit[]): DeliveryAssessmentAggregate {

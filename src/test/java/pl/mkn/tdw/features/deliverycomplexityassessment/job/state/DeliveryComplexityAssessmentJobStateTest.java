@@ -1,16 +1,17 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.job.state;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAssessmentDimensions;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAssessmentScore;
 import pl.mkn.tdw.features.deliverycomplexityassessment.deliveryunit.DeliveryUnit;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexityAssessmentJobStartRequest;
 import pl.mkn.tdw.features.deliverycomplexityassessment.source.DeliveryAssessmentSourceResult;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
-
-import java.time.LocalDate;
-import java.time.Instant;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.features.deliverycomplexityassessment.DeliveryAssessmentTestFixtures.mergeRequest;
@@ -126,13 +127,39 @@ class DeliveryComplexityAssessmentJobStateTest {
         ));
     }
 
+    @Test
+    void shouldPreserveSelectedModelsOnFailureAndAvoidLabellingMixedUsageAsOneModel() {
+        var state = state();
+        var first = unit("CRM-1", mergeRequest(1, "src/A.java", "+A"));
+        var second = unit("CRM-2", mergeRequest(2, "src/B.java", "+B"));
+        ready(state, first, second);
+        for (var unit : List.of(first, second)) {
+            var model = unit == first ? "crm-default" : "crm-extended";
+            state.markAiActivity(unit.unitId(), new AnalysisAiActivityEvent(
+                    model, null, "platform.model_selection", "CONTEXT", "COMPLETED", "Model", "CRM decision",
+                    null, null, null, null, Instant.now(), Map.of(
+                            "phase", "INITIAL_MODEL_SELECTION", "selectedModel", model, "reasoningEffort", "high")));
+            state.markUnitNotScorable(unit.unitId(), List.of("CRM limited evidence"),
+                    new AnalysisAiUsage(100, 20, 0L, 0L, 120, 1.0, 500, 1, model, null, null, null, null));
+        }
+        var snapshot = state.snapshot();
+        assertThat(snapshot.units()).extracting(unit -> unit.aiModel()).containsExactly("crm-default", "crm-extended");
+        assertThat(snapshot.units()).allSatisfy(unit -> assertThat(unit.reasoningEffort()).isEqualTo("high"));
+        assertThat(snapshot.aggregate().usage().model()).isNull();
+        assertThat(snapshot.aggregate().usage().totalTokens()).isEqualTo(240);
+        assertThat(snapshot.aggregate().usage().aiCredits()).isEqualTo(2.0);
+        var failedState = state();
+        ready(failedState, first);
+        failedState.markAiActivity(first.unitId(), snapshot.aiActivityEvents().get(0));
+        failedState.markUnitFailed(first.unitId(), "CRM_AI_FAILURE", "CRM model response unavailable");
+        assertThat(failedState.snapshot().units().get(0).aiModel()).isEqualTo("crm-default");
+    }
+
     private DeliveryComplexityAssessmentJobState state() {
         return new DeliveryComplexityAssessmentJobState(
                 "job-1",
                 new DeliveryComplexityAssessmentJobStartRequest(
-                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"),
-                        "gpt-5", "medium"
-                )
+                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"))
         );
     }
 

@@ -140,8 +140,7 @@ function snapshot(): DeliveryScopeComplexityJobStateSnapshot {
     jiraProject: 'CRM',
     fromDate: '2026-07-01',
     toDate: '2026-07-31',
-    aiModel: 'gpt-5',
-    reasoningEffort: 'medium',
+
     status: 'COMPLETED',
     currentStepCode: 'COMPLETED',
     currentStepLabel: 'Completed',
@@ -194,6 +193,8 @@ function snapshot(): DeliveryScopeComplexityJobStateSnapshot {
       preparedPrompt: null,
       promptPreparedAt: null,
       rawAiResponse: null,
+    aiModel: 'crm-default',
+    reasoningEffort: 'high',
       usage: null
     }],
     aggregate: {

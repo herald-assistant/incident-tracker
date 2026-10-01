@@ -220,7 +220,15 @@ allowlistowane tools pozostaja wtedy dostepne. Runtime przekazuje do
 semantics, allowlisty albo hidden scope jest zmiana architektoniczna i wymaga
 planu, testow oraz rollbacku.
 
-`CopilotContextTierPolicy` jest jedynym wlascicielem automatycznego wyboru
+Oba assessmenty wywoluja `CopilotInitialContextModelSelector` po zbudowaniu
+pelnego promptu, przed prepare/create session. Pary default/long-context
+model i effort sa w properties feature'a; API/UI przyjmuje tylko projekt i
+daty. Decyzja jest zapisywana per-unit w activity, historii i eksporcie V1.
+Nie przenos limitow modeli do feature'a ani nie zmieniaj promptow/skilli
+przy zmianie doboru modelu. Pozostali konsumenci nie korzystaja z tego
+opcjonalnego preflightu.
+
+`aiplatform.copilot.runtime.context` jest jedynym wlascicielem automatycznego wyboru
 `long_context`. Rozmiary okien i wsparcie tieru pochodza z cache'owanego typed
 RPC `models.list`; `analysis.ai.copilot.context-tier` zawiera tylko progi,
 estymator, rezerwe i przelacznik. Preflight `AUTO` obejmuje prompt, opcjonalne

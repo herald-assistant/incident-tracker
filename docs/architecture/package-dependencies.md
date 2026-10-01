@@ -519,6 +519,14 @@ integracji i platformy, ale nie importuja siebie wzajemnie. Powtorzenie
 feature-owned lifecycle jest czasowym kosztem eksperymentu i zapewnia, ze
 usuniecie jednego algorytmu nie zmienia kontraktu drugiego.
 
+Oba assessmenty korzystaja z neutralnego
+`aiplatform.copilot.runtime.context.CopilotInitialContextModelSelector` przed
+utworzeniem sesji jednostki. Feature posiada tylko pary model/effort w
+properties i zapis decyzji w job state; estymator, limity katalogu oraz
+wybor/wymaganie tieru pozostaja w platformie. Platforma nie rozpoznaje Jira,
+MR ani nazw assessmentow. Capability jest jawnie wywolywana tylko przez
+konsumentow posiadajacych konfiguracje overflow, bez zmiany pozostalych sesji.
+
 ## Frontend
 
 Docelowy kierunek zaleznosci Angulara:

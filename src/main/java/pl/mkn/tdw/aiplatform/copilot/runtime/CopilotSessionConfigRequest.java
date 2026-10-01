@@ -117,4 +117,9 @@ public record CopilotSessionConfigRequest(
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
     }
+    public CopilotSessionConfigRequest withModelSelection(CopilotModelSelection selection) {
+        return new CopilotSessionConfigRequest(sessionId, tools, availableToolNames, selection,
+                deniedToolUseMessage, skillsEnabled, durableSystemInstructions, contextTierPreference);
+    }
+
 }

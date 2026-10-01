@@ -15,9 +15,10 @@ w pamieci biezacej karty przegladarki. Odswiezenie lub wyczyszczenie ekranu
 usuwa zestaw danych.
 
 Jeden zestaw moze zawierac tylko CSV jednego rodzaju assessmentu. Porownanie
-obu algorytmow nie jest celem tego widoku. Uzytkownik odpowiada za zalaczenie
-runow wykonanych tym samym modelem i `reasoningEffort`: biznesowy CSV celowo
-nie przechowuje tych metadanych, wiec ekran nie moze zweryfikowac zalozenia.
+obu algorytmow nie jest celem tego widoku. Przy porownywaniu runow uzytkownik
+uwzglednia konfiguracje default/long-context model i effort obu assessmentow.
+Model moze byc rozny dla jednostek jednego runu. Biznesowy CSV nie przechowuje
+metadanych wyboru, wiec ekran nie weryfikuje zgodnosci konfiguracji.
 
 ## Import i rozpoznanie formatu
 

@@ -28,6 +28,8 @@ final class DeliveryScopeUnitState {
     private Instant promptPreparedAt;
     private String rawAiResponse;
     private AnalysisAiUsage usage;
+    private String aiModel;
+    private String reasoningEffort;
 
     DeliveryScopeUnitState(DeliveryUnit unit) {
         this.unit = unit;
@@ -60,6 +62,13 @@ final class DeliveryScopeUnitState {
         }
         preparedPrompt = prompt;
         promptPreparedAt = Instant.now();
+    }
+
+    void selectModel(String model, String effort) {
+        if (!terminal()) {
+            aiModel = model;
+            reasoningEffort = effort != null && !effort.isBlank() ? effort : null;
+        }
     }
 
     void rawAiResponse(String response) {
@@ -211,7 +220,9 @@ final class DeliveryScopeUnitState {
                 preparedPrompt,
                 promptPreparedAt,
                 rawAiResponse,
-                usage
+                usage,
+                aiModel,
+                reasoningEffort
         );
     }
 }

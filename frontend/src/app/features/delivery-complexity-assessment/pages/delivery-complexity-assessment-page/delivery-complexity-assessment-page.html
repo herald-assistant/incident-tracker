@@ -71,29 +71,6 @@
           <input class="text-input" type="date" [formControl]="toDateControl" />
         </label>
 
-        <label class="field-control">
-          <span class="field-label">Model AI</span>
-          <span class="select-loading-control">
-            <select class="select-input" [formControl]="aiModelControl">
-              @for (option of aiModelOptions(); track option.value) {
-                <option [value]="option.value">{{ option.label }}</option>
-              }
-            </select>
-            @if (aiOptionsLoading()) {
-              <span class="runtime-spinner" aria-hidden="true"></span>
-            }
-          </span>
-        </label>
-
-        <label class="field-control">
-          <span class="field-label">Reasoning effort</span>
-          <select class="select-input" [formControl]="reasoningEffortControl">
-            @for (effort of reasoningEffortOptions(); track effort) {
-              <option [value]="effort">{{ statusLabel(effort) }}</option>
-            }
-          </select>
-        </label>
-
         <div class="composer-action">
           <button
             type="button"
@@ -122,9 +99,9 @@
         </div>
       }
 
-      @if (aiOptionsError() || githubAuthError()) {
+      @if (githubAuthError()) {
         <div class="runtime-message runtime-message--warning" role="status">
-          {{ aiOptionsError() || githubAuthError() }}
+          {{ githubAuthError() }}
         </div>
       }
 
@@ -384,6 +361,12 @@
 
                   }
 
+                  @if (unit.aiModel) {
+                    <p class="unit-ai-model">
+                      Model AI: {{ unit.aiModel }}
+                      @if (unit.reasoningEffort) { · {{ unit.reasoningEffort }} }
+                    </p>
+                  }
                   <div class="unit-insights">
                     @if (unit.assessment?.evidenceSummary?.length) {
                       <section class="unit-insight">

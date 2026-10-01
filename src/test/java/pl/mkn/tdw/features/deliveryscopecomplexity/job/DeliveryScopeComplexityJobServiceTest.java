@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.deliveryscopecomplexity.job;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.core.task.TaskExecutor;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
@@ -24,6 +25,7 @@ import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -127,6 +129,9 @@ class DeliveryScopeComplexityJobServiceTest {
             return CompletableFuture.completedFuture(null);
         };
         TaskExecutor directTaskExecutor = Runnable::run;
+        var configuredProperties = new DeliveryScopeComplexityProperties();
+        configuredProperties.getAi().setDefaultModel("crm-configured-default");
+        configuredProperties.getAi().setDefaultReasoningEffort("low");
         var directService = new DeliveryScopeComplexityJobService(
                 source,
                 new DeliveryUnitBuilder(),
@@ -141,7 +146,7 @@ class DeliveryScopeComplexityJobServiceTest {
                 new CopilotRunAuthMapper(),
                 accessTokenResolver,
                 new LocalWorkspaceProperties(),
-                new DeliveryScopeComplexityProperties()
+                configuredProperties
         );
 
         var snapshot = directService.startJob(request());
@@ -159,6 +164,10 @@ class DeliveryScopeComplexityJobServiceTest {
             assertThat(step.itemCount()).isEqualTo(1);
         });
         assertThat(snapshot.aggregate().usage()).isEqualTo(usage);
+        var optionsCaptor = ArgumentCaptor.forClass(AnalysisAiOptions.class);
+        verify(assessmentProvider).analyze(anyString(), optionsCaptor.capture(), any(), any(), any(), any(), any());
+        assertThat(optionsCaptor.getValue().model()).isEqualTo("crm-configured-default");
+        assertThat(optionsCaptor.getValue().reasoningEffort()).isEqualTo("low");
     }
 
     @Test
@@ -214,8 +223,6 @@ class DeliveryScopeComplexityJobServiceTest {
 
     private DeliveryScopeComplexityJobStartRequest request() {
         return new DeliveryScopeComplexityJobStartRequest(
-                "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"),
-                "gpt-5", "medium"
-        );
+                "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"));
     }
 }

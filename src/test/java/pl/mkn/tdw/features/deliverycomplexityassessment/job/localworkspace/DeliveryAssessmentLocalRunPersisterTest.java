@@ -8,12 +8,15 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexi
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.state.DeliveryComplexityAssessmentJobState;
 import pl.mkn.tdw.features.deliverycomplexityassessment.source.DeliveryAssessmentSourceResult;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,9 +37,7 @@ class DeliveryAssessmentLocalRunPersisterTest {
         var state = new DeliveryComplexityAssessmentJobState(
                 "job-1",
                 new DeliveryComplexityAssessmentJobStartRequest(
-                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"),
-                        "gpt-5", "medium"
-                )
+                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"))
         );
 
         persister.persistRunSnapshot(state.snapshot());
@@ -68,9 +69,7 @@ class DeliveryAssessmentLocalRunPersisterTest {
         var state = new DeliveryComplexityAssessmentJobState(
                 "job-1",
                 new DeliveryComplexityAssessmentJobStartRequest(
-                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"),
-                        "gpt-5", "medium"
-                )
+                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"))
         );
         var deliveryUnit = unit("CRM-1", mergeRequest(1, "src/A.java", "+A"));
         state.markDiscoveryStarted();
@@ -79,6 +78,11 @@ class DeliveryAssessmentLocalRunPersisterTest {
                 List.of(deliveryUnit)
         );
         state.markUnitAnalyzing(deliveryUnit.unitId());
+        state.markAiActivity(deliveryUnit.unitId(), new AnalysisAiActivityEvent(
+                "crm-selection", null, "platform.model_selection", "CONTEXT", "COMPLETED",
+                "CRM model selection", "CRM material requires extended context", null, null, null, null,
+                Instant.parse("2026-08-17T09:15:00Z"), Map.of("phase", "INITIAL_MODEL_SELECTION",
+                "selectedModel", "crm-extended", "reasoningEffort", "high")));
         state.markUnitRawAiResponse(deliveryUnit.unitId(), "not valid JSON");
 
         persister.persistRunSnapshot(state.snapshot());
@@ -91,6 +95,12 @@ class DeliveryAssessmentLocalRunPersisterTest {
                 .isEqualTo("delivery-complexity-assessment-v1");
         assertThat(envelope.path("payload").path("job").path("units").path(0).path("rawAiResponse").asText())
                 .isEqualTo("not valid JSON");
+        var job = envelope.path("payload").path("job");
+        assertThat(job.has("aiModel")).isFalse();
+        assertThat(job.has("reasoningEffort")).isFalse();
+        var unit = job.path("units").get(0);
+        assertThat(unit.path("aiModel").asText()).isEqualTo("crm-extended");
+        assertThat(unit.path("reasoningEffort").asText()).isEqualTo("high");
         var issue = envelope.path("payload").path("job").path("units").path(0).path("issues").path(0);
         assertThat(issue.path("timeSpentSeconds").asLong()).isEqualTo(14400L);
         assertThat(issue.path("originalEstimateSeconds").asLong()).isEqualTo(28800L);

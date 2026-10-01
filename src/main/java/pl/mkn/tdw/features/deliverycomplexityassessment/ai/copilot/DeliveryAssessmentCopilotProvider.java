@@ -2,8 +2,11 @@ package pl.mkn.tdw.features.deliverycomplexityassessment.ai.copilot;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotInitialContextModelSelector;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.tdw.features.deliverycomplexityassessment.DeliveryComplexityAssessmentProperties;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAiResponseParser;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryPromptPreparation;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryRawAiResponseListener;
@@ -22,6 +25,8 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final DeliveryAiResponseParser responseParser;
+    private final CopilotInitialContextModelSelector modelSelector;
+    private final DeliveryComplexityAssessmentProperties properties;
 
     @Override
     public DeliveryUnitAiAnalysis analyze(
@@ -33,11 +38,12 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
             AnalysisAiActivityListener activityListener,
             DeliveryRawAiResponseListener rawResponseListener
     ) {
-        var request = runRequestAssembler.assemble(runReference, options, authRef, preparation);
+        var listener = activityListener != null ? activityListener : AnalysisAiActivityListener.NO_OP;
+        var request = runRequestAssembler.assemble(runReference, options, authRef, preparation)
+                .withActivitySink(listener::onAiActivity);
+        request = modelSelector.select(request, new CopilotModelSelection(
+                properties.getAi().getLongContextModel(), properties.getAi().getLongContextReasoningEffort()));
         var session = runPreparationService.prepare(request);
-        if (activityListener != null && activityListener != AnalysisAiActivityListener.NO_OP) {
-            session = session.withActivitySink(activityListener::onAiActivity);
-        }
         var result = executionGateway.execute(session);
         var rawResponse = result.content() != null ? result.content() : "";
         var effectiveRawResponseListener = rawResponseListener != null

@@ -136,6 +136,53 @@ class CopilotSdkModelOptionsProviderTest {
         );
     }
 
+    @Test
+    void shouldPreserveDefaultCapacityWithoutBillingOrLongContextTier() {
+        var model = new Model("crm-basic", "CRM basic",
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+                        new ModelCapabilitiesLimits(80L, 20L, 100L, null)),
+                null, null, null, null, null);
+        var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model),
+                new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
+        var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
+        assertEquals(100L, option.defaultContextWindowTokens());
+        assertEquals(80L, option.defaultPromptTokens());
+        assertFalse(option.supportsLongContext());
+    }
+
+    @Test
+    void shouldPreserveBilledDefaultCapacityWhenMaximumWindowIsNotLarger() {
+        var model = new Model("crm-basic", "CRM basic",
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+                        new ModelCapabilitiesLimits(80L, 20L, 100L, null)),
+                null, new ModelBilling(1D, new ModelBillingTokenPrices(
+                        null, null, null, null, null, 1000L, 80L, null, null), null, null),
+                null, null, null);
+        var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model),
+                new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
+        var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
+        assertEquals(100L, option.defaultContextWindowTokens());
+        assertEquals(80L, option.defaultPromptTokens());
+        assertEquals(0L, option.longContextWindowTokens());
+        assertFalse(option.supportsLongContext());
+    }
+
+    @Test
+    void shouldPreferCurrentPromptBudgetAndNeverExceedReportedTotalWindow() {
+        var model = new Model("crm-basic", "CRM basic",
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+                        new ModelCapabilitiesLimits(80L, 30L, 100L, null)),
+                null, new ModelBilling(1D, new ModelBillingTokenPrices(
+                        null, null, null, null, null, 1000L, 90L, 80L, null), null, null),
+                null, null, null);
+        var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model),
+                new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
+        var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
+        assertEquals(100L, option.defaultContextWindowTokens());
+        assertEquals(80L, option.defaultPromptTokens());
+        assertFalse(option.supportsLongContext());
+    }
+
     private static Model plainModel(String id, String name) {
         return new Model(
                 id,

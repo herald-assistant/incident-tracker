@@ -1,5 +1,12 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.job;
 
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.task.TaskExecutor;
@@ -25,15 +32,8 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.source.DeliveryAssessmen
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
-
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -164,7 +164,8 @@ public class DeliveryComplexityAssessmentJobService {
         persistSnapshot(job, false);
         var analysis = assessmentProvider.analyze(
                 job.snapshot().jobId() + ":" + unit.unitId(),
-                request.aiOptions(),
+                new AnalysisAiOptions(
+                        properties.getAi().getDefaultModel(), properties.getAi().getDefaultReasoningEffort()),
                 authRef,
                 packet,
                 preparation,

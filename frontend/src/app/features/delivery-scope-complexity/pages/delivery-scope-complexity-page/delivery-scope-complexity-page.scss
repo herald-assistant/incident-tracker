@@ -63,7 +63,7 @@
 
 .assessment-form-grid {
   display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) repeat(2, minmax(145px, 0.65fr)) minmax(210px, 1fr) minmax(160px, 0.75fr) auto;
+  grid-template-columns: minmax(160px, 1fr) repeat(2, minmax(145px, 0.65fr)) auto;
   gap: 14px;
   align-items: end;
 }

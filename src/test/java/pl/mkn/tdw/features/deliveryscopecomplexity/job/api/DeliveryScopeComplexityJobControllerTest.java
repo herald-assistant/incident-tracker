@@ -38,7 +38,7 @@ class DeliveryScopeComplexityJobControllerTest {
         mockMvc.perform(post("/api/delivery-scope-complexity/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"jiraProject":"CRM","fromDate":"2026-07-01","toDate":"2026-07-31","model":"gpt-5","reasoningEffort":"medium"}
+                                {"jiraProject":"CRM","fromDate":"2026-07-01","toDate":"2026-07-31"}
                                 """))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.jobId").value("job-1"))
@@ -54,7 +54,17 @@ class DeliveryScopeComplexityJobControllerTest {
         mockMvc.perform(post("/api/delivery-scope-complexity/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"jiraProject":"project = CRM","fromDate":"2026-07-01","toDate":"2026-07-31","model":"gpt-5"}
+                                {"jiraProject":"project = CRM","fromDate":"2026-07-01","toDate":"2026-07-31"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectRemovedManualModelSelection() throws Exception {
+        mockMvc.perform(post("/api/delivery-scope-complexity/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"jiraProject":"CRM","fromDate":"2026-07-01","toDate":"2026-07-31","model":"crm-default","reasoningEffort":"high"}
                                 """))
                 .andExpect(status().isBadRequest());
     }
@@ -62,8 +72,7 @@ class DeliveryScopeComplexityJobControllerTest {
     private DeliveryScopeComplexityJobStateSnapshot snapshot() {
         var now = Instant.parse("2026-07-01T10:00:00Z");
         return new DeliveryScopeComplexityJobStateSnapshot(
-                "job-1", "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"),
-                "gpt-5", "medium", "QUEUED", "QUEUED", "Queued", null, null,
+                "job-1", "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"), "QUEUED", "QUEUED", "Queued", null, null,
                 now, now, null, 0, 0, 0, null, List.of(), List.of(), List.of(), List.of(),
                 new DeliveryScopeAggregateResponse(
                         0.0, 0.0, 0, 0, 0, 0, 0, 0, "LOW", null

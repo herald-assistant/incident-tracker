@@ -1,5 +1,12 @@
 package pl.mkn.tdw.features.deliveryscopecomplexity.job;
 
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.task.TaskExecutor;
@@ -8,8 +15,8 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeComplexityProperties;
-import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryScopeScoringService;
 import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryPromptPreparationService;
+import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryScopeScoringService;
 import pl.mkn.tdw.features.deliveryscopecomplexity.ai.DeliveryUnitAssessmentProvider;
 import pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit.DeliveryUnit;
 import pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit.DeliveryUnitBuilder;
@@ -25,15 +32,8 @@ import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeSourceLis
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
-
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -164,7 +164,8 @@ public class DeliveryScopeComplexityJobService {
         persistSnapshot(job, false);
         var analysis = assessmentProvider.analyze(
                 job.snapshot().jobId() + ":" + unit.unitId(),
-                request.aiOptions(),
+                new AnalysisAiOptions(
+                        properties.getAi().getDefaultModel(), properties.getAi().getDefaultReasoningEffort()),
                 authRef,
                 packet,
                 preparation,

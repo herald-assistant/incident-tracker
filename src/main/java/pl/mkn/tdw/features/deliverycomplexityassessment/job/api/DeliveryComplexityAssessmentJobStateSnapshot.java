@@ -13,8 +13,6 @@ public record DeliveryComplexityAssessmentJobStateSnapshot(
         String jiraProject,
         LocalDate fromDate,
         LocalDate toDate,
-        String aiModel,
-        String reasoningEffort,
         String status,
         String currentStepCode,
         String currentStepLabel,

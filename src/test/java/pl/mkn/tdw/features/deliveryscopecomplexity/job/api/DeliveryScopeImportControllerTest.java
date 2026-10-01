@@ -72,8 +72,6 @@ class DeliveryScopeImportControllerTest {
                 "CRM",
                 LocalDate.parse("2026-07-01"),
                 LocalDate.parse("2026-07-31"),
-                "gpt-5.4-mini",
-                "medium",
                 "COMPLETED_WITH_WARNINGS",
                 "COMPLETED",
                 "Completed with warnings",

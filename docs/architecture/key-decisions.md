@@ -1130,6 +1130,36 @@ na jednostce przed wyslaniem i pokazywany w kroku `AI_INPUT_PREPARATION`.
 Raport jednostki powstaje deterministycznie z finalnego JSON-a. Kredyty AI
 sa agregowane z usage jednostek i pokazywane wylacznie we wspolnym aside.
 
+## 28a. Oba assessmenty dobieraja model do pelnego kontekstu jednostki
+
+Operator podaje projekt Jira i daty. Feature posiada w properties pare
+model/effort default oraz pare long-context. Neutralny preflight
+`aiplatform.copilot.runtime.context` mierzy faktyczny prepared prompt razem
+z instrukcjami i rezerwa oraz korzysta z limitow dynamicznego `models.list`.
+Gdy default bez long context nie pomiesci materialu, wybierana jest para
+long-context dla tej Delivery Unit. Default wspierajacy tier zachowuje model.
+Platforma potwierdza wymagany tier przed send; brak pojemnosci lub metadanych
+jest kontrolowanym bledem jednostki.
+
+Katalog zachowuje zwykle okno takze dla modeli bez rozszerzonego tieru.
+Limity `maxPromptTokens` i `maxContextWindowTokens` sa osobnymi ograniczeniami.
+Budzet promptu z billing metadata wraz z `maxOutputTokens` wyznacza okno
+odpowiedniego tieru; `maxPromptTokens` ma pierwszenstwo przed deprecated
+`contextMax`, a wynik jest ograniczany przez dostepne maksima capabilities.
+Semantyka pochodzi ze
+[schematu RPC Copilot SDK](https://github.com/github/copilot-sdk/blob/main/nodejs/src/generated/rpc.ts),
+a nie z tabel nazw modeli. Estymator liczy faktyczny prompt i instrukcje
+z platformowa rezerwa, bez ponownego liczenia inline artifacts. Jest
+przyblizeniem; granica `>=` oznacza brak bezpiecznego miejsca. Wylaczenie
+`analysis.ai.copilot.context-tier.enabled` blokuje jednostki wymagajace
+rozszerzonego tieru przed wyslaniem materialu.
+
+Wybor jest zapisywany przed sesja w activity i metadata jednostki.
+Agregat usage dla roznych modeli nie deklaruje arbitralnie jednego modelu.
+Publiczny request i aktualny V1 eksport nie zachowuja poprzednich globalnych
+opcji. Preflight nie zmienia evidence, tresci promptow/skilli, scoringu,
+procedury one-shot ani modelu pozostalych feature'ow.
+
 ## 29. Alternatywny scoring jest izolowany jako osobny eksperyment
 
 `Delivery Scope Complexity` nie jest trybem ani wersja Delivery Complexity

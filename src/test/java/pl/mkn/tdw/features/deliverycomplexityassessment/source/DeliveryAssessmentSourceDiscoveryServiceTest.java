@@ -250,8 +250,7 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
 
     private DeliveryComplexityAssessmentJobStartRequest request(String from, String to) {
         return new DeliveryComplexityAssessmentJobStartRequest(
-                "CRM", LocalDate.parse(from), LocalDate.parse(to), "gpt-5", "medium"
-        );
+                "CRM", LocalDate.parse(from), LocalDate.parse(to));
     }
 
     private DeliveryAssessmentSourceExecutor directSourceExecutor() {
