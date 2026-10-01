@@ -93,8 +93,8 @@ class DeliveryScopeSourceDiscoveryServiceTest {
         var materialRequest = ArgumentCaptor.forClass(JiraIssueMaterialRequest.class);
         verify(issuePort).getIssueMaterial(materialRequest.capture());
         assertThat(materialRequest.getValue().includeComments()).isFalse();
-        assertThat(materialRequest.getValue().includeSubTasks()).isFalse();
-        assertThat(materialRequest.getValue().includeParent()).isFalse();
+        assertThat(materialRequest.getValue().includeSubTasks()).isTrue();
+        assertThat(materialRequest.getValue().includeParent()).isTrue();
         assertThat(materialRequest.getValue().customFieldIds()).isEmpty();
     }
 

@@ -1192,5 +1192,4 @@ cache hit. UI pokazuje `Data:` przy `View` i nie prezentuje SHA.
 
 Neutralny `GitLabRepositoryToolScope` utrzymuje osobny tryb pinned dla
 Operational Context Assistance. Formaty cache, exportu, local runu i
-continuation zmienione dla UI/UX maja V1; stare readery i lokalne rekordy
-tych feature'ow zostaly usuniete.
+continuation UI/UX uzywaja wylacznie wersji 1 i odrzucaja inne formaty.

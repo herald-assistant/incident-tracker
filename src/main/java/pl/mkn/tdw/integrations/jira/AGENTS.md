@@ -17,6 +17,13 @@ profilu detailed albo ograniczonego profilu assessment.
 - Jira-specific parsing, limity i nietypowe zachowania HTTP izoluj lokalnie.
 - Publiczny typed search request nie moze przyjmowac raw JQL od feature'a ani UI.
 - Status category rozpoznawaj z kontraktu Jira, nie z nazwy statusu.
+- Hierarchie odczytuj z `parent` i `subtasks`, bez fallbacku po nazwie typu.
+  Flaga `issuetype.subtask` sygnalizuje luke przy braku parent key.
+- Profil assessment obejmuje bezposredni parent i dzieci, bez komentarzy
+  takze w odczytach powiazanych. Nie rozwijaj rodzenstwa ani kolejnych
+  poziomow. Profil detailed zachowuje rozszerzony material powiazany.
+- Nieudany odczyt powiazanego zadania zachowuje znany klucz i relacje oraz
+  jawny limitation. Limit dzieci obejmuje tez nieudane proby odczytu.
 - Kontrakty tooli, promptow i evidence mapping zostaja w warstwach wyzszych.
 
 ## Weryfikacja

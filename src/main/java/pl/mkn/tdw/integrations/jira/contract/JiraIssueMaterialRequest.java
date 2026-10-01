@@ -56,10 +56,10 @@ public record JiraIssueMaterialRequest(
     }
 
     public static JiraIssueMaterialRequest assessment(String issueKey) {
-        return new JiraIssueMaterialRequest(issueKey, false, true, true, false, false, true);
+        return assessment(issueKey, List.of());
     }
 
     public static JiraIssueMaterialRequest assessment(String issueKey, List<String> customFieldIds) {
-        return new JiraIssueMaterialRequest(issueKey, false, true, true, false, false, true, customFieldIds);
+        return new JiraIssueMaterialRequest(issueKey, false, true, true, true, true, true, customFieldIds);
     }
 }

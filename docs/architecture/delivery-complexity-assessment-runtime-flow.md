@@ -130,7 +130,8 @@ feature dodatkowo:
 5. odrzuca issue z ucietym changelogiem albo niepotwierdzonym `doneAt`.
 
 Material issue jest pobierany istniejacym `JiraIssuePort`, ale profilem
-assessment: bez komentarzy, parent i subtasks, z opisem, acceptance criteria,
+assessment: bez komentarzy, z bezposrednim parent i bezposrednimi subtasks,
+z opisem, acceptance criteria,
 issue links, remote links, jawnie powiazanymi stronami Confluence oraz
 opcjonalnym polem zespolu z
 `delivery-complexity-assessment.jira-team-field-id`. Pole zespolu jest
@@ -139,6 +140,15 @@ tez widoczne w chwili pobrania `timespent`, original estimate i remaining
 estimate wraz z timestampem snapshotu. Te pola sa metadanymi raportowymi i nie
 sa evidence dla AI. Stary profil detailed pozostaje kontraktem Change
 Verification.
+
+Profil assessment rozwija tylko jeden poziom relacji: material parent nie
+zawiera rodzenstwa ani dalszych przodkow, a material child nie rozwija
+kolejnego poziomu ani parent. Ustawienia pobierania komentarzy, issue links
+i remote links obowiazuja takze przy odczytach powiazanych. Relacje pochodza
+z pol Jira `parent` i `subtasks`, bez interpretowania nazw typow.
+Flaga `issuetype.subtask` pozwala zglosic brak parent key. Nieudany odczyt
+powiazanego zadania zachowuje jego znany klucz i relacje, z pustym materialem
+oraz jawnym limitation; nie usuwa poprawnie zakwalifikowanego zadania.
 
 Przetwarzanie kandydatow issue po wyszukaniu JQL jest wykonywane przez
 dedykowany, ograniczony executor source discovery. Limit
@@ -172,6 +182,19 @@ integracje:
 - wszystkie changed paths i pelna tresc dostepnych diffow,
 - visibility limits wynikajace wylacznie z partial source failures albo
   ograniczen zgloszonych przez integracje.
+
+Jira artifact jawnie wskazuje oceniane zadania z `unit.issues()` oraz ich
+potwierdzone role nadrzedne/podrzedne. Dodatkowy parent i children sa oznaczone
+`KONTEKST POZA ZAKRESEM OCENY`, chyba ze ich klucz juz nalezy do jednostki.
+Nazwy typow Jira nie sa renderowane jako metadata dla AI; oryginalny
+`issueType` pozostaje w operatorskim snapshotcie i CSV.
+Kazde zadanie ma jedna sekcje z zachowaniem odmiennych tresci z odczytow,
+a identyczne dokumenty sa renderowane raz z lista powiazanych zadan.
+Brak potwierdzonej relacji nie upowaznia modelu do zgadywania hierarchii.
+Opis rodzica wyjasnia intencje, ale nie dowodzi dostarczenia jego calego
+zakresu. Scoring dotyczy union zachowania potwierdzonego przez merged MR-y
+biezacej jednostki. Hierarchia nie laczy dodatkowych Delivery Units i nie
+zmienia qualification, zakresu dat ani wyszukiwania MR-ow.
 
 Feature renderuje te logiczne pliki bezposrednio w finalnym prompcie miedzy
 jawnymi markerami artifact. `CopilotRunRequest.artifactContents` zachowuje ich

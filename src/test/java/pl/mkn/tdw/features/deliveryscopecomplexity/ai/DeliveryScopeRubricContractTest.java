@@ -7,15 +7,21 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkill;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkillState;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.features.deliveryscopecomplexity.evidence.DeliveryEvidencePacket;
+import pl.mkn.tdw.features.deliveryscopecomplexity.evidence.DeliveryEvidencePacketBuilder;
+import pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit.DeliveryUnit;
+import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeTestFixtures.material;
+import static pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeTestFixtures.mergeRequest;
 
 class DeliveryScopeRubricContractTest {
 
@@ -40,6 +46,9 @@ class DeliveryScopeRubricContractTest {
         assertThat(StringUtils.countOccurrencesOf(skill, "- `41-60`:")).isGreaterThanOrEqualTo(6);
         assertThat(StringUtils.countOccurrencesOf(skill, "- `81-100`:")).isGreaterThanOrEqualTo(6);
         assertThat(normalizedSkill)
+                .contains("niezaleznie od nazw typow Jira")
+                .contains("KONTEKST POZA ZAKRESEM OCENY nie rozszerza dostawy")
+                .doesNotContain("Klucz Jira typu Story, Bug albo Task")
                 .contains("Brak danych")
                 .contains("nie jest dowodem score `0`")
                 .contains("Agregacja, wagi, zaokraglenia i wynik koncowy sa wyliczane deterministycznie poza modelem")
@@ -90,6 +99,8 @@ class DeliveryScopeRubricContractTest {
         var preparation = new DeliveryPromptPreparationService(skillRuntimeLoader).prepare(packet);
 
         assertThat(preparation.prompt())
+                .contains("## Zakres oceny i hierarchia zadan")
+                .contains("Ten kontrakt zakresu oceny ma pierwszenstwo")
                 .contains("To jest jednokrokowy request")
                 .contains("Nie wywoluj toola `skill`")
                 .contains("----- BEGIN EFFECTIVE SKILL: delivery-scope-complexity-evaluator -----")
@@ -109,5 +120,32 @@ class DeliveryScopeRubricContractTest {
                 .contains("----- END ARTIFACT: delivery-scope-complexity/issues.md -----");
         assertThat(preparation.prompt()).doesNotContain("report_upsert_section");
         assertThat(preparation.artifacts()).containsKey("delivery-scope-complexity/issues.md");
+    }
+    @Test
+    void shouldCarrySemanticScopeWithPriorityOverConflictingCustomSkill() {
+        var parent = material("CRM-100");
+        var child = material(
+                "CRM-124", "CRM Implementation", List.of(), parent, List.of());
+        var issue = new DeliveryScopeIssue(
+                child.issueKey(), Instant.parse("2026-07-10T10:00:00Z"), child, List.of());
+        var unit = new DeliveryUnit("DU-CRM-124", List.of(issue),
+                List.of(mergeRequest(7, "src/main/java/CustomerStatus.java", "+class CustomerStatus {}")), List.of());
+        var packet = new DeliveryEvidencePacketBuilder().build(unit);
+        var customSkill = "Klucz Jira typu Story, Bug albo Task jest jedna jednostka oceny.";
+        var loader = mock(CopilotSkillRuntimeLoader.class);
+        when(loader.availableSkills()).thenReturn(List.of(new CopilotRuntimeSkill(
+                DeliveryPromptPreparationService.SKILL_NAME, "Assessment", 1,
+                customSkill, customSkill, CopilotRuntimeSkillState.CUSTOM, true)));
+
+        var prompt = new DeliveryPromptPreparationService(loader).prepare(packet).prompt();
+
+        assertThat(prompt).contains(
+                "Oceniane zadania: CRM-124",
+                "Zadanie podrzedne wobec: CRM-100",
+                "## CRM-100\n\n- Zakres oceny: KONTEKST POZA ZAKRESEM OCENY",
+                "Ten kontrakt zakresu oceny ma pierwszenstwo", customSkill);
+        assertThat(prompt).doesNotContain("Type:", "CRM Implementation");
+        assertThat(prompt.indexOf("## Zakres oceny i hierarchia zadan"))
+                .isLessThan(prompt.indexOf("----- BEGIN EFFECTIVE SKILL: delivery-scope-complexity-evaluator -----"));
     }
 }

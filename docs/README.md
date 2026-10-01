@@ -62,10 +62,6 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- [UI Explorer i UX Inspector: analiza wedlug wybranego brancha](needs/frontend-analysis-branch-source-strategy.md)
-  oraz [draft planu strategii branchowej](plans/frontend-analysis-branch-source-strategy.md)
-  opisuja migracje od walidacji i przypinania SHA do odczytow brancha z cache
-  przez caly run i follow-up. Plan czeka na zatwierdzenie.
 - [UX Inspector: jedno przekazanie obserwacji](needs/ux-inspector-capture-snapshot.md)
   oraz [plan capture przez REST](plans/ux-inspector-capture-snapshot.md)
   opisuja upload calej obserwacji z badanej strony, snapshot w
@@ -111,7 +107,7 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
   opisuje source scope, rule ledger, deterministyczna decyzje, prompt, skille,
   tools, report, import/export i UI Change Verification.
 - `architecture/ui-explorer-runtime-flow.md`
-  opisuje katalog widokow, pinned source context, report-first Copilot flow,
+  opisuje katalog widokow, branchowy source context, report-first Copilot flow,
   osiem sekcji wyniku, follow-up chat, historie i portability UI Explorera.
 - `architecture/ux-inspector-runtime-flow.md`
   opisuje Browser Tools, capture v3 przez jeden POST i odczyt po ID, target resolution,

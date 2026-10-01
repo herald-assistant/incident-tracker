@@ -227,7 +227,7 @@ odczytuje pending capture ani nie wymaga jego istnienia po restarcie.
 ### Start, prompt, tools i historia
 
 Publiczny `UxInspectorJobStartRequest` zawiera `captureId`, `systemId`,
-`branch`, `viewId`, `sourceRevision`, `question`, `model`, `reasoningEffort`.
+`branch`, `viewId`, `question`, `model`, `reasoningEffort`.
 Pola `capture`, `storeSnapshotRef` i `formFieldsSnapshotRef` sa odrzucane.
 
 `UxInspectorJobService` najpierw odczytuje wskazany snapshot z pamieci;
@@ -253,16 +253,16 @@ tool schema, hidden scope, skill workflow, tresci raportu ani polityki AI.
 
 ### Jedno wydanie bez kompatybilnosci
 
-Nowy kontrakt obserwacji to capture v3 (ID przeniesione do snapshotu), a
-export ma jedna aktualna wersje v3 i `ux-inspector-result-v3`. Zmiana dotyczy
+Kontrakt obserwacji to capture v3 (ID przeniesione do snapshotu), a
+export ma jedna aktualna wersje v1 i `ux-inspector-result-v1`. Zmiana dotyczy
 koperty i identyfikacji danych; merytoryczny wynik pozostaje taki sam.
 Nie ma migratorow, alternatywnego startu z inline capture, starych uploadow,
-legacy export v1/v2 ani fallbacku odtwarzajacego stara sesje po nazwie.
+odczytu poprzednich kopert exportu ani fallbacku odtwarzajacego stara sesje po nazwie.
 Nowe rodzime runy musza miec jawny continuation contract.
 
 Publiczne snapshoty nadal nie zawieraja pelnego store'a, a import nowego
-exportu pozostaje read-only. Nie wykonujemy automatycznego czyszczenia danych
-workspace'u; brak kompatybilnosci oznacza brak obslugi starych formatow.
+exportu pozostaje read-only. Czyszczenie lokalnego workspace'u obejmuje tylko
+poprzednie formaty UX Inspectora, nie dane innych feature'ow.
 
 ### Reuse i alternatywy
 

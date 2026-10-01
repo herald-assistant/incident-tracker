@@ -31,6 +31,14 @@ Request zawiera `jiraProject`, `fromDate`, `toDate`, model i opcjonalny
 przejscie issue do statusu Done w lokalnym zakresie dat i pobiera material Jira
 oraz merged MR-y przez neutralne integracje.
 
+Profil assessment pobiera bezposredni parent i bezposrednie children,
+zawsze bez komentarzy takze w odczytach powiazanych. Nie rozwija rodzenstwa,
+dalszych przodkow ani dzieci kontekstowych zadan. Neutralny adapter
+rozpoznaje relacje z pol Jira `parent` i `subtasks`, bez slownika nazw
+typow. Flaga `issuetype.subtask` sluzy do wykrywania braku parent key.
+Nieudany odczyt parent/child zachowuje znana relacje i klucz z jawnym
+limitation zamiast zatrzymywac ocene zadania.
+
 Jedna jednostka oceny odpowiada spojnemu grafowi issue-MR. Powiazane issue,
 subtaski i wiele MR-ow sa skladane w jedna wirtualna zmiane. Ten sam MR nie jest
 punktowany wielokrotnie. Source discovery i assessment maja osobne bounded
@@ -46,6 +54,19 @@ Feature buduje wlasny inline evidence packet z Jira, Confluence i pelnych
 danych merged MR zwroconych przez integracje. Story Points, snapshot
 `timespent` i estimate, worklogi, komentarze i dane osobowe nie sa evidence dla
 modelu.
+
+Artifact Jira wskazuje oceniane zadania z `unit.issues()` oraz potwierdzone
+role nadrzedne/podrzedne. Parent i children nienalezace do jednostki maja
+oznaczenie `KONTEKST POZA ZAKRESEM OCENY`. Nazwa typu Jira nie jest
+metadana inputu AI; pozostaje oryginalna metadana snapshotu, CSV i trendow.
+Kazde zadanie jest renderowane w jednej sekcji z zachowaniem odmiennych
+tresci, a identyczne dokumenty raz z lista powiazanych zadan. Brak relacji
+nie jest podstawa zgadywania typu.
+Opis rodzica jest intencja, a nie dowodem dostarczenia jego calego zakresu.
+Prompt i skill wymagaja oceny union zachowania potwierdzonego przez merged
+MR-y jednostki bez zwielokrotnienia wyniku przez podzial na zadania.
+Kontrakt zakresu oceny w prompcie ma pierwszenstwo przed sprzeczna definicja
+jednostki w customowym effective skillu.
 
 Kazda ocenialna Delivery Unit uruchamia jedna nowa sesje Copilota. Prompt
 zawiera effective tresc skilla `delivery-scope-complexity-evaluator`, kontrakt

@@ -3,6 +3,9 @@ package pl.mkn.tdw.features.deliveryscopecomplexity.evidence;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit.DeliveryUnit;
+import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssue;
+import pl.mkn.tdw.integrations.jira.contract.JiraConfluencePage;
+import pl.mkn.tdw.integrations.jira.contract.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestChangedFile;
 
@@ -11,6 +14,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+
+import static java.util.stream.Collectors.joining;
 
 @Component("deliveryScopeEvidencePacketBuilder")
 public class DeliveryEvidencePacketBuilder {
@@ -22,7 +28,7 @@ public class DeliveryEvidencePacketBuilder {
         var mechanicallyExcluded = scorable && allFilesMechanical(unit.mergeRequests());
 
         var artifacts = new LinkedHashMap<String, String>();
-        artifacts.put("delivery-scope-complexity/issues.md", renderIssues(unit.issues()));
+        artifacts.put("delivery-scope-complexity/issues.md", renderIssues(unit, visibilityLimits));
         artifacts.put("delivery-scope-complexity/merge-requests.md",
                 renderMergeRequests(unit.mergeRequests(), visibilityLimits));
         artifacts.put("delivery-scope-complexity/diffs.md", renderDiffs(unit.mergeRequests(), visibilityLimits));
@@ -36,25 +42,90 @@ public class DeliveryEvidencePacketBuilder {
         );
     }
 
-    private String renderIssues(List<pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssue> issues) {
-        var text = new StringBuilder("# Jira delivery scope\n\n");
-        for (var issue : issues) {
+    private String renderIssues(DeliveryUnit unit, LinkedHashSet<String> visibilityLimits) {
+        var assessedIssues = new LinkedHashMap<String, DeliveryScopeIssue>();
+        unit.issues().forEach(issue -> assessedIssues.put(issue.issueKey(), issue));
+        var materials = new LinkedHashMap<String, List<JiraIssueMaterial>>();
+        var parentsByChild = new LinkedHashMap<String, LinkedHashSet<String>>();
+        var childrenByParent = new LinkedHashMap<String, LinkedHashSet<String>>();
+        unit.issues().forEach(issue -> addMaterial(materials, issue.material()));
+        for (var issue : unit.issues()) {
             var material = issue.material();
-            text.append("## ").append(issue.issueKey()).append("\n\n")
-                    .append("- Done at: ").append(issue.doneAt()).append("\n")
-                    .append("- Type: ").append(value(material.issueType())).append("\n")
-                    .append("- Summary: ").append(value(material.summary())).append("\n")
-                    .append("- Labels: ").append(String.join(", ", material.labels())).append("\n\n")
-                    .append("### Description\n\n")
-                    .append(text(material.description())).append("\n\n")
-                    .append("### Acceptance criteria\n\n");
-            material.acceptanceCriteria().forEach(criterion -> text.append("- ").append(criterion).append("\n"));
-            for (var page : material.confluencePages()) {
-                text.append("\n### Linked document: ").append(value(page.title())).append("\n\n")
-                        .append(text(page.content())).append("\n");
+            if (material.parentIssue() != null) {
+                addMaterial(materials, material.parentIssue());
+                addRelation(parentsByChild, childrenByParent, material.parentIssue().issueKey(), issue.issueKey());
+            }
+            for (var child : material.subTasks()) {
+                addMaterial(materials, child);
+                addRelation(parentsByChild, childrenByParent, issue.issueKey(), child.issueKey());
             }
         }
+
+        var documents = new LinkedHashMap<JiraConfluencePage, LinkedHashSet<String>>();
+        var text = new StringBuilder("# Jira delivery scope\n\n")
+                .append("- Oceniane zadania: ").append(String.join(", ", assessedIssues.keySet())).append("\n")
+                .append("- Pozostale zadania sa kontekstem poza zakresem oceny.\n\n");
+        materials.forEach((key, variants) -> {
+            var assessed = assessedIssues.get(key);
+            text.append("## ").append(key).append("\n\n")
+                    .append("- Zakres oceny: ").append(assessed != null
+                            ? "OCENIANE ZADANIE" : "KONTEKST POZA ZAKRESEM OCENY").append("\n");
+            if (assessed != null) {
+                text.append("- Done at: ").append(assessed.doneAt()).append("\n");
+            }
+            var parents = parentsByChild.getOrDefault(key, new LinkedHashSet<>());
+            var children = childrenByParent.getOrDefault(key, new LinkedHashSet<>());
+            if (!parents.isEmpty()) {
+                text.append("- Zadanie podrzedne wobec: ").append(String.join(", ", parents)).append("\n");
+            }
+            if (!children.isEmpty()) {
+                text.append("- Zadanie nadrzedne wobec: ").append(String.join(", ", children)).append("\n");
+            }
+            if (parents.isEmpty() && children.isEmpty()) {
+                text.append("- Relacje: brak potwierdzonego parent/child w dostepnym materiale.\n");
+            }
+            text.append("- Summary: ").append(variants.stream().map(JiraIssueMaterial::summary)
+                            .filter(StringUtils::hasText).distinct().collect(joining(" | ")))
+                    .append("\n")
+                    .append("- Labels: ").append(variants.stream().flatMap(variant -> variant.labels().stream())
+                            .distinct().collect(joining(", ")))
+                    .append("\n\n### Description\n\n");
+            variants.stream().map(JiraIssueMaterial::description).filter(StringUtils::hasText).distinct()
+                    .forEach(description -> text.append(text(description)).append("\n\n"));
+            text.append("### Acceptance criteria\n\n");
+            variants.stream().flatMap(variant -> variant.acceptanceCriteria().stream()).distinct()
+                    .forEach(criterion -> text.append("- ").append(criterion).append("\n"));
+            for (var variant : variants) {
+                variant.limitations().forEach(limit -> visibilityLimits.add("Jira issue " + key + ": " + limit));
+                for (var page : variant.confluencePages()) {
+                    documents.computeIfAbsent(page, ignored -> new LinkedHashSet<>()).add(key);
+                    page.limitations().forEach(limit -> visibilityLimits.add(
+                            "Jira issue " + key + ", document " + value(page.title()) + ": " + limit));
+                }
+            }
+            text.append("\n");
+        });
+        documents.forEach((page, keys) -> text.append("## Linked document: ").append(value(page.title()))
+                .append("\n\n- Referenced by tasks: ").append(String.join(", ", keys)).append("\n\n")
+                .append(text(page.content())).append("\n\n"));
         return text.toString();
+    }
+
+    private void addMaterial(Map<String, List<JiraIssueMaterial>> materials, JiraIssueMaterial material) {
+        var variants = materials.computeIfAbsent(material.issueKey(), ignored -> new ArrayList<>());
+        if (!variants.contains(material)) {
+            variants.add(material);
+        }
+    }
+
+    private void addRelation(
+            Map<String, LinkedHashSet<String>> parentsByChild,
+            Map<String, LinkedHashSet<String>> childrenByParent,
+            String parent,
+            String child
+    ) {
+        parentsByChild.computeIfAbsent(child, ignored -> new LinkedHashSet<>()).add(parent);
+        childrenByParent.computeIfAbsent(parent, ignored -> new LinkedHashSet<>()).add(child);
     }
 
     private String renderMergeRequests(List<GitLabMergeRequest> mergeRequests, LinkedHashSet<String> visibilityLimits) {

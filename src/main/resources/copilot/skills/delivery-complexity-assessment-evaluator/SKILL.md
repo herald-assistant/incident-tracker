@@ -7,6 +7,21 @@ description: Ocenia obserwowalna semantyczna zlozonosc jednej dostarczonej zmian
 
 Oceniaj wylacznie evidence przekazane dla biezacej Delivery Unit.
 
+## Jednostka analizy i hierarchia zadan
+
+- Oceniane zadania sa jawnie wskazane w artifact issues.md. Razem z merged
+  MR-ami tworza jedna Delivery Unit, niezaleznie od nazw typow Jira.
+- Relacje zadanie nadrzedne -> zadania podrzedne pochodza z Jira.
+  Nie rekonstruuj hierarchii z nazw, tytulow ani etykiet.
+- Zadanie nadrzedne jest kontekstem intencji. Nie przypisuj ocenianemu
+  zadaniu calego zakresu rodzica bez potwierdzenia w MR-ach jednostki.
+- Material oznaczony KONTEKST POZA ZAKRESEM OCENY nie rozszerza dostawy.
+- Oceniaj union faktycznie dostarczonego zachowania tylko raz. Podzial na
+  zadania podrzedne, MR-y lub repozytoria nie zwielokrotnia zlozonosci.
+- Niedostepny material powiazanego zadania pozostaje jawna luka widocznosci.
+  Zadanie bez potwierdzonych relacji oceniaj w aktualnym zakresie, bez
+  zgadywania typu ani pelnego zakresu rodzica.
+
 ## Zasady
 
 1. Nie estymuj czasu pracy, dni, seniority ani produktywnosci ludzi.

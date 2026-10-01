@@ -102,9 +102,9 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         links.addAll(remoteLinks);
 
         var limitations = new ArrayList<String>();
-        var parentIssue = request.includeParent() ? parentIssue(issueKey, fields, limitations) : null;
+        var parentIssue = request.includeParent() ? parentIssue(request, fields, limitations) : null;
         var subTasks = request.includeSubTasks()
-                ? subTasks(fields != null ? fields.path("subtasks") : null, limitations, excludedSubTaskKey)
+                ? subTasks(request, fields != null ? fields.path("subtasks") : null, limitations, excludedSubTaskKey)
                 : List.<JiraIssueMaterial>of();
         var confluencePages = request.includeConfluencePages()
                 ? confluencePages(remoteLinks, limitations)
@@ -167,53 +167,56 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         );
     }
 
-    private JiraIssueMaterial parentIssue(String targetIssueKey, JsonNode fields, List<String> limitations) {
-        if (fields == null || fields.isMissingNode() || !isSubTask(fields)) {
+    private JiraIssueMaterial parentIssue(JiraIssueMaterialRequest request, JsonNode fields, List<String> limitations) {
+        if (fields == null || fields.isMissingNode()) {
             return null;
         }
 
         var parentKey = text(fields.path("parent"), "key", "");
         if (!StringUtils.hasText(parentKey)) {
-            limitations.add("Jira target issue is a subtask, but parent key was not available.");
+            if (fields.path("issuetype").path("subtask").asBoolean(false)) {
+                limitations.add("Jira target issue is a subtask, but parent key was not available.");
+            }
+            return null;
+        }
+        if (parentKey.equalsIgnoreCase(request.issueKey())) {
+            limitations.add("Jira parent relation points to the target issue itself.");
             return null;
         }
         try {
-            return getIssueMaterial(new JiraIssueMaterialRequest(
+            // Detailed reads retain sibling context; the comment-free assessment profile stays one level deep.
+            var parent = getIssueMaterial(new JiraIssueMaterialRequest(
                     parentKey,
-                    true,
-                    true,
-                    true,
-                    true,
+                    request.includeComments(),
+                    request.includeRemoteLinks(),
+                    request.includeIssueLinks(),
+                    request.includeComments() && request.includeSubTasks(),
                     false,
-                    true
-            ), targetIssueKey);
+                    request.includeConfluencePages()
+            ), request.issueKey());
+            parent.limitations().forEach(limit -> limitations.add("Jira parent issue " + parentKey + ": " + limit));
+            return parent;
         } catch (RuntimeException exception) {
-            limitations.add("Jira parent issue " + parentKey + " could not be fetched: " + safeMessage(exception));
-            return null;
+            var limitation = "Jira parent issue " + parentKey + " could not be fetched: " + safeMessage(exception);
+            limitations.add(limitation);
+            return unavailableRelatedIssue(parentKey, limitation);
         }
     }
 
-    private boolean isSubTask(JsonNode fields) {
-        if (fields.path("issuetype").path("subtask").asBoolean(false)) {
-            return true;
-        }
-        var issueType = text(fields.path("issuetype"), "name", "");
-        return StringUtils.hasText(issueType)
-                && issueType.toLowerCase(java.util.Locale.ROOT).replace("-", "").replace(" ", "").contains("subtask");
-    }
-
-    private List<JiraIssueMaterial> subTasks(JsonNode subTasks, List<String> limitations, String excludedSubTaskKey) {
+    private List<JiraIssueMaterial> subTasks(
+            JiraIssueMaterialRequest request,
+            JsonNode subTasks,
+            List<String> limitations,
+            String excludedSubTaskKey
+    ) {
         if (subTasks == null || !subTasks.isArray()) {
             return List.of();
         }
 
         var values = new ArrayList<JiraIssueMaterial>();
+        var attemptedKeys = new LinkedHashSet<String>();
         var maxSubTasks = Math.max(0, properties.getMaxSubTasks());
         for (var subTask : subTasks) {
-            if (values.size() >= maxSubTasks) {
-                limitations.add("Jira subtasks were truncated to analysis.jira.max-sub-tasks=" + maxSubTasks + ".");
-                break;
-            }
             var subTaskKey = text(subTask, "key", "");
             if (!StringUtils.hasText(subTaskKey)) {
                 continue;
@@ -221,21 +224,41 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
             if (StringUtils.hasText(excludedSubTaskKey) && subTaskKey.equalsIgnoreCase(excludedSubTaskKey.trim())) {
                 continue;
             }
+            if (subTaskKey.equalsIgnoreCase(request.issueKey()) || attemptedKeys.contains(subTaskKey)) {
+                continue;
+            }
+            if (attemptedKeys.size() >= maxSubTasks) {
+                limitations.add("Jira subtasks were truncated to analysis.jira.max-sub-tasks=" + maxSubTasks + ".");
+                break;
+            }
+            attemptedKeys.add(subTaskKey);
             try {
-                values.add(getIssueMaterial(new JiraIssueMaterialRequest(
+                var child = getIssueMaterial(new JiraIssueMaterialRequest(
                         subTaskKey,
-                        true,
-                        true,
-                        true,
+                        request.includeComments(),
+                        request.includeRemoteLinks(),
+                        request.includeIssueLinks(),
                         false,
                         false,
-                        true
-                ), null));
+                        request.includeConfluencePages()
+                ), null);
+                values.add(child);
+                child.limitations().forEach(limit -> limitations.add("Jira subtask " + subTaskKey + ": " + limit));
             } catch (RuntimeException exception) {
-                limitations.add("Jira subtask " + subTaskKey + " could not be fetched: " + safeMessage(exception));
+                var limitation = "Jira subtask " + subTaskKey + " could not be fetched: " + safeMessage(exception);
+                limitations.add(limitation);
+                values.add(unavailableRelatedIssue(subTaskKey, limitation));
             }
         }
         return List.copyOf(values);
+    }
+
+    private JiraIssueMaterial unavailableRelatedIssue(String key, String limitation) {
+        return new JiraIssueMaterial(
+                key, issueBrowseUrl(key), "", "", "", "UNAVAILABLE",
+                List.of(), List.of(), List.of(), List.of(), null, List.of(), List.of(),
+                List.of(limitation), List.of(), null
+        );
     }
 
     private List<JiraConfluencePage> confluencePages(List<JiraIssueLink> remoteLinks, List<String> limitations) {

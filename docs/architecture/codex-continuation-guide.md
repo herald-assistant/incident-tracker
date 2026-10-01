@@ -85,15 +85,15 @@ zatwierdzony invariant trafia do architektury.
   brakujacych zrodel in-scope, report-first wynikiem zapisywanym przez
   platformowe report tools bez parsowania finalnej odpowiedzi, job,
   business-first report bez osobnego appendixu zaleznosci, follow-up
-  chat na przypietym commicie, wznowienie z historii po restarcie oraz
-  import/export v6 z jawnym odczytem v5.
+  chat na wybranym branchu, wznowienie z historii po restarcie oraz
+  import/export v1.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`
   UX Inspector: strict capture v3 zapisany jednym POST w pamieci przed startem,
   odczyt GET po ID, deterministic target resolution i source binding, focused
   Copilot prompt bez runtime skilli, session-bound `uxi_*` target tools,
   czteropoziomowa mape nazw sciezek i neutralne GitLab
-  navigation/search/read tools dla calego wybranego repozytorium pod pinned
-  policy, jednosekcyjny report, job/history oraz import/export v3. Runtime opisuje
+  navigation/search/read tools dla calego wybranego repozytorium pod branchowa
+  policy, jednosekcyjny report, job/history oraz import/export v1. Runtime opisuje
   `docs/architecture/ux-inspector-runtime-flow.md`.
 
 Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.

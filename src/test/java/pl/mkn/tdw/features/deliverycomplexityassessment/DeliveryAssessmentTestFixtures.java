@@ -47,6 +47,21 @@ public final class DeliveryAssessmentTestFixtures {
         );
     }
 
+    public static JiraIssueMaterial material(
+            String key,
+            String issueType,
+            List<JiraIssueMaterial> children,
+            JiraIssueMaterial parent,
+            List<String> limitations
+    ) {
+        var base = material(key);
+        return new JiraIssueMaterial(
+                base.issueKey(), base.issueUrl(), base.summary(), base.description(), issueType,
+                base.status(), base.labels(), base.acceptanceCriteria(), base.links(), children, parent,
+                base.confluencePages(), base.comments(), limitations, base.customFields(), base.timeTracking()
+        );
+    }
+
     public static DeliveryAssessmentIssue issue(String key) {
         return new DeliveryAssessmentIssue(
                 key,

@@ -63,9 +63,8 @@ rowniez wskazac plik z anonimowa statyczna kolekcja
 obejmuje `loadComponent` ani kolekcji budowanych przez wywolania i transformacje.
 Ograniczenia katalogu pozostaja twarde: domyslnie
 200 000 znakow na plik i 2 000 000 lacznie, z jedna diagnostyka przyczynowa po
-wyczerpaniu limitu lacznego. Ref jest rozstrzygany
-bezposrednio do immutable commit id przez GitLab, niezaleznie od metadanych
-dowolnego pliku.
+wyczerpaniu limitu lacznego. Odczyty katalogu uzywaja nazwy wybranego
+brancha. Metadata commita z GitLaba nie przypina pozniejszych odczytow.
 Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z
 Operational Context i zwraca bounded katalog bez ujawniania danych GitLaba.
 Kosztowny wynik route graph discovery jest utrwalany w local workspace pod
@@ -74,7 +73,8 @@ reuse'uje wpis rowniez po restarcie aplikacji; jawne `refresh=true` omija i
 usuwa tylko dopasowany wpis przed ponownym discovery. Automatyczne ladowanie
 widokow w Angularze po wyborze galezi korzysta z cache; przy braku wpisu
 backend wykonuje discovery. Jawne `Load views` wymusza refresh.
-UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
+UI Explorer job ponownie szuka wybranego widoku na branchu bez porownywania
+SHA katalogu z biezacym stanem, a nastepnie buduje wewnetrzny bounded
 screen reachability graph i wystawia publiczny manifest, coverage, diagnostics
 oraz limity bez repository scope. Graf zaczyna od effective route chain i
 poddrzewa wybranego route node, laczy view targets przez jawne `ROUTED_CHILD`,
@@ -85,7 +85,7 @@ snapshotu plikow ani inventory; frontier pozostaje jawna kolejka dalszego
 targeted research.
 Wewnetrzny krok `AI_PREPARATION` przygotowuje siedem logical artifacts, feature
 prompt i guidance dla trzech polskich skilli. Prompt osadza kazdy artifact
-dokladnie raz i uklada je w kolejnosci request/sekcje, ekran/rewizja, effective
+dokladnie raz i uklada je w kolejnosci request/sekcje, ekran/branch, effective
 route i BFS z zaleznosciami, source slices, coverage/research queue, kontrakt
 pisania funkcjonalnego oraz kontrakt raportu. Artifact source slices v9
 grupuje komponenty, ich pelne osiagalne template'y i zaleznosci wedlug sciezki
@@ -124,11 +124,10 @@ sanitizowane z ukrytego scope'u i szczegolow tools, zachowuja prompt i sa
 zapisywane w lokalnej historii pod feature key `ui-explorer`;
 shared `/api/analysis/runs` odczytuje je po restarcie i dla zakonczonej albo
 czesciowej analizy moze wznowic te sama sesje Copilota. Prywatny,
-feature-owned snapshot zachowuje minimalny frozen scope widoku i immutable
-commit poza publicznym runem oraz exportem. Osobny
-`tdw.ui-explorer-export/v6` zapewnia sanitizowany export wyniku i rozmowy;
-reader zachowuje jawna migracje v5, a import v5/v6 jest zawsze read-only i
-ponownie sanitizowany przed zapisem do historii. Workspace Angular pod
+feature-owned snapshot zachowuje minimalny scope widoku i wybrany branch
+potrzebne do kontynuacji. `tdw.ui-explorer-export/v1` zapewnia sanitizowany
+export wyniku i rozmowy; import przyjmuje tylko v1, jest read-only i ponownie
+sanitizowany przed zapisem do historii. Workspace Angular pod
 `/ui-explorer` udostepnia route, sidebar i landing card oraz feature-owned
 konfiguracje z prawdziwych `input-options`, katalogu ekranow i shared katalogu
 AI. Workspace uzywa tego samego zwartego wzorca analysis composer co Flow
@@ -136,8 +135,8 @@ Explorer: target row grupuje frontend, branch/ref, widok i odswiezenie
 katalogu, scope row grupuje rozwijane tryby sekcji, model i reasoning,
 a ponizej znajduje sie opis scenariusza oraz obszar wyniku.
 Operator nadal moze edytowac wszystkie osiem trybow sekcji bez stalego
-zajmowania wysokosci strony. Source revision jest automatycznie przypisana do
-katalogu i czyszczona po zmianie scope'u. `Run UI Explorer` wysyla
+zajmowania wysokosci strony. Katalog pokazuje `Data:` z czasem zebrania,
+zachowanym przy cache hit i odnowionym przy refresh. `Run UI Explorer` wysyla
 feature-owned start request, natychmiast pokazuje snapshot z `202` i korzysta
 ze wspolnego pollingu bez nakladania requestow. Podczas aktywnego runu
 konfiguracja jest zablokowana. Shared analysis aside pokazuje kroki,
@@ -151,7 +150,7 @@ workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
 aktywne sekcje, confidence, references, visibility limits i open questions.
 Obok raportu shared follow-up chat pozwala pytac o wyjasnienia i rozszerzac
 analize. Odpowiedz uzywa prostego jezyka analityka i moze wykonac celowany
-odczyt kodu przez piec read-only tools na pierwotnym commicie. Jawna prosba
+odczyt kodu przez piec read-only tools na wybranym branchu. Jawna prosba
 operatora o aktualizacje raportu pozwala uzyc report tools; zwalidowane
 zmiany aktualizuja razem raport i wynik w historii oraz eksporcie. Odpowiedz,
 ktora zmienila raport, zachowuje w swoich referencjach surowa tresc zmienionych
@@ -168,12 +167,12 @@ aside. Shared result header, renderer Markdown, section content
 i report meta utrzymuja znany wzorzec prezentacji, a caly dokument mozna
 skopiowac albo pobrac jako Markdown. Katalog i naglowek raportu identyfikuja
 widok przede wszystkim przez `routePattern`, a nazwe komponentu pokazuja jako
-metadata pomocnicze; branch i immutable commit pozostaja w danych rewizji,
-lecz nie sa podtytulem raportu. `BLOCKED`, `FAILED` oraz terminalny stan
+metadata pomocnicze; branch pozostaje zrodlem kolejnych odczytow, a UI nie
+pokazuje SHA. `BLOCKED`, `FAILED` oraz terminalny stan
 bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
 feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
 ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
-koperta `tdw.ui-explorer-local-run/v6`, odtwarza konfiguracje, raport i chat
+koperta `tdw.ui-explorer-local-run/v1`, odtwarza konfiguracje, raport i chat
 oraz wlacza history continuation tylko przy poprawnym prywatnym snapshotcie i
 session id. Niedokonczony turn po restarcie staje sie `FAILED` bez ponownego
 wyslania. Importowany run pozostaje read-only i nigdy nie uzyskuje continuation.
@@ -184,8 +183,8 @@ i odrzuca obca, nieobslugiwana lub uszkodzona koperta bez fallbacku.
 Browser Tools maja osobna akcje UI Explorera, ktora bez wybierania elementu
 otwiera nowa karte z nieufna wskazowka route path i glownego routowanego
 komponentu. Formularz porownuje je z katalogiem wybranej aplikacji i refa,
-korzystajac z tego samego matcheru co UX Inspector; zrodlem screen id oraz
-immutable revision pozostaje katalog kodu, a job startuje tylko jawnie.
+korzystajac z tego samego matcheru co UX Inspector; zrodlem `screenId` pozostaje
+katalog kodu, a job startuje tylko jawnie i ponownie czyta branch.
 UX Inspector jest osobnym pionem dla jednego pytania o element wskazany przez
 TDW Browser Tools. Statyczne zasoby sa dostepne tylko pod `/browser-tools/**`;
 selection runtime tworzy capture v3 w jawnym profilu `ELEMENT_CONTEXT` albo
@@ -194,17 +193,18 @@ oraz store w pamieci backendu. Backend nadaje ID; formularz na
 `/ux-inspector?captureId=...` pobiera snapshot przez GET i pokazuje zwijany
 podglad. Profil formularza wyklucza dane wrazliwe. Zaufany
 formularz wymaga
-systemu, branch/ref, view, katalogowej source revision, pytania oraz poprawnej
-pary model/effort.
+systemu, branch/ref, view, pytania oraz poprawnej
+pary model/effort. Katalog View pokazuje `Data:` z czasem zebrania i nie
+prezentuje SHA; start ponownie czyta wybrany branch.
 
 `features.uxinspector` normalizuje capture ponownie, buduje ranked target
-context w pinned revision i klasyfikuje wynik jako `RESOLVED`, `AMBIGUOUS` albo
+context na wybranym branchu i klasyfikuje wynik jako `RESOLVED`, `AMBIGUOUS` albo
 `NOT_FOUND`. Copilot dostaje focused source slice, kompletna adaptacyjna
 procedure w prompcie, session-bound target refs, waskie frontend slice tools,
 komplet nazw sciezek pierwszych czterech poziomow, pelna tresc obecnego
 repository-wide Copilot instructions i katalog naglowkow project skills oraz
 neutralne GitLab navigation/search/read tools dla calego wybranego repozytorium
-pod pinned policy. Model musi doczytac materialny project skill i sprawdzic
+pod branchowa policy. Model musi doczytac materialny project skill i sprawdzic
 mechanizmy przekrojowe przed wnioskiem. Repository scope nie korzysta z
 Operational Context `pathPrefixes` i nie ma feature-specific limitu liczby
 wywolan; inny projekt lub branch jest odrzucany. Sesja ma
@@ -212,7 +212,7 @@ wywolan; inny projekt lub branch jest odrzucany. Sesja ma
 report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest
 wynikiem ani fallbackiem. Run jest zapisywany jako `QUEUED` przed dispatch,
 trafia do Analysis History i uzywa scislego
-`tdw.ux-inspector-export/v3`. Workspace reuse'uje layout UI Explorera oraz
+`tdw.ux-inspector-export/v1`. Workspace reuse'uje layout UI Explorera oraz
 wspolny aside; jednosekcyjny renderer pokazuje scalone metadata raz pod
 odpowiedzia, ale feature nie importuje modeli ani workflow UI Explorera.
 Szczegoly sa w `ux-inspector-runtime-flow.md`.
@@ -551,8 +551,8 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
   screen catalog, source context i AI analysis.
 - `GET /api/ui-explorer/screens?systemId={systemId}&branch={branch}`
   Rozwiazuje primary frontend repository oraz systemowy code-search scope z
-  Operational Context, waliduje ref i zwraca business-friendly ekrany, source
-  revision, `READY/PARTIAL/BLOCKED`, diagnostics oraz semantyczne graph
+  Operational Context, waliduje ref i zwraca business-friendly ekrany, branch,
+  `dataCollectedAt`, `READY/PARTIAL/BLOCKED`, diagnostics oraz semantyczne graph
   coverage. Publiczny kontrakt nie ujawnia repository id/path, GitLab group ani
   project name. Katalog powstaje z jednego zweryfikowanego root routera i
   targeted traversal; liczba niepowiazanych plikow repozytorium nie zmienia
@@ -564,25 +564,25 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
   bezpieczne ostrzezenia o czesciowym braku dostepnosci. Nie przyjmuje sciezki
   repozytorium ani tokenu od przegladarki.
 - `POST /api/ui-explorer/jobs`
-  Przyjmuje wybrany `systemId`, `branch`, katalogowy `screenId`, obowiazkowa
-  `sourceRevision`, tryby sekcji, opis scenariusza i opcjonalne
-  preferencje AI. Rewizja jest sprawdzana przed ekranem; zmieniony ref albo
-  nieaktualny ekran zwraca konflikt wymagajacy odswiezenia katalogu. Start
+  Przyjmuje wybrany `systemId`, `branch`, katalogowy `screenId`, tryby sekcji,
+  opis scenariusza i opcjonalne preferencje AI. Ponownie szuka widoku na
+  branchu bez porownania SHA; brak brancha albo nieaktualny ekran jest jawnym
+  bledem. Start
   zwraca `202` ze snapshotem `QUEUED`; source context, preparation i analiza AI
   sa wykonywane asynchronicznie.
 - `GET /api/ui-explorer/jobs/{jobId}`
   Zwraca kroki screen discovery/source context/AI preparation/AI, publiczne
   context sections z manifestem, sygnalami, coverage, diagnostics i hard
   boundary, bezpieczne metadane logical artifacts, dokladny `preparedPrompt`,
-  tool evidence, activity, usage, source revision, result i report. Surowe
+  tool evidence, activity, usage, source branch, result i report. Surowe
   pliki logical artifacts i wewnetrzny GitLab scope nie sa czescia odpowiedzi.
 - `GET /api/ui-explorer/jobs/{jobId}/export`
-  Zwraca sanitizowany `tdw.ui-explorer-export/v6` dla `COMPLETED/PARTIAL` z
+  Zwraca sanitizowany `tdw.ui-explorer-export/v1` dla `COMPLETED/PARTIAL` z
   resultem i reportem. Potrafi odtworzyc portable payload z lokalnej historii
   po restarcie, ale nie ujawnia wewnetrznej koperty `run.json`.
 - `POST /api/ui-explorer/imports`
-  Waliduje aktualny v6 lub legacy v5 schema/version/payload/result contract,
-  spojny screen i source revision, ponownie sanitizuje niezaufany dokument, sklada
+  Waliduje tylko v1 schema/version/payload/result contract,
+  spojny screen i branch, ponownie sanitizuje niezaufany dokument, sklada
   report od nowa, usuwa dostarczony `preparedPrompt` i zapisuje wynik pod nowym
   id w Analysis History. Import jest read-only, bez sesji Copilota,
   continuation i resume.
@@ -659,8 +659,8 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
 - `POST /api/gitlab/frontend/route-branch-slice`
   Zwraca tylko effective route branch wybranego ekranu wraz z wymaganymi
   importami i jawnymi markerami pominietych sibling routes. Repository ref
-  jest sprawdzany przez GitLab commit API, dlatego capability przyjmuje nazwe
-  brancha albo przypiety commit SHA bez oslabiania source revision.
+  moze byc nazwa brancha albo commit SHA. UI Explorer i UX Inspector uzywaja
+  wybranego brancha bez `expectedRevision`.
 - `POST /api/gitlab/frontend/typescript-symbol-slice`
   Zwraca osiagalne symbole, lokalne helpery, relewantne pola/importy, template
   bindings i downstream references dla wskazanego pliku TypeScript.
@@ -903,7 +903,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne frontendowe MCP tools dla route branch slice i TypeScript symbol
   slice. Route tool przyjmuje screen `sliceRef`; TypeScript tool przyjmuje
   naturalna sciezke z typem albo dokladne wspolrzedne importu oraz opcjonalne
-  `memberNames`. Repository/ref/source revision i allowlista targetow sa
+  `memberNames`. Repository/branch i allowlista targetow sa
   ukrytym scope'em sesji. Pelny Screen Reachability zasila initial artifacts i
   nie jest toolem.
 - `pl.mkn.tdw.integrations.gitlab.service.source`

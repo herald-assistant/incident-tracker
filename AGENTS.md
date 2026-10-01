@@ -347,7 +347,7 @@ Zasady granic:
   Focused analiza jednego elementu wskazanego przez Browser Tools: capture v3
   zapisywany jednym POST i odczytywany po ID przed startem,
   deterministic target resolution, session-bound tools, one-section report,
-  job, historia i import/export v3.
+  job, historia i import/export v1.
 - `src/main/java/pl/mkn/tdw/frontendcatalog`
   Neutralny katalog zarejestrowanych frontendow i widokow, konsumowany przez
   UX Inspector oraz mapowany przez adaptery UI Explorera.

@@ -188,7 +188,7 @@ mapuje wynik na publiczny katalog bez danych repository. Publiczne DTO w
 
 `features.uiexplorer.context` jest feature-owned pipeline nad wybranym
 katalogowym ekranem. Rozwiazuje hidden repository scope przez katalog
-frontendu, wymaga oczekiwanej source revision, wywoluje neutralny screen
+frontendu, ponownie szuka widoku na branchu bez porownania SHA, wywoluje neutralny screen
 reachability builder i mapuje wynik BFS na wewnetrzny kontekst, coverage
 aktywnych sekcji oraz publiczne `AnalysisEvidenceSection`. Route chain,
 component slices i deduplikowane dependency slices zasilaja logical artifacts;
@@ -216,11 +216,11 @@ hidden repository/report scope, default-deny allowliste, goal-driven targeted
 GitLab fallback bez feature'owego limitu call count oraz zlozenie
 `CopilotRunRequest`. Preferowany route tool przyjmuje bezpieczny screen
 `sliceRef`; TypeScript tool przyjmuje naturalny plik/typ albo dokladny import,
-opcjonalne `memberNames` i `reason`. Repository/ref/source revision i rejestr
+opcjonalne `memberNames` i `reason`. Repository/branch i rejestr
 dozwolonych targetow pozostaja w hidden context. Generyczny search/read jest
 fallbackiem tylko dla luki bez gotowego route lub TypeScript targetu.
 Assembler buduje dodatkowo krotkie durable system instructions z kanonicznego
-report contract oraz wybranego ekranu/source revision. Neutralny runtime
+report contract oraz wybranego ekranu/brancha. Neutralny runtime
 mapuje je na SDK, ale nie importuje ani nie interpretuje kontraktow UI
 Explorera. Duze source artifacts nie sa w tym kanale duplikowane.
 Scope/ref/path validation, limity pojedynczego transferu i platformowy timeout
@@ -230,7 +230,7 @@ platformowe report tools. Zapisany raport jest walidowany wobec deterministic
 oraz captured tool evidence i deterministycznie projektowany na
 `UiExplorerResultResponse`; finalna odpowiedz tekstowa nie jest kontraktem
 wyniku. Follow-up `chat` wznawia te sama sesje z biezacym raportem i
-repository scope przypietym do initial commita; report tools moga go zmienic
+repository scope na wybranym branchu; report tools moga go zmienic
 po jawnej prosbie operatora. `features.uiexplorer.job`
 uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,
 evidence, activity, usage, result i report oraz mapuje kontrolowane stany
@@ -252,7 +252,8 @@ evidence/activity/feedback, uzywany także przez Incident i Flow.
 Operational Context, katalog widokow nad `integrations.gitlab` oraz
 trwaly cache publicznego neutralnego katalogu po zakonczonym discovery. Cache
 zalezy od `localworkspace.storage`, jest kluczowany przez repository scope,
-ref i limity oraz obsluguje jawny scoped refresh. Pakiet nie importuje
+ref i limity oraz obsluguje jawny scoped refresh. Publiczny katalog zachowuje
+`dataCollectedAt` na cache hit i aktualizuje go przy refresh. Pakiet nie importuje
 feature'ow, API, tools ani platformy AI. UI Explorer mapuje ten katalog na
 swoj publiczny kontrakt przez adapter, a UX Inspector korzysta z niego bez
 importowania UI Explorera.

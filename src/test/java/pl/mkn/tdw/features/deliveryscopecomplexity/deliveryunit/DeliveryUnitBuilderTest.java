@@ -1,12 +1,16 @@
 package pl.mkn.tdw.features.deliveryscopecomplexity.deliveryunit;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssue;
+import pl.mkn.tdw.features.deliveryscopecomplexity.source.DeliveryScopeIssueSource;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeTestFixtures.mergeRequest;
 import static pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeTestFixtures.source;
+import static pl.mkn.tdw.features.deliveryscopecomplexity.DeliveryScopeTestFixtures.material;
 
 class DeliveryUnitBuilderTest {
 
@@ -35,5 +39,21 @@ class DeliveryUnitBuilderTest {
 
         assertThat(units).extracting(DeliveryUnit::unitId)
                 .containsExactly("DU-CRM-1", "DU-CRM-2");
+    }
+    @Test
+    void shouldKeepSharedParentAsContextWithoutMergingIndependentDeliveries() {
+        var parent = material("CRM-100");
+        var first = material("CRM-1", "CRM Implementation", List.of(), parent, List.of());
+        var second = material("CRM-2", "CRM Implementation", List.of(), parent, List.of());
+        var doneAt = Instant.parse("2026-07-10T10:00:00Z");
+
+        var units = builder.build(List.of(
+                new DeliveryScopeIssueSource(new DeliveryScopeIssue("CRM-1", doneAt, first, List.of()),
+                        List.of(mergeRequest(7, "src/CustomerStatus.java", "+status")), List.of()),
+                new DeliveryScopeIssueSource(new DeliveryScopeIssue("CRM-2", doneAt, second, List.of()),
+                        List.of(mergeRequest(8, "src/CustomerContact.java", "+contact")), List.of())));
+
+        assertThat(units).extracting(DeliveryUnit::unitId).containsExactly("DU-CRM-1", "DU-CRM-2");
+        assertThat(units).allSatisfy(unit -> assertThat(unit.issues()).hasSize(1));
     }
 }
