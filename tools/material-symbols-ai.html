@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10172f">
-  <meta name="description" content="Przeszukiwalny katalog 125 ikon Material Symbols Outlined do interfejsów AI z nazwami ligatur i kodem Angular Material.">
+  <meta name="description" content="Przeszukiwalny katalog 151 ikon Material Symbols Outlined do interfejsów AI z nazwami ligatur i kodem Angular Material.">
   <title>Ikony AI · Material Symbols Outlined</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -333,7 +333,8 @@
     .icon-card.is-selected { border-color: #889af2; box-shadow: 0 0 0 2px #e3e8ff; }
     .card-main { width: 100%; flex: 1; display: block; padding: 16px 16px 12px; border: 0; border-radius: 16px 16px 0 0; background: none; color: inherit; text-align: left; }
     .card-main:hover .card-preview { background: #e7ecff; }
-    .card-preview { height: 79px; display: grid; place-items: center; border-radius: 11px; background: #f1f4ff; color: #3c55d9; transition: background .16s; }
+    .card-preview { position: relative; height: 79px; display: grid; place-items: center; border-radius: 11px; background: #f1f4ff; color: #3c55d9; transition: background .16s; }
+    .new-badge { position: absolute; top: 7px; right: 7px; padding: 3px 6px; border-radius: 5px; background: #dce5ff; color: #3047bd; font-size: 10px; font-weight: 750; }
     .card-preview .material-symbols-outlined { font-size: var(--gallery-icon-size); }
     .card-name { display: block; overflow-wrap: anywhere; margin-top: 15px; color: #1f2b4b; font-size: 13px; font-weight: 750; }
     .card-purpose { display: block; min-height: 30px; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.45; }
@@ -427,7 +428,7 @@
   <main id="main" class="shell">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <span class="eyebrow"><span id="hero-count">125</span> ligatur · 11 grup</span>
+        <span class="eyebrow"><span id="hero-count">151</span> ligatur · <span id="group-count">12</span> grup</span>
         <h1 id="hero-title">Ikony do pracy z AI.<br><em>Gotowe do mat-icon.</em></h1>
         <p>Gwiazdki, roboty, modele, prompty i narzędzia w jednej galerii. Każdą nazwę możesz bezpośrednio wkleić jako zawartość <strong>&lt;mat-icon&gt;</strong>.</p>
         <div class="hero-actions">
@@ -476,7 +477,7 @@
         <label class="search-label" for="search">Szukaj nazwy, zastosowania lub grupy</label>
         <div class="search-wrap">
           <span class="material-symbols-outlined" aria-hidden="true">search</span>
-          <input id="search" type="search" autocomplete="off" placeholder="np. robot, prompt, pamięć, database_search…">
+          <input id="search" type="search" autocomplete="off" placeholder="np. robot, prompt, tokeny, markdown_spark…">
         </div>
         <div class="filter-bottom">
           <div id="category-chips" class="chips" role="group" aria-label="Filtr kategorii"></div>
@@ -499,7 +500,7 @@
 
     <section id="zrodla" class="sources" aria-labelledby="sources-title">
       <h2 id="sources-title">Źródła i zgodność</h2>
-      <p>Ligatury i codepointy sprawdzono 14.09.2026 w oficjalnym pliku Google <span class="inline-code">MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].codepoints</span>. Podgląd pobiera aktualny font z Google Fonts, więc w aplikacji używającej starszej kopii własnej warto sprawdzić dostępność nowszych glifów.</p>
+      <p>Ligatury i codepointy sprawdzono 04.10.2026 w oficjalnym pliku Google <span class="inline-code">MaterialSymbolsOutlined[FILL,GRAD,opsz,wght].codepoints</span>. Oznaczenia na kartach wskazują <span id="new-count">9</span> ikon dodanych do indeksu od poprzedniej weryfikacji 14.09.2026; pozostałe uzupełnienia to wcześniej dostępne symbole. Podgląd pobiera aktualny font z Google Fonts, więc w aplikacji używającej starszej kopii własnej warto sprawdzić dostępność nowszych glifów.</p>
       <div class="source-links">
         <a href="https://developers.google.com/fonts/docs/material_symbols" target="_blank" rel="noopener noreferrer">Instrukcja Material Symbols ↗</a>
         <a href="https://github.com/google/material-design-icons/blob/master/variablefont/MaterialSymbolsOutlined%5BFILL%2CGRAD%2Copsz%2Cwght%5D.codepoints" target="_blank" rel="noopener noreferrer">Oficjalny indeks ligatur ↗</a>
@@ -514,7 +515,7 @@
   <template id="icon-card">
     <article class="icon-card">
       <button class="card-main" type="button">
-        <span class="card-preview"><span class="material-symbols-outlined" aria-hidden="true"></span></span>
+        <span class="card-preview"><span class="material-symbols-outlined" aria-hidden="true"></span><span class="new-badge" hidden>Nowa</span></span>
         <span class="card-name"></span>
         <span class="card-purpose"></span>
       </button>
@@ -553,6 +554,9 @@
           ["device_swoosh_star", "Inteligentne urządzenie", "ffeb8"],
           ["wand_stars", "Magiczna różdżka", "f31e"],
           ["magic_button", "Magiczna akcja", "f136"],
+          ["magic_exchange", "Przekształcanie treści z AI", "f7f4"],
+          ["magic_tether", "Łączenie elementów z AI", "f7d7"],
+          ["import_spark", "Import wspomagany przez AI", "ffea9"],
         ]
       },
       {
@@ -584,6 +588,16 @@
           ["lightbulb", "Pomysł lub sugestia", "e90f"],
           ["lightbulb_2", "Pomysł – alternatywa", "f3e3"],
           ["lightbulb_circle", "Pomysł w kole", "ebfe"],
+        ]
+      },
+      {
+        id: "context", title: "Kontekst i tokeny",
+        symbol: "generating_tokens", description: "Generowanie odpowiedzi, tokeny i kontekst sesji modelu.",
+        items: [
+          ["generating_tokens", "Generowanie tokenów", "e749"],
+          ["token", "Token lub jednostka użycia", "ea25"],
+          ["contextual_token", "Kontekst modelu", "f486"],
+          ["contextual_token_add", "Dodawanie kontekstu", "f485"],
         ]
       },
       {
@@ -641,6 +655,7 @@
           ["chat_bubble_outline", "Alias chat_bubble — ten sam glif", "e0cb"],
           ["chat_dashed", "Wiadomość robocza", "eeed"],
           ["chat_info", "Informacje o czacie", "f52b"],
+          ["chat_display", "Rozmowa na ekranie", "ffeac"],
           ["conversation", "Konwersacja", "ef2f"],
           ["question_answer", "Pytania i odpowiedzi", "e8af"],
           ["question_exchange", "Wymiana pytań", "f7f3"],
@@ -653,6 +668,10 @@
         items: [
           ["code", "Kod", "e86f"],
           ["code_blocks", "Bloki kodu", "f84d"],
+          ["function_search", "Wyszukiwanie funkcji w kodzie", "ffea2"],
+          ["api", "API narzędzia lub modelu", "f1b7"],
+          ["sdk", "SDK i integracja z modelem", "e720"],
+          ["extension", "Rozszerzenie lub narzędzie agenta", "e87b"],
           ["code_xml", "Kod XML", "fff8b"],
           ["terminal", "Terminal", "eb8e"],
           ["terminal_2", "Wykonanie narzędzia", "fff8e"],
@@ -675,6 +694,7 @@
           ["data_thresholding", "Progi danych", "eb9f"],
           ["database", "Baza danych", "f20e"],
           ["database_search", "Wyszukiwanie w bazie", "f38e"],
+          ["document_search", "Wyszukiwanie dokumentów dla RAG", "f385"],
           ["database_upload", "Dodawanie do bazy", "f3dc"],
           ["dataset", "Zbiór danych", "f8ee"],
           ["dataset_linked", "Powiązany zbiór danych", "f8ef"],
@@ -712,10 +732,23 @@
           ["draw", "Rysowanie", "e746"],
           ["brush", "Edycja grafiki", "e3ae"],
           ["edit_note", "Redakcja tekstu", "e745"],
+          ["edit_line", "Edycja fragmentu tekstu", "ffea5"],
+          ["markdown", "Odpowiedź w Markdown", "f552"],
+          ["markdown_document", "Dokument Markdown", "ffe9f"],
+          ["markdown_spark", "Tworzenie Markdown z AI", "ffea8"],
+          ["markdown_convert", "Konwersja do Markdown", "ffea0"],
+          ["markdown_copy", "Kopiowanie Markdown", "f553"],
+          ["markdown_paste", "Wklejanie Markdown", "f554"],
           ["text_fields", "Tekst", "e262"],
           ["description", "Dokument", "e873"],
+          ["document_share", "Udostępnianie dokumentu", "ffea6"],
           ["video_library", "Biblioteka wideo", "e04a"],
           ["mic", "Wejście głosowe", "e31d"],
+          ["speech_to_text", "Transkrypcja mowy", "f8a7"],
+          ["speech_to_text_2", "Transkrypcja – alternatywa", "ffec9"],
+          ["text_to_speech", "Synteza mowy z tekstu", "f1bc"],
+          ["voice_selection", "Wybór głosu modelu", "f58a"],
+          ["closed_caption_display", "Napisy na ekranie", "ffeab"],
           ["graphic_eq", "Przetwarzanie dźwięku", "e1b8"],
           ["record_voice_over", "Głos lektora", "e91f"],
           ["palette", "Tworzenie grafiki", "e40a"],
@@ -725,7 +758,14 @@
     const FEATURED = new Set([
       "auto_awesome", "star_shine", "cognition", "cognition_2",
       "robot_2", "smart_toy", "prompt_suggestion", "automation",
-      "network_intelligence", "hub", "memory", "experiment"
+      "network_intelligence", "hub", "memory", "experiment",
+      "generating_tokens", "contextual_token", "markdown_spark", "function_search"
+    ]);
+    // Nowe w oficjalnym indeksie względem snapshotu zweryfikowanego 14.09.2026.
+    const NEW_ICONS = new Set([
+      "import_spark", "chat_display", "function_search", "edit_line",
+      "markdown_document", "markdown_spark", "markdown_convert",
+      "document_share", "closed_caption_display"
     ]);
     const allIcons = GROUPS.flatMap(function (group) {
       return group.items.map(function (item) {
@@ -804,6 +844,7 @@
       card.querySelector(".card-preview .material-symbols-outlined").textContent = icon.name;
       card.querySelector(".card-name").textContent = icon.name;
       card.querySelector(".card-purpose").textContent = icon.purpose;
+      card.querySelector(".new-badge").hidden = !NEW_ICONS.has(icon.name);
       card.querySelector(".codepoint").textContent = "U+" + icon.codepoint.toUpperCase();
       const selectButton = card.querySelector(".card-main");
       selectButton.setAttribute("aria-label", "Wybierz ikonę " + icon.name + " i pokaż przykład kodu");
@@ -888,6 +929,8 @@
     }
 
     document.getElementById("hero-count").textContent = allIcons.length;
+    document.getElementById("group-count").textContent = GROUPS.length;
+    document.getElementById("new-count").textContent = NEW_ICONS.size;
     search.addEventListener("input", function () {
       state.query = normalized(search.value.trim());
       renderGallery();
