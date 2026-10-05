@@ -72,10 +72,10 @@ zatwierdzony invariant trafia do architektury.
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer`
   Config Drift Viewer: deterministic diff i oddzielona interpretacja DEEP.
 - `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`
-  Delivery Complexity Assessment: Jira discovery, Delivery Units, bounded
+  Behavior Change Assessment: Jira discovery, Delivery Units, bounded
   evidence, Copilot scoring, partial runs i aggregate.
 - `src/main/java/pl/mkn/tdw/features/deliveryscopecomplexity`
-  Delivery Scope Complexity: niezalezny eksperyment score x scope `0-200`,
+  Technical Change Assessment: niezalezny assessment score x scope `0-200`,
   wlasny lifecycle runu i kontrakt bez zaleznosci do sibling assessmentu.
 - `src/main/java/pl/mkn/tdw/features/uiexplorer`
   UI Explorer: katalog ekranow bez ujawniania repository scope, selected-screen

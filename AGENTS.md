@@ -26,6 +26,26 @@ Przyklady docelowych feature'ow poza incident analysis:
 - natural-language data diagnostics: bezpieczne pytania o dane systemu w DB
   jezykiem naturalnym.
 
+## Nazwy feature'ow Delivery
+
+Nowe nazwy produktowe i dotychczasowe nazwy implementacji oznaczaja te same
+feature'y. Przy wyszukiwaniu kodu uzywaj ponizszego mapowania:
+
+| Nazwa w UI | Poprzednia nazwa | Obecne identyfikatory implementacji |
+| --- | --- | --- |
+| Behavior Change Assessment | Delivery Complexity Assessment | `delivery-complexity-assessment`, `features.deliverycomplexityassessment`, `DeliveryComplexityAssessment*`, `DeliveryAssessment*` |
+| Technical Change Assessment | Delivery Scope Complexity | `delivery-scope-complexity`, `features.deliveryscopecomplexity`, `DeliveryScopeComplexity*`, `DeliveryScope*` |
+| Delivery Trends | Delivery Complexity Trends | `delivery-complexity-trends`, `DeliveryComplexityTrends*`, `AssessmentTrend*` |
+
+Identyfikatory techniczne nadal wystepuja w katalogach, trasach, API,
+konfiguracji, kontraktach eksportu i nazwach skilli `*-evaluator` obu
+assessmentow. Sa biezacymi identyfikatorami, a nie aliasami kompatybilnosci.
+Nie tworz drugiego feature'a na podstawie nowej nazwy ani nie mieszaj obu
+assessmentow. UI uzywa Complexity Points (CP); Behavior zachowuje pola
+`deliveredStoryPoints` / `totalDeliveredStoryPoints`, a Technical `finalScore`
+/ `totalComplexityPoints`. Wspolna etykieta CP nie oznacza wspolnej skali.
+Wszystkie trzy ekrany maja status Dostepne.
+
 ## Najpierw przeczytaj
 
 Przed wieksza zmiana zacznij od:
@@ -49,9 +69,9 @@ Przed wieksza zmiana zacznij od:
 11. `docs/architecture/change-verification-runtime-flow.md`
     dla zmian Change Verification
 12. `docs/architecture/delivery-complexity-assessment-runtime-flow.md`
-    dla zmian Delivery Complexity Assessment
+    dla zmian Behavior Change Assessment (`delivery-complexity-assessment`)
 13. `docs/architecture/delivery-scope-complexity-runtime-flow.md`
-    dla zmian eksperymentalnego Delivery Scope Complexity
+    dla zmian Technical Change Assessment (`delivery-scope-complexity`)
 14. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
 15. `docs/architecture/ui-explorer-runtime-flow.md`
@@ -348,7 +368,7 @@ Zasady granic:
   rownolegle sesje Copilota, deterministyczny scoring oraz czastkowy zapis w
   Analysis History.
 - `src/main/java/pl/mkn/tdw/features/deliveryscopecomplexity`
-  Niezalezny eksperymentalny feature score x scope: wlasny skill, kontrakt
+  Technical Change Assessment: niezalezny feature score x scope: wlasny skill, kontrakt
   `0-200`, job, historia/import-export i UI bez importow do drugiego
   assessmentu.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`

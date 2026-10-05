@@ -78,8 +78,7 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
 
 Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako
-archiwum. Aktualny stan Delivery Complexity Assessment, Delivery Scope
-Complexity i Delivery Complexity Trends jest opisany w odpowiednich dokumentach
+archiwum. Aktualny stan Behavior Change Assessment, Technical Change Assessment i Delivery Trends jest opisany w odpowiednich dokumentach
 `architecture/*-runtime-flow.md`. Kolejny inkrement L1-L3 wymaga nowego albo
 zaktualizowanego dokumentu potrzeby oraz zatwierdzonego planu; historie
 zakonczonych prac zachowuje Git.

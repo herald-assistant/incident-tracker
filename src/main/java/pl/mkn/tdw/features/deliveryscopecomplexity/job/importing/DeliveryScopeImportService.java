@@ -53,13 +53,13 @@ public class DeliveryScopeImportService {
         try {
             return objectMapper.treeToValue(document, DeliveryScopeComplexityExportEnvelope.class);
         } catch (Exception exception) {
-            throw invalid("Delivery Scope Complexity export has an invalid structure.");
+            throw invalid("Technical Change Assessment export has an invalid structure.");
         }
     }
 
     private void validateDocument(JsonNode document) {
         if (document == null || document.isNull()) {
-            throw invalid("Delivery Scope Complexity export is required.");
+            throw invalid("Technical Change Assessment export is required.");
         }
         var job = document.path("payload").path("job");
         if (job.has("aiModel") || job.has("reasoningEffort")) {
@@ -71,22 +71,22 @@ public class DeliveryScopeImportService {
             }
         }
         if (!document.isObject() || document.toString().length() > MAX_IMPORT_CHARACTERS) {
-            throw invalid("Delivery Scope Complexity export has an invalid or oversized structure.");
+            throw invalid("Technical Change Assessment export has an invalid or oversized structure.");
         }
     }
 
     private void validateEnvelope(DeliveryScopeComplexityExportEnvelope envelope) {
         if (envelope == null || !DeliveryScopeComplexityExportEnvelope.SCHEMA.equals(envelope.schema())) {
-            throw invalid("Unsupported Delivery Scope Complexity export schema.");
+            throw invalid("Unsupported Technical Change Assessment export schema.");
         }
         if (envelope.version() != DeliveryScopeComplexityExportEnvelope.VERSION) {
-            throw invalid("Unsupported Delivery Scope Complexity export version.");
+            throw invalid("Unsupported Technical Change Assessment export version.");
         }
         if (envelope.exportedAt() == null
                 || envelope.payload() == null
                 || !DeliveryScopeComplexityExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
                 || !DeliveryScopeComplexityExportEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())) {
-            throw invalid("Unsupported Delivery Scope Complexity result contract.");
+            throw invalid("Unsupported Technical Change Assessment result contract.");
         }
         validateJob(envelope.payload().job());
     }
@@ -103,7 +103,7 @@ public class DeliveryScopeImportService {
                 || job.updatedAt() == null
                 || job.completedAt() == null
                 || job.aggregate() == null) {
-            throw invalid("Only a completed Delivery Scope Complexity result can be imported.");
+            throw invalid("Only a completed Technical Change Assessment result can be imported.");
         }
         validateAggregate(job);
     }
@@ -111,7 +111,7 @@ public class DeliveryScopeImportService {
     private void validateAggregate(DeliveryScopeComplexityJobStateSnapshot job) {
         var aggregate = job.aggregate();
         if (aggregate.totalUnits() != job.units().size()) {
-            throw invalid("Delivery Scope Complexity export has inconsistent aggregate data.");
+            throw invalid("Technical Change Assessment export has inconsistent aggregate data.");
         }
         if ("FAILED".equals(job.status())) {
             return;
@@ -124,7 +124,7 @@ public class DeliveryScopeImportService {
                 + aggregate.excludedUnits()
                 + aggregate.notScorableUnits()
                 + aggregate.failedUnits() != aggregate.totalUnits()) {
-            throw invalid("Delivery Scope Complexity export has inconsistent unit status totals.");
+            throw invalid("Technical Change Assessment export has inconsistent unit status totals.");
         }
     }
 

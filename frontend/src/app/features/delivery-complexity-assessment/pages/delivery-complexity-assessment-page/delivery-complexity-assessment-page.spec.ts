@@ -37,8 +37,8 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     expect(algorithm.textContent).toContain('Parametryzacja');
     expect(algorithm.textContent).toContain('20%');
     expect(algorithm.textContent).toContain('> 75');
-    expect(algorithm.textContent).toContain('13 DSP');
-    expect(algorithm.textContent).toContain('Confidence jest prezentowane osobno i nie zmienia wyniku DSP');
+    expect(algorithm.textContent).toContain('13 CP');
+    expect(algorithm.textContent).toContain('Confidence jest prezentowane osobno i nie zmienia wyniku CP');
     expect(algorithm.querySelectorAll('.assessment-algorithm__weights > div')).toHaveLength(7);
     expect(algorithm.querySelectorAll('.assessment-algorithm__buckets > div')).toHaveLength(7);
   });
@@ -144,7 +144,7 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     fixture.detectChanges();
 
     expect(history.getRun).toHaveBeenCalledWith('job-1');
-    expect(fixture.nativeElement.textContent).toContain('nie jest Delivery Complexity Assessment');
+    expect(fixture.nativeElement.textContent).toContain('nie jest Behavior Change Assessment');
   });
 
   it('should present aggregate credits in the shared aside only', async () => {
@@ -209,7 +209,7 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     expect(tooltips).toHaveLength(6);
     expect(tooltips[0]).toContain('projekcie CRM od 2026-07-01 do 2026-07-31');
     expect(tooltips[0]).toContain('issue Jira i powiązanych, scalonych Merge Requests');
-    expect(tooltips[1]).toContain('Suma DSP z 1 ocenionych Delivery Units wynosi 8');
+    expect(tooltips[1]).toContain('Suma CP z 1 ocenionych Delivery Units wynosi 8');
     expect(tooltips[1]).toContain('0, 1, 2, 3, 5, 8 lub 13');
     expect(tooltips[2]).toContain('średnia confidence z 1 ocenionych jednostek wynosi 0,85');
     expect(tooltips[2]).toContain('HIGH od 0,80, MEDIUM od 0,60, LOW poniżej 0,60');
@@ -446,7 +446,7 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     const completed = snapshot('COMPLETED', 8, [completedUnit()]);
     const { fixture, history } = await createComponent({ localRun: completed, localRunId: 'job-1' });
     const document = fixture.componentInstance.shareDocument();
-    expect(document?.markdown).toContain('Delivered Story Points');
+    expect(document?.markdown).toContain('Complexity Points');
     expect(document?.markdown).toContain('CRM-1');
     expect(document?.markdownWithMeta).toContain('Referencje');
     expect(fixture.nativeElement.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();

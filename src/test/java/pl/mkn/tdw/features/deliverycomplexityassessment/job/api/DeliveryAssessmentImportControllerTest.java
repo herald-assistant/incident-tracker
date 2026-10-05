@@ -52,7 +52,7 @@ class DeliveryAssessmentImportControllerTest {
     void shouldExposeExactImportValidationError() throws Exception {
         when(importService.importReadOnly(any(JsonNode.class))).thenThrow(
                 new DeliveryAssessmentImportException(
-                        "Unsupported Delivery Complexity Assessment export version."
+                        "Unsupported Behavior Change Assessment export version."
                 )
         );
 
@@ -62,7 +62,7 @@ class DeliveryAssessmentImportControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DELIVERY_ASSESSMENT_IMPORT_INVALID"))
                 .andExpect(jsonPath("$.message").value(
-                        "Unsupported Delivery Complexity Assessment export version."
+                        "Unsupported Behavior Change Assessment export version."
                 ));
     }
 

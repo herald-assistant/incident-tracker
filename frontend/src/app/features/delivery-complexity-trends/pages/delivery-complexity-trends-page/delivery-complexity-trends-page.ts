@@ -158,8 +158,8 @@ export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
 
   protected sourceLabel(dataset: AssessmentTrendDataset): string {
     return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-      ? 'Delivery Complexity Assessment'
-      : 'Delivery Scope Complexity';
+      ? 'Behavior Change Assessment'
+      : 'Technical Change Assessment';
   }
 
   protected issueTypeSelected(key: string): boolean {
@@ -309,7 +309,7 @@ export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
     const periods = trend.periods
       .map((period) => `${period.label}: ${this.formatPoints(period.points)} ${dataset.metricShortLabel}`)
       .join(', ');
-    return `Trend ${dataset.metricLabel}. ${periods}. Zmiany liczbowe i procentowe są pokazane pod okresami.`;
+    return `Trend ${this.sourceLabel(dataset)} · ${dataset.metricLabel}. ${periods}. Zmiany liczbowe i procentowe są pokazane pod okresami.`;
   }
 
   protected formatEfficiency(value: number | null): string {
@@ -374,10 +374,10 @@ export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
       return 'punkt odniesienia dla kolejnych okresów';
     }
     if (value < 0) {
-      return 'efektywniej niż w poprzednim okresie';
+      return 'spadek wskaźnika względem poprzedniego okresu';
     }
     if (value > 0) {
-      return 'mniej efektywnie niż w poprzednim okresie';
+      return 'wzrost wskaźnika względem poprzedniego okresu';
     }
     return 'bez zmiany względem poprzedniego okresu';
   }
@@ -416,7 +416,7 @@ export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
     const periods = efficiency.periods.map((period) =>
       `${period.label}: ${this.formatEfficiency(period.pointsPerPersonDay)} CP/MD`
     ).join(', ');
-    return `Efektywność dostarczenia. ${periods}. Dokładne dane znajdują się w tabeli pod wykresem.`;
+    return `Complexity Points na jednostkę zaraportowanego czasu. ${periods}. Dokładne dane znajdują się w tabeli pod wykresem.`;
   }
 
   protected statusLabel(status: AssessmentTrendStatusCount['status']): string {

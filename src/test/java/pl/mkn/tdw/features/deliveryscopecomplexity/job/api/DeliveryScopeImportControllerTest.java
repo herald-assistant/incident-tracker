@@ -51,7 +51,7 @@ class DeliveryScopeImportControllerTest {
     void shouldExposeExactImportValidationError() throws Exception {
         when(importService.importReadOnly(any(JsonNode.class))).thenThrow(
                 new DeliveryScopeImportException(
-                        "Unsupported Delivery Scope Complexity export version."
+                        "Unsupported Technical Change Assessment export version."
                 )
         );
 
@@ -61,7 +61,7 @@ class DeliveryScopeImportControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DELIVERY_SCOPE_IMPORT_INVALID"))
                 .andExpect(jsonPath("$.message").value(
-                        "Unsupported Delivery Scope Complexity export version."
+                        "Unsupported Technical Change Assessment export version."
                 ));
     }
 

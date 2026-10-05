@@ -513,10 +513,9 @@ regula zabrania pakietowi
 `deterministic.projection` z dokladnymi wartosciami oraz warstwy
 `presentation`; adnotacje DEEP sa laczone dopiero poza granica AI.
 
-Delivery Scope Complexity celowo posiada wlasna orchestration obok Delivery
-Complexity Assessment. Oba feature'y moga korzystac z tych samych neutralnych
+Technical Change Assessment celowo posiada wlasna orchestration obok Behavior Change Assessment. Oba feature'y moga korzystac z tych samych neutralnych
 integracji i platformy, ale nie importuja siebie wzajemnie. Powtorzenie
-feature-owned lifecycle jest czasowym kosztem eksperymentu i zapewnia, ze
+feature-owned lifecycle zapewnia niezaleznosc assessmentow:
 usuniecie jednego algorytmu nie zmienia kontraktu drugiego.
 
 Oba assessmenty korzystaja z neutralnego

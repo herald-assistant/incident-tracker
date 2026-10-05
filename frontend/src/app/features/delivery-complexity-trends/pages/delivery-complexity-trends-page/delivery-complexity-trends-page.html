@@ -2,7 +2,7 @@
   <section class="trend-import-card" aria-labelledby="trendImportTitle">
     <div class="trend-import-card__copy">
       <p class="section-eyebrow">Raporty okresowe</p>
-      <h2 id="trendImportTitle">Połącz raporty i zobacz zmianę złożoności</h2>
+      <h2 id="trendImportTitle">Połącz raporty i zobacz trendy dostaw</h2>
       <p>
         Wybierz CSV z kolejnych okresów. Wszystkie pliki muszą pochodzić z jednego
         assessmentu oraz z runów wykonanych tym samym modelem i reasoning effort.
@@ -152,7 +152,7 @@
           <div class="trend-section-heading">
             <div>
               <p class="section-eyebrow">Kierunek w czasie</p>
-              <h2 id="trendChartTitle">Dostarczona złożoność (CP) według okresu</h2>
+              <h2 id="trendChartTitle">{{ sourceLabel(data) }} · CP według okresu</h2>
             </div>
             <p class="trend-section-note">
               Zmiana jest liczona względem poprzedniego widocznego okresu z danymi.
@@ -341,13 +341,13 @@
           <div class="trend-section-heading">
             <div>
               <p class="section-eyebrow">Time Spent + Complexity Points</p>
-              <h2 id="trendEfficiencyTitle">Efficiency</h2>
+              <h2 id="trendEfficiencyTitle">Złożoność dostaw na jednostkę czasu</h2>
             </div>
           </div>
 
           <p class="trend-efficiency-context">
-            Complexity Points dzielimy przez Time Spent. Jira Issue wchodzi do wyniku tylko
-            wtedy, gdy powiązane dane mają dodatni Time Spent. 1 MD odpowiada 8 godzinom.
+            Punkty dzielimy przez zaraportowany czas jednostek z pełnym, dodatnim Time Spent.
+            To relacja punktów do czasu, nie pomiar produktywności. 1 MD = 8 godzin.
           </p>
 
           @if (authorControl.value) {
@@ -355,15 +355,15 @@
               <span class="material-symbols-outlined" aria-hidden="true">info</span>
               <span>
                 Filtr autora zawęża Jira Issues powiązane z jego MR-ami. Nie przypisuje
-                Time Spent ani Efficiency do tej osoby.
+                Time Spent ani punktów do tej osoby.
               </span>
             </div>
           }
 
           @if (currentTrend.efficiency.periods.length > 0) {
-            <section class="trend-efficiency-summary-grid" aria-label="Podsumowanie efektywności">
+            <section class="trend-efficiency-summary-grid" aria-label="Podsumowanie punktów na jednostkę czasu">
               <article class="trend-summary-card trend-summary-card--primary">
-                <span>Efficiency</span>
+                <span>Complexity Points / MD</span>
                 <strong>{{ formatEfficiency(currentTrend.efficiency.pointsPerPersonDay) }}</strong>
                 <small>CP/MD dla całego widocznego zakresu</small>
               </article>
@@ -427,14 +427,14 @@
               <div class="trend-table-scroll">
                 <table class="trend-table trend-efficiency-table">
                   <caption>
-                    Complexity Points, Time Spent i Efficiency dla każdego widocznego okresu.
+                    Complexity Points, Time Spent i CP/MD dla każdego widocznego okresu.
                   </caption>
                   <thead>
                     <tr>
                       <th scope="col">Okres</th>
                       <th scope="col">CP</th>
                       <th scope="col">Time Spent (MD)</th>
-                      <th scope="col">Efficiency (CP/MD)</th>
+                      <th scope="col">Punkty / czas (CP/MD)</th>
                       <th scope="col">Zmiana (CP/MD)</th>
                       <th scope="col">Zmiana %</th>
                       <th scope="col">Pokrycie CP</th>
@@ -468,7 +468,7 @@
             </p>
           } @else {
             <p class="trend-empty-copy">
-              Original Estimate jest obecne, ale bez Time Spent nie można policzyć Efficiency
+              Original Estimate jest obecne, ale bez Time Spent nie można policzyć CP/MD
               ani porównać Original Estimate z Time Spent.
             </p>
           }
@@ -545,10 +545,10 @@
               </div>
             </div>
 
-            <div class="trend-estimate-trend-legend" aria-label="Legenda zmiany efektywności względem poprzedniego okresu">
+            <div class="trend-estimate-trend-legend" aria-label="Legenda zmiany Time Spent / Original Estimate względem poprzedniego okresu">
               <span><i class="trend-estimate-trend-legend__first"></i> pierwszy okres</span>
-              <span><i class="trend-estimate-trend-legend__improved"></i> efektywniej</span>
-              <span><i class="trend-estimate-trend-legend__worsened"></i> mniej efektywnie</span>
+              <span><i class="trend-estimate-trend-legend__improved"></i> spadek wskaźnika</span>
+              <span><i class="trend-estimate-trend-legend__worsened"></i> wzrost wskaźnika</span>
               <span><i></i> bez zmiany</span>
             </div>
           </section>

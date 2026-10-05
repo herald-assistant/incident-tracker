@@ -5,7 +5,7 @@ import {
   deliveryComplexityAssessmentCsvFileName
 } from './delivery-complexity-assessment-csv.utils';
 
-describe('Delivery Complexity Assessment CSV', () => {
+describe('Behavior Change Assessment CSV', () => {
   it('should export one row per issue and count DSP only on the latest Done issue', () => {
     const job = snapshot();
     job.units[0].issues = [

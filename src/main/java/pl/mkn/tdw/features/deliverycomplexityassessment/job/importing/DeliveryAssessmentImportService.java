@@ -53,13 +53,13 @@ public class DeliveryAssessmentImportService {
         try {
             return objectMapper.treeToValue(document, DeliveryComplexityAssessmentExportEnvelope.class);
         } catch (Exception exception) {
-            throw invalid("Delivery Complexity Assessment export has an invalid structure.");
+            throw invalid("Behavior Change Assessment export has an invalid structure.");
         }
     }
 
     private void validateDocument(JsonNode document) {
         if (document == null || document.isNull()) {
-            throw invalid("Delivery Complexity Assessment export is required.");
+            throw invalid("Behavior Change Assessment export is required.");
         }
         var job = document.path("payload").path("job");
         if (job.has("aiModel") || job.has("reasoningEffort")) {
@@ -71,22 +71,22 @@ public class DeliveryAssessmentImportService {
             }
         }
         if (!document.isObject() || document.toString().length() > MAX_IMPORT_CHARACTERS) {
-            throw invalid("Delivery Complexity Assessment export has an invalid or oversized structure.");
+            throw invalid("Behavior Change Assessment export has an invalid or oversized structure.");
         }
     }
 
     private void validateEnvelope(DeliveryComplexityAssessmentExportEnvelope envelope) {
         if (envelope == null || !DeliveryComplexityAssessmentExportEnvelope.SCHEMA.equals(envelope.schema())) {
-            throw invalid("Unsupported Delivery Complexity Assessment export schema.");
+            throw invalid("Unsupported Behavior Change Assessment export schema.");
         }
         if (envelope.version() != DeliveryComplexityAssessmentExportEnvelope.VERSION) {
-            throw invalid("Unsupported Delivery Complexity Assessment export version.");
+            throw invalid("Unsupported Behavior Change Assessment export version.");
         }
         if (envelope.exportedAt() == null
                 || envelope.payload() == null
                 || !DeliveryComplexityAssessmentExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
                 || !DeliveryComplexityAssessmentExportEnvelope.RESULT_CONTRACT.equals(envelope.payload().resultContract())) {
-            throw invalid("Unsupported Delivery Complexity Assessment result contract.");
+            throw invalid("Unsupported Behavior Change Assessment result contract.");
         }
         validateJob(envelope.payload().job());
     }
@@ -103,7 +103,7 @@ public class DeliveryAssessmentImportService {
                 || job.updatedAt() == null
                 || job.completedAt() == null
                 || job.aggregate() == null) {
-            throw invalid("Only a completed Delivery Complexity Assessment result can be imported.");
+            throw invalid("Only a completed Behavior Change Assessment result can be imported.");
         }
         validateAggregate(job);
     }
@@ -111,7 +111,7 @@ public class DeliveryAssessmentImportService {
     private void validateAggregate(DeliveryComplexityAssessmentJobStateSnapshot job) {
         var aggregate = job.aggregate();
         if (aggregate.totalUnits() != job.units().size()) {
-            throw invalid("Delivery Complexity Assessment export has inconsistent aggregate data.");
+            throw invalid("Behavior Change Assessment export has inconsistent aggregate data.");
         }
         if ("FAILED".equals(job.status())) {
             return;
@@ -124,7 +124,7 @@ public class DeliveryAssessmentImportService {
                 + aggregate.excludedUnits()
                 + aggregate.notScorableUnits()
                 + aggregate.failedUnits() != aggregate.totalUnits()) {
-            throw invalid("Delivery Complexity Assessment export has inconsistent unit status totals.");
+            throw invalid("Behavior Change Assessment export has inconsistent unit status totals.");
         }
     }
 

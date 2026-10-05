@@ -207,7 +207,7 @@ public class DeliveryScopeSourceDiscoveryService {
 
     private void validateRange(DeliveryScopeComplexityJobStartRequest request) {
         if (!properties.isEnabled()) {
-            throw new IllegalStateException("Delivery Scope Complexity is disabled.");
+            throw new IllegalStateException("Technical Change Assessment is disabled.");
         }
         var days = ChronoUnit.DAYS.between(request.fromDate(), request.toDate()) + 1;
         if (days > properties.getMaxRangeDays()) {

@@ -5,7 +5,7 @@ import {
 } from '../models/delivery-complexity-trends.models';
 import { buildAssessmentTrendView } from './delivery-complexity-trends-aggregation.utils';
 
-describe('Delivery Complexity Trends aggregation', () => {
+describe('Delivery Trends aggregation', () => {
   it('should calculate complexity points per person-day and period deltas', () => {
     const data = dataset([
       issue({

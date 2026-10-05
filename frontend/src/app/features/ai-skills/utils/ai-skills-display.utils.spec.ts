@@ -14,10 +14,10 @@ describe('AI Skills display projection', () => {
       'Operational Context Assistance'
     );
     expect(aiSkillFamily('delivery-complexity-assessment-evaluator').label).toBe(
-      'Delivery Complexity Assessment'
+      'Behavior Change Assessment'
     );
     expect(aiSkillFamily('delivery-scope-complexity-evaluator').label).toBe(
-      'Delivery Scope Complexity'
+      'Technical Change Assessment'
     );
     expect(aiSkillFamily('future-skill').label).toBe('Other');
   });

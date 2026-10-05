@@ -2,7 +2,10 @@
 
 ## Zakres
 
-Ten katalog zawiera dedykowany feature Delivery Scope Complexity.
+Ten katalog zawiera dedykowany feature Technical Change Assessment.
+Poprzednia nazwa Delivery Scope Complexity i identyfikator `delivery-scope-complexity`
+oznaczaja ten sam feature; pakiet i klasy zachowuja dotychczasowe nazwy.
+Pelne mapowanie nazw Delivery znajduje sie w glownym `AGENTS.md`.
 Feature ocenia obserwowalna zlozonosc dostarczonych zmian dla projektu Jira i
 zakresu dat.
 

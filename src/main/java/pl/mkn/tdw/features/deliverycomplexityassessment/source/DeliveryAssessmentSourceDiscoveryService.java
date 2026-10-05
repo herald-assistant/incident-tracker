@@ -207,7 +207,7 @@ public class DeliveryAssessmentSourceDiscoveryService {
 
     private void validateRange(DeliveryComplexityAssessmentJobStartRequest request) {
         if (!properties.isEnabled()) {
-            throw new IllegalStateException("Delivery Complexity Assessment is disabled.");
+            throw new IllegalStateException("Behavior Change Assessment is disabled.");
         }
         var days = ChronoUnit.DAYS.between(request.fromDate(), request.toDate()) + 1;
         if (days > properties.getMaxRangeDays()) {

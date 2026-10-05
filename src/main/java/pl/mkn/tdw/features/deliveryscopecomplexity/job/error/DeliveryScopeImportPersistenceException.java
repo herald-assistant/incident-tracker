@@ -9,7 +9,7 @@ public class DeliveryScopeImportPersistenceException extends UserFacingApplicati
         super(
                 "DELIVERY_SCOPE_IMPORT_PERSISTENCE_UNAVAILABLE",
                 UserFacingErrorType.SERVICE_UNAVAILABLE,
-                "Delivery Scope Complexity import cannot be saved in local Analysis History."
+                "Technical Change Assessment import cannot be saved in local Analysis History."
         );
     }
 }

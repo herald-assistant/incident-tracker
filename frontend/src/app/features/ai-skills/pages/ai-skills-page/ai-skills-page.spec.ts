@@ -23,8 +23,8 @@ describe('AiSkillsPageComponent', () => {
     expect(compiled.textContent).toContain('Effective runtime catalog');
     expect(compiled.textContent).toContain('incident-analysis-orchestrator');
     expect(compiled.textContent).toContain('Flow Explorer');
-    expect(compiled.textContent).toContain('Delivery Complexity Assessment');
-    expect(compiled.textContent).toContain('Delivery Scope Complexity');
+    expect(compiled.textContent).toContain('Behavior Change Assessment');
+    expect(compiled.textContent).toContain('Technical Change Assessment');
     expect(compiled.textContent).toContain('UI Explorer');
     expect(compiled.textContent).toContain('Operational Context Assistance');
     const workflowSelect = compiled.querySelector<HTMLSelectElement>('#aiSkillsWorkflow');
@@ -61,7 +61,7 @@ describe('AiSkillsPageComponent', () => {
     expect(rows[0]?.textContent).toContain('flow-explorer-orchestrator');
   });
 
-  it('should expose the Delivery Complexity Assessment evaluator as its own family', async () => {
+  it('should expose the Behavior Change Assessment evaluator as its own family', async () => {
     const { fixture } = await createComponent();
 
     fixture.componentInstance.familyControl.setValue('delivery-complexity-assessment');
@@ -71,11 +71,11 @@ describe('AiSkillsPageComponent', () => {
     const rows = Array.from(compiled.querySelectorAll<HTMLElement>('.ai-skills-row'));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.textContent).toContain('delivery-complexity-assessment-evaluator');
-    expect(rows[0]?.textContent).toContain('Delivery Complexity Assessment');
+    expect(rows[0]?.textContent).toContain('Behavior Change Assessment');
     expect(rows[0]?.textContent).toContain('Assessment');
   });
 
-  it('should expose the Delivery Scope Complexity evaluator as its own family', async () => {
+  it('should expose the Technical Change Assessment evaluator as its own family', async () => {
     const { fixture } = await createComponent();
 
     fixture.componentInstance.familyControl.setValue('delivery-scope-complexity');
@@ -86,7 +86,7 @@ describe('AiSkillsPageComponent', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.textContent).toContain('delivery-scope-complexity-evaluator');
-    expect(rows[0]?.textContent).toContain('Delivery Scope Complexity');
+    expect(rows[0]?.textContent).toContain('Technical Change Assessment');
     expect(rows[0]?.textContent).toContain('Assessment');
   });
 

@@ -8,7 +8,7 @@ import {
   deliveryScopeComplexityCsvFileName
 } from './delivery-scope-complexity-csv.utils';
 
-describe('Delivery Scope Complexity CSV', () => {
+describe('Technical Change Assessment CSV', () => {
   it('should export one row per issue and count final score only on the latest Done issue', () => {
     const job = snapshot();
     job.units[0].issues = [

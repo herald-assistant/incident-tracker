@@ -131,10 +131,10 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     if (!job || !this.hasTerminalRun() || !aggregate) return null;
     return buildDeliveryShareDocument(
       `delivery-complexity-assessment-${sanitizeFileNamePart(job.jiraProject)}-${job.fromDate}-${job.toDate}.md`,
-      `Delivery Complexity Assessment · ${job.jiraProject}`,
+      `Behavior Change Assessment · ${job.jiraProject}`,
       `${job.fromDate} – ${job.toDate}${this.filtersActive() ? ' · aktualny filtr' : ''}`,
       [
-        `Delivered Story Points: ${aggregate.totalDeliveredStoryPoints}`,
+        `Complexity Points: ${aggregate.totalDeliveredStoryPoints}`,
         `Ocenione jednostki: ${aggregate.assessedUnits} / ${aggregate.totalUnits}`,
         `Confidence: ${aggregate.confidence}`
       ],
@@ -142,7 +142,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
         title: unit.issues.map((issue) => `${issue.issueKey} ${issue.summary}`).join(', ') || unit.unitId,
         status: unit.status,
         result: unit.assessment ? [
-          `Delivered Story Points: ${unit.assessment.deliveredStoryPoints}`,
+          `Complexity Points: ${unit.assessment.deliveredStoryPoints}`,
           `Wynik: ${unit.assessment.score100}/100`,
           `Confidence: ${this.percent(unit.assessment.confidence)}`
         ] : [],
@@ -296,7 +296,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     try {
       const document = await readJsonFile(
         file,
-        'Plik nie zawiera poprawnego eksportu Delivery Complexity Assessment.'
+        'Plik nie zawiera poprawnego eksportu Behavior Change Assessment.'
       );
       this.api
         .importRun(document)
@@ -379,7 +379,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   }
 
   protected filterOptionLabel(option: FilterOption): string {
-    return `${option.label} · ${option.issueCount} issue · ${option.deliveredStoryPoints} DSP`;
+    return `${option.label} · ${option.issueCount} issue · ${option.deliveredStoryPoints} CP`;
   }
 
   protected filteredResultLabel(job: DeliveryComplexityAssessmentJobStateSnapshot): string {
@@ -403,15 +403,15 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     const prefix = this.filtersActive()
       ? 'Odfiltrowany obraz'
       : 'Zbiorczy obraz';
-    return `${prefix} obserwowalnej złożoności dostarczonej w projekcie ${job.jiraProject} `
+    return `${prefix} złożoności zmian w działaniu produktu w projekcie ${job.jiraProject} `
       + `od ${job.fromDate} do ${job.toDate}. Powstaje z ${job.aggregate.totalUnits} Delivery Units `
       + (this.filtersActive() ? `i pokazuje ${aggregate.totalUnits} jednostek po filtrze; ` : '')
       + 'utworzonych z issue Jira i powiązanych, scalonych Merge Requests; nie jest oceną produktywności zespołu.';
   }
 
   protected deliveredStoryPointsTooltip(aggregate: DeliveryAssessmentAggregate): string {
-    return `Suma DSP z ${aggregate.assessedUnits} ocenionych Delivery Units wynosi ${aggregate.totalDeliveredStoryPoints}. `
-      + 'DSP każdej jednostki backend wylicza z ważonej oceny sześciu wymiarów AI i mapuje na skalę '
+    return `Suma CP z ${aggregate.assessedUnits} ocenionych Delivery Units wynosi ${aggregate.totalDeliveredStoryPoints}. `
+      + 'CP każdej jednostki backend wylicza z ważonej oceny siedmiu wymiarów AI i mapuje na skalę '
       + '0, 1, 2, 3, 5, 8 lub 13. Jednostki bez oceny i błędne nie dodają punktów.';
   }
 
@@ -438,19 +438,19 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
 
   protected assessedUnitsTooltip(aggregate: DeliveryAssessmentAggregate): string {
     return `Delivery Units ze statusem COMPLETED, dla których AI zwróciło prawidłową ocenę, a backend `
-      + `wyliczył DSP: ${aggregate.assessedUnits} z ${aggregate.totalUnits} wszystkich jednostek.`;
+      + `wyliczył CP: ${aggregate.assessedUnits} z ${aggregate.totalUnits} wszystkich jednostek.`;
   }
 
   protected notAssessedUnitsTooltip(aggregate: DeliveryAssessmentAggregate): string {
     const total = aggregate.excludedUnits + aggregate.notScorableUnits;
     return `Suma jednostek EXCLUDED (${aggregate.excludedUnits}) i NOT_SCORABLE (${aggregate.notScorableUnits}) `
       + `wynosi ${total}. EXCLUDED nie reprezentuje dostarczenia, a NOT_SCORABLE nie ma wystarczającego `
-      + 'evidence. Żadne z nich nie zwiększa DSP.';
+      + 'evidence. Żadne z nich nie zwiększa CP.';
   }
 
   protected failedUnitsTooltip(aggregate: DeliveryAssessmentAggregate): string {
     return `Delivery Units ze statusem FAILED: ${aggregate.failedUnits}. To przypadki niezakończone z powodu `
-      + 'błędu przygotowania evidence, wywołania AI, walidacji lub parsowania odpowiedzi; nie zwiększają DSP.';
+      + 'błędu przygotowania evidence, wywołania AI, walidacji lub parsowania odpowiedzi; nie zwiększają CP.';
   }
 
   protected tokenCount(value: number): string {
@@ -594,7 +594,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
 
   private applyLocalRun(detail: LocalAnalysisRunDetailResponse): void {
     if (detail.feature !== 'delivery-complexity-assessment') {
-      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Delivery Complexity Assessment.`);
+      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Behavior Change Assessment.`);
       return;
     }
     const job = jobFromEnvelope(detail.exportEnvelope);

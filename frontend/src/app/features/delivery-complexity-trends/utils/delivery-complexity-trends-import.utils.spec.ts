@@ -31,7 +31,7 @@ const DSC_HEADERS = [
   'distributionPoints', 'finalScore', 'pointsForAggregation'
 ] as const;
 
-describe('Delivery Complexity Trends CSV import', () => {
+describe('Delivery Trends CSV import', () => {
   it('should detect DCA, parse authors and deduplicate issue keys deterministically', async () => {
     const first = csvFile('2026-07.csv', DCA_HEADERS, [
       row(DCA_HEADERS, {

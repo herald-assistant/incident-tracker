@@ -1,11 +1,11 @@
-# Delivery Complexity Assessment Runtime Flow
+# Behavior Change Assessment Runtime Flow
 
 ## Cel i kontrakt
 
-`Delivery Complexity Assessment` mierzy obserwowalna, semantyczna
-zlozonosc zmian dostarczonych w projekcie Jira i zakresie lokalnych dat.
-`Delivered Story Points` jest metryka wyniku, nie nazwa feature'a i nie
-odtwarza czasu pracy ani istniejacych Story Points z Jira.
+`Behavior Change Assessment` ocenia zlozonosc dostarczonych zmian w dzialaniu
+produktu: funkcjach, regulach i procesach, takze dzialajacych w tle.
+UI uzywa ikony `domain_add` oraz etykiety wyniku `Complexity Points (CP)`.
+Wynik nie odtwarza czasu pracy ani istniejacych Story Points z Jira.
 
 Publiczne wejscia:
 
@@ -84,11 +84,11 @@ i `mergeRequestAuthorNames`, snapshot `timeSpentSeconds`,
 `timeTrackingCapturedAt`, wymiary oceny, `score100`,
 `deliveredStoryPoints` oraz `pointsForAggregation`. Ocena pozostaje ocena
 Delivery Unit i jest powtarzana przy jej issue. Aby analiza w Excelu nie
-zwielokrotniala DSP, `pointsForAggregation` jest wypelnione tylko dla issue z
+zwielokrotniala CP, `pointsForAggregation` jest wypelnione tylko dla issue z
 najpozniejszym `doneAt`, a przy remisie z leksykograficznie najmniejszym
 `issueKey`. CSV uzywa separatora `;`, UTF-8 z BOM oraz cytowania wartosci
 z separatorem, cudzyslowem albo nowa linia. Ten biznesowy CSV moze byc lokalnie
-wczytany przez `Delivery Complexity Trends`; nie zmienia to jego
+wczytany przez `Delivery Trends`; nie zmienia to jego
 niewersjonowanego, niezaleznego od backendowego importu charakteru.
 
 Przed kazdym wywolaniem modelu feature zapisuje na Delivery Unit dokladny
@@ -263,7 +263,7 @@ odpowiedz ma byc finalnym JSON-em.
 
 Jira, GitLab, Confluence, filesystem, shell i terminal nie sa dostepne w
 sesji. AI zwraca classification, confidence, evidence/quality/visibility oraz
-siedem wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`. Zwalidowany
+siedem wymiarow 0-4 dla `DELIVERY`. Nie zwraca CP ani `score100`. Zwalidowany
 JSON jest mapowany bezposrednio na wynik jednostki; feature nie tworzy
 rownoleglego `AnalysisReport` ani nie wykonuje kolejnego wywolania modelu lub
 toola.
@@ -303,7 +303,7 @@ ogon opisowy. Nie odzyskuje ani nie zgaduje niekompletnych pol scoringowych.
 Ten sam zwalidowany skill jest widoczny w read-only ekranie `Platform / AI
 Skills`. Frontendowa projekcja grupuje
 `delivery-complexity-assessment-evaluator` jako rodzine
-`Delivery Complexity Assessment` i odpowiedzialnosc `Assessment`; pozostaje
+`Behavior Change Assessment` i odpowiedzialnosc `Assessment`; pozostaje
 to etykieta nawigacyjna, a nie runtime selection skilla.
 
 Backend liczy `score100` wagami `10/20/20/15/10/10/15` i mapuje wynik na
@@ -339,7 +339,7 @@ pozostawianiu osobnego procesu CLI po zakonczonej Delivery Unit.
 
 Snapshot publikuje postep Jira, kroki, context, activity, czastkowe jednostki i
 aggregate. Visibility limits pozostaja przy jednostkach, ktorych widocznosci
-dotycza. Aggregate backendowy zawiera total DSP, distribution, coverage,
+dotycza. Aggregate backendowy zawiera total CP, distribution, coverage,
 confidence, liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED` oraz zsumowane
 usage/cost dla calego runu. UI moze deterministycznie przeliczyc ten sam ksztalt
 agregatu dla widocznych jednostek po filtrze. Parent job konczy sie `COMPLETED`,
@@ -351,7 +351,7 @@ agregat kredytow pozostaje nieznany. Wspolny aside pokazuje kredyty i ekwiwalent
 USD przy zalozeniu 100 kredytow = 1 USD.
 
 Glowny wynik UI jest jedna rozwijalna tabela Delivery Units. Wiersz pokazuje
-issue, MR-y, status i DSP; ikona ostrzezenia przy statusie sygnalizuje
+issue, MR-y, status i CP; ikona ostrzezenia przy statusie sygnalizuje
 quality flags, visibility limits albo blad jednostki. Rozwiniecie pokazuje
 MR-y jako linki oraz tylko dostepne Evidence, Quality flags, Visibility limits
 i Warnings. Na koncu `Unit insights` znajduje sie domyslnie zwiniety panel
@@ -360,7 +360,7 @@ diagnostyki bez przeszukiwania logow. Nad tabela sa filtry po zespole Jira i
 autorze MR. Po wybraniu
 filtra UI pokazuje te sama tabele i wynik zbiorczy w ksztalcie
 odfiltrowanym do widocznych Delivery Units. Gdy widoczne issue ma MR-y wiecej
-niz jednego autora, UI pokazuje ostrzezenie informacyjne, bo DSP dotyczy calej
+niz jednego autora, UI pokazuje ostrzezenie informacyjne, bo CP dotyczy calej
 jednostki i nie jest dzielone pomiedzy osoby. Pod tabela znajduje sie prosty
 wynik zbiorczy bez ponownego wyliczania konkretnych issue. Koszt w aside dotyczy
 calego wykonania, niezaleznie od filtra widoku. Nie ma osobnego visibility

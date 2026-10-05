@@ -171,13 +171,13 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     const estimateComparison = element().querySelector<HTMLElement>('.trend-effort-comparison')!;
     expect(efficiency).not.toBeNull();
     expect(estimateComparison).not.toBeNull();
-    expect(efficiency.textContent).toContain('Efficiency');
+    expect(efficiency.textContent).toContain('Complexity Points / MD');
     expect(efficiency.textContent).not.toContain('Original Estimate a Time Spent');
     expect(estimateComparison.textContent).toContain('Original Estimate a Time Spent');
     expect(estimateComparison.textContent).toContain('Realizacja estymaty');
     expect(estimateComparison.textContent).toContain('Time Spent / Original Estimate');
     expect(estimateComparison.previousElementSibling).toBe(efficiency);
-    expect(efficiency.textContent).toContain('Efficiency');
+    expect(efficiency.textContent).toContain('Complexity Points / MD');
     expect(efficiency.textContent).toContain('CP/MD');
     expect(efficiency.textContent).toContain('Time Spent (MD)');
     expect(efficiency.querySelectorAll('.trend-efficiency-bar')).toHaveLength(2);
@@ -203,19 +203,19 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(estimateBars[1].textContent).toContain('+33,3 p.p.');
     expect(estimateBars[0].querySelector('.trend-estimate-trend-bar__fill--first')).not.toBeNull();
     expect(estimateBars[1].querySelector('.trend-estimate-trend-bar__fill--worsened')).not.toBeNull();
-    expect(estimateBars[1].title).toContain('mniej efektywnie niż w poprzednim okresie');
+    expect(estimateBars[1].title).toContain('wzrost wskaźnika względem poprzedniego okresu');
     expect(
       estimateComparison.querySelector('.trend-estimate-trend-chart')?.getAttribute('aria-label')
     ).toContain('100% oznacza realizację zgodną z estymatą');
     expect(efficiency.querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('10,5');
     expect(efficiency.querySelector('input[type="number"]')).toBeNull();
-    expect(efficiency.textContent).toContain('1 MD odpowiada 8 godzinom');
+    expect(efficiency.textContent).toContain('1 MD = 8 godzin');
     expect(efficiency.textContent).toContain('1 MD = 8 h');
 
     fixture.componentInstance.authorControl.setValue('id:101');
     fixture.detectChanges();
     expect(element().querySelector('.trend-efficiency-panel')?.textContent).toContain(
-      'Nie przypisuje Time Spent ani Efficiency do tej osoby'
+      'Nie przypisuje Time Spent ani punktów do tej osoby'
     );
   });
 
@@ -240,7 +240,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(estimateBars).toHaveLength(2);
     expect(estimateBars[1].textContent).toContain('-53,3 p.p.');
     expect(estimateBars[1].querySelector('.trend-estimate-trend-bar__fill--improved')).not.toBeNull();
-    expect(estimateBars[1].title).toContain('efektywniej niż w poprzednim okresie');
+    expect(estimateBars[1].title).toContain('spadek wskaźnika względem poprzedniego okresu');
   });
 
   it('should filter whole Delivery Units by multiple issue types without double counting', async () => {

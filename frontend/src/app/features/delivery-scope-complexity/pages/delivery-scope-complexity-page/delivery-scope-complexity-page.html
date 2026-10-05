@@ -4,7 +4,7 @@
       <div class="section-heading">
         <div>
           <p class="section-eyebrow">Delivery portfolio</p>
-          <h2 id="deliveryScopeTitle">Delivery Scope Complexity</h2>
+          <h2 id="deliveryScopeTitle">Technical Change Assessment</h2>
         </div>
         <div class="section-heading__actions">
           @if (localRunName()) {
@@ -119,7 +119,7 @@
         <div class="assessment-algorithm__body">
           <div class="assessment-algorithm__intro">
             <p>
-              AI ocenia intensywność zmiany od 0 do 100 oraz jej semantyczny zakres od 0 do 1
+              AI ocenia intensywność zmiany technicznej od 0 do 100 oraz jej zakres od 0 do 1
               osobno w sześciu wymiarach. Backend przelicza zakres na mnożnik od 0,5 do 2,0,
               stosuje stałe wagi i wylicza wynik jednostki od 0 do 200.
             </p>
@@ -456,11 +456,11 @@
               <div>
                 <strong>{{ aggregate.totalComplexityPoints | number:'1.1-1' }}</strong>
                 <span class="overall-result__label">
-                  <span>Punkty complexity</span>
+                  <span>Complexity Points</span>
                   <button
                     type="button"
                     class="overall-result__help"
-                    aria-label="Wyjaśnienie punktów complexity"
+                    aria-label="Wyjaśnienie Complexity Points"
                     [matTooltip]="complexityPointsTooltip(aggregate)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">info</span>
@@ -546,7 +546,7 @@
       </section>
 
       <app-analysis-feature-aside
-        ariaLabel="Panel pracy Delivery Scope Complexity"
+        ariaLabel="Panel pracy Technical Change Assessment"
         [usage]="currentJob.aggregate.usage"
         [progressActive]="workflowRunning()"
         [aiActive]="currentJob.status === 'ANALYZING'"

@@ -102,7 +102,7 @@ class DeliveryAssessmentImportServiceTest {
 
         assertThatThrownBy(() -> service.importReadOnly(document))
                 .isInstanceOf(DeliveryAssessmentImportException.class)
-                .hasMessage("Unsupported Delivery Complexity Assessment export version.");
+                .hasMessage("Unsupported Behavior Change Assessment export version.");
     }
 
     @Test
@@ -118,7 +118,7 @@ class DeliveryAssessmentImportServiceTest {
 
         assertThatThrownBy(() -> service.importReadOnly(document))
                 .isInstanceOf(DeliveryAssessmentImportException.class)
-                .hasMessage("Unsupported Delivery Complexity Assessment result contract.");
+                .hasMessage("Unsupported Behavior Change Assessment result contract.");
     }
 
     @Test
@@ -139,10 +139,10 @@ class DeliveryAssessmentImportServiceTest {
 
         assertThatThrownBy(() -> service.importReadOnly(active))
                 .isInstanceOf(DeliveryAssessmentImportException.class)
-                .hasMessage("Only a completed Delivery Complexity Assessment result can be imported.");
+                .hasMessage("Only a completed Behavior Change Assessment result can be imported.");
         assertThatThrownBy(() -> service.importReadOnly(inconsistent))
                 .isInstanceOf(DeliveryAssessmentImportException.class)
-                .hasMessage("Delivery Complexity Assessment export has inconsistent aggregate data.");
+                .hasMessage("Behavior Change Assessment export has inconsistent aggregate data.");
     }
 
     @Test

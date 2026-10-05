@@ -132,10 +132,10 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
     if (!job || !this.hasTerminalRun() || !aggregate) return null;
     return buildDeliveryShareDocument(
       `delivery-scope-complexity-${sanitizeFileNamePart(job.jiraProject)}-${job.fromDate}-${job.toDate}.md`,
-      `Delivery Scope Complexity · ${job.jiraProject}`,
+      `Technical Change Assessment · ${job.jiraProject}`,
       `${job.fromDate} – ${job.toDate}${this.filtersActive() ? ' · aktualny filtr' : ''}`,
       [
-        `Punkty złożoności: ${aggregate.totalComplexityPoints}`,
+        `Complexity Points: ${aggregate.totalComplexityPoints}`,
         `Średni wynik: ${aggregate.averageComplexityScore}/200`,
         `Ocenione jednostki: ${aggregate.assessedUnits} / ${aggregate.totalUnits}`,
         `Confidence: ${aggregate.confidence}`
@@ -297,7 +297,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
     try {
       const document = await readJsonFile(
         file,
-        'Plik nie zawiera poprawnego eksportu Delivery Scope Complexity.'
+        'Plik nie zawiera poprawnego eksportu Technical Change Assessment.'
       );
       this.api
         .importRun(document)
@@ -404,7 +404,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
     const prefix = this.filtersActive()
       ? 'Odfiltrowany obraz'
       : 'Zbiorczy obraz';
-    return `${prefix} obserwowalnej złożoności dostarczonej w projekcie ${job.jiraProject} `
+    return `${prefix} zakresu i złożoności zmian technicznych w projekcie ${job.jiraProject} `
       + `od ${job.fromDate} do ${job.toDate}. Powstaje z ${job.aggregate.totalUnits} Delivery Units `
       + (this.filtersActive() ? `i pokazuje ${aggregate.totalUnits} jednostek po filtrze; ` : '')
       + 'utworzonych z issue Jira i powiązanych, scalonych Merge Requests; nie jest oceną produktywności zespołu.';
@@ -600,7 +600,7 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
 
   private applyLocalRun(detail: LocalAnalysisRunDetailResponse): void {
     if (detail.feature !== 'delivery-scope-complexity') {
-      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Delivery Scope Complexity.`);
+      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Technical Change Assessment.`);
       return;
     }
     const job = jobFromEnvelope(detail.exportEnvelope);

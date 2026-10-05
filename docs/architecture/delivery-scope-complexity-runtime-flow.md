@@ -1,10 +1,14 @@
-# Delivery Scope Complexity Runtime Flow
+# Technical Change Assessment Runtime Flow
 
-## Cel i izolacja eksperymentu
+## Cel i izolacja feature'a
 
-`Delivery Scope Complexity` jest niezaleznym feature'em eksperymentalnym do
-rownoleglego porownania z `Delivery Complexity Assessment`. Ocenia ten sam typ
-dostarczonego materialu, ale uzywa innego kontraktu AI i innej arytmetyki.
+`Technical Change Assessment` ocenia zakres i zlozonosc dostarczonych zmian
+technicznych, w tym logiki, kontraktow, refaktoryzacji i architektury. UI uzywa
+ikony `engineering` i etykiety `Complexity Points (CP)`. To niezalezny
+feature z wlasnym kontraktem AI i arytmetyka. Status w UI: `Dostępne`.
+Poprzednia nazwa `Delivery Scope Complexity` pozostaje nazwa implementacji
+(`delivery-scope-complexity`, `features.deliveryscopecomplexity`, klasy
+`DeliveryScope*`). Pelne mapowanie trzech ekranow opisuje glowny `AGENTS.md`.
 Nie importuje kodu, modeli ani komponentow sibling feature'a.
 
 Publiczne wejscia:
@@ -177,10 +181,10 @@ issue. `pointsForAggregation` jest wypelnione tylko dla issue z najpozniejszym
 suma tej kolumny nie zwielokrotnia wyniku jednostki. CSV nie jest formatem
 importu; uzywa separatora `;`, UTF-8 z BOM i cytowania wartosci z separatorem,
 cudzyslowem albo nowa linia. Ten biznesowy CSV moze byc lokalnie wczytany
-przez `Delivery Complexity Trends`; nie staje sie przez to wersjonowanym
+przez `Delivery Trends`; nie staje sie przez to wersjonowanym
 kontraktem backendowego importu.
 
-## Ownership i usuniecie eksperymentu
+## Ownership i usuniecie feature'a
 
 Pakiet `features.deliveryscopecomplexity` posiada caly kontrakt use case'u:
 source orchestration, Delivery Units, evidence, prompt, parser, scoring, job,
@@ -189,4 +193,4 @@ persistence codec, import/export i API. Reuse dotyczy tylko neutralnych
 
 Usuniecie feature'a wymaga usuniecia jego pakietu, testow, skilla, katalogu
 Angular i punktowych wpisow composition root. Nie wymaga zmiany ani migracji
-`Delivery Complexity Assessment`.
+`Behavior Change Assessment`.

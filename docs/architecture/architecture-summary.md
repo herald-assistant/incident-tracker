@@ -71,7 +71,7 @@ Follow-up chat wznawia zapisana sesje Copilota i uzywa juz rozwiazanego hidden s
 
 ## Feature'y i API
 
-Obok Incident Analysis produkt posiada lub rozwija niezalezne feature'y: Flow Explorer, Change Verification, Config Drift Viewer, Delivery Complexity Assessment, eksperymentalny Delivery Scope Complexity, Delivery Complexity Trends oraz UI Explorer. Kazdy z nich jest odrebnym pionem w `features` i reuse'uje capability platformy bez zaleznosci od Incident Analysis.
+Obok Incident Analysis produkt posiada lub rozwija niezalezne feature'y: Flow Explorer, Change Verification, Config Drift Viewer, Behavior Change Assessment, Technical Change Assessment, Delivery Trends oraz UI Explorer. Kazdy z nich jest odrebnym pionem w `features` i reuse'uje capability platformy bez zaleznosci od Incident Analysis.
 
 `api.*` udostepnia shared/operator fasady, m.in. katalog modeli, konfiguracje UI, ustawienia workspace'u, GitHub auth, effective AI Skills, Operational Context oraz lokalna historie runow. Endpointy konkretnego use case'u sa feature-owned i mieszcza sie przy jego API/job workflow.
 

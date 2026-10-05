@@ -247,10 +247,10 @@ export class AnalysisHistoryPageComponent {
       return 'Config Drift Viewer';
     }
     if (feature === 'delivery-complexity-assessment') {
-      return 'Delivery Complexity Assessment';
+      return 'Behavior Change Assessment';
     }
     if (feature === 'delivery-scope-complexity') {
-      return 'Delivery Scope Complexity';
+      return 'Technical Change Assessment';
     }
     return feature
       ? feature
@@ -284,10 +284,10 @@ export class AnalysisHistoryPageComponent {
       return 'build_circle';
     }
     if (feature === 'delivery-complexity-assessment') {
-      return 'query_stats';
+      return 'domain_add';
     }
     if (feature === 'delivery-scope-complexity') {
-      return 'function';
+      return 'engineering';
     }
     return 'analytics';
   }

@@ -101,7 +101,7 @@ class DeliveryScopeImportServiceTest {
 
         assertThatThrownBy(() -> service.importReadOnly(document))
                 .isInstanceOf(DeliveryScopeImportException.class)
-                .hasMessage("Unsupported Delivery Scope Complexity export version.");
+                .hasMessage("Unsupported Technical Change Assessment export version.");
     }
 
     @Test
@@ -117,7 +117,7 @@ class DeliveryScopeImportServiceTest {
 
         assertThatThrownBy(() -> service.importReadOnly(document))
                 .isInstanceOf(DeliveryScopeImportException.class)
-                .hasMessage("Unsupported Delivery Scope Complexity result contract.");
+                .hasMessage("Unsupported Technical Change Assessment result contract.");
     }
 
     @Test
@@ -138,10 +138,10 @@ class DeliveryScopeImportServiceTest {
 
         assertThatThrownBy(() -> service.importReadOnly(active))
                 .isInstanceOf(DeliveryScopeImportException.class)
-                .hasMessage("Only a completed Delivery Scope Complexity result can be imported.");
+                .hasMessage("Only a completed Technical Change Assessment result can be imported.");
         assertThatThrownBy(() -> service.importReadOnly(inconsistent))
                 .isInstanceOf(DeliveryScopeImportException.class)
-                .hasMessage("Delivery Scope Complexity export has inconsistent aggregate data.");
+                .hasMessage("Technical Change Assessment export has inconsistent aggregate data.");
     }
 
     @Test

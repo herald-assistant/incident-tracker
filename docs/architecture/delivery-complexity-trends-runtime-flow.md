@@ -1,12 +1,12 @@
-# Delivery Complexity Trends Runtime Flow
+# Delivery Trends Runtime Flow
 
 ## Cel i granica
 
-`Delivery Complexity Trends` jest uniwersalnym, frontendowym konsumentem
-biznesowych CSV z `Delivery Complexity Assessment` oraz
-`Delivery Scope Complexity`. Oba zrodla sa w prezentacji normalizowane do
-wspolnej metryki `Complexity Points (CP)`; zrodlowe nazwy pol scoringu
-pozostaja detalem kompatybilnego formatu CSV.
+`Delivery Trends` jest uniwersalnym, frontendowym konsumentem
+biznesowych CSV z `Behavior Change Assessment` oraz
+`Technical Change Assessment`. UI uzywa ikony `finance`. Obie perspektywy
+maja etykiete `Complexity Points (CP)`, ale rozne skale; naglowek wykresu
+wskazuje nazwe oceny. Nie nalezy porownywac ani sumowac punktow obu metod.
 
 Ekran jest dostepny pod `GET /delivery-complexity-trends`. Nie uruchamia
 assessmentu, nie ma API, historii ani storage po stronie serwera i nie importuje
@@ -110,11 +110,11 @@ Nie sumuje powtorzonych wymiarow z kazdego issue jednostki.
 
 Semantyka prezentacji jest jawnie zalezna od assessmentu:
 
-- dla Delivery Scope Complexity szesc kolumn `*Points` tworzy addytywny
+- dla Technical Change Assessment szesc kolumn `*Points` tworzy addytywny
   rozklad `finalScore`; domyslny skumulowany wykres laczny sumuje sie do
   `Complexity Points`, a tryb sredni pokazuje punktowy wklad wymiaru na
   Delivery Unit,
-- dla Delivery Complexity Assessment domyslny heatmap pokazuje srednia
+- dla Behavior Change Assessment domyslny heatmap pokazuje srednia
   surowa ocene `0-4`; opcjonalny wykres laczny stosuje wagi
   `10/20/20/15/10/10/15` i pokazuje wklad do `score100`. Nie jest to rozklad
   Delivered Story Points, poniewaz DSP powstaje przez progi wyniku `score100`.
@@ -128,7 +128,7 @@ Profil wymiarow wyjasnia kompozycje obserwowalnej zlozonosci. Tak samo jak
 wynik glowny nie jest miara produktywnosci osoby ani automatyczna ocena
 dobrze/zle.
 
-## Efektywnosc czasu i estimate
+## Punkty na jednostke czasu i estimate
 
 Warstwa prezentacji uzywa jednego slownika niezaleznie od assessmentu:
 
@@ -138,7 +138,7 @@ Warstwa prezentacji uzywa jednego slownika niezaleznie od assessmentu:
 - `Time Spent (MD)` oznacza czas zalogowany w Jira przeliczony z sekund na MD,
 - `Remaining Estimate (MD)` oznacza pozostala estymacje z Jira, gdy raport
   pokazuje jej wartosc,
-- `Efficiency` ma jednostke `CP/MD`.
+- `Zlozonosc dostaw na jednostke czasu` ma jednostke `CP/MD`.
 
 UI nie uzywa dla tych wartosci nazw Delivered Story Points, DSP, punktow
 delivery ani osobodni. Techniczny kontrakt CSV pozostaje kompatybilny i nadal
@@ -161,7 +161,7 @@ Calosc snapshotu czasu jest przypisana do okresu `doneAt` punktowej kotwicy
 Delivery Unit. CSV nie zawiera historii worklogow, dlatego ekran nie rozklada
 nakladu na rzeczywiste dni jego poniesienia. Okresy bez kwalifikujacej sie
 proby nie sa dopisywane jako zera. Dla kazdego okresu widoczne sa CP,
-Time Spent (MD), Efficiency (CP/MD), zmiana, pokrycie i wielkosc proby; okres ponizej
+Time Spent (MD), punkty / czas (CP/MD), zmiana, pokrycie i wielkosc proby; okres ponizej
 trzech Delivery Units jest liczony jako mala proba.
 
 Dla calego tribe jednostki wielozespolowe pozostaja w wyniku. Po wyborze
@@ -177,15 +177,15 @@ okres pokazuje wskaznik `Time Spent / Original Estimate * 100%` z linia
 referencyjna `100%` oraz zmiane wzgledem poprzedniego okresu w punktach
 procentowych. Wartosc ponizej `100%` oznacza przeszacowanie, a powyzej `100%`
 niedoszacowanie. Kolor slupka nie koduje polozenia wzgledem `100%`, tylko
-kierunek zmiany wobec poprzedniego okresu: spadek wskaznika oznacza bardziej
-efektywna realizacje i kolor zielony, wzrost mniej efektywna realizacje i kolor
-pomaranczowy, brak zmiany kolor szary, a pierwszy okres kolor niebieski.
+kierunek zmiany wobec poprzedniego okresu: spadek wskaznika ma kolor zielony,
+wzrost pomaranczowy, brak zmiany szary, a pierwszy okres niebieski. Opisy
+pokazuja wzrost lub spadek, bez automatycznej oceny efektywnosci.
 Pozostale estimate nie sa mieszane z ta proba. Dodatni
 `remainingEstimateSeconds` dla issue w Done jest licznikiem jakosci danych, a
 nie czescia efektywnosci.
 
 Wskaznik pokazuje obserwowana relacje wyniku assessmentu do zarejestrowanego
-czasu. Nie dowodzi przyczynowego uzysku z AI i nie sluzy do rankingow osob.
+czasu. Nie mierzy produktywnosci, nie dowodzi uzysku z AI ani nie sluzy do rankingow osob.
 
 Osobne sekcje pokazuja laczna zlozonosc, ostatnia zmiane, pokrycie jednostek i
 issue, najwyzszy okres, najwiekszy wzrost/spadek, statusy ocen oraz jakosc

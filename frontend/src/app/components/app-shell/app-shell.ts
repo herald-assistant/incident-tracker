@@ -99,21 +99,21 @@ const NAV_GROUPS: NavGroup[] = [
         reloadOnActiveClick: true
       },
       {
-        label: 'Delivery Complexity Assessment',
+        label: 'Behavior Change Assessment',
         route: '/delivery-complexity-assessment',
-        icon: 'query_stats',
+        icon: 'domain_add',
         reloadOnActiveClick: true
       },
       {
-        label: 'Delivery Scope Complexity',
+        label: 'Technical Change Assessment',
         route: '/delivery-scope-complexity',
-        icon: 'function',
+        icon: 'engineering',
         reloadOnActiveClick: true
       },
       {
-        label: 'Delivery Complexity Trends',
+        label: 'Delivery Trends',
         route: '/delivery-complexity-trends',
-        icon: 'monitoring',
+        icon: 'finance',
         reloadOnActiveClick: true
       },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }

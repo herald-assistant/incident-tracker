@@ -115,7 +115,7 @@ public class DeliveryComplexityAssessmentJobService {
             job.finalizeJob();
             persistSnapshot(job, false);
         } catch (RuntimeException exception) {
-            log.error("Delivery Complexity Assessment failed jobId={} reason={}",
+            log.error("Behavior Change Assessment failed jobId={} reason={}",
                     job.snapshot().jobId(), exception.getMessage(), exception);
             job.markFailed("DELIVERY_ASSESSMENT_FAILED", safeMessage(exception));
             persistSnapshot(job, false);
@@ -224,14 +224,14 @@ public class DeliveryComplexityAssessmentJobService {
         if (!properties.isEnabled()) {
             throw new DeliveryAssessmentStartException(
                     "DELIVERY_ASSESSMENT_DISABLED",
-                    "Delivery Complexity Assessment is disabled.",
+                    "Behavior Change Assessment is disabled.",
                     UserFacingErrorType.SERVICE_UNAVAILABLE
             );
         }
         if (!workspaceProperties.isEnabled()) {
             throw new DeliveryAssessmentStartException(
                     "DELIVERY_ASSESSMENT_HISTORY_DISABLED",
-                    "Delivery Complexity Assessment requires local Analysis History storage.",
+                    "Behavior Change Assessment requires local Analysis History storage.",
                     UserFacingErrorType.SERVICE_UNAVAILABLE
             );
         }

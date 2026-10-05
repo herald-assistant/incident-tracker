@@ -6,12 +6,12 @@ export const AI_SKILL_FAMILIES = [
   { id: 'config-drift-viewer', label: 'Config Drift Viewer', prefix: 'config-drift-viewer-' },
   {
     id: 'delivery-complexity-assessment',
-    label: 'Delivery Complexity Assessment',
+    label: 'Behavior Change Assessment',
     prefix: 'delivery-complexity-assessment-'
   },
   {
     id: 'delivery-scope-complexity',
-    label: 'Delivery Scope Complexity',
+    label: 'Technical Change Assessment',
     prefix: 'delivery-scope-complexity-'
   },
   {

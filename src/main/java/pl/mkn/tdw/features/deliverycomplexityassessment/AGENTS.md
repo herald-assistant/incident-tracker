@@ -2,7 +2,10 @@
 
 ## Zakres
 
-Ten katalog zawiera dedykowany feature Delivery Complexity Assessment.
+Ten katalog zawiera dedykowany feature Behavior Change Assessment.
+Poprzednia nazwa Delivery Complexity Assessment i identyfikator `delivery-complexity-assessment`
+oznaczaja ten sam feature; pakiet i klasy zachowuja dotychczasowe nazwy.
+Pelne mapowanie nazw Delivery znajduje sie w glownym `AGENTS.md`.
 Feature ocenia obserwowalna zlozonosc dostarczonych zmian dla projektu Jira i
 zakresu dat.
 

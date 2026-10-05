@@ -142,6 +142,7 @@ export const routes: Routes = [
         }
       },
       {
+        // Behavior Change Assessment (formerly Delivery Complexity Assessment); implementation id: delivery-complexity-assessment.
         path: 'delivery-complexity-assessment',
         loadComponent: () =>
           import(
@@ -149,10 +150,11 @@ export const routes: Routes = [
           ).then((module) => module.DeliveryComplexityAssessmentPageComponent),
         data: {
           section: 'Analysis Features',
-          title: 'Delivery Complexity Assessment'
+          title: 'Behavior Change Assessment'
         }
       },
       {
+        // Technical Change Assessment (formerly Delivery Scope Complexity); implementation id: delivery-scope-complexity.
         path: 'delivery-scope-complexity',
         loadComponent: () =>
           import(
@@ -160,10 +162,11 @@ export const routes: Routes = [
           ).then((module) => module.DeliveryScopeComplexityPageComponent),
         data: {
           section: 'Analysis Features',
-          title: 'Delivery Scope Complexity'
+          title: 'Technical Change Assessment'
         }
       },
       {
+        // Delivery Trends (formerly Delivery Complexity Trends); implementation id: delivery-complexity-trends.
         path: 'delivery-complexity-trends',
         loadComponent: () =>
           import(
@@ -171,7 +174,7 @@ export const routes: Routes = [
           ).then((module) => module.DeliveryComplexityTrendsPageComponent),
         data: {
           section: 'Analysis Features',
-          title: 'Delivery Complexity Trends'
+          title: 'Delivery Trends'
         }
       },
       {

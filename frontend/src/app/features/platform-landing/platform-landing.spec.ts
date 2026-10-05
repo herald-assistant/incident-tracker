@@ -53,10 +53,16 @@ describe('PlatformLandingPageComponent', () => {
       'platform-landing__feature-card--delivery',
       'platform-landing__feature-card--delivery'
     ]);
-    expect(featureGrid?.textContent).toContain('Delivery Complexity Assessment');
-    expect(featureGrid?.textContent).toContain('Delivery Scope Complexity');
-    expect(featureGrid?.textContent).toContain('Delivery Complexity Trends');
+    expect(featureGrid?.textContent).toContain('Behavior Change Assessment');
+    expect(featureGrid?.textContent).toContain('Technical Change Assessment');
+    expect(featureGrid?.textContent).toContain('Delivery Trends');
     expect(featureGrid?.textContent).not.toContain('Data Diagnostics');
+    expect(featureLinks.slice(6).map((link) =>
+      link.querySelector('.platform-landing__feature-icon')?.textContent?.trim()
+    )).toEqual(['domain_add', 'engineering', 'finance']);
+    expect(featureLinks.slice(6).map((link) =>
+      link.querySelector('.platform-landing__feature-status')?.textContent?.trim()
+    )).toEqual(['Dostępne', 'Dostępne', 'Dostępne']);
     expect(
       featureLinks[2]?.querySelector('.platform-landing__feature-icon')?.textContent?.trim()
     ).toBe('screen_search_desktop');

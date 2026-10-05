@@ -61,7 +61,7 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
-  it('should render Delivery Complexity Trends from the Analysis Features navigation', async () => {
+  it('should render Delivery Trends from the Analysis Features navigation', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
     const http = TestBed.inject(HttpTestingController);
@@ -74,18 +74,18 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const navLink = compiled.querySelector(
-      'a.app-shell__nav-item[aria-label="Delivery Complexity Trends"]'
+      'a.app-shell__nav-item[aria-label="Delivery Trends"]'
     );
 
     expect(compiled.querySelector('app-delivery-complexity-trends-page')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
-      'Delivery Complexity Trends'
+      'Delivery Trends'
     );
     expect(navLink?.getAttribute('aria-current')).toBe('page');
     expect(navLink?.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe(
-      'monitoring'
+      'finance'
     );
-    expect(compiled.textContent).toContain('Połącz raporty i zobacz zmianę złożoności');
+    expect(compiled.textContent).toContain('Połącz raporty i zobacz trendy dostaw');
   });
 
   it('should render the incident analysis shell on the incident analysis route', async () => {

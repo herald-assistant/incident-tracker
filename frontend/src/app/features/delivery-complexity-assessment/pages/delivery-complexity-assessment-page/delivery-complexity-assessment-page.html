@@ -4,7 +4,7 @@
       <div class="section-heading">
         <div>
           <p class="section-eyebrow">Delivery portfolio</p>
-          <h2 id="deliveryAssessmentTitle">Delivery Complexity Assessment</h2>
+          <h2 id="deliveryAssessmentTitle">Behavior Change Assessment</h2>
         </div>
         <div class="section-heading__actions">
           @if (localRunName()) {
@@ -119,7 +119,7 @@
         <div class="assessment-algorithm__body">
           <div class="assessment-algorithm__intro">
             <p>
-              Każda oceniona Delivery Unit otrzymuje wartości od 0 do 4 w siedmiu wymiarach.
+              AI ocenia zmiany w działaniu produktu od 0 do 4 w siedmiu wymiarach Delivery Unit.
               Backend przelicza je na wynik od 0 do 100 według stałych wag:
             </p>
           </div>
@@ -156,21 +156,21 @@
           </dl>
 
           <div class="assessment-algorithm__conversion">
-            <h4>Przeliczenie wyniku na Delivered Story Points</h4>
-            <dl class="assessment-algorithm__buckets" aria-label="Progi Delivered Story Points">
-              <div><dt>0</dt><dd>0 DSP</dd></div>
-              <div><dt>&gt; 0–14</dt><dd>1 DSP</dd></div>
-              <div><dt>&gt; 14–27</dt><dd>2 DSP</dd></div>
-              <div><dt>&gt; 27–42</dt><dd>3 DSP</dd></div>
-              <div><dt>&gt; 42–58</dt><dd>5 DSP</dd></div>
-              <div><dt>&gt; 58–75</dt><dd>8 DSP</dd></div>
-              <div><dt>&gt; 75</dt><dd>13 DSP</dd></div>
+            <h4>Przeliczenie wyniku na Complexity Points</h4>
+            <dl class="assessment-algorithm__buckets" aria-label="Progi Complexity Points">
+              <div><dt>0</dt><dd>0 CP</dd></div>
+              <div><dt>&gt; 0–14</dt><dd>1 CP</dd></div>
+              <div><dt>&gt; 14–27</dt><dd>2 CP</dd></div>
+              <div><dt>&gt; 27–42</dt><dd>3 CP</dd></div>
+              <div><dt>&gt; 42–58</dt><dd>5 CP</dd></div>
+              <div><dt>&gt; 58–75</dt><dd>8 CP</dd></div>
+              <div><dt>&gt; 75</dt><dd>13 CP</dd></div>
             </dl>
           </div>
 
           <p class="assessment-algorithm__note">
-            Wynik całego raportu jest sumą DSP ocenionych jednostek. Jednostki pominięte i zakończone
-            błędem nie dodają punktów. Confidence jest prezentowane osobno i nie zmienia wyniku DSP.
+            Wynik całego raportu jest sumą CP ocenionych jednostek. Jednostki pominięte i zakończone
+            błędem nie dodają punktów. Confidence jest prezentowane osobno i nie zmienia wyniku CP.
           </p>
         </div>
       </details>
@@ -243,7 +243,7 @@
             <span role="columnheader">Issue</span>
             <span role="columnheader">Merge Requests</span>
             <span role="columnheader">Status</span>
-            <span role="columnheader">DSP</span>
+            <span role="columnheader">CP</span>
             <span role="columnheader"></span>
           </div>
           @for (unit of visibleUnits(); track trackUnit($index, unit)) {
@@ -452,11 +452,11 @@
               <div>
                 <strong>{{ aggregate.totalDeliveredStoryPoints }}</strong>
                 <span class="overall-result__label">
-                  <span>Delivered Story Points</span>
+                  <span>Complexity Points</span>
                   <button
                     type="button"
                     class="overall-result__help"
-                    aria-label="Wyjaśnienie Delivered Story Points"
+                    aria-label="Wyjaśnienie Complexity Points"
                     [matTooltip]="deliveredStoryPointsTooltip(aggregate)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">info</span>
@@ -528,7 +528,7 @@
       </section>
 
       <app-analysis-feature-aside
-        ariaLabel="Panel pracy Delivery Complexity Assessment"
+        ariaLabel="Panel pracy Behavior Change Assessment"
         [usage]="currentJob.aggregate.usage"
         [progressActive]="workflowRunning()"
         [aiActive]="currentJob.status === 'ANALYZING'"

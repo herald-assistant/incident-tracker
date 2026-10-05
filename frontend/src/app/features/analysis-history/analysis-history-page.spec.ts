@@ -51,7 +51,7 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('config-drift-viewer')).toBe('build_circle');
   });
 
-  it('should use the Delivery Complexity Assessment product mapping', async () => {
+  it('should use the Behavior Change Assessment product mapping', async () => {
     const { fixture } = await createComponent();
     const component = fixture.componentInstance as unknown as {
       featureLabel: (feature: string) => string;
@@ -59,11 +59,11 @@ describe('AnalysisHistoryPageComponent', () => {
     };
 
     expect(component.featureLabel('delivery-complexity-assessment'))
-      .toBe('Delivery Complexity Assessment');
-    expect(component.featureIcon('delivery-complexity-assessment')).toBe('query_stats');
+      .toBe('Behavior Change Assessment');
+    expect(component.featureIcon('delivery-complexity-assessment')).toBe('domain_add');
   });
 
-  it('should use the Delivery Scope Complexity product mapping', async () => {
+  it('should use the Technical Change Assessment product mapping', async () => {
     const { fixture } = await createComponent();
     const component = fixture.componentInstance as unknown as {
       featureLabel: (feature: string) => string;
@@ -71,8 +71,8 @@ describe('AnalysisHistoryPageComponent', () => {
     };
 
     expect(component.featureLabel('delivery-scope-complexity'))
-      .toBe('Delivery Scope Complexity');
-    expect(component.featureIcon('delivery-scope-complexity')).toBe('function');
+      .toBe('Technical Change Assessment');
+    expect(component.featureIcon('delivery-scope-complexity')).toBe('engineering');
   });
 
   it('should use the UI Explorer product mapping', async () => {

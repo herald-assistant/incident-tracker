@@ -39,8 +39,8 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    naprawy, weryfikacji albo przekazania dalej.
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
-Config Drift Viewer, Delivery Complexity Assessment i eksperymentalny
-Delivery Scope Complexity. Frontendowy Delivery Complexity Trends laczy
+Config Drift Viewer, Behavior Change Assessment i
+Technical Change Assessment. Frontendowy Delivery Trends laczy
 lokalnie biznesowe CSV jednego z assessmentow i pokazuje addytywny trend bez
 nowego backendowego API ani storage. Trend wymiarow wyjasnia, co napedza
 zmiane: Scope jako addytywny rozklad, a Assessment jako profil `0-4` lub
@@ -440,7 +440,7 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
 - `POST /api/config-drift-viewer/v1/imports`
   Waliduje kompletny kontrakt V1 calego batcha i zwraca snapshot read-only.
 - `GET /delivery-complexity-assessment`
-  Angularowy workspace `Analysis Features / Delivery Complexity Assessment`
+  Angularowy workspace `Analysis Features / Behavior Change Assessment`
   z projektem Jira, zakresem dat, pollingiem i czastkowymi
   wynikami jednostek.
 - `POST /api/delivery-complexity-assessment/jobs`
@@ -450,7 +450,7 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
   effective JQL, steps/activity, Delivery Units, aggregate, usage, visibility
   limits i report.
 - `GET /delivery-scope-complexity`
-  Angularowy workspace niezaleznego eksperymentu score x scope z projektem i datami.
+  Angularowy workspace niezaleznego assessmentu score x scope z projektem i datami.
 - `POST /api/delivery-scope-complexity/jobs`
   Zapisuje `QUEUED` w Analysis History i uruchamia wlasny lifecycle. Polling
   `GET /api/delivery-scope-complexity/jobs/{jobId}` zwraca czastkowe jednostki,
@@ -965,8 +965,8 @@ Znaczenie grup UI:
 - `Analysis Features` - pionowe feature'y produktowe. `Incident Analysis` jest
   pierwszym dostepnym feature'em; Flow Explorer i Change Verification sa
   kolejnymi dostepnymi feature'ami, podobnie jak Config Drift Viewer i
-  Delivery Complexity Assessment, eksperymentalny Delivery Scope Complexity
-  i client-only Delivery Complexity Trends, a Data Diagnostics pozostaje
+  Behavior Change Assessment, Technical Change Assessment
+  i client-only Delivery Trends, a Data Diagnostics pozostaje
   placeholderem dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
   GitLab, Jira, Confluence, Database i Operational Context sa

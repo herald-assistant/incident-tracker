@@ -30,8 +30,8 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification`,
-  `Config Drift Viewer`, `Delivery Complexity Assessment`, eksperymentalny
-  `Delivery Scope Complexity`, `Delivery Complexity Trends`, `UI Explorer`,
+  `Config Drift Viewer`, `Behavior Change Assessment`,
+  `Technical Change Assessment`, `Delivery Trends`, `UI Explorer`,
   `UX Inspector` oraz przyszle miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
@@ -187,7 +187,7 @@ operatorski diff, mapping, anonimizacje oraz dokladny AI-safe input tego samego
 pipeline'u dla pojedynczego scope'u. Nie uruchamia modelu i nie jest batchowym
 jobem ani historia analizy.
 
-### Delivery Complexity Assessment
+### Behavior Change Assessment
 
 Operator wybiera projekt Jira i zakres lokalnych dat. Feature
 wyszukuje issue aktualnie w kategorii `Done`, potwierdza ich ostatnie
@@ -197,7 +197,7 @@ liczony wielokrotnie.
 
 AI ocenia tylko ograniczony, przygotowany pakiet Jira/GitLab/Confluence, bez
 narzedzi eksploracyjnych i bez danych personalnych. Backend deterministycznie
-mapuje szesc wymiarow na skale Delivered Story Points `0/1/2/3/5/8/13`.
+mapuje siedem wymiarow na skale Complexity Points `0/1/2/3/5/8/13`.
 Suma jest zawsze prezentowana razem z coverage, confidence, visibility limits
 i usage/cost; metryka nie mierzy czasu pracy ani wydajnosci ludzi.
 
@@ -206,10 +206,9 @@ wynikami czastkowymi. Feature korzysta z neutralnych Jira/GitLab ports,
 platformy Copilota i shared run UI, ale posiada wlasny request, evidence,
 policy, scoring, report i job state.
 
-### Delivery Scope Complexity
+### Technical Change Assessment
 
-To niezalezny eksperyment uruchamiany rownolegle z Delivery Complexity
-Assessment dla tych samych zakresow Jira. AI oddzielnie ocenia intensywnosc
+To niezalezny assessment uruchamiany rownolegle z Behavior Change Assessment dla tych samych zakresow Jira. AI oddzielnie ocenia intensywnosc
 `0-100` i semantyczny zakres `0-1` szesciu wymiarow. Backend liczy jawny
 mnoznik zakresu `0.5-2.0`, wazone skladowe i finalny wynik `0-200`.
 
@@ -225,7 +224,7 @@ modelu bez long context wybiera skonfigurowany model rozszerzonego kontekstu.
 Operator widzi rzeczywisty model przy jednostce. Procedury oceny i scoring
 pozostaja wlasnoscia poszczegolnych feature'ow.
 
-### Delivery Complexity Trends
+### Delivery Trends
 
 Uzytkownik laczy na zadanie biznesowe CSV z kolejnych runow jednego
 assessmentu i oglada zmiane dostarczonej zlozonosci dziennie, tygodniowo,
@@ -237,7 +236,7 @@ statusy i jakosc importu ulatwiaja odczyt trendu bez przygotowywania stalego
 dashboardu albo zapisywania danych na serwerze.
 Sekcja ocen czastkowych wyjasnia kompozycje zmiany: Scope zachowuje addytywny
 rozklad punktow, a Assessment pokazuje profil `0-4` lub wazony wklad do
-`score100`, nigdy pozorny rozklad progowego DSP.
+`score100`, nigdy pozorny rozklad progowych CP.
 
 To frontendowy konsument obu niezaleznych assessmentow, a nie wspolna domena
 ich scoringu. Jeden zestaw nie miesza algorytmow. Filtr autora oznacza udzial
@@ -390,8 +389,8 @@ generycznym silnikiem analitycznym.
 
 ## Najwazniejszy dowod architektury
 
-Flow Explorer, Change Verification, Delivery Complexity Assessment i
-Delivery Scope Complexity sa
+Flow Explorer, Change Verification, Behavior Change Assessment i
+Technical Change Assessment sa
 kolejnymi feature'ami obok Incident Analysis i stanowia praktyczny test, czy platforma nie jest tylko
 przemianowanym incident trackerem. Kazdy obecny i kolejny feature:
 

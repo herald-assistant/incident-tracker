@@ -115,7 +115,7 @@ public class DeliveryScopeComplexityJobService {
             job.finalizeJob();
             persistSnapshot(job, false);
         } catch (RuntimeException exception) {
-            log.error("Delivery Scope Complexity failed jobId={} reason={}",
+            log.error("Technical Change Assessment failed jobId={} reason={}",
                     job.snapshot().jobId(), exception.getMessage(), exception);
             job.markFailed("DELIVERY_SCOPE_FAILED", safeMessage(exception));
             persistSnapshot(job, false);
@@ -224,14 +224,14 @@ public class DeliveryScopeComplexityJobService {
         if (!properties.isEnabled()) {
             throw new DeliveryScopeStartException(
                     "DELIVERY_SCOPE_DISABLED",
-                    "Delivery Scope Complexity is disabled.",
+                    "Technical Change Assessment is disabled.",
                     UserFacingErrorType.SERVICE_UNAVAILABLE
             );
         }
         if (!workspaceProperties.isEnabled()) {
             throw new DeliveryScopeStartException(
                     "DELIVERY_SCOPE_HISTORY_DISABLED",
-                    "Delivery Scope Complexity requires local Analysis History storage.",
+                    "Technical Change Assessment requires local Analysis History storage.",
                     UserFacingErrorType.SERVICE_UNAVAILABLE
             );
         }
@@ -255,7 +255,7 @@ public class DeliveryScopeComplexityJobService {
                 if (required) {
                     throw exception;
                 }
-                log.warn("Delivery Scope Complexity snapshot persistence failed jobId={} reason={}",
+                log.warn("Technical Change Assessment snapshot persistence failed jobId={} reason={}",
                         job.snapshot().jobId(), exception.getMessage(), exception);
             }
         }

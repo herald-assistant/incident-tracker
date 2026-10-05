@@ -1091,7 +1091,7 @@ przypiety commit nadal ograniczaja odczyt. Prompt jest widoczny w jobie i
 zachowywany w lokalnej historii; dane z repozytorium pozostaja niezaufanym
 materialem, a nie instrukcjami zmieniajacymi zasady asysty.
 
-## 28. Delivery Complexity Assessment rozdziela discovery, interpretacje i scoring
+## 28. Behavior Change Assessment rozdziela discovery, interpretacje i scoring
 
 Operator podaje typowane kryteria `projectKey`, `fromDate` i `toDate`, a nie
 surowy JQL. Reusable adapter Jira mapuje je na ograniczone zapytanie JQL,
@@ -1160,10 +1160,9 @@ Publiczny request i aktualny V1 eksport nie zachowuja poprzednich globalnych
 opcji. Preflight nie zmienia evidence, tresci promptow/skilli, scoringu,
 procedury one-shot ani modelu pozostalych feature'ow.
 
-## 29. Alternatywny scoring jest izolowany jako osobny eksperyment
+## 29. Technical Change Assessment ma niezalezny scoring
 
-`Delivery Scope Complexity` nie jest trybem ani wersja Delivery Complexity
-Assessment. Ma wlasny feature id, API, properties, skill, kontrakt wyniku,
+`Technical Change Assessment` nie jest trybem ani wersja Behavior Change Assessment. Ma wlasny feature id, API, properties, skill, kontrakt wyniku,
 local run codec, import/export i ekran. Oba feature'y korzystaja z neutralnych
 Jira/GitLab/Copilot capabilities, ale nie importuja siebie wzajemnie. Czasowe
 powtorzenie source/job orchestration jest zaakceptowanym kosztem deletion
@@ -1175,7 +1174,7 @@ mapuje go liniowo na `scope` `0.5-2.0`, liczy wazone punkty i ogranicza wynik
 jednostki do `0-200`. Publiczny breakdown zawiera kazda skladowa arytmetyki,
 wiec wynik jest odtwarzalny bez interpretowania raw response.
 
-Eksperyment nie mapuje wyniku na DSP i nie mierzy produktywnosci. Aggregate
+Technical Change Assessment nie mapuje wyniku na skale Behavior Change Assessment i nie mierzy produktywnosci. Aggregate
 zawiera sume i srednia final score, liczniki statusow, confidence oraz
 usage/cost. Wspolny dashboard porownawczy nie jest czescia pierwszej wersji;
 uzytkownik uruchamia oba niezalezne runy na tym samym zakresie.

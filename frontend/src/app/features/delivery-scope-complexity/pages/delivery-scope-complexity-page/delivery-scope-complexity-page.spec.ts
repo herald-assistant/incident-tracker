@@ -143,7 +143,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     fixture.detectChanges();
 
     expect(history.getRun).toHaveBeenCalledWith('job-1');
-    expect(fixture.nativeElement.textContent).toContain('nie jest Delivery Scope Complexity');
+    expect(fixture.nativeElement.textContent).toContain('nie jest Technical Change Assessment');
   });
 
   it('should present aggregate credits in the shared aside only', async () => {
@@ -445,7 +445,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     const completed = snapshot('COMPLETED', 8, [completedUnit()]);
     const { fixture, history } = await createComponent({ localRun: completed, localRunId: 'job-1' });
     const document = fixture.componentInstance.shareDocument();
-    expect(document?.markdown).toContain('Punkty złożoności');
+    expect(document?.markdown).toContain('Complexity Points');
     expect(document?.markdown).toContain('CRM-1');
     expect(document?.markdownWithMeta).toContain('Referencje');
     expect(fixture.nativeElement.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();

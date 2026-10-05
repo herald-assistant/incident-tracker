@@ -9,7 +9,7 @@ public class DeliveryAssessmentImportPersistenceException extends UserFacingAppl
         super(
                 "DELIVERY_ASSESSMENT_IMPORT_PERSISTENCE_UNAVAILABLE",
                 UserFacingErrorType.SERVICE_UNAVAILABLE,
-                "Delivery Complexity Assessment import cannot be saved in local Analysis History."
+                "Behavior Change Assessment import cannot be saved in local Analysis History."
         );
     }
 }
