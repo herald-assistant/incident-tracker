@@ -97,15 +97,15 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('ux-inspector')).toBe('ads_click');
   });
 
-  it('routes saved Operational Context assistance to its read-only feature view', async () => {
-    const { fixture, router } = await createComponent();
+  it('opens saved Operational Context assistance in a new tab', async () => {
+    const { fixture } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
       analysisId: 'assistance-1', feature: 'operational-context-assistance',
       name: 'Utwórz lub uzupełnij katalog', status: 'COMPLETED',
       createdAt: '2026-09-13T10:00:00Z', updatedAt: '2026-09-13T10:01:00Z',
       completedAt: '2026-09-13T10:01:00Z'
     };
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     const component = fixture.componentInstance as unknown as {
       featureLabel: (feature: string) => string;
       featureIcon: (feature: string) => string;
@@ -116,9 +116,11 @@ describe('AnalysisHistoryPageComponent', () => {
 
     expect(component.featureLabel(run.feature)).toBe('Asysta Operational Context');
     expect(component.featureIcon(run.feature)).toBe('hub');
-    expect(navigateSpy).toHaveBeenCalledWith(['/operational-context'], {
-      queryParams: { localRunId: 'assistance-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/operational-context?localRunId=assistance-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should keep history action labels in tooltips instead of visible button text', async () => {
@@ -136,7 +138,7 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(runActionButtons.every((button) => button.querySelectorAll('span:not(.material-symbols-outlined)').length === 0))
       .toBe(true);
     expect(tooltipMessagesForIcon(fixture, 'refresh')).toContain('Refresh');
-    expect(tooltipMessagesForIcon(fixture, 'visibility')).toContain('Open');
+    expect(tooltipMessagesForIcon(fixture, 'visibility')).toContain('Open in new tab');
     expect(tooltipMessagesForIcon(fixture, 'edit')).toContain('Rename');
     expect(tooltipMessagesForIcon(fixture, 'download')).toContain('Export');
     expect(tooltipMessagesForIcon(fixture, 'download')).toContain(
@@ -221,53 +223,65 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Flow /customers goal');
   });
 
-  it('should open an incident run in the feature screen without loading full run JSON in history', async () => {
+  it('should open an incident run in a new tab and keep history and its filter in place', async () => {
     const { fixture, historyApi, router } = await createComponent();
-    const run = listRuns()[0]!;
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    fixture.componentInstance.filterControl.setValue('crm');
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
-    fixture.componentInstance.openRun(run);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+    const previewButton = (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.analysis-history-run__actions button')!;
+    previewButton.click();
 
     expect(historyApi.getRun).not.toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith(['/incident-analysis'], {
-      queryParams: { localRunId: 'analysis-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/incident-analysis?localRunId=analysis-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.filterControl.value).toBe('crm');
+    expect(fixture.nativeElement.textContent).toContain('CRM corr-123');
     expect(fixture.nativeElement.textContent).not.toContain('Analiza funkcjonalna procesu profilu klienta CRM.');
   });
 
   it('should route a flow run to the Flow Explorer feature screen', async () => {
-    const { fixture, router } = await createComponent();
+    const { fixture } = await createComponent();
     const run = listRuns()[1]!;
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/flow-explorer'], {
-      queryParams: { localRunId: 'analysis-2' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/flow-explorer?localRunId=analysis-2',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should route a change verification run to the Change Verification feature screen', async () => {
-    const { fixture, router } = await createComponent();
+    const { fixture } = await createComponent();
     const run = listRuns()[3]!;
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/change-verification'], {
-      queryParams: { localRunId: 'analysis-4' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/change-verification?localRunId=analysis-4',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should route a config drift viewer run to its feature screen', async () => {
-    const { fixture, router } = await createComponent();
+    const { fixture } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
       analysisId: 'config-drift-viewer-1',
       feature: 'config-drift-viewer',
@@ -277,19 +291,21 @@ describe('AnalysisHistoryPageComponent', () => {
       updatedAt: '2026-07-30T10:01:00Z',
       completedAt: '2026-07-30T10:01:00Z'
     };
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/config-drift-viewer'], {
-      queryParams: { localRunId: 'config-drift-viewer-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/config-drift-viewer?localRunId=config-drift-viewer-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should route a delivery complexity run to its feature screen', async () => {
-    const { fixture, router } = await createComponent();
+    const { fixture } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
       analysisId: 'delivery-1',
       feature: 'delivery-complexity-assessment',
@@ -299,18 +315,20 @@ describe('AnalysisHistoryPageComponent', () => {
       updatedAt: '2026-07-30T10:01:00Z',
       completedAt: ''
     };
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/delivery-complexity-assessment'], {
-      queryParams: { localRunId: 'delivery-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/delivery-complexity-assessment?localRunId=delivery-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should route a delivery scope run to its independent feature screen', async () => {
-    const { fixture, router } = await createComponent();
+    const { fixture } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
       analysisId: 'delivery-scope-1',
       feature: 'delivery-scope-complexity',
@@ -320,14 +338,16 @@ describe('AnalysisHistoryPageComponent', () => {
       updatedAt: '2026-07-30T10:01:00Z',
       completedAt: ''
     };
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/delivery-scope-complexity'], {
-      queryParams: { localRunId: 'delivery-scope-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/delivery-scope-complexity?localRunId=delivery-scope-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should route a UI Explorer run to its feature screen', async () => {
@@ -341,15 +361,17 @@ describe('AnalysisHistoryPageComponent', () => {
       updatedAt: '2026-08-15T10:01:00Z',
       completedAt: '2026-08-15T10:01:00Z'
     };
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     await fixture.whenStable();
 
     expect(historyApi.getRun).not.toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith(['/ui-explorer'], {
-      queryParams: { localRunId: 'crm-ui-history-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/ui-explorer?localRunId=crm-ui-history-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
   it('should route a UX Inspector run to its read-only feature screen', async () => {
@@ -363,15 +385,17 @@ describe('AnalysisHistoryPageComponent', () => {
       updatedAt: '2026-09-15T10:02:00Z',
       completedAt: '2026-09-15T10:02:00Z'
     };
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
 
     fixture.componentInstance.openRun(run);
     await fixture.whenStable();
 
     expect(historyApi.getRun).not.toHaveBeenCalled();
-    expect(navigateSpy).toHaveBeenCalledWith(['/ux-inspector'], {
-      queryParams: { localRunId: 'ux-inspector-run-1' }
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      '/ux-inspector?localRunId=ux-inspector-run-1',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 
 

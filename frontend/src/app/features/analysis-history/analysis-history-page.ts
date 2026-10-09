@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -33,6 +34,7 @@ import {
 export class AnalysisHistoryPageComponent {
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly filterControl = new FormControl('', { nonNullable: true });
@@ -42,7 +44,6 @@ export class AnalysisHistoryPageComponent {
   readonly filterText = signal('');
   readonly isListLoading = signal(false);
   readonly listError = signal('');
-  readonly openingAnalysisId = signal('');
   readonly openError = signal('');
   readonly renamingAnalysisId = signal('');
   readonly renameError = signal('');
@@ -114,21 +115,14 @@ export class AnalysisHistoryPageComponent {
       return;
     }
 
-    this.openingAnalysisId.set(run.analysisId);
     this.openError.set('');
 
-    void this.router
-      .navigate([route], {
-        queryParams: {
-          localRunId: run.analysisId
-        }
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree([route], {
+        queryParams: { localRunId: run.analysisId }
       })
-      .then((navigated) => {
-        if (!navigated) {
-          this.openError.set('Nie udało się otworzyć lokalnego runu w ekranie feature.');
-        }
-      })
-      .finally(() => this.openingAnalysisId.set(''));
+    );
+    window.open(this.location.prepareExternalUrl(url), '_blank', 'noopener,noreferrer');
   }
 
   exportRun(run: LocalAnalysisRunListItemResponse): void {

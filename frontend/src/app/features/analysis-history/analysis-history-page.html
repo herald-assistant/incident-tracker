@@ -179,9 +179,8 @@
                     <button
                       class="secondary-button"
                       type="button"
-                      [disabled]="openingAnalysisId() === run.analysisId"
-                      [attr.aria-label]="openingAnalysisId() === run.analysisId ? 'Opening local run ' + run.name : 'Open local run ' + run.name"
-                      [matTooltip]="openingAnalysisId() === run.analysisId ? 'Opening...' : 'Open'"
+                      [attr.aria-label]="'Open local run ' + run.name + ' in a new tab'"
+                      matTooltip="Open in new tab"
                       matTooltipPosition="above"
                       [matTooltipShowDelay]="120"
                       (click)="openRun(run)"
