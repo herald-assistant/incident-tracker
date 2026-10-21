@@ -71,12 +71,24 @@ describe('ContextEntityEditorDrawerComponent', () => {
     expect(sections[2].hidden).toBe(true);
   });
 
-  it('keeps every section visible in read-only preview', async () => {
+  it('keeps preview values visible, hides empty selectors and restores them for editing', async () => {
     await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
-      entity: { type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml', payload: { id: 'crm-contact-core', name: 'CRM Contact Core' } }
+      entity: {
+        type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml',
+        payload: {
+          id: 'crm-contact-core', name: 'CRM Contact Core',
+          ownership: { ownershipStatus: 'explicit', ownerTeamIds: ['crm-contact-team'] },
+          references: { processes: ['crm-contact-update'] },
+          relations: [{ type: 'depends-on', externalSystem: 'CRM partner platform' }]
+        }
+      }
+    });
+    fixture.componentRef.setInput('referenceOptions', {
+      team: [{ id: 'crm-contact-team', label: 'CRM Contact Team' }],
+      process: [{ id: 'crm-contact-update', label: 'CRM Contact Update' }]
     });
     fixture.componentRef.setInput('readonly', true);
     fixture.detectChanges();
@@ -84,6 +96,39 @@ describe('ContextEntityEditorDrawerComponent', () => {
     const sections = fixture.nativeElement.querySelectorAll('.editor-section') as NodeListOf<HTMLElement>;
     expect(Array.from(sections).every((section) => !section.hidden)).toBe(true);
     expect(fixture.nativeElement.querySelector('.editor-advanced-toggle')).toBeNull();
+
+    const root = fixture.nativeElement as HTMLElement;
+    for (const selector of [
+      '[data-field-path="systemSubtype"]',
+      '#ownership-confidence', '#source-coverage-status',
+      '#relation-target-type-0', '#relation-target-0', '#relation-via-0',
+      '#reference-integrations'
+    ]) {
+      const field = root.querySelector<HTMLElement>(selector)!
+        .closest<HTMLElement>('.editor-field, .structured-control, .reference-group')!;
+      expect(field.hidden, selector).toBe(true);
+      expect(getComputedStyle(field).display, selector).toBe('none');
+    }
+    expect(root.querySelector<HTMLElement>('#ownership-status')!.closest<HTMLElement>('.structured-control')!.hidden).toBe(false);
+    expect(root.querySelector<HTMLSelectElement>('#ownership-status')!.value).toBe('explicit');
+    expect(root.querySelector<HTMLElement>('#reference-processes')!.closest<HTMLElement>('.reference-group')!.hidden).toBe(false);
+    expect(root.querySelector('[data-field-path="ownership"] .value-chip')!.textContent).toContain('CRM Contact Team');
+    expect(root.querySelector('[data-field-path="references"] .value-chip')!.textContent).toContain('CRM Contact Update');
+    for (const selector of ['#ownership-team', '#reference-processes']) {
+      const select = root.querySelector<HTMLSelectElement>(selector)!;
+      expect(select.hidden).toBe(true);
+      expect(getComputedStyle(select).display).toBe('none');
+    }
+
+    fixture.componentInstance.form.controls['systemSubtype'].setValue('backend');
+    fixture.detectChanges();
+    expect(root.querySelector<HTMLElement>('[data-field-path="systemSubtype"]')!.hidden).toBe(false);
+    expect(root.querySelector<HTMLSelectElement>('#systemSubtype')!.value).toBe('backend');
+
+    fixture.componentRef.setInput('readonly', false);
+    fixture.detectChanges();
+    expect(root.querySelectorAll('.editor-field[hidden], .structured-control[hidden], .reference-group[hidden], select[hidden]').length).toBe(0);
+    expect(root.querySelector<HTMLSelectElement>('#ownership-team')!.disabled).toBe(false);
   });
 
   it('opens an advanced section and focuses a nested field requested by maintenance inbox', async () => {

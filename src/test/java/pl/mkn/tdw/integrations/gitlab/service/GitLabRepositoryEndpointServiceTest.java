@@ -153,7 +153,8 @@ class GitLabRepositoryEndpointServiceTest {
                 result.endpoints().get(0).endpointId());
         assertEquals("/api/crm/customers/{customerId}", result.endpoints().get(0).path());
         assertTrue(result.endpoints().get(0).annotations().contains("OpenApiContract"));
-        assertTrue(result.endpoints().get(0).annotations().contains("Implements CustomerDataApi"));
+        assertTrue(result.endpoints().get(0).annotations()
+                .contains("Implements com.example.crm.customer.adapter.in.rest.CustomerDataApi"));
         assertTrue(result.endpoints().get(0).limitations()
                 .contains("Endpoint mapping resolved from OpenAPI YAML contract, not Java annotations."));
         assertEquals("OPENAPI_YAML", result.endpoints().get(0).documentation().source());

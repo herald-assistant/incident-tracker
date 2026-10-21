@@ -1,3 +1,4 @@
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { Component, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -330,7 +331,7 @@ function group(key: string, label: string, type: OperationalContextWritableType)
 
 @Component({
   selector: 'app-context-structured-field-editor',
-  imports: [MatIconModule, MatTooltipModule],
+  imports: [MatIconModule, MatTooltipModule, CdkTextareaAutosize],
   templateUrl: './context-structured-field-editor.html',
   styleUrl: './context-structured-field-editor.scss'
 })

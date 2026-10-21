@@ -1,3 +1,4 @@
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, ElementRef, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -45,7 +46,7 @@ interface BatchFieldIssue {
 
 @Component({
   selector: 'app-context-assistance-panel',
-  imports: [ReactiveFormsModule, AnalysisStepsPanelComponent, AnalysisFeatureAsideComponent, GitLabBranchSelectComponent, AnalysisShareMenuComponent],
+  imports: [ReactiveFormsModule, CdkTextareaAutosize, AnalysisStepsPanelComponent, AnalysisFeatureAsideComponent, GitLabBranchSelectComponent, AnalysisShareMenuComponent],
   templateUrl: './context-assistance-panel.html',
   styleUrl: './context-assistance-panel.scss'
 })

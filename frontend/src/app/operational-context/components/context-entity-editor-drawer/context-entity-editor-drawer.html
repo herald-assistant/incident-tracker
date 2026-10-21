@@ -35,7 +35,7 @@
         <h3>{{ section.title }}</h3>
         <div class="editor-grid">
           @for (field of section.fields; track field.path) {
-            <div class="editor-field" [attr.data-field-path]="field.path" [class.editor-field--wide]="field.kind !== 'text' && field.kind !== 'select'">
+            <div class="editor-field" [attr.data-field-path]="field.path" [class.editor-field--wide]="field.kind !== 'text' && field.kind !== 'select'" [hidden]="readonly() && field.kind === 'select' && !form.controls[controlName(field)].value.trim()">
               <div class="editor-field__label-row">
                 <label [for]="controlName(field)">{{ field.label }} @if (field.required) { <strong>*</strong> }</label>
                 <button
@@ -59,7 +59,7 @@
                   (valueChange)="updateStructuredField(field, $event)"
                 ></app-context-structured-field-editor>
               } @else if (field.kind === 'textarea' || field.kind === 'list') {
-                <textarea [id]="controlName(field)" rows="3" [formControlName]="controlName(field)" [attr.readonly]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null"></textarea>
+                <textarea cdkTextareaAutosize [id]="controlName(field)" cdkAutosizeMinRows="3" [formControlName]="controlName(field)" [attr.readonly]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null"></textarea>
               } @else if (field.kind === 'select') {
                 <select [id]="controlName(field)" [formControlName]="controlName(field)" [attr.disabled]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null">
                   <option value="">Not applicable</option>

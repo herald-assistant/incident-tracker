@@ -1,3 +1,4 @@
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { Component, ElementRef, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +19,7 @@ import {
 
 @Component({
   selector: 'app-context-entity-editor-drawer',
-  imports: [ReactiveFormsModule, MatIconModule, MatTooltipModule, ContextStructuredFieldEditorComponent],
+  imports: [ReactiveFormsModule, MatIconModule, MatTooltipModule, CdkTextareaAutosize, ContextStructuredFieldEditorComponent],
   templateUrl: './context-entity-editor-drawer.html',
   styleUrl: './context-entity-editor-drawer.scss'
 })

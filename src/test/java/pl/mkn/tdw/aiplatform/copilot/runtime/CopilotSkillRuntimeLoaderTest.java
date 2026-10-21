@@ -183,6 +183,7 @@ class CopilotSkillRuntimeLoaderTest {
         var loader = new FailingReplaceLoader(properties);
         var before = skill(loader, "incident-analysis-orchestrator");
         var file = skillFile(properties, before.name());
+        var originalBytes = Files.readAllBytes(file);
 
         assertThatThrownBy(() -> loader.updateSkill(
                 before.name(),
@@ -191,7 +192,7 @@ class CopilotSkillRuntimeLoaderTest {
                 .isInstanceOf(CopilotSkillCatalogException.class)
                 .extracting(exception -> ((CopilotSkillCatalogException) exception).code())
                 .isEqualTo(CopilotSkillCatalogException.Code.STORAGE_UNAVAILABLE);
-        assertThat(Files.readString(file)).isEqualTo(before.rawMarkdown());
+        assertThat(Files.readAllBytes(file)).isEqualTo(originalBytes);
         assertThat(skill(loader, before.name())).isEqualTo(before);
     }
 

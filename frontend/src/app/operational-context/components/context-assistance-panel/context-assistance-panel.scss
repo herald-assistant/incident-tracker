@@ -30,7 +30,8 @@
 .assistance-form__select { position: relative; min-width: 0; }
 .assistance-form__select .select-input { appearance: none; padding: 9px 44px 9px 11px; font-weight: 800; line-height: 1.3; }
 .assistance-form__select > .material-symbols-outlined { position: absolute; top: 50%; right: 11px; transform: translateY(-50%); color: var(--text-muted); font-size: 21px; pointer-events: none; }
-.assistance-panel textarea.text-input { resize: vertical; line-height: 1.5; }
+// CDK mierzy wysokość treści; szerokość uwzględnia padding i obramowanie pola.
+.assistance-panel textarea.text-input { box-sizing: content-box; width: calc(100% - 26px); min-height: 0; overflow: hidden; resize: none; line-height: 1.5; }
 .assistance-form > small,
 .assistance-form__source small { color: var(--text-muted); line-height: 1.5; overflow-wrap: anywhere; }
 .assistance-form__checkbox { display: flex; align-items: center; gap: 8px; margin-top: 8px; line-height: 1.5; }
@@ -151,7 +152,6 @@
 .assistance-change__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
 .assistance-change__locked { color: var(--color-text-muted, #526174); font-size: .8rem; }
 .assistance-change__editor { display: grid; gap: .45rem; }
-.assistance-change__editor textarea { min-height: 5rem; }
 .assistance-change__editor .primary-button,
 .assistance-change__editor .secondary-button { padding: .45rem .7rem; }
 .assistance-change__evidence { color: var(--color-text-muted, #526174); font-size: .82rem; }

@@ -29,7 +29,7 @@
   } @else {
   <form class="assistance-form" (submit)="start($event)">
     <label class="field-label" for="assistance-description">Opis dla AI</label>
-    <textarea class="text-input" id="assistance-description" [formControl]="descriptionControl" maxlength="4000" rows="5" placeholder="Co wiadomo o systemie, procesie lub brakującym fakcie?"></textarea>
+    <textarea cdkTextareaAutosize class="text-input" id="assistance-description" [formControl]="descriptionControl" maxlength="4000" cdkAutosizeMinRows="5" placeholder="Co wiadomo o systemie, procesie lub brakującym fakcie?"></textarea>
     <small>{{ descriptionControl.value.length }}/4000 znaków</small>
 
     <label class="assistance-form__checkbox" for="assistance-use-gitlab">
@@ -330,8 +330,8 @@
                     @if (isEditing(activeProposalIndex(), change.path)) {
                       <div class="assistance-change__editor">
                         <label class="field-label" [for]="'assistance-edit-' + activeProposalIndex() + '-' + change.path">Poprawiona wartość @if (typeof change.after !== 'string') { (JSON) }</label>
-                        <textarea class="text-input" [id]="'assistance-edit-' + activeProposalIndex() + '-' + change.path" [formControl]="editValueControl"
-                          [rows]="typeof change.after === 'string' ? 3 : 7" spellcheck="false"></textarea>
+                        <textarea cdkTextareaAutosize class="text-input" [id]="'assistance-edit-' + activeProposalIndex() + '-' + change.path" [formControl]="editValueControl"
+                          [cdkAutosizeMinRows]="typeof change.after === 'string' ? 3 : 7" spellcheck="false"></textarea>
                         @if (editError()) { <p class="assistance-panel__error" role="alert">{{ editError() }}</p> }
                         <div class="assistance-change__actions">
                           <button type="button" class="primary-button" (click)="saveFieldEdit(activeProposalIndex(), proposal, change)">Zastosuj poprawkę</button>

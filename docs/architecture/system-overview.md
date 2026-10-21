@@ -1183,12 +1183,28 @@ REST udostepnianych przez konkretne repozytorium:
 
 1. klient podaje `group`, `projectName`, `branch` oraz opcjonalne filtry
    `endpointPathPrefix`, `httpMethod` i `maxScannedFiles`,
-2. backend deleguje do `integrations.gitlab.GitLabRepositoryEndpointService`,
-3. serwis uzywa wspolnego GitLab repository tree/cache od root repozytorium i
-   sam wybiera produkcyjne source rooty w ukladzie multi-module,
-4. parser best-effort znajduje Spring MVC/REST controller mappings,
+2. backend deleguje do `integrations.gitlab.service.GitLabRepositoryEndpointService`,
+3. serwis wyszukuje sygnaly kontrolerow i mappingow Springa; przy braku
+   trafien reuse'uje wspolne repository tree/cache i ranking produkcyjnych
+   plikow, uwzgledniajac tez nazwy kontrolerow z sufiksem implementacyjnym,
+4. JavaParser rozpoznaje deklaracje klas i metod, pomijajac komentarze,
+   wywolania i zagniezdzone typy pomocnicze. Skaner odczytuje lokalne
+   interfejsy oraz klasy bazowe kontrolera, laczy mappingi i dokumentacje
+   kontraktu z rzeczywistym handlerem oraz zachowuje referencje do obu
+   zrodel. Mapping implementacji ma pierwszenstwo, ale nie usuwa
+   dokumentacji kontraktu. Sam interfejs nie jest osobnym endpointem.
+   Odczyt respektuje `pathPrefixes`, 64 lookupy typow i osiem poziomow
+   dziedziczenia. OpenAPI YAML moze uzupelniac kontrakt generowanego API,
+   ale nie zastepuje znanego lokalnego interfejsu o tej samej prostej nazwie,
 5. endpoint zwraca liste endpointow, klasy/metody handlerow, pliki, linie,
    request/response types, confidence, limitations i suggested next reads.
+
+`scannedFileCount` liczy glowne pliki kandydatow ograniczone przez
+`maxScannedFiles`; dodatkowe pliki lokalnej hierarchii maja osobny limit
+lookupow. Rozpoznawanie pozostaje best-effort: brak lub niejednoznacznosc
+zrodla, nierozstrzygnieta sygnatura, blad parsowania i wyczerpanie limitu sa
+jawnymi ograniczeniami widocznosci, nie dowodem braku endpointu. To nie jest
+runtime introspection Springa ani odczyt binarnych zaleznosci poza repozytorium.
 
 Ten endpoint nie jest czescia glownego job flow analizy. Sluzy operatorowi do
 manualnej weryfikacji tej samej capability, ktora jest wystawiona AI jako

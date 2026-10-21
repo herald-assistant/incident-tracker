@@ -13,6 +13,7 @@
 .editor-advanced-toggle:hover, .editor-advanced-toggle:focus-visible { color: var(--primary); }
 .editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .editor-field { display: grid; align-content: start; gap: 6px; color: var(--text-muted); font-size: .78rem; font-weight: 700; }
+.editor-field[hidden] { display: none; }
 .editor-field__label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .editor-field__label-row label { min-width: 0; }
 .editor-field__help { display: inline-grid; flex: 0 0 auto; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-soft); cursor: help; }
@@ -20,7 +21,8 @@
 .editor-field__help mat-icon { width: 18px; height: 18px; font-size: 18px; }
 .editor-grid input, .editor-grid select, .editor-grid textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border-strong); border-radius: 8px; padding: 9px 10px; background: #fff; color: var(--text-main); font: inherit; font-weight: 500; }
 .editor-grid input:disabled, .editor-grid select:disabled, .editor-grid textarea:disabled { border-color: var(--border); background: #f7f9fc; color: var(--text-main); opacity: 1; }
-.editor-grid textarea { resize: vertical; font-family: inherit; }
+// CDK mierzy wysokość treści; szerokość uwzględnia padding i obramowanie pola.
+.editor-grid textarea { box-sizing: content-box; width: calc(100% - 22px); overflow: hidden; resize: none; font-family: inherit; }
 .editor-field:has(textarea[rows="7"]) textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .76rem; }
 .editor-field--wide { grid-column: 1 / -1; }
 .field-error, .form-error { color: var(--danger-text); }

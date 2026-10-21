@@ -1,5 +1,11 @@
 package pl.mkn.tdw.integrations.gitlab.service;
 
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryEndpoint;
@@ -41,9 +47,10 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
     private static final int MAX_CONTROLLER_FILE_CHARACTERS = 80_000;
     private static final int MAX_CONSTANT_FILE_CHARACTERS = 80_000;
     private static final int MAX_STATIC_CONSTANT_IMPORT_DEPTH = 4;
+    private static final int MAX_ENDPOINT_TYPE_LOOKUPS = 64;
+    private static final int MAX_ENDPOINT_INHERITANCE_DEPTH = 8;
     private static final int MAX_OPENAPI_FILE_CHARACTERS = 260_000;
     private static final int MAX_OPENAPI_FILES = 40;
-    private static final int MAX_SIGNATURE_LINES = 8;
     private static final int MAX_DOCUMENTATION_TEXT_LENGTH = 700;
     private static final int MAX_PARAMETER_DESCRIPTION_LENGTH = 360;
 
@@ -57,6 +64,11 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
             "@RestController",
             "@Controller",
             "@RequestMapping",
+            "@GetMapping",
+            "@PostMapping",
+            "@PutMapping",
+            "@PatchMapping",
+            "@DeleteMapping",
             "RouterFunctions.route",
             "RouterFunction<",
             "@RepositoryRestResource"
@@ -87,23 +99,11 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
             "native",
             "strictfp"
     );
-    private static final Set<String> CONTROL_METHOD_NAMES = Set.of(
-            "if",
-            "for",
-            "while",
-            "switch",
-            "catch",
-            "return",
-            "new",
-            "throw"
-    );
-
+    private static final Pattern ANNOTATION_NAME_PATTERN = Pattern.compile("@([A-Za-z_$][\\w$.]*)");
     private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^\\s*package\\s+([\\w.]+)\\s*;");
     private static final Pattern CLASS_PATTERN = Pattern.compile("\\b(?:class|interface|record)\\s+([A-Za-z_$][\\w$]*)\\b");
-    private static final Pattern ANNOTATION_NAME_PATTERN = Pattern.compile("@([A-Za-z_$][\\w$.]*)");
     private static final Pattern REQUEST_METHOD_PATTERN = Pattern.compile("RequestMethod\\.([A-Z]+)");
     private static final Pattern STRING_LITERAL_PATTERN = Pattern.compile("\"([^\"]*)\"");
-    private static final Pattern IDENTIFIER_BEFORE_PAREN_PATTERN = Pattern.compile("([A-Za-z_$][\\w$]*)\\s*\\(");
     private static final Pattern IMPORT_PATTERN = Pattern.compile(
             "(?m)^\\s*import\\s+(?!static\\b)([\\w.]+|[\\w.]+\\.\\*)\\s*;"
     );
@@ -220,6 +220,7 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         var scannedFileLimitReached = candidateFiles.size() > scannedFiles.size();
         var endpoints = new ArrayList<GitLabRepositoryEndpoint>();
         var controllerImplementations = new ArrayList<ControllerImplementation>();
+        var javaTypes = new LinkedHashMap<String, JavaEndpointType>();
         var openApiOperations = new ArrayList<OpenApiOperation>();
         var openApiDocumentCount = 0;
         var constantResolutionContext = new JavaStringConstantResolutionContext(
@@ -249,19 +250,39 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
                         fileLimitations,
                         constantResolutionContext
                 );
-                endpoints.addAll(parseEndpointFile(
-                        projectName,
-                        content.filePath(),
-                        content.content(),
-                        fileLimitations,
-                        constantResolver
-                ));
-                controllerImplementations.addAll(parseControllerImplementations(
-                        content.filePath(),
-                        content.content()
-                ));
+                var parsed = parseJavaSource(content.content());
+                if (parsed == null) {
+                    limitations.add("Could not parse Java endpoint source: " + content.filePath());
+                    continue;
+                }
+                registerEndpointTypes(content.filePath(), parsed, constantResolver, fileLimitations, javaTypes);
             } catch (RuntimeException exception) {
                 limitations.add("Could not read " + file.filePath() + ": " + safeMessage(exception));
+            }
+        }
+
+        var typeLookups = new LinkedHashSet<String>();
+        for (var controller : List.copyOf(javaTypes.values())) {
+            if (isController(controller.declaration())) {
+                if (ambiguousEndpointType(controller)) {
+                    controller.limitations().forEach(limitation -> addLimitation(limitations, limitation));
+                    continue;
+                }
+                var hierarchy = new ArrayList<EndpointHierarchyType>();
+                collectEndpointHierarchy(group, projectName, branch,
+                        new EndpointHierarchyType(controller, Map.of()), javaTypes, typeLookups,
+                        new LinkedHashSet<>(), constantResolutionContext, hierarchy, limitations, 0);
+                endpoints.addAll(hierarchyEndpoints(projectName, controller, hierarchy, limitations));
+                var interfaceNames = new ArrayList<String>();
+                for (var parent : controller.declaration().getImplementedTypes()) {
+                    var name = endpointParentName(group, projectName, branch, controller.source(),
+                            parent.getNameWithScope(), javaTypes, constantResolutionContext, limitations);
+                    if (name != null) {
+                        interfaceNames.add(name);
+                    }
+                }
+                controllerImplementations.addAll(parseControllerImplementations(
+                        controller.filePath(), controller.declaration(), interfaceNames));
             }
         }
 
@@ -297,7 +318,8 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         }
 
         endpoints = new ArrayList<>(mergeOpenApiDocumentation(endpoints, openApiOperations));
-        endpoints.addAll(openApiBackedEndpoints(projectName, openApiOperations, controllerImplementations, endpoints));
+        endpoints.addAll(openApiBackedEndpoints(projectName, openApiOperations, controllerImplementations,
+                endpoints, javaTypes.keySet()));
 
         if (candidateFiles.isEmpty()) {
             limitations.add("No Spring REST endpoint candidate files were found by GitLab search or repository tree fallback.");
@@ -333,87 +355,367 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
     }
 
     private List<GitLabRepositoryEndpoint> parseEndpointFile(
-            String projectName,
-            String filePath,
-            String content,
-            List<String> inheritedLimitations,
-            JavaStringConstantResolver constantResolver
+            String projectName, String filePath, String content,
+            List<String> inheritedLimitations, JavaStringConstantResolver constantResolver
     ) {
-        if (!StringUtils.hasText(content)) {
+        var parsed = parseJavaSource(content);
+        if (parsed == null) {
             return List.of();
         }
-
-        var lines = content.lines().toList();
-        var packageName = extractPackageName(content);
         var endpoints = new ArrayList<GitLabRepositoryEndpoint>();
-        var pendingAnnotations = new ArrayList<AnnotationBlock>();
-        var annotationBuffer = new StringBuilder();
-        var annotationStartLine = 0;
-        var annotationDepth = 0;
-        var collectingAnnotation = false;
-        ControllerContext controller = null;
-
-        for (int index = 0; index < lines.size(); index++) {
-            var rawLine = lines.get(index);
-            var trimmedLine = rawLine.trim();
-
-            if (collectingAnnotation) {
-                annotationBuffer.append(' ').append(trimmedLine);
-                annotationDepth += parenthesisDelta(trimmedLine);
-                if (annotationDepth <= 0) {
-                    pendingAnnotations.add(new AnnotationBlock(annotationBuffer.toString(), annotationStartLine));
-                    collectingAnnotation = false;
-                    annotationBuffer.setLength(0);
-                }
+        for (var declaration : parsed.findAll(ClassOrInterfaceDeclaration.class)) {
+            if (!isController(declaration)) {
                 continue;
             }
+            var type = new JavaEndpointType(filePath, parsed, declaration, constantResolver,
+                    List.copyOf(inheritedLimitations));
+            endpoints.addAll(hierarchyEndpoints(projectName, type,
+                    List.of(new EndpointHierarchyType(type, Map.of())), new ArrayList<>()));
+        }
+        return List.copyOf(endpoints);
+    }
 
-            if (trimmedLine.startsWith("@")) {
-                annotationStartLine = index + 1;
-                annotationBuffer.setLength(0);
-                annotationBuffer.append(trimmedLine);
-                annotationDepth = parenthesisDelta(trimmedLine);
-                if (annotationDepth <= 0) {
-                    pendingAnnotations.add(new AnnotationBlock(annotationBuffer.toString(), annotationStartLine));
-                    annotationBuffer.setLength(0);
+    private CompilationUnit parseJavaSource(String content) {
+        if (!StringUtils.hasText(content)) {
+            return null;
+        }
+        var parsed = new JavaParser(new ParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE)).parse(content);
+        return parsed.isSuccessful() ? parsed.getResult().orElse(null) : null;
+    }
+
+    private void registerEndpointTypes(
+            String filePath, CompilationUnit source, JavaStringConstantResolver resolver,
+            List<String> limitations, Map<String, JavaEndpointType> types
+    ) {
+        for (var declaration : source.findAll(ClassOrInterfaceDeclaration.class)) {
+            declaration.getFullyQualifiedName().ifPresent(name -> {
+                var existing = types.get(name);
+                if (existing != null && !existing.filePath().equals(filePath)) {
+                    var conflicts = new ArrayList<>(existing.limitations());
+                    addLimitation(conflicts, "Ambiguous endpoint interface source for " + name);
+                    types.put(name, new JavaEndpointType(existing.filePath(), existing.source(),
+                            existing.declaration(), existing.constantResolver(), List.copyOf(conflicts)));
                 } else {
-                    collectingAnnotation = true;
+                    types.putIfAbsent(name, new JavaEndpointType(filePath, source, declaration,
+                            resolver, List.copyOf(limitations)));
                 }
+            });
+        }
+    }
+
+    private boolean ambiguousEndpointType(JavaEndpointType type) {
+        return type.limitations().stream().anyMatch(value -> value.startsWith("Ambiguous endpoint interface source"));
+    }
+
+    private List<AnnotationBlock> annotationBlocks(List<AnnotationExpr> annotations) {
+        return annotations.stream().map(annotation -> new AnnotationBlock(
+                annotation.toString(), annotation.getBegin().orElseThrow().line)).toList();
+    }
+
+    private boolean isController(ClassOrInterfaceDeclaration declaration) {
+        var names = annotationNames(annotationBlocks(declaration.getAnnotations()));
+        return !declaration.isInterface() && !names.contains("FeignClient")
+                && (names.contains("RestController") || names.contains("Controller"));
+    }
+
+    private void collectEndpointHierarchy(
+            String group, String projectName, String branch, EndpointHierarchyType owner,
+            Map<String, JavaEndpointType> types, Set<String> lookups, Set<String> visited,
+            JavaStringConstantResolutionContext resolutionContext,
+            List<EndpointHierarchyType> hierarchy, List<String> limitations, int depth
+    ) {
+        var ownerName = owner.type().declaration().getFullyQualifiedName().orElseThrow();
+        if (!visited.add(ownerName)) {
+            return;
+        }
+        hierarchy.add(owner);
+        var parents = joinLists(owner.type().declaration().getExtendedTypes(),
+                owner.type().declaration().getImplementedTypes());
+        if (depth >= MAX_ENDPOINT_INHERITANCE_DEPTH) {
+            if (!parents.isEmpty()) {
+                addLimitation(limitations, "Endpoint interface traversal reached its depth limit at "
+                        + owner.type().filePath());
+            }
+            return;
+        }
+        for (var parent : parents) {
+            var typeName = endpointParentName(group, projectName, branch, owner.type().source(),
+                    parent.getNameWithScope(), types, resolutionContext, limitations);
+            if (typeName == null) {
                 continue;
             }
-
-            if (isIgnorableBetweenAnnotations(trimmedLine)) {
+            var contract = loadEndpointType(group, projectName, branch, typeName, types,
+                    lookups, resolutionContext, limitations);
+            if (contract == null || annotationNames(annotationBlocks(contract.declaration().getAnnotations()))
+                    .contains("FeignClient")) {
                 continue;
             }
-
-            var className = className(trimmedLine);
-            if (className != null) {
-                controller = buildControllerContext(packageName, className, pendingAnnotations, filePath, constantResolver);
-                pendingAnnotations.clear();
-                continue;
+            var arguments = new LinkedHashMap<String, String>();
+            var actualArguments = parent.getTypeArguments().orElseGet(com.github.javaparser.ast.NodeList::new);
+            var variables = contract.declaration().getTypeParameters();
+            for (var index = 0; index < Math.min(variables.size(), actualArguments.size()); index++) {
+                var argument = actualArguments.get(index).asString();
+                arguments.put(variables.get(index).getNameAsString(),
+                        owner.typeArguments().getOrDefault(argument,
+                                qualifiedJavaType(owner.type().source(), argument)));
             }
+            collectEndpointHierarchy(group, projectName, branch,
+                    new EndpointHierarchyType(contract, arguments), types, lookups, visited,
+                    resolutionContext, hierarchy, limitations, depth + 1);
+        }
+    }
 
-            if (controller != null && hasEndpointMapping(pendingAnnotations)) {
-                var signature = methodSignature(lines, index);
-                if (signature != null) {
-                    endpoints.addAll(buildEndpoints(
-                            projectName,
-                            filePath,
-                            controller,
-                            pendingAnnotations,
-                            signature,
-                            inheritedLimitations,
-                            constantResolver
-                    ));
-                    pendingAnnotations.clear();
+    private String endpointParentName(
+            String group, String projectName, String branch, CompilationUnit source, String name,
+            Map<String, JavaEndpointType> types, JavaStringConstantResolutionContext context,
+            List<String> limitations
+    ) {
+        var qualified = source.getPackageDeclaration()
+                .map(declaration -> declaration.getNameAsString() + "." + name).orElse(name);
+        if (name.contains(".") || source.getImports().stream().anyMatch(imported ->
+                !imported.isStatic() && !imported.isAsterisk()
+                        && imported.getName().getIdentifier().equals(name))) {
+            return qualifiedJavaType(source, name);
+        }
+        var sameFile = source.findAll(ClassOrInterfaceDeclaration.class).stream()
+                .filter(declaration -> declaration.getNameAsString().equals(name))
+                .flatMap(declaration -> declaration.getFullyQualifiedName().stream()).distinct().toList();
+        if (sameFile.size() == 1) {
+            return sameFile.get(0);
+        }
+        var wildcardImports = source.getImports().stream()
+                .filter(imported -> !imported.isStatic() && imported.isAsterisk())
+                .map(imported -> imported.getNameAsString() + "." + name).toList();
+        if (wildcardImports.isEmpty() || types.containsKey(qualified)) {
+            return qualified;
+        }
+        List<GitLabRepositoryFile> files;
+        try {
+            files = repositoryTreeFilesForJavaStringConstants(group, projectName, branch, context);
+        } catch (RuntimeException exception) {
+            addLimitation(limitations, "Could not resolve endpoint interface import for " + name
+                    + ": " + safeMessage(exception));
+            return null;
+        }
+        if (files.stream().anyMatch(file -> javaSourcePathMatchesClass(file.filePath(), qualified))) {
+            return qualified;
+        }
+        var candidates = wildcardImports.stream().filter(candidate -> types.containsKey(candidate)
+                || files.stream().anyMatch(file -> javaSourcePathMatchesClass(file.filePath(), candidate)))
+                .distinct().toList();
+        if (candidates.size() == 1) {
+            return candidates.get(0);
+        }
+        addLimitation(limitations, (candidates.isEmpty() ? "Unresolved" : "Ambiguous")
+                + " endpoint interface import for " + name);
+        return null;
+    }
+
+    private JavaEndpointType loadEndpointType(
+            String group, String projectName, String branch, String typeName,
+            Map<String, JavaEndpointType> types, Set<String> lookups,
+            JavaStringConstantResolutionContext context, List<String> limitations
+    ) {
+        if (types.containsKey(typeName)) {
+            var type = types.get(typeName);
+            if (ambiguousEndpointType(type)) {
+                type.limitations().forEach(limitation -> addLimitation(limitations, limitation));
+                return null;
+            }
+            return type;
+        }
+        if (lookups.contains(typeName)) {
+            return null;
+        }
+        if (lookups.size() >= MAX_ENDPOINT_TYPE_LOOKUPS) {
+            addLimitation(limitations, "Endpoint interface resolution reached its type lookup limit.");
+            return null;
+        }
+        lookups.add(typeName);
+        try {
+            var candidates = repositoryTreeFilesForJavaStringConstants(group, projectName, branch, context)
+                    .stream().filter(file -> javaSourcePathMatchesClass(file.filePath(), typeName))
+                    .filter(file -> isProductionJavaSource(file.filePath()) && !isTestSource(file.filePath()))
+                    .filter(file -> pathWithinPrefixes(file.filePath(), context.pathPrefixes())).toList();
+            if (candidates.size() > 1) {
+                addLimitation(limitations, "Ambiguous endpoint interface source for " + typeName);
+                return null;
+            }
+            if (candidates.isEmpty()) {
+                addLimitation(limitations, "Endpoint interface source unavailable in repository scope: "
+                        + typeName + "; inherited mappings could not be checked.");
+                return null;
+            }
+            var file = gitLabRepositoryPort.readFile(group, projectName, branch,
+                    candidates.get(0).filePath(), MAX_CONTROLLER_FILE_CHARACTERS);
+            var parsed = parseJavaSource(file.content());
+            if (file.truncated() || parsed == null) {
+                addLimitation(limitations, "Incomplete endpoint interface source: " + file.filePath());
+                return null;
+            }
+            var fileLimitations = new ArrayList<String>();
+            var resolver = javaStringConstantResolver(group, projectName, branch, file.filePath(),
+                    file.content(), fileLimitations, context);
+            registerEndpointTypes(file.filePath(), parsed, resolver, fileLimitations, types);
+            if (!types.containsKey(typeName)) {
+                addLimitation(limitations, "Endpoint interface declaration unavailable in " + file.filePath()
+                        + ": " + typeName);
+            }
+            return types.get(typeName);
+        } catch (RuntimeException exception) {
+            addLimitation(limitations, "Could not resolve endpoint interface " + typeName + ": "
+                    + safeMessage(exception));
+            return null;
+        }
+    }
+
+    private List<GitLabRepositoryEndpoint> hierarchyEndpoints(
+            String projectName, JavaEndpointType controller,
+            List<EndpointHierarchyType> hierarchy, List<String> limitations
+    ) {
+        var classMappings = List.<MappingDefinition>of();
+        var methods = new LinkedHashMap<String, List<EndpointJavaMethod>>();
+        for (var owner : hierarchy) {
+            if (classMappings.isEmpty()) {
+                classMappings = mappings(annotationBlocks(owner.type().declaration().getAnnotations()),
+                        owner.type().constantResolver());
+            }
+            for (var method : owner.type().declaration().getMethods()) {
+                if (method.isStatic() || method.isPrivate() && owner.type() != controller) {
                     continue;
                 }
+                var key = endpointMethodKey(owner, method);
+                if (key == null) {
+                    if (hasEndpointMapping(annotationBlocks(method.getAnnotations()))) {
+                        addLimitation(limitations, "Unresolved endpoint handler signature in "
+                                + owner.type().filePath() + "#" + method.getNameAsString());
+                    }
+                    continue;
+                }
+                methods.computeIfAbsent(key, ignored -> new ArrayList<>())
+                        .add(new EndpointJavaMethod(owner, method));
             }
-
-            pendingAnnotations.clear();
         }
+        var controllerName = controller.declaration().getFullyQualifiedName().orElseThrow();
+        var controllerContext = new ControllerContext(controllerName,
+                annotationNames(annotationBlocks(controller.declaration().getAnnotations())), classMappings, true);
+        var result = new ArrayList<GitLabRepositoryEndpoint>();
+        for (var entry : methods.entrySet()) {
+            var declarations = entry.getValue();
+            var mapping = declarations.stream().filter(method ->
+                    hasEndpointMapping(annotationBlocks(method.method().getAnnotations()))).findFirst();
+            if (mapping.isEmpty()) {
+                continue;
+            }
+            var handler = declarations.stream().filter(method ->
+                    !method.owner().type().declaration().isInterface() && !method.method().isAbstract()).findFirst();
+            if (handler.isEmpty()) {
+                handler = declarations.stream().filter(method -> method.method().isDefault()).findFirst();
+            }
+            if (handler.isEmpty()) {
+                addLimitation(limitations, "No concrete endpoint handler implementation for "
+                        + controllerName + "#" + entry.getKey());
+                continue;
+            }
+            var implementation = handler.get();
+            var annotationOwner = mapping.get();
+            var signature = methodSignature(implementation.method());
+            var fileLimitations = deduplicate(hierarchy.stream()
+                    .flatMap(owner -> owner.type().limitations().stream()).toList());
+            var documentation = (GitLabRepositoryEndpointDocumentation) null;
+            var reads = new ArrayList<String>();
+            for (var declaration : declarations) {
+                var inheritedDocumentation = documentationFromJavaAnnotations(
+                        annotationBlocks(declaration.method().getAnnotations()), documentedMethodSignature(declaration),
+                        declaration.owner().type().constantResolver());
+                if (inheritedDocumentation != null) {
+                    documentation = documentation == null ? inheritedDocumentation
+                            : documentation.merge(inheritedDocumentation);
+                }
+                reads.addAll(suggestedNextReads(projectName, declaration.owner().type().filePath(),
+                        declaration.method().getBegin().orElseThrow().line,
+                        declaration.method().getEnd().orElseThrow().line));
+            }
+            for (var endpoint : buildEndpoints(projectName, implementation.owner().type().filePath(),
+                    controllerContext, annotationBlocks(annotationOwner.method().getAnnotations()),
+                    signature, fileLimitations, annotationOwner.owner().type().constantResolver())) {
+                result.add(new GitLabRepositoryEndpoint(endpoint.endpointId(), endpoint.httpMethods(), endpoint.path(),
+                        endpoint.pathExpression(), controllerName, endpoint.handlerMethod(), endpoint.filePath(),
+                        signature.lineStart(), signature.lineEnd(), endpoint.requestTypes(), endpoint.responseTypes(),
+                        endpoint.annotations(), documentation, endpoint.confidence(), endpoint.limitations(),
+                        deduplicate(reads)));
+            }
+        }
+        return List.copyOf(result);
+    }
 
-        return List.copyOf(endpoints);
+    private String endpointMethodKey(EndpointHierarchyType owner, MethodDeclaration method) {
+        var parameters = new ArrayList<String>();
+        for (var parameter : method.getParameters()) {
+            var type = parameter.getType().asString().replaceAll("<.*>", "");
+            var array = type.endsWith("[]") || parameter.isVarArgs();
+            var name = type.replace("[]", "");
+            var variable = owner.type().declaration().getTypeParameters().stream()
+                    .anyMatch(candidate -> candidate.getNameAsString().equals(name))
+                    || method.getTypeParameters().stream().anyMatch(candidate -> candidate.getNameAsString().equals(name));
+            if (variable && !owner.typeArguments().containsKey(name)) {
+                return null;
+            }
+            var qualified = owner.typeArguments().getOrDefault(name, qualifiedJavaType(owner.type().source(), name));
+            var source = owner.type().source();
+            if (!name.contains(".") && !variable && qualified.equals(source.getPackageDeclaration()
+                    .map(declaration -> declaration.getNameAsString() + "." + name).orElse(name))
+                    && source.getImports().stream().filter(imported -> !imported.isStatic() && imported.isAsterisk())
+                    .count() > 1) {
+                return null;
+            }
+            parameters.add(qualified + (array ? "[]" : ""));
+        }
+        return method.getNameAsString() + "(" + String.join(",", parameters) + ")";
+    }
+
+    private String qualifiedJavaType(CompilationUnit source, String name) {
+        if (name.contains(".")) {
+            return name;
+        }
+        for (var imported : source.getImports()) {
+            if (!imported.isStatic() && !imported.isAsterisk()
+                    && imported.getName().getIdentifier().equals(name)) {
+                return imported.getNameAsString();
+            }
+        }
+        if (Set.of("String", "Object", "Boolean", "Byte", "Short", "Integer", "Long", "Float", "Double",
+                "Character", "Void").contains(name)) {
+            return "java.lang." + name;
+        }
+        if (Set.of("boolean", "byte", "short", "int", "long", "float", "double", "char", "void").contains(name)) {
+            return name;
+        }
+        var wildcards = source.getImports().stream()
+                .filter(imported -> !imported.isStatic() && imported.isAsterisk()).toList();
+        if (wildcards.size() == 1) {
+            return wildcards.get(0).getNameAsString() + "." + name;
+        }
+        return source.getPackageDeclaration().map(declaration -> declaration.getNameAsString() + "." + name)
+                .orElse(name);
+    }
+
+    private void addLimitation(List<String> limitations, String limitation) {
+        if (!limitations.contains(limitation)) {
+            limitations.add(limitation);
+        }
+    }
+
+    private MethodSignature documentedMethodSignature(EndpointJavaMethod declaration) {
+        var method = declaration.method().clone();
+        for (var parameter : method.getParameters()) {
+            var replacement = declaration.owner().typeArguments().get(parameter.getType().asString());
+            if (replacement != null) {
+                parameter.setType(replacement);
+            }
+        }
+        return methodSignature(method);
     }
 
     private JavaStringConstantResolver javaStringConstantResolver(
@@ -1023,6 +1325,11 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         return matcher.find() ? matcher.group(1) : null;
     }
 
+    private String extractPackageName(String content) {
+        var matcher = PACKAGE_PATTERN.matcher(content);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
     private String packageName(String fullyQualifiedClassName) {
         if (!StringUtils.hasText(fullyQualifiedClassName)) {
             return null;
@@ -1493,119 +1800,35 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
                 .trim();
     }
 
-    private List<ControllerImplementation> parseControllerImplementations(String filePath, String content) {
-        if (!StringUtils.hasText(content)) {
-            return List.of();
-        }
-
-        var lines = content.lines().toList();
-        var packageName = extractPackageName(content);
+    private List<ControllerImplementation> parseControllerImplementations(
+            String filePath, ClassOrInterfaceDeclaration declaration, List<String> interfaces
+    ) {
         var implementations = new ArrayList<ControllerImplementation>();
-        var pendingAnnotations = new ArrayList<AnnotationBlock>();
-        var annotationBuffer = new StringBuilder();
-        var annotationStartLine = 0;
-        var annotationDepth = 0;
-        var collectingAnnotation = false;
-        ControllerImplementationContext controller = null;
-
-        for (int index = 0; index < lines.size(); index++) {
-            var rawLine = lines.get(index);
-            var trimmedLine = rawLine.trim();
-
-            if (collectingAnnotation) {
-                annotationBuffer.append(' ').append(trimmedLine);
-                annotationDepth += parenthesisDelta(trimmedLine);
-                if (annotationDepth <= 0) {
-                    pendingAnnotations.add(new AnnotationBlock(annotationBuffer.toString(), annotationStartLine));
-                    collectingAnnotation = false;
-                    annotationBuffer.setLength(0);
-                }
-                continue;
+        for (var method : declaration.getMethods()) {
+            if (!method.isPrivate() && !method.isStatic()) {
+                implementations.add(new ControllerImplementation(
+                        declaration.getFullyQualifiedName().orElse(declaration.getNameAsString()),
+                        annotationNames(annotationBlocks(declaration.getAnnotations())), interfaces,
+                        filePath, methodSignature(method)));
             }
-
-            if (trimmedLine.startsWith("@")) {
-                annotationStartLine = index + 1;
-                annotationBuffer.setLength(0);
-                annotationBuffer.append(trimmedLine);
-                annotationDepth = parenthesisDelta(trimmedLine);
-                if (annotationDepth <= 0) {
-                    pendingAnnotations.add(new AnnotationBlock(annotationBuffer.toString(), annotationStartLine));
-                    annotationBuffer.setLength(0);
-                } else {
-                    collectingAnnotation = true;
-                }
-                continue;
-            }
-
-            if (isIgnorableBetweenAnnotations(trimmedLine)) {
-                continue;
-            }
-
-            var classDeclaration = classDeclaration(lines, index);
-            var className = className(classDeclaration);
-            if (className != null) {
-                controller = buildControllerImplementationContext(
-                        packageName,
-                        className,
-                        classDeclaration,
-                        pendingAnnotations
-                );
-                pendingAnnotations.clear();
-                continue;
-            }
-
-            if (controller != null) {
-                var signature = methodSignature(lines, index);
-                if (signature != null) {
-                    implementations.add(new ControllerImplementation(
-                            controller.qualifiedClassName(),
-                            controller.annotationNames(),
-                            controller.implementedInterfaces(),
-                            filePath,
-                            signature
-                    ));
-                    pendingAnnotations.clear();
-                    continue;
-                }
-            }
-
-            pendingAnnotations.clear();
         }
-
         return List.copyOf(implementations);
     }
 
-    private ControllerImplementationContext buildControllerImplementationContext(
-            String packageName,
-            String className,
-            String classDeclaration,
-            List<AnnotationBlock> annotations
-    ) {
-        var annotationNames = annotationNames(annotations);
-        if (annotationNames.contains("FeignClient")
-                || annotationNames.stream().noneMatch(name ->
-                "RestController".equals(name) || "Controller".equals(name))) {
-            return null;
-        }
-
-        var implementedInterfaces = implementedInterfaces(classDeclaration);
-        if (implementedInterfaces.isEmpty()) {
-            return null;
-        }
-
-        var qualifiedClassName = StringUtils.hasText(packageName) ? packageName + "." + className : className;
-        return new ControllerImplementationContext(
-                qualifiedClassName,
-                annotationNames,
-                implementedInterfaces
-        );
+    private MethodSignature methodSignature(MethodDeclaration method) {
+        return new MethodSignature(method.getNameAsString(), method.getType().asString(),
+                method.getParameters().stream().map(Object::toString).toList(),
+                method.getName().getBegin().orElseThrow().line,
+                method.getBody().flatMap(body -> body.getBegin())
+                        .orElseGet(() -> method.getEnd().orElseThrow()).line);
     }
 
     private List<GitLabRepositoryEndpoint> openApiBackedEndpoints(
             String projectName,
             List<OpenApiOperation> openApiOperations,
             List<ControllerImplementation> controllerImplementations,
-            List<GitLabRepositoryEndpoint> existingEndpoints
+            List<GitLabRepositoryEndpoint> existingEndpoints,
+            Set<String> declaredJavaTypes
     ) {
         if (openApiOperations.isEmpty() || controllerImplementations.isEmpty()) {
             return List.of();
@@ -1619,7 +1842,7 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         for (var operation : openApiOperations) {
             for (var implementation : controllerImplementations) {
                 var matchedInterface = matchedOpenApiInterface(operation, implementation);
-                if (!StringUtils.hasText(matchedInterface)) {
+                if (!StringUtils.hasText(matchedInterface) || declaredJavaTypes.contains(matchedInterface)) {
                     continue;
                 }
 
@@ -2021,33 +2244,6 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         ));
     }
 
-    private ControllerContext buildControllerContext(
-            String packageName,
-            String className,
-            List<AnnotationBlock> annotations,
-            String filePath,
-            JavaStringConstantResolver constantResolver
-    ) {
-        var qualifiedClassName = StringUtils.hasText(packageName) ? packageName + "." + className : className;
-        var annotationNames = annotationNames(annotations);
-        if (annotationNames.contains("FeignClient")) {
-            return null;
-        }
-        var mappings = mappings(annotations, constantResolver);
-        var controllerLike = annotationNames.stream().anyMatch(name ->
-                "RestController".equals(name)
-                        || "Controller".equals(name)
-                        || "RequestMapping".equals(name)
-        ) || likelyControllerFile(filePath);
-
-        return new ControllerContext(
-                qualifiedClassName,
-                annotationNames,
-                mappings,
-                controllerLike
-        );
-    }
-
     private List<MappingDefinition> mappings(
             List<AnnotationBlock> annotationBlocks,
             JavaStringConstantResolver constantResolver
@@ -2145,121 +2341,6 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
             methods.add(matcher.group(1));
         }
         return methods.isEmpty() ? List.of("ANY") : List.copyOf(methods);
-    }
-
-    private MethodSignature methodSignature(List<String> lines, int startIndex) {
-        var text = new StringBuilder(lines.get(startIndex).trim());
-        var endIndex = startIndex;
-        while (!signatureTerminated(text.toString())
-                && endIndex + 1 < lines.size()
-                && endIndex - startIndex < MAX_SIGNATURE_LINES) {
-            endIndex++;
-            text.append(' ').append(lines.get(endIndex).trim());
-        }
-
-        var signatureText = stripMethodBody(text.toString());
-        var methodName = methodName(signatureText);
-        if (!StringUtils.hasText(methodName) || CONTROL_METHOD_NAMES.contains(methodName)) {
-            return null;
-        }
-
-        return new MethodSignature(
-                methodName,
-                responseType(signatureText, methodName),
-                parameters(signatureText),
-                startIndex + 1,
-                endIndex + 1
-        );
-    }
-
-    private boolean signatureTerminated(String text) {
-        return text.contains("{") || text.contains(";");
-    }
-
-    private String stripMethodBody(String signatureText) {
-        var bodyIndex = signatureText.indexOf('{');
-        var semicolonIndex = signatureText.indexOf(';');
-        var endIndex = bodyIndex >= 0 ? bodyIndex : semicolonIndex;
-        return endIndex >= 0 ? signatureText.substring(0, endIndex).trim() : signatureText.trim();
-    }
-
-    private String methodName(String signatureText) {
-        var matcher = IDENTIFIER_BEFORE_PAREN_PATTERN.matcher(signatureText);
-        return matcher.find() ? matcher.group(1) : null;
-    }
-
-    private String responseType(String signatureText, String methodName) {
-        var parenIndex = signatureText.indexOf('(');
-        if (parenIndex < 0) {
-            return null;
-        }
-        var beforeMethod = signatureText.substring(0, parenIndex).trim();
-        if (!beforeMethod.endsWith(methodName)) {
-            return null;
-        }
-        beforeMethod = beforeMethod.substring(0, beforeMethod.length() - methodName.length()).trim();
-        if (beforeMethod.isEmpty()) {
-            return null;
-        }
-        var tokens = new ArrayList<>(List.of(beforeMethod.split("\\s+")));
-        while (!tokens.isEmpty() && METHOD_MODIFIERS.contains(tokens.get(0))) {
-            tokens.remove(0);
-        }
-        if (tokens.isEmpty()) {
-            return null;
-        }
-        return tokens.get(tokens.size() - 1);
-    }
-
-    private List<String> parameters(String signatureText) {
-        var open = signatureText.indexOf('(');
-        var close = signatureText.lastIndexOf(')');
-        if (open < 0 || close <= open) {
-            return List.of();
-        }
-        var parameters = signatureText.substring(open + 1, close).trim();
-        if (!StringUtils.hasText(parameters)) {
-            return List.of();
-        }
-        return deduplicate(splitTopLevelParameters(parameters));
-    }
-
-    private List<String> splitTopLevelParameters(String parameters) {
-        var result = new ArrayList<String>();
-        var current = new StringBuilder();
-        var parenthesisDepth = 0;
-        var angleDepth = 0;
-        var inString = false;
-
-        for (var index = 0; index < parameters.length(); index++) {
-            var character = parameters.charAt(index);
-            if (character == '"' && (index == 0 || parameters.charAt(index - 1) != '\\')) {
-                inString = !inString;
-            }
-            if (!inString) {
-                if (character == '(') {
-                    parenthesisDepth++;
-                } else if (character == ')' && parenthesisDepth > 0) {
-                    parenthesisDepth--;
-                } else if (character == '<') {
-                    angleDepth++;
-                } else if (character == '>' && angleDepth > 0) {
-                    angleDepth--;
-                } else if (character == ',' && parenthesisDepth == 0 && angleDepth == 0) {
-                    if (StringUtils.hasText(current.toString())) {
-                        result.add(current.toString().trim());
-                    }
-                    current.setLength(0);
-                    continue;
-                }
-            }
-            current.append(character);
-        }
-
-        if (StringUtils.hasText(current.toString())) {
-            result.add(current.toString().trim());
-        }
-        return List.copyOf(result);
     }
 
     private List<String> responseTypes(String responseType) {
@@ -2453,7 +2534,7 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         }
         var normalized = filePath.toLowerCase(Locale.ROOT).replace('\\', '/');
         var score = 0;
-        if (normalized.endsWith("controller.java")) {
+        if (normalized.substring(normalized.lastIndexOf('/') + 1).contains("controller")) {
             score += 120;
         }
         if (normalized.endsWith("resource.java")) {
@@ -2482,10 +2563,6 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
 
     private boolean likelyEndpointSourceFile(String filePath) {
         return candidateScore(filePath) > 0;
-    }
-
-    private boolean likelyControllerFile(String filePath) {
-        return candidateScore(filePath) >= 60;
     }
 
     private boolean isSourceFile(String filePath) {
@@ -2547,83 +2624,6 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
         var qualifiedName = matcher.group(1);
         var dotIndex = qualifiedName.lastIndexOf('.');
         return dotIndex >= 0 ? qualifiedName.substring(dotIndex + 1) : qualifiedName;
-    }
-
-    private String className(String line) {
-        var matcher = CLASS_PATTERN.matcher(line);
-        return matcher.find() ? matcher.group(1) : null;
-    }
-
-    private String classDeclaration(List<String> lines, int startIndex) {
-        var text = new StringBuilder(lines.get(startIndex).trim());
-        var endIndex = startIndex;
-        while (!text.toString().contains("{")
-                && endIndex + 1 < lines.size()
-                && endIndex - startIndex < MAX_SIGNATURE_LINES) {
-            endIndex++;
-            text.append(' ').append(lines.get(endIndex).trim());
-        }
-        return text.toString();
-    }
-
-    private List<String> implementedInterfaces(String classDeclaration) {
-        if (!StringUtils.hasText(classDeclaration)) {
-            return List.of();
-        }
-
-        var implementsIndex = classDeclaration.indexOf(" implements ");
-        if (implementsIndex < 0) {
-            return List.of();
-        }
-
-        var declarationTail = classDeclaration.substring(implementsIndex + " implements ".length());
-        var bodyIndex = declarationTail.indexOf('{');
-        if (bodyIndex >= 0) {
-            declarationTail = declarationTail.substring(0, bodyIndex);
-        }
-
-        return deduplicate(List.of(declarationTail.split("\\s*,\\s*")).stream()
-                .map(this::cleanImplementedInterface)
-                .filter(StringUtils::hasText)
-                .toList());
-    }
-
-    private String cleanImplementedInterface(String implementedInterface) {
-        if (!StringUtils.hasText(implementedInterface)) {
-            return null;
-        }
-        var cleaned = implementedInterface.trim();
-        var genericIndex = cleaned.indexOf('<');
-        if (genericIndex >= 0) {
-            cleaned = cleaned.substring(0, genericIndex);
-        }
-        var tokens = cleaned.split("\\s+");
-        return tokens.length > 0 ? tokens[tokens.length - 1].trim() : null;
-    }
-
-    private String extractPackageName(String content) {
-        var matcher = PACKAGE_PATTERN.matcher(content);
-        return matcher.find() ? matcher.group(1) : null;
-    }
-
-    private boolean isIgnorableBetweenAnnotations(String line) {
-        return !StringUtils.hasText(line)
-                || line.startsWith("//")
-                || line.startsWith("/*")
-                || line.startsWith("*");
-    }
-
-    private int parenthesisDelta(String line) {
-        var delta = 0;
-        for (var index = 0; index < line.length(); index++) {
-            var character = line.charAt(index);
-            if (character == '(') {
-                delta++;
-            } else if (character == ')') {
-                delta--;
-            }
-        }
-        return delta;
     }
 
     private List<String> pathsOrBlank(List<String> paths) {
@@ -2939,15 +2939,16 @@ public class GitLabRepositoryEndpointService implements GitLabRepositoryEndpoint
     ) {
     }
 
-    private record ControllerImplementationContext(
-            String qualifiedClassName,
-            List<String> annotationNames,
-            List<String> implementedInterfaces
+    private record JavaEndpointType(
+            String filePath, CompilationUnit source, ClassOrInterfaceDeclaration declaration,
+            JavaStringConstantResolver constantResolver, List<String> limitations
     ) {
-        private ControllerImplementationContext {
-            annotationNames = annotationNames != null ? List.copyOf(annotationNames) : List.of();
-            implementedInterfaces = implementedInterfaces != null ? List.copyOf(implementedInterfaces) : List.of();
-        }
+    }
+
+    private record EndpointHierarchyType(JavaEndpointType type, Map<String, String> typeArguments) {
+    }
+
+    private record EndpointJavaMethod(EndpointHierarchyType owner, MethodDeclaration method) {
     }
 
     private record ControllerImplementation(

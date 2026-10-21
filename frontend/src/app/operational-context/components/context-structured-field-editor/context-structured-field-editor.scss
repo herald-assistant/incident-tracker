@@ -12,9 +12,11 @@
 .structured-label__help:focus-visible { border-radius: 50%; outline: 2px solid rgba(39, 94, 254, .45); outline-offset: 2px; }
 input, select, textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 9px; background: #fff; color: var(--text-main); font: inherit; font-weight: 500; }
 input:disabled, select:disabled, textarea:disabled { border-color: var(--border); background: #f7f9fc; color: var(--text-main); opacity: 1; }
-textarea { resize: vertical; }
+// CDK mierzy wysokość treści; szerokość uwzględnia padding i obramowanie pola.
+textarea { box-sizing: content-box; width: calc(100% - 20px); overflow: hidden; resize: none; }
 .reference-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .reference-group { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.structured-control[hidden], .reference-group[hidden], select[hidden] { display: none; }
 .chip-list { display: flex; flex-wrap: wrap; gap: 5px; min-height: 4px; }
 .value-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 4px 5px 4px 8px; border-radius: 999px; background: #eaf2ff; color: #153b71; font-size: .72rem; font-weight: 700; overflow-wrap: anywhere; }
 .value-chip small { color: #557294; font-weight: 600; }
