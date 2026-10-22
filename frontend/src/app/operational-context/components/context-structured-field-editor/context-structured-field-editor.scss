@@ -19,7 +19,6 @@ textarea { box-sizing: content-box; width: calc(100% - 20px); overflow: hidden; 
 .structured-control[hidden], .reference-group[hidden], select[hidden] { display: none; }
 .chip-list { display: flex; flex-wrap: wrap; gap: 5px; min-height: 4px; }
 .value-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 4px 5px 4px 8px; border-radius: 999px; background: #eaf2ff; color: #153b71; font-size: .72rem; font-weight: 700; overflow-wrap: anywhere; }
-.value-chip small { color: #557294; font-weight: 600; }
 .value-chip button { display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .value-chip button:hover, .value-chip button:focus-visible { background: rgba(21, 59, 113, .12); outline: none; }
 .value-chip mat-icon { width: 15px; height: 15px; font-size: 15px; }

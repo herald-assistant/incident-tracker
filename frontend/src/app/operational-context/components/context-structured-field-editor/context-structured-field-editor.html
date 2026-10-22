@@ -189,7 +189,7 @@
             <label class="structured-label" [for]="'reference-' + referenceGroup.key">{{ referenceGroup.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('reference')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <div class="chip-list">
               @for (id of selectedReferences(referenceGroup.key); track id) {
-                <span class="value-chip">{{ optionLabel(referenceGroup.type, id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove ' + referenceGroup.label + ' reference ' + id" (click)="removeReference(referenceGroup.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
+                <span class="value-chip" [matTooltip]="optionLabel(referenceGroup.type, id) + ' - ' + id">{{ optionLabel(referenceGroup.type, id) }}<button type="button" [attr.aria-label]="'Remove ' + referenceGroup.label + ' reference ' + id" (click)="removeReference(referenceGroup.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
               }
             </div>
             <select [id]="'reference-' + referenceGroup.key" [attr.aria-label]="'Add ' + referenceGroup.label + ' reference'" [hidden]="readonly()" (change)="addReference(referenceGroup, $event)">
@@ -504,7 +504,7 @@
                 <label class="structured-label" [for]="'relation-via-' + index">Via integrations <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('relationVia')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <div class="chip-list">
                   @for (id of selectedRelationVia(index); track id) {
-                    <span class="value-chip">{{ optionLabel('integration', id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove relation via integration ' + id" (click)="removeRelationVia(index, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
+                    <span class="value-chip" [matTooltip]="optionLabel('integration', id) + ' - ' + id">{{ optionLabel('integration', id) }}<button type="button" [attr.aria-label]="'Remove relation via integration ' + id" (click)="removeRelationVia(index, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
                   }
                 </div>
                 <select [id]="'relation-via-' + index" aria-label="Add relation via integration" [hidden]="readonly()" (change)="addRelationVia(index, $event)">
@@ -569,7 +569,7 @@
             <label class="structured-label" [for]="'process-role-' + role.key">{{ role.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('processSystemRole')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <div class="chip-list">
               @for (id of selectedProcessSystems(role.key); track id) {
-                <span class="value-chip">{{ optionLabel('system', id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove ' + role.label + ' ' + id" (click)="removeProcessSystem(role.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
+                <span class="value-chip" [matTooltip]="optionLabel('system', id) + ' - ' + id">{{ optionLabel('system', id) }}<button type="button" [attr.aria-label]="'Remove ' + role.label + ' ' + id" (click)="removeProcessSystem(role.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
               }
             </div>
             <select [id]="'process-role-' + role.key" [attr.aria-label]="'Add ' + role.label" [hidden]="readonly()" (change)="addProcessSystem(role.key, $event)">
@@ -621,7 +621,7 @@
                   <label class="structured-label" [for]="'step-reference-' + index + '-' + referenceGroup.key">{{ referenceGroup.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('stepReference')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <div class="chip-list">
                     @for (id of selectedProcessStepReferences(index, referenceGroup.key); track id) {
-                      <span class="value-chip">{{ optionLabel(referenceGroup.type, id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove step ' + referenceGroup.label + ' reference ' + id" (click)="removeProcessStepReference(index, referenceGroup.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
+                      <span class="value-chip" [matTooltip]="optionLabel(referenceGroup.type, id) + ' - ' + id">{{ optionLabel(referenceGroup.type, id) }}<button type="button" [attr.aria-label]="'Remove step ' + referenceGroup.label + ' reference ' + id" (click)="removeProcessStepReference(index, referenceGroup.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
                     }
                   </div>
                   <select [id]="'step-reference-' + index + '-' + referenceGroup.key" [attr.aria-label]="'Add step ' + referenceGroup.label + ' reference'" [hidden]="readonly()" (change)="addProcessStepReference(index, referenceGroup, $event)">
