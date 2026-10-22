@@ -1,10 +1,13 @@
 package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
 import lombok.RequiredArgsConstructor;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.*;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearchPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogSearchMatch;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipRequest;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextOwnershipResolution;
@@ -47,28 +50,11 @@ public class OperationalContextToolMapper {
     private static final int DEFAULT_SECTION_LIST_LIMIT = 8;
     private static final int DEFAULT_SECTION_MAP_LIMIT = 12;
     private static final int DEFAULT_SOURCE_REF_LIMIT = 8;
-    private static final int DEFAULT_OPEN_QUESTION_LIMIT = 5;
-    private static final List<String> DETAIL_SECTION_ORDER = List.of(
-            "overview",
-            "relations",
-            "signals",
-            "codeSearch",
-            "handoff",
-            "sourceCoverage",
-            "openQuestions"
-    );
-    private static final Set<String> DEFAULT_DETAIL_INCLUDES = Set.of(
-            "overview",
-            "relations",
-            "signals",
-            "codeSearch",
-            "handoff",
-            "sourceCoverage",
-            "openQuestions"
-    );
 
+    private final OperationalContextNavigationPort navigationPort;
     private final OperationalContextOwnershipPort ownershipResolver;
     private final OperationalContextCatalogSearchPort catalogSearch;
+    private final OperationalContextCodeSearchPort codeSearchPort;
 
     public OpctxScopeResult getScope(OperationalContextCatalog catalog) {
         var index = index(catalog);
@@ -174,41 +160,59 @@ public class OperationalContextToolMapper {
             throw new IllegalArgumentException("Operational context entity id is required.");
         }
 
-        var entity = index(catalog).entitiesByType().getOrDefault(normalizedType, List.of()).stream()
+        var catalogIndex = index(catalog);
+        var entity = catalogIndex.entitiesByType().getOrDefault(normalizedType, List.of()).stream()
                 .filter(candidate -> normalize(candidate.id()).equals(normalizedId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
                 "Unknown operational context entity %s:%s.".formatted(normalizedType, id)
                 ));
-        var includes = normalizeIncludes(include);
-        var overview = included(includes, "overview", entity.overview());
-        var relations = included(includes, "relations", entity.relations());
-        var signals = included(includes, "signals", entity.signals());
-        var codeSearch = included(includes, "codeSearch", entity.codeSearch());
-        var handoff = included(includes, "handoff", entity.handoff());
-        var sourceCoverage = included(includes, "sourceCoverage", entity.sourceCoverage());
-        var openQuestions = includes.contains("openQuestions")
-                ? limitList(entity.openQuestions(), DEFAULT_OPEN_QUESTION_LIMIT)
-                : List.<OpctxOpenQuestion>of();
-        var sourceRefs = limitText(entity.sourceRefs(), DEFAULT_SOURCE_REF_LIMIT);
-        var truncation = entityTruncation(entity, overview, relations, signals, codeSearch, handoff, sourceCoverage, openQuestions, sourceRefs);
+        entity = withCodeSearch(entity, catalog);
+        var allNavigation = catalogIndex.navigation().forEntity(canonicalType(normalizedType), entity.id());
+        return OperationalContextToolDetailProjection.project(entity.type(), entity.id(), entity.label(), entity.summary(), entity.purpose(),
+                Map.of("overview", entity.overview(), "relations", entity.relations(), "signals", entity.signals(),
+                        "codeSearch", entity.codeSearch(), "handoff", entity.handoff(), "sourceCoverage", entity.sourceCoverage()),
+                entity.openQuestions(), entity.sourceRefs(), allNavigation, include);
+    }
 
-        return new OpctxEntityDetailResult(
-                entity.type(),
-                entity.id(),
-                entity.label(),
-                entity.summary(),
-                entity.purpose(),
-                overview,
-                relations,
-                signals,
-                codeSearch,
-                handoff,
-                sourceCoverage,
-                openQuestions,
-                sourceRefs,
-                entityAffordances(entity, includes, truncation)
-        );
+    private OpctxCatalogEntity withCodeSearch(OpctxCatalogEntity entity, OperationalContextCatalog catalog) {
+        var readModel = codeSearchPort.buildForEntity(catalog, canonicalType(entity.type()), entity.id());
+        var scopesById = catalog.codeSearchScopes().stream().collect(Collectors.toMap(
+                OperationalContextRepositorySearchScope::id, Function.identity(), (first, ignored) -> first));
+        var scopes = readModel.scopes().stream().map(scope -> scopesById.get(scope.scope().id()))
+                .filter(java.util.Objects::nonNull)
+                .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
+                .toList();
+        var codeSearch = new LinkedHashMap<String, Object>();
+        codeSearch.put("status", scopes.isEmpty() ? "not-defined" : "available");
+        codeSearch.put("codeSearchScopes", scopes);
+        codeSearch.put("limitations", readModel.limitations());
+        codeSearch.put("validationFindings", readModel.validationFindings());
+        return new OpctxCatalogEntity(entity.type(), entity.id(), entity.label(), entity.summary(), entity.purpose(),
+                entity.identityValues(), entity.summaryValues(), entity.signalValues(), entity.relationValues(), entity.facets(),
+                entity.overview(), entity.relations(), entity.signals(), codeSearch, entity.handoff(),
+                entity.sourceCoverage(), entity.openQuestions(), entity.sourceRefs());
+    }
+
+    private String canonicalType(String type) {
+        return switch (type) {
+            case TYPE_BOUNDED_CONTEXT -> "bounded-context";
+            case TYPE_CODE_SEARCH_SCOPE -> "code-search-scope";
+            case TYPE_GLOSSARY_TERM -> "term";
+            case TYPE_HANDOFF_RULE -> "handoff-rule";
+            default -> type;
+        };
+    }
+
+    private OpctxCatalogEntity withNavigationFacets(OpctxCatalogEntity entity, OperationalContextNavigation navigation) {
+        var facets = new LinkedHashMap<>(entity.facets());
+        var targets = Map.of("system", "systemIds", "repository", "repositoryIds", "process", "processIds",
+                "bounded-context", "boundedContextIds", "integration", "integrationIds", "code-search-scope", "codeSearchScopeIds");
+        targets.forEach((type, field) -> facets.put(field, navigation.relatedIds(canonicalType(entity.type()), entity.id(), type)));
+        return new OpctxCatalogEntity(entity.type(), entity.id(), entity.label(), entity.summary(), entity.purpose(),
+                entity.identityValues(), entity.summaryValues(), entity.signalValues(), textValues(entity.relationValues(), flattenFacets(facets)), facets,
+                entity.overview(), entity.relations(), entity.signals(), entity.codeSearch(), entity.handoff(),
+                entity.sourceCoverage(), entity.openQuestions(), entity.sourceRefs());
     }
 
     private OpctxCatalogIndex index(OperationalContextCatalog catalog) {
@@ -233,13 +237,15 @@ public class OperationalContextToolMapper {
         safeCatalog.glossaryTerms().forEach(term -> entities.add(glossaryTermEntity(term, openQuestions)));
         safeCatalog.handoffRules().forEach(rule -> entities.add(handoffRuleEntity(rule, openQuestions)));
 
+        var navigation = navigationPort.build(safeCatalog);
+        entities.replaceAll(entity -> withNavigationFacets(entity, navigation));
         var entitiesByType = entities.stream()
                 .collect(Collectors.groupingBy(
                         OpctxCatalogEntity::type,
                         LinkedHashMap::new,
                         Collectors.toList()
                 ));
-        return new OpctxCatalogIndex(List.copyOf(entities), entitiesByType);
+        return new OpctxCatalogIndex(List.copyOf(entities), entitiesByType, navigation);
     }
 
     private OpctxCatalogEntity systemEntity(
@@ -247,9 +253,6 @@ public class OperationalContextToolMapper {
             OperationalContextCatalog catalog,
             List<OperationalContextOpenQuestion> openQuestions
     ) {
-        var codeSearchScopes = catalog.codeSearchScopes().stream()
-                .filter(scope -> semanticTargetMatches(scope.target(), TYPE_SYSTEM, system.id()))
-                .toList();
         var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(system));
         var facets = facets(
                 "ownerTeamIds", ownerTeamIds(resolvedOwnership),
@@ -257,8 +260,7 @@ public class OperationalContextToolMapper {
                 "repositoryIds", system.references().repositories(),
                 "processIds", system.references().processes(),
                 "boundedContextIds", system.references().boundedContexts(),
-                "integrationIds", system.references().integrations(),
-                "codeSearchScopeIds", codeSearchScopes.stream().map(OperationalContextRepositorySearchScope::id).toList()
+                "integrationIds", system.references().integrations()
         );
         var overview = values(
                 "systemType", system.systemType(),
@@ -278,11 +280,6 @@ public class OperationalContextToolMapper {
                 "externalOwner", system.participants().externalOwner()
         );
         var signals = values("matchSignals", matchSignals(system.matchSignals()));
-        var codeSearch = values(
-                "codeSearchScopes", codeSearchScopes.stream()
-                        .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
-                        .toList()
-        );
         var handoff = resolvedOwnershipHandoff(resolvedOwnership);
 
         return entity(
@@ -297,7 +294,7 @@ public class OperationalContextToolMapper {
                 overview,
                 relations,
                 signals,
-                codeSearch,
+                Map.of(),
                 handoff,
                 sourceCoverage(system, "systems.yml#" + system.id()),
                 openQuestionsFor(openQuestions, TYPE_SYSTEM, system.id()),
@@ -311,10 +308,6 @@ public class OperationalContextToolMapper {
             OperationalContextCatalog catalog,
             List<OperationalContextOpenQuestion> openQuestions
     ) {
-        var codeSearchScopes = catalog.codeSearchScopes().stream()
-                .filter(scope -> scope.repositories().stream()
-                        .anyMatch(candidate -> normalize(candidate.repoId()).equals(normalize(repository.id()))))
-                .toList();
         var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(repository));
         var facets = facets(
                 "ownerTeamIds", ownerTeamIds(resolvedOwnership),
@@ -324,8 +317,7 @@ public class OperationalContextToolMapper {
                 "systems", repository.references().systems(),
                 "boundedContexts", repository.references().boundedContexts(),
                 "processes", repository.references().processes(),
-                "integrations", repository.references().integrations(),
-                "codeSearchScopeIds", codeSearchScopes.stream().map(OperationalContextRepositorySearchScope::id).toList()
+                "integrations", repository.references().integrations()
         );
         var overview = values(
                 "repositoryType", repository.repositoryType(),
@@ -346,16 +338,12 @@ public class OperationalContextToolMapper {
                 "references", references(repository.references()),
                 "relations", relations(repository.relations())
         );
-        var signals = values("matchSignals", matchSignals(repository.matchSignals()));
-        var codeSearch = values(
-                "git", git(repository.git()),
+        var signals = values(
+                "matchSignals", matchSignals(repository.matchSignals()),
                 "llmToolHints", values(
                         "answerWhenUserMentions", repository.llmToolHints().answerWhenUserMentions(),
                         "disambiguateFrom", repository.llmToolHints().disambiguateFrom()
-                ),
-                "codeSearchScopes", codeSearchScopes.stream()
-                        .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
-                        .toList()
+                )
         );
 
         return entity(
@@ -370,7 +358,7 @@ public class OperationalContextToolMapper {
                 overview,
                 relations,
                 signals,
-                codeSearch,
+                Map.of(),
                 resolvedOwnershipHandoff(resolvedOwnership),
                 sourceCoverage(repository, "repo-map.yml#repositories/" + repository.id()),
                 openQuestionsFor(openQuestions, TYPE_REPOSITORY, repository.id()),
@@ -407,10 +395,6 @@ public class OperationalContextToolMapper {
                 "target", repositorySearchTarget(scope.target()),
                 "repositories", includedRepositories
         );
-        var codeSearch = values(
-                "repositories", includedRepositories,
-                "limitations", scope.limitations()
-        );
         var sourceCoverage = values(
                 "limitations", scope.limitations(),
                 "sourceRefs", List.of("code-search-scopes.yml#codeSearchScopes/" + scope.id())
@@ -420,7 +404,7 @@ public class OperationalContextToolMapper {
                 TYPE_CODE_SEARCH_SCOPE,
                 scope.id(),
                 firstNonBlank(scope.name(), scope.id()),
-                codeSearchScopeSummary(scope),
+                firstNonBlank(scope.summary(), codeSearchScopeSummary(scope)),
                 null,
                 List.of(),
                 scope.useFor(),
@@ -428,7 +412,7 @@ public class OperationalContextToolMapper {
                 overview,
                 relations,
                 values("target", repositorySearchTarget(scope.target())),
-                codeSearch,
+                Map.of(),
                 resolvedOwnershipHandoff(resolvedOwnership),
                 sourceCoverage,
                 openQuestionsFor(openQuestions, TYPE_CODE_SEARCH_SCOPE, scope.id()),
@@ -869,22 +853,6 @@ public class OperationalContextToolMapper {
                 .toList();
     }
 
-    private Set<String> normalizeIncludes(List<String> include) {
-        if (include == null || include.isEmpty()) {
-            return DEFAULT_DETAIL_INCLUDES;
-        }
-        var normalized = include.stream()
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .filter(DEFAULT_DETAIL_INCLUDES::contains)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        return normalized.isEmpty() ? DEFAULT_DETAIL_INCLUDES : Set.copyOf(normalized);
-    }
-
-    private Map<String, Object> included(Set<String> includes, String include, Map<String, Object> value) {
-        return includes.contains(include) ? compactMap(value) : Map.of();
-    }
-
     private OpctxToolAffordances scopeAffordances() {
         return new OpctxToolAffordances(
                 "default",
@@ -986,98 +954,6 @@ public class OperationalContextToolMapper {
                 ),
                 List.of()
         );
-    }
-
-    private OpctxToolAffordances entityAffordances(
-            OpctxCatalogEntity entity,
-            Set<String> includes,
-            OpctxTruncation truncation
-    ) {
-        var links = new ArrayList<OpctxToolLink>();
-        links.add(toolLink(
-                "self",
-                "opctx_get_entity",
-                values("type", entity.type(), "id", entity.id()),
-                "Read compact default entity detail."
-        ));
-        for (var section : DETAIL_SECTION_ORDER) {
-            links.add(toolLink(
-                    "include-" + section,
-                    "opctx_get_entity",
-                    values("type", entity.type(), "id", entity.id(), "include", List.of(section)),
-                    "Read only the " + section + " section for this entity."
-            ));
-        }
-
-        var omitted = new ArrayList<String>();
-        for (var section : DETAIL_SECTION_ORDER) {
-            if (!includes.contains(section)) {
-                omitted.add(section + " omitted by include filter.");
-            }
-        }
-        if (truncation.truncated()) {
-            omitted.add("Large maps/lists were compacted for the default tool profile.");
-        }
-
-        var suggestedReads = new ArrayList<String>();
-        if (!entity.codeSearch().isEmpty()) {
-            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[codeSearch]) to narrow repositories.".formatted(entity.type(), entity.id()));
-        }
-        if (!entity.relations().isEmpty()) {
-            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[relations]) to inspect upstream/downstream references.".formatted(entity.type(), entity.id()));
-        }
-        if (!entity.signals().isEmpty()) {
-            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[signals]) to verify catalog matching signals.".formatted(entity.type(), entity.id()));
-        }
-        suggestedReads.add("opctx_search(query=<more-specific-signal>) if this entity is too broad.");
-
-        return new OpctxToolAffordances(
-                "default",
-                links,
-                DETAIL_SECTION_ORDER.stream()
-                        .map(section -> "include=" + section)
-                        .toList(),
-                suggestedReads,
-                List.of("opctx_get_entity", "opctx_search"),
-                "Call opctx_get_entity again with a focused include section when omitted/truncated data is needed.",
-                omitted,
-                truncation,
-                limitationsFromSourceCoverage(entity.sourceCoverage())
-        );
-    }
-
-    private OpctxTruncation entityTruncation(
-            OpctxCatalogEntity entity,
-            Map<String, Object> overview,
-            Map<String, Object> relations,
-            Map<String, Object> signals,
-            Map<String, Object> codeSearch,
-            Map<String, Object> handoff,
-            Map<String, Object> sourceCoverage,
-            List<OpctxOpenQuestion> openQuestions,
-            List<String> sourceRefs
-    ) {
-        var returned = counts(
-                "overviewValues", leafCount(overview),
-                "relationValues", leafCount(relations),
-                "signalValues", leafCount(signals),
-                "codeSearchValues", leafCount(codeSearch),
-                "handoffValues", leafCount(handoff),
-                "sourceCoverageValues", leafCount(sourceCoverage),
-                "openQuestions", openQuestions.size(),
-                "sourceRefs", sourceRefs.size()
-        );
-        var total = counts(
-                "overviewValues", leafCount(entity.overview()),
-                "relationValues", leafCount(entity.relations()),
-                "signalValues", leafCount(entity.signals()),
-                "codeSearchValues", leafCount(entity.codeSearch()),
-                "handoffValues", leafCount(entity.handoff()),
-                "sourceCoverageValues", leafCount(entity.sourceCoverage()),
-                "openQuestions", entity.openQuestions().size(),
-                "sourceRefs", entity.sourceRefs().size()
-        );
-        return truncation("entity detail compacted for default tool profile", returned, total);
     }
 
     private OpctxTruncation truncation(
@@ -1597,15 +1473,15 @@ public class OperationalContextToolMapper {
                         (left, right) -> left,
                         LinkedHashMap::new
                 ));
-        return values(
+        var result = new LinkedHashMap<>(values(
                 "id", scope.id(),
                 "name", scope.name(),
-                "target", repositorySearchTarget(scope.target()),
-                "repositories", scope.repositories().stream()
-                        .map(repository -> scopeRepository(repository, repositoriesById))
-                        .toList(),
-                "limitations", scope.limitations()
-        );
+                "target", repositorySearchTarget(scope.target())
+        ));
+        result.put("repositories", scope.repositories().stream()
+                .map(repository -> scopeRepository(repository, repositoriesById)).toList());
+        result.put("limitations", scope.limitations());
+        return result;
     }
 
     private String codeSearchScopeSummary(OperationalContextRepositorySearchScope scope) {
@@ -1624,21 +1500,12 @@ public class OperationalContextToolMapper {
         );
     }
 
-    private boolean semanticTargetMatches(
-            OperationalContextRepositorySearchTarget target,
-            String expectedType,
-            String expectedId
-    ) {
-        return normalize(target.type()).equals(normalize(expectedType))
-                && normalize(target.id()).equals(normalize(expectedId));
-    }
-
     private Map<String, Object> scopeRepository(
             OperationalContextRepositorySearchRepository scopeRepository,
             Map<String, OperationalContextRepository> repositoriesById
     ) {
         var repository = repositoriesById.get(scopeRepository.repoId());
-        return values(
+        var result = new LinkedHashMap<>(values(
                 "repoId", scopeRepository.repoId(),
                 "role", scopeRepository.role(),
                 "priority", scopeRepository.priority(),
@@ -1646,7 +1513,10 @@ public class OperationalContextToolMapper {
                 "readFor", scopeRepository.readFor(),
                 "projectName", repository != null ? repository.git().project() : null,
                 "projectPath", repository != null ? repository.git().projectPath() : null
-        );
+        ));
+        result.put("searchMode", scopeRepository.searchMode());
+        result.put("pathPrefixes", scopeRepository.pathPrefixes());
+        return result;
     }
 
     private Map<String, List<String>> facets(Object... keysAndValues) {
@@ -1763,13 +1633,6 @@ public class OperationalContextToolMapper {
                 .toList();
     }
 
-    private <T> List<T> limitList(List<T> values, int maxItems) {
-        if (values == null || values.isEmpty() || maxItems <= 0) {
-            return List.of();
-        }
-        return values.stream().limit(maxItems).toList();
-    }
-
     private String first(List<String> values) {
         return safeList(values).stream().filter(StringUtils::hasText).findFirst().orElse(null);
     }
@@ -1808,7 +1671,8 @@ public class OperationalContextToolMapper {
 
     private record OpctxCatalogIndex(
             List<OpctxCatalogEntity> entities,
-            Map<String, List<OpctxCatalogEntity>> entitiesByType
+            Map<String, List<OpctxCatalogEntity>> entitiesByType,
+            OperationalContextNavigation navigation
     ) {
     }
 

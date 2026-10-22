@@ -132,14 +132,25 @@ public class OperationalContextCodeSearchReadModelBuilder implements Operational
         }
 
         var result = new LinkedHashSet<String>();
+        if (REPOSITORY.equals(target.type())) {
+            relationIndex.entityRelations(target.type(), target.id()).incomingRelations().stream()
+                    .filter(relation -> CODE_SEARCH_SCOPE.equals(relation.source().type()))
+                    .filter(relation -> "references-repository".equals(relation.relationType()))
+                    .map(relation -> relation.source().id())
+                    .forEach(result::add);
+        }
         addScopeIds(result, relationIndex, target);
         if (!result.isEmpty()) {
-            return List.copyOf(result);
+            return result.stream().sorted().toList();
         }
-        relationIndex.entityRelations(target.type(), target.id()).neighbors().forEach(neighbor ->
-                addScopeIds(result, relationIndex, new EntityKey(neighbor.type(), neighbor.id()))
-        );
-        return List.copyOf(result);
+        OperationalContextNavigationService.fromIndex(relationIndex).forEntity(target.type(), target.id()).stream()
+                .filter(link -> !link.indirect()
+                        || link.relationType().equals("integration-upstream-system")
+                        || link.relationType().equals("integration-downstream-system")
+                        || ("system".equals(link.target().type())
+                            && link.via().stream().allMatch(via -> CODE_SEARCH_SCOPE.equals(via.type()))))
+                .forEach(link -> addScopeIds(result, relationIndex, link.target().key()));
+        return result.stream().sorted().toList();
     }
 
     private void addScopeIds(

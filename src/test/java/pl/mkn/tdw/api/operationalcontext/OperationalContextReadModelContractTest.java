@@ -33,9 +33,11 @@ class OperationalContextReadModelContractTest {
                 "outgoingRelations",
                 "incomingRelations",
                 "neighbors",
+                "navigation",
                 "validationFindings"
         ), fieldNames(relations));
 
+        assertTrue(relations.navigation().stream().anyMatch(link -> !link.sourceRefs().isEmpty()));
         assertEquals("operational-context.code-search", codeSearch.contract());
         assertEquals(List.of(
                 "contract",

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.testsupport.agenttools;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabMcpTools;
@@ -86,6 +87,7 @@ public final class GitLabMcpToolsTestCreator {
         return new GitLabMcpTools(
                 new GitLabVerifiedRepositoryFileService(), gitLabRepositoryPort,
                 operationalContextPort,
+                OperationalContextNavigationTestCreator.navigation(),
                 gitLabRepositoryEndpointService,
                 gitLabEndpointUseCaseContextService,
                 gitLabJavaMethodUseCaseContextService,

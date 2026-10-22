@@ -34,6 +34,10 @@ code-search scope instead of adding owner-like fields here.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 repositories:
   - id: crm-agent-portal
@@ -41,59 +45,57 @@ repositories:
     shortName: Agent Portal
     repositoryType: frontend
     lifecycleStatus: active
-    criticality: high
-    summary: Strongly anonymized CRM frontend repository for contact preference handling.
-    purpose: Primary project to inspect after the CRM Agent Portal system is selected.
+    summary: Fictional CRM frontend repository for contact preference handling.
+    purpose: Inspect the user-facing CRM contact journey.
     aliases:
-      - crm-portal
-      - crm agent ui
+      - CRM agent UI repository
     useFor:
-      - Inspect anonymized CRM contact-screen behavior after the semantic target is known.
-      - Distinguish portal behavior from CRM backend processing.
+      - Inspect the CRM contact screen after selecting its semantic target.
     git:
       provider: gitlab
-      group: crm
+      group: CRM
       project: agent-portal
-      projectPath: crm/agent-portal
+      projectPath: CRM/agent-portal
       defaultBranch: main
-      url: https://gitlab.example.com/crm/agent-portal
-      aliases:
-        - crm-agent-portal
+      url: https://gitlab.example.com/CRM/agent-portal
     references:
-      systems:
-        - crm-agent-portal
       processes:
         - crm-contact-preference-update
-      boundedContexts:
-        - crm-contact-preferences
-      integrations:
-        - crm-contact-to-consent
-      handoffRules:
-        - crm-contact-boundary
     matchSignals:
       exact:
         projectPaths:
-          - crm/agent-portal
-      strong:
-        businessTerms:
-          - CRM contact screen
-      weak:
-        phrases:
-          - anonymized CRM contact form
+          - CRM/agent-portal
     evidence:
-      - sourceRef: crm/agent-portal/package.json
+      - sourceRef: CRM/agent-portal/package.json
         evidenceType: reviewed-build-definition
-        note: Strongly anonymized CRM frontend module identity; framework alone does not classify the system.
+        note: Fictional CRM frontend identity confirmed together with the operator role statement.
     llmToolHints:
       answerWhenUserMentions:
         - CRM contact screen
       disambiguateFrom:
-        - CRM contact backend service
-    relations:
-      - type: supports
-        targetType: system
-        target: crm-agent-portal
-        evidence: Primary strongly anonymized CRM frontend repository for the system.
+        - CRM Contact Core backend repository
+  - id: crm-contact-core
+    name: CRM Contact Core repository
+    repositoryType: service
+    lifecycleStatus: active
+    summary: Implements fictional CRM contact preference validation and persistence.
+    git:
+      provider: gitlab
+      group: CRM
+      project: contact-core
+      projectPath: CRM/contact-core
+      defaultBranch: main
+  - id: crm-contact-contracts
+    name: CRM Contact Contracts
+    repositoryType: shared-library
+    lifecycleStatus: active
+    summary: Shared fictional CRM contact contract library.
+    git:
+      provider: gitlab
+      group: CRM
+      project: contact-contracts
+      projectPath: CRM/contact-contracts
+      defaultBranch: main
 ```
 
 ## Update rules
@@ -106,6 +108,8 @@ repositories:
   evidence to inspect, not an automatic classification rule.
 - Use `references` to connect a repository with systems, processes, bounded
   contexts, integrations and handoff rules as recognition signals.
+  Add a distinct semantic fact only; do not mirror an existing reference or
+  copy the system-to-repository relation already owned by a code-search scope.
 - Do not add team references to imply repository ownership.
 - Add aliases only when they help resolve a real user or tool signal.
 - Use guided `evidence` cards only for durable provenance labels or safe
@@ -115,7 +119,10 @@ repositories:
   and `disambiguateFrom` for explicit contrasts. These values guide AI
   exploration but never grant access or define ownership.
 - Leave code reading order, module boundaries and bounded-context-to-code
-  ownership routing to the system-targeted scope in `code-search-scopes.yml`.
+  ownership routing to `code-search-scopes.yml`: directly targeted context
+  scopes are preferred for their context, with related scopes as fallback.
+  Repository entries have no `notes`; use `summary`, provenance `evidence` or
+  a supported gap for a durable clarification.
 - When a repository is a direct internal library dependency of a system's
   primary repository, make sure it has a stable repository entry so it can be
   included in that system's single code-search scope.

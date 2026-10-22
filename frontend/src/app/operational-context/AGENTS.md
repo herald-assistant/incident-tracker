@@ -143,3 +143,13 @@ uniewaznia poprzedni podglad i jego oznaczenia.
 Reczny edytor encji pozostaje dostepny na biezacej wersji danych. Domyslnie
 eksponuje pola podstawowe i rozwija zaawansowane sekcje na
 zadanie, ale nadal umozliwia edycje calego kanonicznego kontraktu.
+
+## Nawigacja Operational Context
+
+Read-only mapa korzysta z neutralnego `OperationalContextNavigationPort` i
+indeksu relacji. Jednostronny zapis musi dawac dostep do obu stron relacji.
+`navigation` odroznia bezposredni fakt od sciezki przez integracje/scope/krok;
+nie jest zrodlem ownershipu ani zgody na szerszy code search. Tools zwracaja
+konkretne linki nastepnego odczytu; `include=[navigation]` odzyskuje cala mape.
+UI pokazuje role, direction, posrednikow i source refs oraz otwiera target.
+Maintenance nie zapisuje projekcji jako nowych faktow.

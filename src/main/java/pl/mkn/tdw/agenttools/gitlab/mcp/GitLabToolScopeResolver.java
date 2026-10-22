@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabToolScope;
@@ -23,18 +24,22 @@ final class GitLabToolScopeResolver {
             Set.of(
                     OperationalContextEntryType.SYSTEM,
                     OperationalContextEntryType.REPOSITORY,
-                    OperationalContextEntryType.CODE_SEARCH_SCOPE
+                    OperationalContextEntryType.CODE_SEARCH_SCOPE,
+                    OperationalContextEntryType.PROCESS, OperationalContextEntryType.BOUNDED_CONTEXT, OperationalContextEntryType.INTEGRATION
             );
 
     private final GitLabSettingsPort gitLabProperties;
     private final OperationalContextPort operationalContextPort;
+    private final OperationalContextNavigationPort navigationPort;
 
     GitLabToolScopeResolver(
             GitLabSettingsPort gitLabProperties,
-            OperationalContextPort operationalContextPort
+            OperationalContextPort operationalContextPort,
+            OperationalContextNavigationPort navigationPort
     ) {
         this.gitLabProperties = gitLabProperties;
         this.operationalContextPort = operationalContextPort;
+        this.navigationPort = navigationPort;
     }
 
     GitLabToolScope resolve(
@@ -45,7 +50,7 @@ final class GitLabToolScopeResolver {
     ) {
         var branch = requiredBranch(branchRef);
         var catalog = loadCatalog();
-        var applicationScopeResolver = new GitLabApplicationScopeResolver();
+        var applicationScopeResolver = new GitLabApplicationScopeResolver(navigationPort.build(catalog));
         var applicationScope = applicationScopeResolver.resolve(applicationNames, toolContext, catalog);
         var group = resolveGroup(projectName, applicationScope.applicationNames(), catalog);
         if (applicationScope.restrictedByApplicationScope() && StringUtils.hasText(projectName)) {

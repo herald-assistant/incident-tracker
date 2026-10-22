@@ -13,6 +13,7 @@ import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDto
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextHandoffRule;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegration;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextIntegrationParticipant;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextOwnership;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcess;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextProcessStep;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences;
@@ -62,7 +63,6 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
         extractProcessRelations(state, safeCatalog.processes());
         extractIntegrationRelations(state, safeCatalog.integrations());
         extractBoundedContextRelations(state, safeCatalog.boundedContexts());
-        extractTeamRelations(state, safeCatalog.teams());
         extractGlossaryRelations(state, safeCatalog.glossaryTerms());
         extractHandoffRuleRelations(state, safeCatalog.handoffRules());
 
@@ -87,6 +87,7 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
     private void extractSystemRelations(BuildState state, List<OperationalContextSystem> systems) {
         for (var system : systems) {
             var source = new EntityKey(SYSTEM, system.id());
+            ownershipRelations(state, source, system.ownership(), "systems.yml", "$.systems[id=" + system.id() + "].ownership");
             references(state, source, system.references(), "systems.yml", SYSTEM, system.id(), "$.systems[id=" + system.id() + "].references", true);
             explicitRelations(state, source, system.relations(), "systems.yml", system.id(), "$.systems[id=" + system.id() + "].relations");
 
@@ -181,16 +182,22 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
     private void extractBoundedContextRelations(BuildState state, List<OperationalContextBoundedContext> boundedContexts) {
         for (var context : boundedContexts) {
             var source = new EntityKey(BOUNDED_CONTEXT, context.id());
+            ownershipRelations(state, source, context.ownership(), "bounded-contexts.yml", "$.boundedContexts[id=" + context.id() + "].ownership");
             references(state, source, context.references(), "bounded-contexts.yml", BOUNDED_CONTEXT, context.id(), "$.boundedContexts[id=" + context.id() + "].references", true);
             explicitRelations(state, source, context.relations(), "bounded-contexts.yml", context.id(), "$.boundedContexts[id=" + context.id() + "].relations");
         }
     }
 
-    private void extractTeamRelations(BuildState state, List<OperationalContextTeam> teams) {
-        for (var team : teams) {
-            var source = new EntityKey(TEAM, team.id());
-            references(state, source, team.references(), "teams.yml", TEAM, team.id(), "$.teams[id=" + team.id() + "].references", true);
-            explicitRelations(state, source, team.relations(), "teams.yml", team.id(), "$.teams[id=" + team.id() + "].relations");
+    private void ownershipRelations(
+            BuildState state, EntityKey source, OperationalContextOwnership ownership, String file, String fieldPath
+    ) {
+        if (!"explicit".equalsIgnoreCase(ownership.ownershipStatus())) {
+            return;
+        }
+        for (var teamId : safeTextList(ownership.ownerTeamIds())) {
+            relation(state, source, "owned-by-team", new EntityKey(TEAM, teamId), "owner", source,
+                    true, false, "direct-yaml", ownership.confidence(),
+                    sourceRef(file, source.type(), source.id(), fieldPath + ".ownerTeamIds[id=" + teamId + "]", "owned-by-team"));
         }
     }
 
@@ -641,6 +648,9 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
             return;
         }
         var selectedParticipantPath = participantPath + "[system=" + participant.system() + "]";
+        if (StringUtils.hasText(participant.boundedContext())) {
+            selectedParticipantPath += "[boundedContext=" + participant.boundedContext() + "]";
+        }
         relation(
                 state,
                 source,

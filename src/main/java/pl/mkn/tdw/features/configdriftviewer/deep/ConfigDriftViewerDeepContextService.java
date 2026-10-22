@@ -1,6 +1,8 @@
 package pl.mkn.tdw.features.configdriftviewer.deep;
 
 import lombok.RequiredArgsConstructor;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.configdriftviewer.deep.model.ConfigDriftViewerAffectedEntity;
@@ -45,6 +47,7 @@ public class ConfigDriftViewerDeepContextService {
     private final OperationalContextPort operationalContextPort;
     private final OperationalContextOwnershipPort ownershipResolver;
     private final OperationalContextCodeSearchPort codeSearchBuilder;
+    private final OperationalContextNavigationPort navigationPort;
 
     public Optional<ConfigDriftViewerDeepContext> build(
             ConfigDriftViewerMode mode,
@@ -109,7 +112,7 @@ public class ConfigDriftViewerDeepContextService {
             visibilityLimits.add("No deterministic code usage was confirmed for changed configuration keys.");
         }
 
-        var entityIndex = new EntityIndex(catalog, deterministicContext, codeSearch);
+        var entityIndex = new EntityIndex(catalog, deterministicContext, codeSearch, navigationPort.build(catalog));
         entityIndex.collect(systemId);
         var primarySystem = primarySystem(catalog, preflight, systemId);
         resolvedListener.onOwnershipStarted();
@@ -254,7 +257,8 @@ public class ConfigDriftViewerDeepContextService {
                     .orElse(null);
             if (system == null
                     || !"internal-service".equalsIgnoreCase(system.systemType())
-                    || !codeSearchBuilder.buildForEntity(catalog, "system", systemId).scopes().isEmpty()) {
+                    || catalog.codeSearchScopes().stream().anyMatch(scope ->
+                            "system".equals(scope.target().type()) && equalsId(scope.target().id(), systemId))) {
                 continue;
             }
             result.add(systemId);
@@ -275,6 +279,7 @@ public class ConfigDriftViewerDeepContextService {
     private static final class EntityIndex {
 
         private final OperationalContextCatalog catalog;
+        private final OperationalContextNavigation navigation;
         private final ConfigDriftViewerDeterministicContext deterministicContext;
         private final ConfigDriftViewerCodeSearchResult codeSearch;
         private final Map<String, ConfigDriftViewerAffectedEntity> entities = new LinkedHashMap<>();
@@ -284,9 +289,11 @@ public class ConfigDriftViewerDeepContextService {
         private EntityIndex(
                 OperationalContextCatalog catalog,
                 ConfigDriftViewerDeterministicContext deterministicContext,
-                ConfigDriftViewerCodeSearchResult codeSearch
+                ConfigDriftViewerCodeSearchResult codeSearch,
+                OperationalContextNavigation navigation
         ) {
             this.catalog = catalog;
+            this.navigation = navigation;
             this.deterministicContext = deterministicContext;
             this.codeSearch = codeSearch;
         }
@@ -314,7 +321,7 @@ public class ConfigDriftViewerDeepContextService {
                             || contains(process.participants().supportingSystems(), primarySystemId))
                     .forEach(process -> {
                         addRelated(ConfigDriftViewerOperationalEntityType.PROCESS, process);
-                        addSystems(process.references().systems(), "RELATED_PROCESS");
+                        addSystems(navigation.references("process", process.id()).systems(), "RELATED_PROCESS");
                         addSystems(process.participants().primarySystems(), "RELATED_PROCESS");
                         addSystems(process.participants().supportingSystems(), "RELATED_PROCESS");
                     });
@@ -323,7 +330,7 @@ public class ConfigDriftViewerDeepContextService {
                             || contains(integration.participants().systems(), primarySystemId))
                     .forEach(integration -> {
                         addRelated(ConfigDriftViewerOperationalEntityType.INTEGRATION, integration);
-                        addSystems(integration.references().systems(), "RELATED_INTEGRATION");
+                        addSystems(navigation.references("integration", integration.id()).systems(), "RELATED_INTEGRATION");
                         addSystems(integration.participants().systems(), "RELATED_INTEGRATION");
                     });
             catalog.boundedContexts().stream()
@@ -432,7 +439,7 @@ public class ConfigDriftViewerDeepContextService {
                         .distinct()
                         .toList();
                 addReferences(
-                        repository.references(),
+                        navigation.references("repository", repository.id()),
                         "CODE_CONFIRMED_REPOSITORY",
                         ConfigDriftViewerGroundingConfidence.HIGH,
                         differenceIds,
@@ -443,7 +450,7 @@ public class ConfigDriftViewerDeepContextService {
 
         private void addReferencedEntities(OperationalContextEntry entry) {
             addReferences(
-                    entry.references(),
+                    effectiveReferences(entry),
                     "DIRECT_CATALOG_REFERENCE",
                     ConfigDriftViewerGroundingConfidence.MEDIUM,
                     List.of(),
@@ -600,8 +607,17 @@ public class ConfigDriftViewerDeepContextService {
                                     == ConfigDriftViewerOperationalEntityType.BOUNDED_CONTEXT));
         }
 
+        private pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences effectiveReferences(OperationalContextEntry entry) {
+            var type = entry instanceof OperationalContextSystem ? "system"
+                    : entry instanceof OperationalContextBoundedContext ? "bounded-context"
+                    : entry instanceof OperationalContextProcess ? "process"
+                    : entry instanceof OperationalContextIntegration ? "integration"
+                    : entry instanceof OperationalContextRepository ? "repository" : "team";
+            return navigation.references(type, entry.id());
+        }
+
         private boolean referencesSystem(OperationalContextEntry entry, String systemId) {
-            return contains(entry.references().systems(), systemId);
+            return contains(effectiveReferences(entry).systems(), systemId);
         }
 
         private boolean contains(List<String> ids, String id) {

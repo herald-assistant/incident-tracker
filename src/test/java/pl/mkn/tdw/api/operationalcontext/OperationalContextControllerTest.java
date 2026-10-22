@@ -154,6 +154,7 @@ class OperationalContextControllerTest {
                         List.of(),
                         List.of(),
                         List.of(entityRef("system", "new-system")),
+                        List.of(),
                         List.of()
                 ));
         when(viewService.codeSearchReadModel("process", "new-process"))
@@ -177,6 +178,7 @@ class OperationalContextControllerTest {
                         "operational-context.entity-relations",
                         1,
                         target,
+                        List.of(),
                         List.of(),
                         List.of(),
                         List.of(),
@@ -256,7 +258,8 @@ class OperationalContextControllerTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                ""
+                "",
+                List.of()
         );
     }
 

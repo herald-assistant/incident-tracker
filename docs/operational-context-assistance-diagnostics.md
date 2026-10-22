@@ -21,6 +21,14 @@ plany nie są źródłem aktualnego zachowania.
    zatrzymuje run jawnie; asysta nie powinna pracować na niejawnie obciętym
    katalogu. Źródłem jest efektywna kopia w
    `${tdw.workspace.directory}/operational-context`, nie seed z JAR-a.
+   Sprawdź również sekcję `Effective skill`: startup nie nadpisuje istniejącego
+   skilla w `${copilot-home}/skills`. Zmiana packaged seeda nie synchronizuje
+   automatycznie jego efektywnej treści. Jawny zapis lub restore w
+   `Platform / AI Skills` aktualizuje plik i katalog skilli w pamięci; samo
+   skopiowanie pliku na dysku nie aktualizuje cache działającej aplikacji.
+   Restore przywraca seed załadowany przez aktualny proces; po zmianie zasobów
+   użyj jawnego zapisu aktualnej treści albo uruchom proces z nowym seedem.
+   Już przygotowany prompt i aktywny run zachowują poprzednią treść.
 3. Przy GitLabie porównaj wybrany projekt i gałąź z przypiętym commitem.
    `source-options` podpowiada projekty zapisane w katalogu, nie wszystkie
    projekty GitLab. Pełny URL projektu musi należeć do skonfigurowanego
@@ -43,6 +51,12 @@ nazw ani treści według wzorców danych wrażliwych; nadal obowiązują granice
 grupy, ścieżki, formatu tekstowego, kompletności i przypiętego commita.
 
 ## Jak rozpoznać miejsce błędu
+
+Przy sprzątaniu porównaj pełny katalog przed i po, a nie samą liczbę findingów.
+Instrukcja `Cleanup verification` wymaga rozliczenia treści pomijanej przez
+writable schema, pełnych celów mapy, różnych ról, ownershipu, wyników search
+i granic per scope/repository. Słabe sygnały systemu również wpływają na dobór
+scope'ów GitLaba. Nierozpoznany glossary ID pozostaje jawną luką wiedzy.
 
 - **Run zatrzymał się przed odpowiedzią AI.** Sprawdź krok zbierania katalogu
   i `PREPARE_AI`: komplet dziewięciu YAML, 11 reguł,

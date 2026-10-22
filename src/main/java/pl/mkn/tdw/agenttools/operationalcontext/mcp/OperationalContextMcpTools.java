@@ -140,9 +140,13 @@ public class OperationalContextMcpTools {
     @Tool(
             name = GET_ENTITY,
             description = """
-                    Returns compact details for one operational context entity.
+                    Returns type-specific compact details for one operational context entity.
                     Use this after search or list results before relying on relationships, ownership, code-search scope,
                     handoff decision guidance, recognition signals or source limitations.
+                    Navigation groups paths by target, preserves distinct relationship kinds and roles and provides one read per target.
+                    include=[navigation] returns the complete lightweight index; include=[navigationDetails] returns every original path and provenance.
+                    A codeSearchScope default includes complete repository roles and searchMode/pathPrefixes; other types return a scope index.
+                    Any explicit include returns only the requested sections, without compaction. Use include=[codeSearch] for all search boundaries.
                     """
     )
     public OpctxEntityDetailResult getEntity(
@@ -150,7 +154,7 @@ public class OperationalContextMcpTools {
             String type,
             @ToolParam(description = "Stable entity id returned by scope, list or search.")
             String id,
-            @ToolParam(required = false, description = "Optional sections: overview, relations, signals, codeSearch, handoff, sourceCoverage, openQuestions.")
+            @ToolParam(required = false, description = "Optional sections: navigation, navigationDetails, overview, relations, signals, codeSearch, handoff, sourceCoverage, openQuestions. Omit for type-specific defaults. Explicit sections are complete and exclude unrequested sections; navigationDetails contains full paths/provenance, navigation is the lightweight index.")
             List<String> include,
             @ToolParam(required = false, description = REASON_DESCRIPTION)
             String reason,

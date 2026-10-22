@@ -63,7 +63,7 @@ class OperationalContextMaintenanceInstructionsTest {
         assertTrue(guidance.contains("`whole-repository` or `path-prefixes`"));
         assertTrue(guidance.contains("positive `priority`"));
         assertTrue(guidance.contains("crm-contact-core"));
-        assertTrue(guidance.contains("crm-contact-repository"));
+        assertTrue(guidance.contains("crm-contact-core"));
         assertTrue(guidance.contains("lifecycleStatus"));
         assertTrue(guidance.contains("Runtime / AI effect"));
     }
@@ -126,7 +126,7 @@ class OperationalContextMaintenanceInstructionsTest {
         assertTrue(guidance.contains("crm-contact-rejected"));
         assertTrue(processPrompt.contains("crm-request-validation-failed"));
         assertTrue(processPrompt.contains("never CRM customer records or payloads"));
-        assertTrue(integrationPrompt.contains("CRM case handoff not visible"));
+        assertTrue(integrationPrompt.contains("CRM contact handoff not visible"));
         assertTrue(integrationPrompt.contains("never confirm root cause"));
     }
 

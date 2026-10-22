@@ -104,3 +104,26 @@ Nie obejmuje:
 
 - `PackageDependencyGuardTest` pilnuje, zeby `agenttools.*` nie importowalo
   warstw aplikacyjnych ani platformowych.
+
+## Nawigacja Operational Context
+
+Read-only mapa korzysta z neutralnego OperationalContextNavigationPort i
+indeksu relacji. Jednostronny zapis daje dostep do obu stron relacji;
+sciezka posrednia nie ustanawia ownershipu ani uprawnien do kodu.
+Operator API/UI zachowuje pelny kontrakt integracyjny. Maintenance nie
+zapisuje projekcji jako nowych faktow.
+
+AI detail ma defaulty zalezne od dziewieciu typow encji. Lekki navigation
+jest grupowany po celu, z odrebnymi relacjami, kierunkami, rolami, liczba
+sciezek i jednym read. navigationTotal liczy cele, navigationPathTotal
+sciezki. include=[navigation] zwraca caly indeks, include=[navigationDetails]
+wszystkie oryginalne sciezki i provenance. Nie powielaj neighbor reads
+w affordances.links; sa tam tylko akcje ekspansji.
+
+codeSearch korzysta ze wspolnego OperationalContextCodeSearchPort, z jawnym
+status i detail=index|complete. Wybrany codeSearchScope domyslnie dostaje
+pelne repozytoria i granice searchMode/pathPrefixes; inne typy karty scope'ow.
+Granice pozostaja osobne per scope/repository. Brak scope'u jest not-defined,
+nie pustym obiektem zaleznym od typu. Kazdy jawny include zwraca w calosci
+wylacznie wybrane sekcje, bez niezamowionej nawigacji. Puste sekcje nie sa
+serializowane. Wszystkie dane pominiete w default sa odzyskiwalne.

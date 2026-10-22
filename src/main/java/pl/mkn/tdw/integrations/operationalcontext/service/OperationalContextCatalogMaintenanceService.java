@@ -51,7 +51,7 @@ public class OperationalContextCatalogMaintenanceService implements OperationalC
     private static final Set<String> INTERNAL_SERVICE_SUBTYPES =
             Set.of("frontend", "backend", "worker", "mixed", "unknown");
     private static final Set<String> DERIVED_FIELDS = Set.of(
-            "rawSourcePreview", "resolvedOwnership", "validationFindings", "sourceReferences",
+            "rawSourcePreview", "resolvedOwnership", "validationFindings", "sourceReferences", "navigation", "navigationTotal",
             "openQuestions", "overviewSections", "relatedEntities", "recognitionSignals", "explainabilitySections"
     );
 

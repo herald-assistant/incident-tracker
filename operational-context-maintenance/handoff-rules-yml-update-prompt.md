@@ -11,41 +11,48 @@ and what first action is practical. It does not store the receiving team.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 schemaVersion: 1
 catalogKind: operational-context-handoff-rules
 handoffRules:
   - id: crm-contact-sync-delayed
-    title: CRM contact synchronization is delayed
+    title: CRM contact acceptance is not visible
     useWhen:
-      - An anonymized CRM customer update is not visible downstream.
+      - An anonymized CRM contact update was submitted but acceptance is not visible.
     doNotUseWhen:
-      - The update is inside its documented processing window.
+      - The update is still within its documented processing window.
     requiredEvidence:
-      - An anonymized CRM correlation key.
+      - An anonymized CRM correlation key and observations from both sides.
     expectedFirstAction:
-      - Verify both sides of the CRM synchronization boundary.
+      - Verify submission and acceptance at the CRM integration boundary.
     references:
       systems:
-        - crm-customer-service
-      processes:
-        - crm-contact-update
+        - crm-agent-portal
+        - crm-contact-core
       integrations:
-        - crm-contact-sync
+        - crm-contact-to-core
       terms:
-        - crm-customer-profile
+        - crm-contact-preference
     notes:
-      - Strongly anonymized CRM example.
+      - Fictional CRM example; team routing is resolved from contexts and systems.
     llmToolHints:
-      - Collect evidence from both CRM sides.
+      - Collect evidence from both CRM sides before interpreting the handoff.
     limitations:
-      - No production identifiers.
+      - No conclusion about the current runtime state follows from this rule alone.
 gaps:
-  - id: crm-handoff-boundary
-    type: ownership-boundary
+  - id: crm-handoff-window
+    type: human-confirmation-required
     severity: info
     status: open
-    description: Confirm the anonymous CRM handoff boundary.
+    summary: Confirm the fictional CRM processing window.
 ```
 
 ## Update rules
@@ -56,5 +63,7 @@ gaps:
   team.
 - Link affected systems, processes and integrations through `references`;
   the rule does not maintain a second list of affected targets.
+- If a process already links this rule, do not add the inverse process reference
+  solely for discovery. The effective map exposes incoming links.
 - Prefer concrete evidence and first actions over generic investigation text.
 - Every test, fixture or example must be strongly anonymized and CRM-only.

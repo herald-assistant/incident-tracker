@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import com.github.javaparser.JavaParser;
@@ -135,12 +136,14 @@ public class GitLabMcpTools {
     private static final Set<OperationalContextEntryType> BROAD_DISCOVERY_CONTEXT_ENTRY_TYPES = Set.of(
             OperationalContextEntryType.SYSTEM,
             OperationalContextEntryType.REPOSITORY,
-            OperationalContextEntryType.CODE_SEARCH_SCOPE
+            OperationalContextEntryType.CODE_SEARCH_SCOPE,
+            OperationalContextEntryType.PROCESS, OperationalContextEntryType.BOUNDED_CONTEXT, OperationalContextEntryType.INTEGRATION
     );
 
     private final GitLabVerifiedRepositoryFilePort verifiedFileReader;
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
+    private final OperationalContextNavigationPort navigationPort;
     private final GitLabRepositoryEndpointPort gitLabRepositoryEndpointService;
     private final GitLabEndpointUseCaseContextPort gitLabEndpointUseCaseContextService;
     private final GitLabJavaMethodUseCaseContextPort gitLabJavaMethodUseCaseContextService;
@@ -154,7 +157,7 @@ public class GitLabMcpTools {
             String branchRef,
             ToolContext toolContext
     ) {
-        return new GitLabToolScopeResolver(gitLabProperties, operationalContextPort)
+        return new GitLabToolScopeResolver(gitLabProperties, operationalContextPort, navigationPort)
                 .resolve(branchRef, projectName, applicationNames, toolContext);
     }
 
@@ -1516,7 +1519,7 @@ public class GitLabMcpTools {
             OperationalContextCatalog catalog,
             List<String> applicationNames
     ) {
-        return new GitLabApplicationScopeResolver().codeSearchScopes(catalog, applicationNames);
+        return new GitLabApplicationScopeResolver(navigationPort.build(catalog)).codeSearchScopes(catalog, applicationNames);
     }
 
     private List<String> javaTypeDefinitionCandidatePaths(

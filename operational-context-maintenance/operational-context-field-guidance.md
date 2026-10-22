@@ -55,10 +55,20 @@ from the edit payload and removed when the entity is updated. Recognition-signal
 names within canonical strength buckets remain dynamic. AI-assisted drafts may
 propose only fields in the current maintenance schema.
 
+Before an update, compare the full source entity with the writable payload.
+For every omitted or removed field, account for its meaningful content: move it
+to an accepted field or identify the surviving canonical source of the same
+fact. Do not equate removal of an unsupported key with removal of its knowledge.
+Follow the cleanup verification procedure in `operational-context-fill-order.md`.
+
 ## Strict maintenance validation
 
 - Every entity requires a stable `id` and its display field: `name`, `term` or
   `title`. IDs are immutable after creation.
+- Omit absent optional fields. Null, blank strings and empty objects are rejected;
+  empty lists are allowed where the field permits them. A conditional field
+  change cannot delete a root field with `after: null`. If deletion is required,
+  disclose that limitation instead of inventing a non-empty value or signal.
 - A repository requires `git.provider: gitlab` and `git.projectPath`.
 - `system.participants`, when present, is an object and its `externalOwner` is
   non-blank text. `system.runtime.configurationDirectory`, when present, is a
@@ -133,9 +143,9 @@ CRM example:
 
 ```json
 {
-  "systems": ["crm-contact-core"],
-  "processes": ["crm-contact-update"],
-  "terms": ["crm-customer-profile"]
+  "boundedContexts": ["crm-contact-preferences"],
+  "integrations": ["crm-contact-to-core"],
+  "terms": ["crm-contact-preference"]
 }
 ```
 
@@ -146,10 +156,20 @@ team/status/confidence/source controls. Supported serialized properties are
 `ownerTeamIds`, `ownerLabel`, `ownershipStatus`, `confidence`, `source` and
 `notes`. `ownershipStatus: explicit` requires an existing team ID or an owner
 label. Confidence convention is `high`, `medium` or `low`.
+An uncertain owner is a visibility limit or a supported gap, not a guessed
+`ownerLabel` with low confidence. AI assistance may propose ownership only from
+an explicit operator statement with the required confirmation and source ref.
 
 Bounded-context ownership has priority; system ownership is the fallback. AI
 uses resolved ownership for impact and handoff, while repositories, processes,
 integrations, teams, glossary terms and handoff rules never define owners.
+
+Explicit system/context `ownerTeamIds` also create canonical `owned-by-team`
+navigation edges with the ownership field as provenance. Teams discover their
+systems, contexts and their code scopes from those incoming edges; they have
+no writable `references` or `relations`. Inferred owner IDs and label similarity
+do not create confirmed ownership edges. A shared team is not a graph
+intermediary granting access to another system's code.
 
 ```json
 {
@@ -172,6 +192,15 @@ each bucket maps durable evidence keys such as
 Runtime resolution and catalogue search compare evidence with these values.
 AI tools expose the signals to explain why an entity matched. Put a value in a
 stronger bucket only when the evidence is reliably identifying.
+
+Strength is not an access boundary. GitLab application-to-system matching uses
+all system signal values, including `weak`, plus aliases and `useFor`, without
+weighting their strength. A value colliding with another system identity can
+select additional code-search scopes. Do not move descriptive metadata or an
+unresolved glossary reference into signals to preserve text or satisfy a shape.
+Keep such text in an accepted descriptive field or gap. Before changing system
+signals, aliases or `useFor`, compare selected systems, scopes and repositories
+for the existing identity inputs; disclose any intended selection change.
 
 Signal keys are intentionally extensible because integrations and runtime
 evidence introduce durable identifiers such as `bindings`, `exchanges`,
@@ -214,6 +243,10 @@ catalogue targets; unknown relation extensions are removed on update.
 
 ### `sourceCoverage`
 
+Entity-level `sourceCoverage` is writable only on systems, repositories and
+bounded contexts. For other types use an accepted descriptive field or the
+draft's `visibilityLimits`; do not invent a source-coverage property.
+
 The UI writes one object with `status`, `scannedSources`, `expectedSources` and
 `limitations`. The accepted status values are `complete`, `partial` and
 `unknown`.
@@ -233,6 +266,12 @@ that every expected source was reviewed.
 ```
 
 ### `gaps`
+
+Entity-level `gaps` is writable only on systems, repositories and bounded
+contexts. Root document gaps are separate metadata preserved by maintenance;
+they are not fields of a glossary term, rule or another entity. For other entity
+types, use an accepted descriptive field or draft `visibilityLimits`. Never
+invent a glossary definition or redirect a missing ID to a similar name.
 
 The UI writes a list of cards. Every card requires an actionable `summary`.
 Optional `id` uses lowercase kebab-case and is unique inside the entry; it is a
@@ -284,16 +323,15 @@ card shape.
 | `sourceCoverage` | Guided status plus checked/expected repository areas and limitations. | Exposed by `opctx_get_entity`; prevents a partial mapping from appearing exhaustive. |
 | `gaps` | Guided missing Git identity or semantic-mapping questions. | Feeds Open Questions; AI may request targeted evidence instead of inventing a link. |
 | `llmToolHints` | Guided non-blank phrase lists: `answerWhenUserMentions` for discovery triggers and `disambiguateFrom` for explicit contrasts. Enter selection guidance, not answers or secrets. | Discovery phrases are searchable repository signals; both lists are exposed by `opctx_get_entity` to guide AI exploration without defining access or ownership. |
-| `notes` | One durable clarification per item. | Available in detailed context but not used as a match unless also modeled as a signal. |
 
 CRM `git` example:
 
 ```json
 {
   "provider": "gitlab",
-  "group": "crm",
+  "group": "CRM",
   "project": "contact-service",
-  "projectPath": "crm/contact-service",
+  "projectPath": "CRM/contact-service",
   "defaultBranch": "main"
 }
 ```
@@ -356,7 +394,7 @@ satisfy frontend eligibility.
 ```json
 [
   {
-    "repoId": "crm-contact-repository",
+    "repoId": "crm-contact-core",
     "role": "primary",
     "priority": 1,
     "reason": "Contains the CRM contact workflow.",
@@ -447,7 +485,7 @@ CRM failure-mode example:
   "id": "crm-contact-rejected",
   "name": "CRM contact rejected",
   "summary": "The anonymized CRM contact update is rejected before persistence.",
-  "affectedStep": "validate-contact",
+  "affectedStep": "accept-contact-update",
   "signals": ["CRM validation rejection", "CRM update confirmation is absent"]
 }
 ```
@@ -476,7 +514,7 @@ CRM step example:
   "summary": "Validate and accept the anonymized CRM contact change.",
   "references": {
     "systems": ["crm-contact-core"],
-    "boundedContexts": ["crm-customer-context"]
+    "boundedContexts": ["crm-contact-preferences"]
   },
   "matchSignals": {
     "strong": { "terms": ["accept CRM contact update"] }
@@ -503,8 +541,8 @@ and canonical code-search scopes.
 
 ```json
 {
-  "source": { "system": "crm-contact-core", "role": "client" },
-  "targets": [{ "system": "crm-profile-store", "role": "server" }]
+  "source": { "system": "crm-agent-portal", "role": "client" },
+  "targets": [{ "system": "crm-contact-core", "role": "server" }]
 }
 ```
 
@@ -640,3 +678,48 @@ update together:
 - the relevant file-specific prompt,
 - the UI tooltip guidance,
 - anonymized CRM-only tests.
+
+## Single maintenance source and effective navigation
+
+Store each fact once. Read models and tools expose incoming and outgoing links
+with their original direction, canonical source and provenance. Do not add an
+inverse reference just to make the other entity discoverable.
+
+- Integration participants own participant roles; avoid matching generic references.
+- Process participants own system roles. Keep process-to-context references on the process.
+- Keep explicit context-to-system assignments on the bounded context. A shared
+  integration participant is not a replacement for this fact or for parent ownership.
+- A system discovers code through its code-search scope, never through direct
+  `references.repositories`. Preserve repository semantic context in repo-map.
+- Keep different semantic roles for the same pair of entities. A path through
+  an integration is navigation context, not proof of ownership or implementation.
+- Redundant references are maintenance warnings; invalid targets and unsupported
+  catalog shapes remain errors. Review the exact source before removing a fact.
+- Derived navigation is read-only and must never be written back as extra fields.
+
+## Complete reads and code-search boundaries
+
+Maintenance starts from the full nine-document snapshot, never from a compact
+`opctx_get_entity` response used as a replacement entity. Default fields depend
+on type and the default navigation is limited to eight targets. Missing fields
+or neighbours in that response do not prove absence in the catalogue.
+
+Use `include=[navigation]` for the complete lightweight target index and
+`include=[navigationDetails]` for every original path, direction, role and source
+reference. The same target may have several distinct semantic paths.
+`include=[codeSearch]` returns complete boundaries for all scopes selected for
+that entity. A default code-search-scope read also includes its full boundaries.
+Explicit include returns only the requested sections; expand other sections
+through `availableExpansions` when needed.
+
+Directly targeted scopes take precedence. For a bounded context with its own
+scope, start within that semantic slice; otherwise the read model falls back
+through effective links to related scopes. System scopes remain the broader
+implementation map. Read the scope returned by the model rather than inferring
+repository access from a navigation link.
+
+Preserve boundaries per scope and repository: `repoId`, `role`, `priority`,
+`searchMode`, `pathPrefixes` and scope `limitations`. Do not flatten, union or
+widen different boundaries of the same repository. No prefix means whole
+repository only when `searchMode` explicitly says `whole-repository`; an omitted
+boundary in a compact response is not permission to search more widely.

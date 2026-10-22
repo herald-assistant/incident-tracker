@@ -465,6 +465,7 @@
     }
 
     <app-context-entity-drawer
+      (openRelatedEntity)="openEntity($event)"
       [detail]="detail()"
       [entityPreview]="entityPreview()"
       [entityPreviewLoading]="entityPreviewLoading()"

@@ -600,3 +600,23 @@ Nowy feature jest zgodny z architektura, gdy:
   feature'a,
 - jego usuniecie nie wymaga zmiany reusable warstw poza usunieciem
   niewykorzystywanych rozszerzen.
+
+## Operational Context navigation
+
+`integrations.operationalcontext.OperationalContextNavigationPort` udostepnia
+read-only projekcje w `contract.OperationalContextNavigation`. Jej mechanika
+mieszka w `service` nad istniejacym relation index. MCP, shared/operator API,
+incident matching i Config Drift DEEP korzystaja z portu/kontraktu, bez
+importowania implementation service. Code-search read model reuse'uje te
+sama projekcje wewnatrz integracji. Feature-owned wagi i polityki pozostaja
+u konsumentow; integracja nie importuje tools, API, feature'a ani Copilota.
+
+`OperationalContextToolMapper` korzysta rowniez z istniejacego
+`OperationalContextCodeSearchPort` do jednakowej projekcji scope'ow
+wszystkich typow encji. Nie importuje buildera ani operator DTO. Repozytoria
+i ich granice sa serializowane osobno per scope.
+
+`agenttools.operationalcontext.mcp.OperationalContextToolDetailProjection`
+jest stateless prezentacja AI: wybiera defaulty typow, grupuje indeks celow
+i oddziela focused odczyty. Nie zmienia portow ani operator DTO i nie
+przejmuje algorytmu wyboru scope'ow, ownershipu albo autoryzacji.

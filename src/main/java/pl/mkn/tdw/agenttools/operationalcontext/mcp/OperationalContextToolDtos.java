@@ -1,6 +1,8 @@
 package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
 import java.util.Map;
 
 public final class OperationalContextToolDtos {
@@ -92,6 +94,7 @@ public final class OperationalContextToolDtos {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record OpctxEntityDetailResult(
             String type,
             String id,
@@ -106,9 +109,17 @@ public final class OperationalContextToolDtos {
             Map<String, Object> sourceCoverage,
             List<OpctxOpenQuestion> openQuestions,
             List<String> sourceRefs,
+            List<OpctxNavigationTarget> navigation,
+            @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+            int navigationTotal,
+            @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+            int navigationPathTotal,
+            List<OperationalContextNavigation.Link> navigationDetails,
             OpctxToolAffordances affordances
     ) {
         public OpctxEntityDetailResult {
+            navigation = List.copyOf(navigation);
+            navigationDetails = List.copyOf(navigationDetails);
             overview = overview != null ? Map.copyOf(overview) : Map.of();
             relations = relations != null ? Map.copyOf(relations) : Map.of();
             signals = signals != null ? Map.copyOf(signals) : Map.of();
@@ -121,6 +132,36 @@ public final class OperationalContextToolDtos {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public record OpctxNavigationTarget(
+            String type,
+            String id,
+            String label,
+            String summary,
+            @JsonInclude(JsonInclude.Include.NON_DEFAULT) boolean summaryTruncated,
+            List<OpctxNavigationRelation> relations,
+            int pathCount,
+            OpctxToolLink read
+    ) {
+        public OpctxNavigationTarget {
+            relations = List.copyOf(relations);
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public record OpctxNavigationRelation(
+            String relationType,
+            String direction,
+            boolean indirect,
+            List<OpctxNavigationRole> roles,
+            int pathCount
+    ) {
+        public OpctxNavigationRelation { roles = List.copyOf(roles); }
+    }
+
+    public record OpctxNavigationRole(String relationType, String role) {}
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record OpctxToolAffordances(
             String profile,
             List<OpctxToolLink> links,
@@ -169,6 +210,7 @@ public final class OperationalContextToolDtos {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public record OpctxTruncation(
             boolean truncated,
             String reason,

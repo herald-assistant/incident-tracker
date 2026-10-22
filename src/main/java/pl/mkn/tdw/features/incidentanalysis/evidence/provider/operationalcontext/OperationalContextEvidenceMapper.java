@@ -1,6 +1,8 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
 import lombok.RequiredArgsConstructor;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
@@ -35,6 +37,7 @@ import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalCon
 public class OperationalContextEvidenceMapper {
 
     private final OperationalContextOwnershipPort ownershipResolver;
+    private final OperationalContextNavigationPort navigationPort;
 
     public AnalysisEvidenceSection emptySection() {
         return new AnalysisEvidenceSection(
@@ -52,12 +55,13 @@ public class OperationalContextEvidenceMapper {
             OperationalContextMatchBundle matches,
             OperationalContextCatalog catalog
     ) {
+        var navigation = navigationPort.build(catalog);
         var items = new ArrayList<AnalysisEvidenceItem>();
-        addSystemItems(items, matches.systemMatches(), catalog);
-        addIntegrationItems(items, matches.integrationMatches(), catalog);
-        addProcessItems(items, matches.processMatches(), catalog);
-        addRepositoryItems(items, matches.repositoryMatches(), catalog);
-        addBoundedContextItems(items, matches.boundedContextMatches(), catalog);
+        addSystemItems(navigation, items, matches.systemMatches(), catalog);
+        addIntegrationItems(navigation, items, matches.integrationMatches(), catalog);
+        addProcessItems(navigation, items, matches.processMatches(), catalog);
+        addRepositoryItems(navigation, items, matches.repositoryMatches(), catalog);
+        addBoundedContextItems(navigation, items, matches.boundedContextMatches(), catalog);
         addTeamItems(items, matches.teamMatches());
         addGlossaryItems(items, matches.glossaryMatches());
         addHandoffRuleItems(items, matches.handoffMatches());
@@ -71,7 +75,20 @@ public class OperationalContextEvidenceMapper {
         );
     }
 
+    private void addNavigationAttributes(List<AnalysisEvidenceAttribute> attributes, OperationalContextNavigation navigation,
+                                         String type, String id) {
+        var links = navigation.forEntity(type, id);
+        var lines = links.stream().limit(8).map(link ->
+                link.target().key().value() + " | " + link.reason() + " | read opctx_get_entity(type="
+                + link.target().type() + ", id=" + link.target().id() + ") | sources=" + link.sourceRefs()).toList();
+        if (!lines.isEmpty()) {
+            addAttribute(attributes, "navigation", String.join("\n", lines)
+                    + "\nAll " + links.size() + " links: opctx_get_entity(type=" + type + ", id=" + id + ", include=[navigation]).");
+        }
+    }
+
     private void addSystemItems(
+            OperationalContextNavigation navigation,
             List<AnalysisEvidenceItem> items,
             List<OperationalContextMatchedEntry<OperationalContextSystem>> matches,
             OperationalContextCatalog catalog
@@ -79,17 +96,18 @@ public class OperationalContextEvidenceMapper {
         for (var match : matches) {
             var system = match.entry();
             var systemId = system.id();
-            var repoIds = systemRepositoryIds(system);
+            var repoIds = navigation.relatedIds("system", system.id(), "repository");
             var codeSearch = resolveCodeSearchSelection(catalog, system, repoIds);
             var codeSearchRepositories = codeSearch.repositories();
             var ownership = ownershipResolver.resolve(catalog, ownershipRequest(system));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+            addNavigationAttributes(attributes, navigation, "system", system.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_ID, systemId);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(system.name(), system.shortName()));
             addOwnershipAttributes(attributes, ownership);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, system.participants().externalOwner());
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(system.references().processes()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(system.references().boundedContexts()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(navigation.references("system", system.id()).processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(navigation.references("system", system.id()).boundedContexts()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(repoIds));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_SCOPE_IDS, joined(codeSearch.scopeIds()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS, joined(repositoryIds(codeSearchRepositories)));
@@ -106,6 +124,7 @@ public class OperationalContextEvidenceMapper {
     }
 
     private void addIntegrationItems(
+            OperationalContextNavigation navigation,
             List<AnalysisEvidenceItem> items,
             List<OperationalContextMatchedEntry<OperationalContextIntegration>> matches,
             OperationalContextCatalog catalog
@@ -114,6 +133,7 @@ public class OperationalContextEvidenceMapper {
             var integration = match.entry();
             var ownership = ownershipResolver.resolve(catalog, ownershipRequest(integration));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+            addNavigationAttributes(attributes, navigation, "integration", integration.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_ID, integration.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(integration.name(), integration.shortName()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_SYSTEM, integration.participants().source().system());
@@ -132,6 +152,7 @@ public class OperationalContextEvidenceMapper {
     }
 
     private void addProcessItems(
+            OperationalContextNavigation navigation,
             List<AnalysisEvidenceItem> items,
             List<OperationalContextMatchedEntry<OperationalContextProcess>> matches,
             OperationalContextCatalog catalog
@@ -140,6 +161,7 @@ public class OperationalContextEvidenceMapper {
             var process = match.entry();
             var ownership = ownershipResolver.resolve(catalog, ownershipRequest(process));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+            addNavigationAttributes(attributes, navigation, "process", process.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_ID, process.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(process.name(), process.shortName()));
             addOwnershipAttributes(attributes, ownership);
@@ -155,6 +177,7 @@ public class OperationalContextEvidenceMapper {
     }
 
     private void addRepositoryItems(
+            OperationalContextNavigation navigation,
             List<AnalysisEvidenceItem> items,
             List<OperationalContextMatchedEntry<OperationalContextRepository>> matches,
             OperationalContextCatalog catalog
@@ -163,13 +186,14 @@ public class OperationalContextEvidenceMapper {
             var repository = match.entry();
             var ownership = ownershipResolver.resolve(catalog, ownershipRequest(repository));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+            addNavigationAttributes(attributes, navigation, "repository", repository.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_ID, repository.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROJECT_PATH, repository.git().projectPath());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_GROUP, repository.git().group());
             addOwnershipAttributes(attributes, ownership);
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(repository.references().systems()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(repository.references().processes()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(repository.references().boundedContexts()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(navigation.references("repository", repository.id()).systems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(navigation.references("repository", repository.id()).processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(navigation.references("repository", repository.id()).boundedContexts()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational repository " + firstNonBlank(repository.id(), repository.git().projectPath(), repository.name()),
@@ -179,6 +203,7 @@ public class OperationalContextEvidenceMapper {
     }
 
     private void addBoundedContextItems(
+            OperationalContextNavigation navigation,
             List<AnalysisEvidenceItem> items,
             List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> matches,
             OperationalContextCatalog catalog
@@ -190,10 +215,10 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_BOUNDED_CONTEXT_ID, boundedContext.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(boundedContext.name(), boundedContext.shortName()));
             addOwnershipAttributes(attributes, ownership);
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(boundedContext.references().systems()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(boundedContext.references().repositories()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(boundedContext.references().processes()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TERMS, joined(limit(boundedContext.references().terms(), 4)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(navigation.references("bounded-context", boundedContext.id()).systems()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(navigation.references("bounded-context", boundedContext.id()).repositories()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(navigation.references("bounded-context", boundedContext.id()).processes()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TERMS, joined(limit(navigation.references("bounded-context", boundedContext.id()).terms(), 4)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational bounded context " + firstNonBlank(boundedContext.id(), boundedContext.name()),
@@ -261,10 +286,6 @@ public class OperationalContextEvidenceMapper {
         }
     }
 
-    private List<String> systemRepositoryIds(OperationalContextSystem system) {
-        return system.references().repositories();
-    }
-
     private CodeSearchSelection resolveCodeSearchSelection(
             OperationalContextCatalog catalog,
             OperationalContextSystem system,
@@ -329,12 +350,14 @@ public class OperationalContextEvidenceMapper {
             return List.of();
         }
 
+        var navigation = navigationPort.build(catalog);
         return catalog.codeSearchScopes().stream()
-                .filter(scope -> matchesCodeSearchScope(scope, system, seedRepoIds))
+                .filter(scope -> matchesCodeSearchScope(navigation, scope, system, seedRepoIds))
                 .toList();
     }
 
     private boolean matchesCodeSearchScope(
+            OperationalContextNavigation navigation,
             OperationalContextRepositorySearchScope scope,
             OperationalContextSystem system,
             List<String> seedRepoIds
@@ -342,9 +365,9 @@ public class OperationalContextEvidenceMapper {
         var target = scope.target();
         var targetType = normalizeTargetType(target.type());
         return ("system".equals(targetType) && sameId(target.id(), system.id()))
-                || ("process".equals(targetType) && containsNormalized(system.references().processes(), target.id()))
-                || ("bounded-context".equals(targetType) && containsNormalized(system.references().boundedContexts(), target.id()))
-                || ("integration".equals(targetType) && containsNormalized(system.references().integrations(), target.id()))
+                || ("process".equals(targetType) && containsNormalized(navigation.scopeTargetIds("system", system.id(), "process"), target.id()))
+                || ("bounded-context".equals(targetType) && containsNormalized(navigation.scopeTargetIds("system", system.id(), "bounded-context"), target.id()))
+                || ("integration".equals(targetType) && containsNormalized(navigation.scopeTargetIds("system", system.id(), "integration"), target.id()))
                 || intersectsNormalized(primaryScopeRepositoryIds(scope), seedRepoIds);
     }
 

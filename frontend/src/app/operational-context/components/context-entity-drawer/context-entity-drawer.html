@@ -153,6 +153,28 @@
     }
 
     <section class="entity-drawer__section">
+      <h3>Mapa dalszej analizy</h3>
+      @if (!entity.navigation.length) {
+        <p class="muted-text">Brak znanych powiπzaÒ katalogowych.</p>
+      }
+      @for (link of entity.navigation; track $index) {
+        <div class="drawer-group">
+          <button type="button" class="text-button" (click)="openNavigationTarget(link.target)">
+            {{ link.target.label }} ∑ {{ link.target.type }}
+          </button>
+          <small>{{ link.indirect ? 'Powiπzanie poúrednie' : 'Relacja bezpoúrednia' }} ∑ {{ link.relationType }} ∑ {{ link.direction }}</small>
+          <p>{{ link.reason }}</p>
+          @if (link.via.length) {
+            <small>Przez: @for (step of link.via; track step.id) { {{ step.label }} }</small>
+          }
+          <details><summary>èrÛd≥a powiπzania</summary>
+            @for (ref of link.sourceRefs; track $index) { <p>{{ ref.file }} ∑ {{ ref.fieldPath }}</p> }
+          </details>
+        </div>
+      }
+    </section>
+
+    <section class="entity-drawer__section">
       <h3>Related entities</h3>
       @if (!entity.relatedEntities.length) {
         <p class="muted-text">No related entities.</p>

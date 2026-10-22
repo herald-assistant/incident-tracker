@@ -96,7 +96,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
 
         findings.addAll(relationIndex.validationFindings());
         validateRelationProvenance(relationIndex.relations(), findings);
-        validateMergedDuplicateRelations(relationIndex.relations(), findings);
+        validateMergedDuplicateRelations(safeCatalog, relationIndex.relations(), findings);
         validateIntegrationParticipantReferenceDuplicates(relationIndex, findings);
         validateSystemDependenciesDerivedFromIntegrations(safeCatalog, findings);
         validateBoundedContextReferencesDerivedFromReadModel(safeCatalog, findings);
@@ -278,11 +278,15 @@ public class OperationalContextReadModelValidator implements OperationalContextR
     }
 
     private void validateMergedDuplicateRelations(
+            OperationalContextCatalog catalog,
             List<ReadModelRelation> relations,
             List<ValidationFinding> findings
     ) {
         for (var relation : relations) {
             if (relation.provenance().warnings().isEmpty()) {
+                continue;
+            }
+            if (distinctParticipantContexts(catalog, relation)) {
                 continue;
             }
             findings.add(new ValidationFinding(
@@ -292,6 +296,27 @@ public class OperationalContextReadModelValidator implements OperationalContextR
                     sourceRefs(relation)
             ));
         }
+    }
+
+    private boolean distinctParticipantContexts(OperationalContextCatalog catalog, ReadModelRelation relation) {
+        if (!INTEGRATION.equals(relation.source().type()) || !SYSTEM.equals(relation.target().type())) {
+            return false;
+        }
+        var integration = catalog.integrations().stream()
+                .filter(item -> item.id().equals(relation.source().id())).findFirst().orElse(null);
+        if (integration == null) {
+            return false;
+        }
+        var participants = switch (relation.relationType()) {
+            case "target-system" -> integration.participants().targets();
+            case "intermediary-system" -> integration.participants().intermediaries();
+            case "final-target-system" -> integration.participants().finalTargets();
+            default -> List.<OperationalContextIntegrationParticipant>of();
+        };
+        var contexts = participants.stream().filter(item -> relation.target().id().equals(item.system()))
+                .map(OperationalContextIntegrationParticipant::boundedContext).toList();
+        return contexts.size() > 1 && contexts.stream().allMatch(StringUtils::hasText)
+                && contexts.stream().distinct().count() == contexts.size();
     }
 
     private void validateIntegrationParticipantReferenceDuplicates(
@@ -344,7 +369,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
             }
             var participantRelation = entry.getValue();
             findings.add(new ValidationFinding(
-                    "error",
+                    "warning",
                     code,
                     "Integration " + source.value() + " keeps " + entry.getKey().value()
                             + " both in participants and references.",
@@ -409,7 +434,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
                 continue;
             }
             findings.add(new ValidationFinding(
-                    "error",
+                    "warning",
                     "SYSTEM_DEPENDENCY_DERIVED_FROM_INTEGRATION",
                     "System " + system.id() + " keeps dependency " + target + " in " + fieldPath
                             + ", but the same directed dependency is derivable from integrations.yml participants.",
@@ -434,7 +459,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
             var bidirectional = isBidirectional(integration.flowDirection());
             addIntegrationSystemPairs(result, source, integration.participants().targets(), bidirectional);
             addIntegrationSystemPairs(result, source, integration.participants().intermediaries(), bidirectional);
-            addIntegrationSystemPairs(result, source, integration.participants().finalTargets(), bidirectional);
+
         }
         return Set.copyOf(result);
     }
@@ -473,19 +498,10 @@ public class OperationalContextReadModelValidator implements OperationalContextR
             warnBoundedContextDerivedReference(
                     findings,
                     context.id(),
-                    context.references().systems(),
-                    "references.systems",
-                    "references-system",
-                    derivedReferences.systems(),
-                    "BOUNDED_CONTEXT_SYSTEM_REFERENCE_DERIVED"
-            );
-            warnBoundedContextDerivedReference(
-                    findings,
-                    context.id(),
                     context.references().integrations(),
                     "references.integrations",
                     "references-integration",
-                    derivedReferences.integrations(),
+                    derivedReferences,
                     "BOUNDED_CONTEXT_INTEGRATION_REFERENCE_DERIVED"
             );
         }
@@ -505,10 +521,10 @@ public class OperationalContextReadModelValidator implements OperationalContextR
                 continue;
             }
             findings.add(new ValidationFinding(
-                    "error",
+                    "warning",
                     code,
                     "Bounded context " + boundedContextId + " keeps " + targetId + " in " + fieldPath
-                            + ", but the same relation is derivable from integration participants/references or code-search targets.",
+                            + ", but the same relation is derivable from integration participants/references.",
                     List.of(new SourceRef(
                                 "bounded-contexts.yml",
                             BOUNDED_CONTEXT,
@@ -520,32 +536,29 @@ public class OperationalContextReadModelValidator implements OperationalContextR
         }
     }
 
-    private DerivedBoundedContextReferences boundedContextDerivedReferences(OperationalContextCatalog catalog) {
-        var systems = new LinkedHashSet<String>();
+    private Set<String> boundedContextDerivedReferences(OperationalContextCatalog catalog) {
         var integrations = new LinkedHashSet<String>();
 
         for (var integration : catalog.integrations()) {
             addBoundedContextDerivedReferences(
-                    systems,
                     integrations,
                     integration.id(),
                     integration.participants().source()
             );
             integration.participants().targets().forEach(participant ->
-                    addBoundedContextDerivedReferences(systems, integrations, integration.id(), participant));
+                    addBoundedContextDerivedReferences(integrations, integration.id(), participant));
             integration.participants().intermediaries().forEach(participant ->
-                    addBoundedContextDerivedReferences(systems, integrations, integration.id(), participant));
+                    addBoundedContextDerivedReferences(integrations, integration.id(), participant));
             integration.participants().finalTargets().forEach(participant ->
-                    addBoundedContextDerivedReferences(systems, integrations, integration.id(), participant));
+                    addBoundedContextDerivedReferences(integrations, integration.id(), participant));
             integration.references().boundedContexts().forEach(boundedContextId ->
                     integrations.add(pair(boundedContextId, integration.id())));
         }
 
-        return new DerivedBoundedContextReferences(Set.copyOf(systems), Set.copyOf(integrations));
+        return Set.copyOf(integrations);
     }
 
     private void addBoundedContextDerivedReferences(
-            Set<String> systems,
             Set<String> integrations,
             String integrationId,
             OperationalContextIntegrationParticipant participant
@@ -556,10 +569,6 @@ public class OperationalContextReadModelValidator implements OperationalContextR
         }
         integrations.add(pair(boundedContextId, integrationId));
 
-        var systemId = text(participant.system());
-        if (StringUtils.hasText(systemId)) {
-            systems.add(pair(boundedContextId, systemId));
-        }
     }
 
     private void validateProcessParticipantReferenceDuplicates(
@@ -573,7 +582,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
                     continue;
                 }
                 findings.add(new ValidationFinding(
-                        "error",
+                        "warning",
                         "PROCESS_PARTICIPANT_REFERENCE_SYSTEM",
                         "Process " + process.id() + " keeps " + systemId
                                 + " both in participants and references.systems.",
@@ -621,7 +630,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
                 continue;
             }
             findings.add(new ValidationFinding(
-                    "error",
+                    "warning",
                     "BIDIRECTIONAL_REFERENCE",
                     "Reference relation is kept in both directions for " + pairKey + ".",
                     concatSourceRefs(relation, reverse)
@@ -1047,9 +1056,6 @@ public class OperationalContextReadModelValidator implements OperationalContextR
                 .replace("_", "-")
                 .replace(" ", "-")
                 .toLowerCase(Locale.ROOT);
-    }
-
-    private record DerivedBoundedContextReferences(Set<String> systems, Set<String> integrations) {
     }
 
 }

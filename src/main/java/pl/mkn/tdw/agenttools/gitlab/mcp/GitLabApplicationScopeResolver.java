@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
@@ -14,6 +15,12 @@ import java.util.Locale;
 import java.util.Set;
 
 final class GitLabApplicationScopeResolver {
+
+    private final OperationalContextNavigation navigation;
+
+    GitLabApplicationScopeResolver(OperationalContextNavigation navigation) {
+        this.navigation = navigation;
+    }
 
     ResolvedApplicationScope resolve(
             List<String> requestedApplicationNames,
@@ -110,9 +117,9 @@ final class GitLabApplicationScopeResolver {
                 }
                 matched = true;
                 add(systemIds, system.id());
-                addAll(processIds, system.references().processes());
-                addAll(boundedContextIds, system.references().boundedContexts());
-                addAll(integrationIds, system.references().integrations());
+                addAll(processIds, navigation.scopeTargetIds("system", system.id(), "process"));
+                addAll(boundedContextIds, navigation.scopeTargetIds("system", system.id(), "bounded-context"));
+                addAll(integrationIds, navigation.scopeTargetIds("system", system.id(), "integration"));
             }
             if (!matched) {
                 systemIds.add(normalizedApplicationName);

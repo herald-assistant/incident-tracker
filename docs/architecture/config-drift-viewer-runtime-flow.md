@@ -303,3 +303,10 @@ raporcie/activity i zaleznosciach pakietu AI, limity duzych plikow i manifestu,
 401/403/404/timeout, traversal, `BASIC` bez auth ani AI dependencies, `DEEP`
 scope i budget, puste/niepelne Operational Context oraz bezpieczne bledy joba.
 Regresje granic pakietow egzekwuje `PackageDependencyGuardTest`.
+
+## Nawigacja katalogu
+
+DEEP context korzysta z `OperationalContextNavigationPort` dla efektywnych
+bezposrednich references, niezaleznie od strony zapisu faktu. Scope'y kodu
+pozostaja osobno kontrolowane przez preflight i system-targeted code-search
+scope; posredni sasiad integracji nie rozszerza tych uprawnien.

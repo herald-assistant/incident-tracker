@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranch;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ToolContext;
@@ -46,6 +47,7 @@ public class GitLabRepositoryNavigationMcpTools {
     private final GitLabRepositoryBranchPort branchService;
     private final GitLabSettingsPort properties;
     private final OperationalContextPort operationalContextPort;
+    private final OperationalContextNavigationPort navigationPort;
 
     @Tool(name = LIST_REPOSITORY_BRANCHES, description = """
             List up to 100 GitLab branches, including the default branch marker, for a project
@@ -181,7 +183,7 @@ public class GitLabRepositoryNavigationMcpTools {
         if (bound instanceof GitLabRepositoryToolScope scope) {
             return scope.resolve(projectName, branchRef, repositoryPort);
         }
-        var resolved = new GitLabToolScopeResolver(properties, operationalContextPort)
+        var resolved = new GitLabToolScopeResolver(properties, operationalContextPort, navigationPort)
                 .resolve(branchRef, projectName, List.of(), context);
         var group = resolved.group();
         var relative = projectName != null && projectName.startsWith(group + "/")

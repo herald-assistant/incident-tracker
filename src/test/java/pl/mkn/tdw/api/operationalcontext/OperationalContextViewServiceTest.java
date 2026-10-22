@@ -1,5 +1,6 @@
 package pl.mkn.tdw.api.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogSearch;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
@@ -35,7 +36,7 @@ class OperationalContextViewServiceTest {
     void shouldFindTheSameCatalogEntitiesAsOperationalContextTool() {
         var catalog = typicalCatalog();
         var service = viewService(port(catalog), create());
-        var toolMapper = new OperationalContextToolMapper(new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch());
+        var toolMapper = new OperationalContextToolMapper(OperationalContextNavigationTestCreator.navigation(), new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.search(), OperationalContextNavigationTestCreator.codeSearch());
 
         for (var query : List.of("crm-consent-service", "business-analysis", "consent-registry-handoff", "Customer Consent")) {
             var apiIds = service.search(query).stream()
@@ -76,8 +77,8 @@ class OperationalContextViewServiceTest {
         assertEquals(1, system.signals().count());
 
         var repository = service.repositories().get(0);
-        assertEquals("Group/crm-consent-service", repository.project());
-        assertEquals("Group", repository.group());
+        assertEquals("CRM/crm-consent-service", repository.project());
+        assertEquals("CRM", repository.group());
         assertEquals("team-a", repository.owner().value());
         assertEquals(1, repository.systems().count());
         assertEquals(1, repository.contexts().count());
@@ -93,7 +94,8 @@ class OperationalContextViewServiceTest {
 
         var process = service.processes().get(0);
         assertEquals("Business process for capturing customer consent.", process.purpose());
-        assertEquals(1, process.systems().count());
+        assertEquals(2, process.systems().count());
+        assertTrue(process.systems().detailsIds().containsAll(List.of("crm-consent-service", "consent-registry")));
         assertEquals(1, process.externalSystems().count());
         assertEquals(1, process.repositories().count());
         assertEquals(1, process.contexts().count());

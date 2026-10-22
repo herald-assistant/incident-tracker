@@ -27,9 +27,9 @@ Use bounded-context ownership first whenever the problem is clearly inside a
 bounded context. Use system ownership when the problem is system-wide,
 infrastructure-facing, integration-facing, or only the system is known.
 
-Keep ownership in the YAML shape below. If accountability is unclear, add an
-open question or low-confidence owner label instead of inventing extra routing
-fields.
+Keep ownership in the YAML shape below. If accountability is unclear, use a
+supported gap or draft visibility limit. Never persist an inferred owner label
+with low confidence.
 
 ## When to add or change a system
 
@@ -42,6 +42,10 @@ open question or validation note instead.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 systems:
   - id: crm-contact-core
@@ -50,16 +54,13 @@ systems:
     systemType: internal-service
     systemSubtype: backend
     lifecycleStatus: active
-    operationalStatus: live
     criticality: high
-    summary: Anonymized CRM service responsible for contact preference handling.
-    purpose: Gives analysts one durable system boundary for CRM contact changes.
+    summary: Validates and maintains anonymized CRM contact preferences.
+    purpose: Applies contact channel choices and exposes their durable state.
     aliases:
-      - contact service
-      - crm contacts
+      - CRM Contact Service
     useFor:
-      - Start analysis when a signal concerns anonymized CRM contact preferences.
-      - Resolve system-level ownership when the bounded context is unknown.
+      - Start analysis for the CRM Contact Core system.
     runtime:
       configurationDirectory: crm/contact-service
     ownership:
@@ -67,35 +68,33 @@ systems:
         - crm-domain-team
       ownershipStatus: explicit
       confidence: high
-      source: systems.yml
-      notes:
-        - Confirmed system-level accountable owner.
-    references:
-      processes:
-        - crm-contact-preference-update
-      boundedContexts:
-        - crm-contact-preferences
-      integrations:
-        - crm-contact-to-consent
-      teams:
-        - crm-domain-team
-      handoffRules:
-        - crm-contact-boundary
+      source: Explicit operator statement in the fictional CRM scenario.
     matchSignals:
       exact:
         serviceNames:
           - crm-contact-service
       strong:
-        businessTerms:
-          - CRM contact preference
-      weak:
-        phrases:
-          - anonymized CRM contact update
-    relations:
-      - type: uses
-        targetType: process
-        target: crm-contact-preference-update
-        evidence: Primary anonymized CRM process for the system.
+        names:
+          - CRM Contact Core
+    notes:
+      - Context assignments are maintained on bounded contexts; code belongs in scopes.
+  - id: crm-agent-portal
+    name: CRM Agent Portal
+    systemType: internal-service
+    systemSubtype: frontend
+    lifecycleStatus: active
+    summary: Lets a CRM agent review and change anonymized contact preferences.
+    purpose: Provides the user-facing contact preference journey.
+    ownership:
+      ownerTeamIds:
+        - crm-experience-team
+      ownershipStatus: explicit
+      confidence: high
+      source: Explicit operator statement in the fictional CRM scenario.
+    matchSignals:
+      exact:
+        serviceNames:
+          - crm-agent-portal-ui
 ```
 
 The UI exposes `participants.externalOwner` and
@@ -112,7 +111,7 @@ deployment and application identities in `matchSignals`.
 - Every `internal-service` must declare exactly one `systemSubtype` from:
   `frontend`, `backend`, `worker`, `mixed`, `unknown`. Omit `systemSubtype`
   for all other system types.
-- Use `unknown` during a deterministic breaking migration when evidence does
+- Use `unknown` when reviewed evidence does
   not support a narrower subtype. Never infer `frontend` or `backend` from a
   repository name, `package.json`, build file or framework alone.
 - A UI selectable by UI Explorer must be modeled as its own durable system
@@ -129,6 +128,9 @@ deployment and application identities in `matchSignals`.
 - Ensure this system has exactly one system-targeted code-search scope when it
   is an internal system or otherwise requires code discovery.
 - Keep `matchSignals` small and durable. Use names, aliases and business terms.
+  All system signal strengths, aliases and `useFor` participate in GitLab
+  application matching. Do not preserve unrelated metadata as `weak` signals;
+  compare code-scope selection before and after identity changes.
 - Keep the optional `runtime.configurationDirectory` safe and
   repository-relative. Do not put service or deployment identities in
   `runtime`.
@@ -136,8 +138,11 @@ deployment and application identities in `matchSignals`.
   responsibility; local team ownership belongs in `ownership`.
 - Use `relations` for meaningful navigation that is not already obvious from
   another typed field.
-- If ownership is uncertain, set low confidence or add an open question instead
-  of inventing a team.
+- Keep explicit context-to-system assignments on the bounded context, process
+  roles on the process and integration roles in integration participants. Do
+  not add inverse references or duplicate integration dependencies for discovery.
+- If ownership is uncertain, use a supported gap or draft visibility limit.
+  Ownership proposals require an explicit operator statement and confirmation.
 
 ## Quality check
 

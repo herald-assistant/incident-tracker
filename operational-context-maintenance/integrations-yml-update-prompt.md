@@ -24,8 +24,8 @@ Integration entries do not define ownership. Owner and handoff are resolved from
 the source/target bounded contexts first, then source/target systems. If the
 problem is on the boundary between systems or contexts, the resolver should
 surface owners for both sides. If a system/context is not cataloged with a team,
-the resolver may infer labels such as "owner of system Salesforce" or "owner of
-domain customer".
+the resolver may display an inferred label such as "owner of CRM Contact Core".
+Do not save that display inference as explicit ownership.
 
 Keep integration entries in the YAML shape below. If owner or handoff is needed,
 model the participating systems/bounded contexts precisely instead of adding
@@ -33,80 +33,53 @@ owner-like fields here.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 integrations:
-  - id: portal-to-case-management
-    name: Portal to Case Management
-    shortName: Portal case handoff
-    category: internal-collaboration
+  - id: crm-contact-to-core
+    name: CRM Portal to Contact Core
+    category: internal-api
     lifecycleStatus: active
-    summary: Customer portal sends accepted request information to case management.
-    purpose: Explains the system boundary for customer request processing.
+    summary: The CRM portal submits a contact preference to CRM Contact Core.
+    purpose: Explains the boundary between the agent journey and preference acceptance.
     integrationStyle: synchronous-request
-    flowDirection: outbound
+    flowDirection: source-to-target
     criticality: high
-    aliases:
-      - portal case handoff
-    useFor:
-      - Explain the boundary between portal request intake and case handling.
-      - Decide whether an issue appears before, at, or after the handoff boundary.
     participants:
       source:
-        system: customer-portal
-        boundedContext: customer-requests
-        role: initiates customer request handoff
-        externalOwner: ""
-        notes:
-          - Portal owns the user-facing journey before handoff through its system/context ownership.
+        system: crm-agent-portal
+        role: submits the contact preference
       targets:
-        - system: case-management
-          boundedContext: case-lifecycle
-          role: receives accepted case state
-          externalOwner: ""
+        - system: crm-contact-core
+          boundedContext: crm-contact-preferences
+          role: validates and accepts the contact preference
           notes:
-            - Case handling ownership is resolved from the target system/context.
-      intermediaries: []
-      finalTargets: []
+            - The target context owns preference semantics; system ownership remains separate.
     references:
-      repositories:
-        - customer-portal-ui
-        - case-management-service
-      processes:
-        - customer-request-handling
-      boundedContexts:
-        - customer-requests
-        - case-lifecycle
-      handoffRules:
-        - customer-request-boundary
+      terms:
+        - crm-contact-preference
     matchSignals:
-      exact:
-        names:
-          - Portal to Case Management
       strong:
-        terms:
-          - case handoff
-      weak:
-        phrases:
-          - customer request accepted by case team
-    relations:
-      - type: source-system
-        targetType: system
-        target: customer-portal
-        evidence: participant source
-      - type: target-system
-        targetType: system
-        target: case-management
-        evidence: participant target
+        businessTerms:
+          - CRM contact preference submission
     failureModes:
-      - name: CRM case handoff not visible
+      - name: CRM contact handoff not visible
         type: delivery-failure
-        symptom: The source accepts the anonymized CRM request but the target context does not expose the case.
-        impact: CRM case handling cannot continue.
+        symptom: The CRM portal submits an anonymized update but acceptance is not visible.
+        impact: The CRM agent cannot confirm the updated preference.
 ```
 
 ## Update rules
 
 - Use `participants` as the source of source/target relationships.
+- Do not repeat participant systems or contexts in `references` or in equivalent
+  `relations`. A process owns its link to this integration; do not store the
+  inverse process reference just for discoverability. The effective map supplies it.
+- Omit absent optional participant fields such as `externalOwner`; blank strings
+  and empty objects are invalid. Use external-owner labels only when supported.
 - Participants have no `repositories` field. Repository navigation belongs in
   top-level `references` and code-search scopes.
 - Use editable `references` for navigation only; participant systems already

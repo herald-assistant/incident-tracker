@@ -14,44 +14,56 @@ from linked bounded contexts and systems.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 schemaVersion: 1
 catalogKind: operational-context-glossary
 terms:
-  - id: crm-customer-profile
-    term: CRM Customer Profile
+  - id: crm-contact-preference
+    term: CRM Contact Preference
     category: domain-term
     lifecycleStatus: active
-    definition: An anonymized CRM view of a customer.
+    definition: An anonymized CRM contact's choice of an available contact channel.
     localMeaningAndBoundaries:
-      - Represents the CRM profile used during customer-case handling.
+      - Describes a contact channel choice, not authentication credentials.
     aliases:
-      - CRM profile
+      - CRM channel preference
     useFor:
-      - case-routing
+      - Explain CRM preference terminology.
     matchSignals:
       exact:
-        alias:
-          - "alias:customer profile"
+        phrases:
+          - CRM contact preference
     canonicalReferences:
-      - system:crm-customer-service
-      - bounded-context:crm-customer-management
+      - bounded-context:crm-contact-preferences
     relatedTerms:
-      - crm-contact-preference
+      - crm-contact-channel
     doNotConfuseWith:
       - Authentication account
     responsibilityHints:
-      - Resolve ownership through the CRM customer context.
+      - Resolve responsibility through the linked CRM context.
     llmToolHints:
-      - Use only for CRM terminology grounding.
+      - Use for CRM terminology grounding.
+  - id: crm-contact-channel
+    term: CRM Contact Channel
+    category: domain-term
+    lifecycleStatus: active
+    definition: An available way to contact an anonymized CRM contact.
     notes:
-      - Strongly anonymized CRM example.
+      - Describes a channel kind, never a real address or customer record.
 gaps:
   - id: crm-vocabulary-boundary
     type: human-confirmation-required
     severity: info
     status: open
-    summary: Confirm the anonymous CRM vocabulary boundary.
+    summary: Confirm the fictional CRM vocabulary boundary.
 ```
 
 ## Update rules
@@ -60,6 +72,11 @@ gaps:
 - `matchSignals` keeps the exact/strong/medium/weak buckets and typed signal
   maps.
 - `canonicalReferences` use `type:id`; `relatedTerms` contain glossary IDs.
+- Keep one canonical direction for a navigation fact. Do not mirror a context's
+  existing term reference or a related term merely to make this term discoverable.
+- Never invent a definition or substitute a similarly named term to repair a
+  missing ID. Preserve the unresolved meaning as a supported gap on its source
+  entity or a draft visibility limit.
 - Keep `responsibilityHints` descriptive. Do not encode a team route here.
 - Preserve root metadata and gaps; do not edit generated read projections.
 - Every test, fixture or example must be strongly anonymized and CRM-only.

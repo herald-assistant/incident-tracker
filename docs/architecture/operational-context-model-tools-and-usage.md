@@ -287,7 +287,10 @@ visibility limits.
 Bounded context moze wskazac pojecia domenowe, ale nie powinien przechowywac
 list klas encji, Java-owych implementation hints ani list repozytoriow. Code
 discovery dla bounded contextu zaczyna sie od code-search scope'u targetujacego
-ten bounded context.
+ten bounded context. Gdy nie ma takiego scope'u, read model korzysta z
+powiazanych scope'ow jako fallbacku, w tym scope'u przypisanego systemu.
+Szerszy systemowy zakres wymaga osobnego uzasadnionego odczytu; granic
+roznych scope'ow tego samego repozytorium nie laczy sie w jedna liste.
 
 ### Integration
 
@@ -726,6 +729,47 @@ Tools nie sluza do:
 Incident-specific zasady uzycia sa w feature policy i runtime skillach
 Copilota, nie w neutralnym kontrakcie tools.
 
+`opctx_get_entity.codeSearch` ma wspolny resolver dla wszystkich dziewieciu
+typow encji, jawny profil `detail=index|complete`, `scopeTotal`, `status`
+oraz `codeSearchScopes`. Pelny odczyt zawiera `limitations` i
+`validationFindings`; indeks zachowuje findings, a ograniczenia scope'u
+czytane sa razem z jego granicami.
+`status=available` oznacza znalezienie scope'u przez
+`OperationalContextCodeSearchPort`, a `not-defined` brak scope'u w tym
+odczycie, z pustym `codeSearchScopes` i findingiem `NO_CODE_SEARCH_SCOPE`.
+Nie jest to deklaracja braku kodu ani uprawnienie do jego odczytu.
+Mapper nie utrzymuje osobnych algorytmow scope selection per typ.
+Repozytorium odnajduje scope'y przez jawne czlonkostwo, bez reverse refs.
+
+Kazdy scope zawiera swoj semantyczny `target` i wlasna liste `repositories`
+z rolami, priorytetem, `reason`, `readFor`, `searchMode` oraz `pathPrefixes`.
+Granice tego samego repozytorium w roznych scope'ach pozostaja oddzielne.
+Dla `whole-repository` lista `pathPrefixes` jest pusta. Brak trybu w zrodle
+nie jest uzupelniany domyslnym dostepem do calego repozytorium.
+Standardowy detail `codeSearchScope` zawiera wszystkie repozytoria i prefixy,
+bez kompakcji granic. Inne typy domyslnie zwracaja karty scope'ow z targetem
+i wykonywalnym `read`. `affordances.truncation` informuje o obcieciu indeksu,
+a `include=[codeSearch]` zwraca wszystkie scope'y, repozytoria i prefixy.
+Kazdy jawny filtr `include` zwraca w calosci tylko zadane sekcje. Puste
+sekcje i null nie sa serializowane. Repozytoryjne `git` pozostaje w
+`overview`, a `llmToolHints` w `signals`.
+
+| Typ | Domyslna tresc poza tozsamoscia, indeksem scope'ow i nawigacja |
+| --- | --- |
+| system | charakterystyka/runtime, sygnaly rozpoznania, resolved ownership i ograniczenia |
+| repository | tozsamosc Git, rodzaj repozytorium, exploration hints i resolved ownership |
+| process | granice, warunki zakonczenia, stany, material procesu, uczestnicy i etapy |
+| boundedContext | granice domeny, lokalny jezyk, reguly/inwarianty i resolved ownership |
+| integration | kierunek, styl, uczestnicy i ich role oraz resolved ownership |
+| codeSearchScope | opis i cel, pelne repozytoria, role, readFor i granice, bez drugiej kopii w relations |
+| team | tozsamosc i jawne associations w indeksie, bez inferowania ownershipu |
+| glossaryTerm | znaczenie, kontekst uzycia, rozroznienia i notatki |
+| handoffRule | kiedy stosowac/nie stosowac, wymagane evidence, pierwsza akcja i notatki |
+
+Otwarte pytania, visibility limits i source refs pozostaja widoczne, gdy sa
+dostepne. Szczegoly kazdej sekcji, takze celowo pominiete przez profil,
+sa odzyskiwalne przez `availableExpansions` i focused include.
+
 ## GitLab I Code Search
 
 `gitlab_list_available_repositories` korzysta z operational context jako
@@ -820,6 +864,88 @@ Kolejnosc uzupelniania i zasady jakosci danych opisuje
 Maintenance API przyjmuje tylko biezacy schemat. Przy aktualizacji encji usuwa
 nieznane pola z jej YAML; nie uruchamia migracji starych ksztaltow. Po wiekszej
 zmianie katalogu sprawdz walidacje i diff dokumentow.
+Podglad przed zapisem musi rozliczac takze merytoryczna tresc pol zrodlowych
+pomijanych przez editable payload. Zachowanie samego writable schema nie
+potwierdza zachowania wiedzy: tresc wymaga jawnego aktualnego pola albo
+dowodu, ze ten sam fakt utrzymuje inne kanoniczne zrodlo. Odwolanie do
+nieistniejacego pojecia pozostaje jawna luka; nie dopasowuje sie go do
+podobnej nazwy bez potwierdzenia znaczenia.
+
+Wspolne reguly maintenance okreslaja procedure `Cleanup verification`:
+porownanie pelnych zrodel z writable payload, zachowanych celow nawigacji,
+odrebnych rol i kierunkow, ownershipu, search membership oraz doboru kodu
+i granic per scope/repository. Sam spadek liczby findings nie potwierdza
+rownowaznosci wiedzy. Domyslna odpowiedz AI nie jest pelnym zrodlem do zapisu:
+pelny indeks, sciezki i granice wymagaja odpowiednich ekspansji.
+
+Sily systemowych `matchSignals` nie sa granica doboru GitLaba. Resolver
+aplikacji porownuje wszystkie ich wartosci, rowniez `weak`, oraz `aliases`
+i `useFor`. Kolizja z identyfikatorem innego systemu moze dolaczyc jego scope.
+Porzadkowanie opisowych metadanych nie moze aktywowac ich jako sygnalow;
+zmiana tozsamosci wymaga jawnego porownania doboru zrodel.
+
+Dziewiec glownych przykladow YAML w promptach tworzy jeden fikcyjny katalog
+CRM. Testy sprawdzaja caly zestaw aktualnym maintenance preview i walidatorem,
+wszystkie fragmenty przewodnika pol, brak duplikatow, pelna mape dla dziewieciu
+typow encji i zachowanie granic code search. Osobna regresja pilnuje
+dopasowania GitLaba oraz trafienia faktycznych reguł i efektywnego skilla
+do przygotowanego promptu.
+
+## Jednostronny zapis i mapa odczytu
+
+Katalog utrzymuje fakt w jednym miejscu. Neutralny
+`OperationalContextNavigationPort` buduje z jednego snapshotu projekcje nad
+`OperationalContextRelationIndex`. Search, operator detail, tools i incident
+matching oraz Config Drift DEEP korzystaja z tych samych efektywnych powiazan. Maintenance nadal
+czyta i zapisuje kanoniczne YAML, nie projekcje.
+
+Mapa pokazuje incoming/outgoing z zachowaniem oryginalnego kierunku faktu,
+canonical owner i source refs. Jedno ograniczone przejscie przez integracje,
+code-search scope albo krok procesu jest jawnie oznaczone jako posrednie;
+nie jest transitively reachable graph ani dowodem runtime flow. Rozne role
+tej samej pary pozostaja odrebne. Integration source/target daje opisany
+kierunek upstream/downstream, bez uznania wszystkich wspoluczestnikow za
+bezposrednie zaleznosci.
+
+Kanoniczne miejsca utrzymania:
+
+- integracja definiuje role swoich participants;
+- proces definiuje role systemow, kolejnosc krokow i references do kontekstow;
+- bounded context definiuje jawne przypisania `references.systems`, uzywane
+  takze przez fallback ownershipu; uczestnictwo w integracji ich nie zastepuje;
+- code-search scope definiuje system-to-code navigation; repo-map zachowuje
+  semantyczne informacje repozytorium, a system nie zapisuje repository refs.
+- jawne ownership.ownerTeamIds systemu i bounded contextu definiuja
+  owned-by-team z kanonicznym zrodlem na tym polu; zespol odkrywa z niego
+  swoje systemy, konteksty i code scopes bez team.references/relations.
+  Ownership inferowany i podobienstwo ownerLabel nie tworza takich krawedzi.
+  Zespol nie jest posrednikiem grafu i nie rozszerza application scope GitLaba.
+
+`opctx_get_entity.navigation` jest lekkim indeksem grupowanym po celu.
+`navigationTotal` liczy cele, a `navigationPathTotal` oryginalne sciezki.
+Pozycja zachowuje odrebne typy relacji, kierunki, role, liczby sciezek,
+krotki opis z jawnym `summaryTruncated` i jeden wykonywalny `read`.
+Domyslnie pokazuje do osmiu celow, z pierwszenstwem bezposrednich faktow
+i priorytetami typow, w tym primary-system procesu. Nie jest to ranking
+trafnosci wobec pytania. `include=[navigation]` zwraca caly indeks.
+`include=[navigationDetails]` zwraca w `navigationDetails` wszystkie
+oryginalne sciezki z `via`, canonical owner, source refs i provenance.
+Grupowanie nie scala znaczen ani nie usuwa oryginalnej sciezki.
+`affordances.links` sluzy do ekspansji i nie powtarza neighbor reads.
+Operator UI nadal uzywa integracyjnego kontraktu pelnej mapy z pochodzeniem
+i akcjami przejscia. Projekcja nie przyznaje ownershipu ani dostepu do kodu.
+GitLab selection korzysta z bezposrednich powiazan, nie z posrednich
+wspoluczestnikow integracji. Feature-owned matching zachowuje wlasne wagi,
+ale nie otrzymuje dodatkowej premii za druga kopie tego samego reference.
+
+Redundant participant/reference, bidirectional reference, rownowazna zaleznosc
+systemu i powielona context/integration reference sa maintenance warnings.
+Rozne bounded contexts tego samego uczestniczacego systemu nie sa
+duplikatem faktu; source refs rozrozniaja te przypisania.
+Nieistniejace targety, self-reference i niedozwolone `system.references.repositories`
+pozostaja errors. Jawnego context/system assignment nie uznaje sie za zbedny
+na podstawie integracji. Czyszczenie lokalnych danych wymaga podgladu
+konkretnego zestawu i decyzji operatora po porownaniu jakosci nawigacji.
 
 ## Validation
 

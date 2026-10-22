@@ -23,32 +23,35 @@ update the owning system/bounded context or add an open question there.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 teams:
-  - id: customer-experience-team
-    name: Customer Experience Team
-    shortName: Customer Experience
+  - id: crm-domain-team
+    name: CRM Domain Team
+    type: product
     lifecycleStatus: active
-    summary: Team visible as owner for customer-facing request intake and portal behavior.
-    purpose: Helps analysts understand the team label when ownership resolver returns this team.
+    summary: Team label for the fictional CRM contact domain.
+    purpose: Explains the team returned by explicit system or context ownership.
     aliases:
-      - CX team
-      - portal team
+      - CRM Contact Team
     useFor:
-      - Recognize the team when returned from system or bounded-context ownership.
-      - Understand collaboration language for request intake behavior.
-      - Confirm who can review user-facing journey assumptions when already selected as owner.
+      - Recognize the CRM domain owner label.
     matchSignals:
       exact:
         names:
-          - Customer Experience Team
-      strong:
-        aliases:
-          - portal team
-          - CX team
-      weak:
-        phrases:
-          - customer request owner
+          - CRM Domain Team
+  - id: crm-experience-team
+    name: CRM Experience Team
+    type: product
+    lifecycleStatus: active
+    summary: Team label for the fictional CRM agent portal.
+    matchSignals:
+      exact:
+        names:
+          - CRM Experience Team
 ```
 
 ## Update rules

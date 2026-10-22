@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileService;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranchPage;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabBranch;
@@ -44,7 +45,7 @@ class GitLabRepositoryNavigationMcpToolsTest {
             "CRM", "PROCESSES/customer-profile", "main", SELECTED_COMMIT);
     private final GitLabRepositoryNavigationMcpTools tools = new GitLabRepositoryNavigationMcpTools(
             new GitLabVerifiedRepositoryFileService(), port, new GitLabRepositoryTreeExplorer(port), branchService, new GitLabProperties(),
-            mock(OperationalContextPort.class));
+            mock(OperationalContextPort.class), OperationalContextNavigationTestCreator.navigation());
 
     @Test
     void listsBranchesOfAnUncataloguedProjectInsideTheConfiguredMainGroup() {

@@ -123,6 +123,12 @@ Przed wieksza zmiana zacznij od:
 - Operational context tools sa neutralna capability pod prefixem `opctx_`.
   Definicje tooli nie moga niesc semantyki incident trackera; incidentowe
   zasady uzycia mieszkaja w feature policy/guidance oraz skillu Copilota.
+- Operational Context utrzymuje relacje jednostronnie, a odczyt zwraca mape
+  incoming/outgoing z oryginalnym kierunkiem, znaczeniem i provenance.
+  Reuse `OperationalContextNavigationPort`; nie odtwarzaj relacji osobno
+  w search, tools i feature'ach. Posredni link nie ustanawia ownershipu
+  ani authorization scope. Jawne bounded-context `references.systems`
+  pozostaje faktem niezastepowalnym przez participants integracji.
 - Asysta AI przy utrzymaniu Operational Context jest feature-owned pod
   `features.operationalcontextassistance`. AI przygotowuje tylko typowany
   draft bez mutation tools. Dostaje pelny snapshot dziewieciu aktywnych

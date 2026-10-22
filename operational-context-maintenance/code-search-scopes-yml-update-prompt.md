@@ -19,10 +19,15 @@ target. The actual code search is performed by GitLab tools.
 Code-search scopes do not define ownership. Owner and handoff are resolved from
 the target system and, when known, its referenced bounded contexts.
 
-Every cataloged system must have exactly one code-search scope with
+Each internal system requiring code discovery should have one code-search scope with
 `target.type: system` and `target.id` equal to the system id. Put the system's
 primary implementation repository and directly imported internal library
 repositories into the same system scope.
+
+External SaaS and partner systems without accessible implementation code may
+have no scope. Record their visibility boundary; never invent a repository to
+satisfy a uniform scope count. Exactly one system scope is a strict eligibility
+rule for `internal-service/frontend`, not a universal backend cardinality check.
 
 Optional bounded-context-targeted scopes are allowed when they help describe a
 durable semantic slice inside one or more systems and support reverse mapping
@@ -44,19 +49,22 @@ fields here.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 codeSearchScopes:
   - id: crm-agent-portal-code-scope
     name: CRM Agent Portal code scope
     scopeType: system
     lifecycleStatus: active
-    summary: Repositories and modules to inspect for the strongly anonymized CRM Agent Portal system.
+    summary: Reviewed CRM portal implementation boundary.
     target:
       type: system
       id: crm-agent-portal
     useFor:
-      - Understand anonymized CRM contact-screen behavior.
-      - Keep broad code discovery efficient for the CRM Agent Portal system.
+      - Inspect the CRM contact screen and its shared UI module.
     repositories:
       - repoId: crm-agent-portal
         role: primary
@@ -65,21 +73,53 @@ codeSearchScopes:
         pathPrefixes:
           - apps/crm-agent-portal
           - libs/crm-contact-ui
-        reason: Strongly anonymized CRM contact journey starts here.
+        reason: Contains the fictional CRM agent journey.
         readFor:
-          - CRM contact journey and labels
-          - anonymized contact submission behavior
+          - Contact preference interaction and validation feedback
+    limitations:
+      - Other portal modules are outside this scope.
+  - id: crm-contact-core-code-scope
+    name: CRM Contact Core code scope
+    scopeType: system
+    lifecycleStatus: active
+    summary: Reviewed backend and its directly imported CRM contract library.
+    target:
+      type: system
+      id: crm-contact-core
+    repositories:
+      - repoId: crm-contact-core
+        role: primary
+        priority: 1
+        searchMode: whole-repository
+        reason: Implements the fictional CRM backend system.
       - repoId: crm-contact-contracts
         role: library
         priority: 2
         searchMode: path-prefixes
         pathPrefixes:
           - crm-contact-contracts
-        reason: Reviewed internal contract library imported by the primary CRM portal repository.
-        readFor:
-          - shared anonymized CRM contracts and validation types used by the primary system code
+        reason: Direct internal library dependency reviewed in the primary repository POM files.
     limitations:
-      - Does not cover partner-owned systems beyond the cataloged handoff boundary.
+      - Transitive dependencies were not added.
+  - id: crm-contact-preferences-code-scope
+    name: CRM Contact Preferences code scope
+    scopeType: bounded-context
+    lifecycleStatus: active
+    summary: Narrow semantic slice for contact preferences within the CRM backend.
+    target:
+      type: bounded-context
+      id: crm-contact-preferences
+    repositories:
+      - repoId: crm-contact-core
+        role: primary
+        priority: 1
+        searchMode: path-prefixes
+        pathPrefixes:
+          - src/main/java/example/crm/contact
+          - src/main/resources/crm/contact
+        reason: Reviewed implementation of the contact preference boundary.
+    limitations:
+      - Covers contact preferences only; broader system code requires a separate justified scope.
 ```
 
 ## Update rules
@@ -88,7 +128,7 @@ codeSearchScopes:
 - A system classified as `internal-service/frontend` must have exactly one
   system-targeted scope and exactly one repository with `role: primary`.
   That repository must declare `repositoryType: frontend` in `repo-map.yml`.
-- Maintain exactly one code-search scope per system. The scope id should be
+- Maintain one system-targeted scope per system requiring code discovery. The scope id should be
   stable and system-oriented, for example `<system-id>-code-scope`.
 - The required system scope target must be `target.type: system` and `target.id`
   must match the system id.
@@ -101,6 +141,9 @@ codeSearchScopes:
   domain ownership, local-language navigation, and code-to-team attribution
   clearer. They should usually use repository/prefix subsets already present in
   the related system scope.
+- A bounded context's directly targeted scope is preferred by its code-search
+  read model. Related scopes are fallback when no direct scope exists; inspect
+  a broader system scope separately only when the task justifies it.
 - Do not create process or integration targeted scopes unless the catalog model
   gets an explicit governance rule for them.
 - Do not duplicate code ownership by listing repositories directly on the
@@ -123,6 +166,8 @@ codeSearchScopes:
 - `reason` must be understandable to a business/system analyst.
 - `readFor` should describe questions to answer, not low-level code clues.
 - Keep `limitations` explicit when the scope is intentionally incomplete.
+- Preserve boundaries per scope and repository, including `role` and `priority`.
+  Do not union or widen `pathPrefixes` for the same repository across scopes.
 - Keep ownership and routing out of this file.
 - Do not store class names, endpoint inventories, exact files, package
   inventories, build files or generated-source details here. `pathPrefixes` are
@@ -151,8 +196,10 @@ When creating or updating the code-search scope for a system:
 
 - Every `repoId` exists in `repo-map.yml`.
 - Every scope has at least one repository.
-- Every cataloged system has exactly one system-targeted code-search scope.
-- No system has more than one code-search scope.
+- Each internal system requiring code discovery has one clear system-targeted
+  scope. An external system with no accessible code may have none.
+- A frontend system has exactly one system-targeted scope. A system may also
+  participate in several optional bounded-context scopes; these are distinct slices.
 - Optional bounded-context scopes target existing bounded contexts and do not
   replace the required system scope.
 - No code-search scope targets a process or integration.

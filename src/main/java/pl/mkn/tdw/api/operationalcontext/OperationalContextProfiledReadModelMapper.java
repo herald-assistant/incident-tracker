@@ -212,6 +212,7 @@ class OperationalContextProfiledReadModelMapper {
                         "outgoingRelations", outgoing,
                         "incomingRelations", incoming,
                         "neighbors", neighbors,
+                        "navigation", limit(expanded.navigation(), DEFAULT_ITEMS),
                         "validationFindings", validation
                 ),
                 readModelLinks(expanded.analysisTarget(), "relations"),

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogSearch;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,8 +26,30 @@ class OperationalContextMcpToolsTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final OperationalContextMcpTools tools = new OperationalContextMcpTools(
             ignored -> catalog(),
-            new OperationalContextToolMapper(new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch())
+            new OperationalContextToolMapper(OperationalContextNavigationTestCreator.navigation(), new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.search(), OperationalContextNavigationTestCreator.codeSearch())
     );
+
+    @Test
+    void shouldExposeExecutableNeighborLinksAndRecoverEveryOmittedNavigationLink() {
+        var catalog = OperationalContextNavigationTestCreator.catalog(false, 12);
+        var mapper = new OperationalContextToolMapper(
+                OperationalContextNavigationTestCreator.navigation(),
+                new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.search(), OperationalContextNavigationTestCreator.codeSearch());
+        var compact = mapper.getEntity(catalog, "system", "crm-contacts", null);
+        var expanded = mapper.getEntity(catalog, "system", "crm-contacts", List.of("navigation"));
+        assertEquals(8, compact.navigation().size());
+        assertTrue(compact.affordances().truncation().omittedCounts().get("navigation") > 0);
+        assertEquals(expanded.navigationTotal(), expanded.navigation().size());
+        assertTrue(expanded.navigation().size() > compact.navigation().size());
+        assertFalse(expanded.affordances().truncation().omittedCounts().containsKey("navigation"));
+        assertTrue(expanded.affordances().links().stream().noneMatch(link -> link.rel().equals("related-entity")));
+        var links = expanded.navigation().stream().map(OperationalContextToolDtos.OpctxNavigationTarget::read).toList();
+        for (var link : links) {
+            var detail = mapper.getEntity(catalog, link.arguments().get("type").toString(), link.arguments().get("id").toString(), null);
+            assertEquals(link.arguments().get("id"), detail.id());
+            assertFalse(link.reason().isBlank());
+        }
+    }
 
     @Test
     void shouldExposeScopeCountsWithoutEntityDetails() {
@@ -110,10 +133,9 @@ class OperationalContextMcpToolsTest {
         );
 
         assertEquals("Notifications", result.label());
-        assertEquals("default", result.affordances().profile());
+        assertEquals("focused", result.affordances().profile());
         assertTrue(result.affordances().availableExpansions().contains("include=codeSearch"));
-        assertTrue(result.affordances().suggestedNextReads().stream()
-                .anyMatch(read -> read.contains("include=[codeSearch]")));
+        assertTrue(result.affordances().suggestedNextReads().isEmpty());
         assertEquals("internal-service", result.overview().get("systemType"));
         assertEquals("backend", result.overview().get("systemSubtype"));
         assertEquals("high", result.overview().get("criticality"));
@@ -139,15 +161,15 @@ class OperationalContextMcpToolsTest {
         var result = tools.getEntity(
                 "repository",
                 "notifications-service",
-                List.of("overview", "codeSearch"),
+                List.of("overview", "signals", "codeSearch"),
                 "Sprawdzam zanonimizowane wskazowki repozytorium CRM.",
                 null
         );
 
         assertTrue(result.overview().get("evidence").toString().contains("crm/notifications/pom.xml"));
         assertTrue(result.overview().get("evidence").toString().contains("build-definition"));
-        assertTrue(result.codeSearch().get("llmToolHints").toString().contains("CRM contact notification"));
-        assertTrue(result.codeSearch().get("llmToolHints").toString().contains("CRM authentication account service"));
+        assertTrue(result.signals().get("llmToolHints").toString().contains("CRM contact notification"));
+        assertTrue(result.signals().get("llmToolHints").toString().contains("CRM authentication account service"));
         assertFalse(result.toString().contains("futureCrmEvidenceHint"));
         assertFalse(result.toString().contains("futureCrmToolHint"));
     }
@@ -199,7 +221,7 @@ class OperationalContextMcpToolsTest {
         );
         assertEquals("partial", system.sourceCoverage().get("status"));
         assertTrue(system.sourceCoverage().get("limitations").toString().contains("CRM provider internals were not reviewed"));
-        assertTrue(system.affordances().limitations().stream().anyMatch(limit -> limit.contains("CRM provider internals")));
+        assertTrue(system.affordances().limitations().isEmpty());
         assertFalse(system.sourceCoverage().containsKey("futureCrmRawHint"));
     }
 
@@ -215,11 +237,10 @@ class OperationalContextMcpToolsTest {
 
         assertEquals("default", result.affordances().profile());
         if (result.affordances().truncation().truncated()) {
-            assertTrue(result.affordances().omittedBecause().stream()
-                    .anyMatch(reason -> reason.contains("compacted")));
+            assertTrue(result.affordances().truncation().reason().contains("include"));
         }
-        assertTrue(result.affordances().truncation().returnedCounts().containsKey("overviewValues"));
-        assertTrue(result.affordances().suggestedTools().contains("opctx_search"));
+        assertTrue(result.affordances().truncation().returnedCounts().containsKey("overview"));
+        assertTrue(result.affordances().suggestedTools().isEmpty());
         assertFalse(result.toString().contains("rawSourcePreview"));
         assertFalse(result.toString().contains("payload"));
     }
@@ -228,7 +249,7 @@ class OperationalContextMcpToolsTest {
     void shouldKeepEntityPayloadCompactForLargeCodeSearchScope() throws Exception {
         var catalogTools = new OperationalContextMcpTools(
                 OperationalContextAdapterTestCreator.create(new OperationalContextProperties()),
-                new OperationalContextToolMapper(new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch())
+                new OperationalContextToolMapper(OperationalContextNavigationTestCreator.navigation(), new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.search(), OperationalContextNavigationTestCreator.codeSearch())
         );
 
         var result = catalogTools.getEntity(
@@ -241,12 +262,12 @@ class OperationalContextMcpToolsTest {
         var json = objectMapper.writeValueAsString(result);
 
         assertEquals("default", result.affordances().profile());
-        assertTrue(result.affordances().truncation().returnedCounts().containsKey("codeSearchValues"));
+        assertTrue(result.affordances().truncation().returnedCounts().containsKey("codeSearch"));
         assertTrue(json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 100_000);
         assertFalse(json.contains("rawSourcePreview"));
         assertFalse(json.contains("\"payload\""));
-        assertTrue(result.affordances().suggestedNextReads().stream()
-                .anyMatch(read -> read.contains("include=[codeSearch]")));
+        assertEquals("complete", result.codeSearch().get("detail"));
+        assertTrue(result.affordances().availableExpansions().contains("include=codeSearch"));
     }
 
     @Test
@@ -282,7 +303,7 @@ class OperationalContextMcpToolsTest {
         );
         assertEquals("Notifications code scope", codeSearchScope.label());
         assertTrue(codeSearchScope.relations().containsKey("repositories"));
-        assertTrue(codeSearchScope.codeSearch().containsKey("repositories"));
+        assertTrue(codeSearchScope.codeSearch().containsKey("codeSearchScopes"));
         assertTrue(codeSearchScope.codeSearch().containsKey("limitations"));
         assertTrue(codeSearchScope.sourceCoverage().containsKey("limitations"));
         assertFalse(codeSearchScope.codeSearch().containsKey("payload"));
@@ -458,9 +479,9 @@ class OperationalContextMcpToolsTest {
                 "summary", "Repository for notifications capability.",
                 "git", map(
                         "provider", "gitlab",
-                        "group", "platform",
+                        "group", "CRM",
                         "project", "notifications-service",
-                        "projectPath", "platform/notifications-service",
+                        "projectPath", "CRM/notifications-service",
                         "aliases", List.of("notifications-api")
                 ),
                 "references", map(

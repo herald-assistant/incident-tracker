@@ -115,6 +115,21 @@ class OperationalContextCodeSearchReadModelBuilderTest {
     }
 
     @Test
+    void shouldResolveRepositoryMembershipWithoutRequiringReverseReferences() {
+        var catalog = OperationalContextDtos.catalogFromRaw(
+                List.of(), List.of(), List.of(), List.of(),
+                List.of(map("id", "crm-contact-repo")),
+                List.of(map("id", "crm-contact-scope", "target", map("type", "bounded-context", "id", "crm-contact-profile"),
+                        "repositories", List.of(map("repoId", "crm-contact-repo", "role", "primary", "searchMode", "whole-repository")))),
+                List.of(map("id", "crm-contact-profile")), List.of(), List.of(), List.of());
+
+        var result = builder.buildForEntity(catalog, "repository", "crm-contact-repo");
+
+        assertEquals(List.of("crm-contact-scope"), result.scopes().stream().map(scope -> scope.scope().id()).toList());
+        assertEquals("crm-contact-repo", result.repositories().get(0).repository().id());
+    }
+
+    @Test
     void shouldReportMissingIncludedRepository() {
         var catalog = OperationalContextDtos.catalogFromRaw(
                 List.of(),

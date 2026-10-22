@@ -1,5 +1,6 @@
 package pl.mkn.tdw.api.operationalcontext.dto;
 
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityRef;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ReadModelRelation;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ValidationFinding;
@@ -293,7 +294,8 @@ public final class OperationalContextDtos {
             List<ValidationFindingDto> validationFindings,
             List<OpenQuestionDto> openQuestions,
             List<SourceReferenceDto> sourceReferences,
-            String rawSourcePreview
+            String rawSourcePreview,
+            List<OperationalContextNavigation.Link> navigation
     ) {
     }
 
@@ -304,6 +306,7 @@ public final class OperationalContextDtos {
             List<ReadModelRelation> outgoingRelations,
             List<ReadModelRelation> incomingRelations,
             List<EntityRef> neighbors,
+            List<OperationalContextNavigation.Link> navigation,
             List<ValidationFinding> validationFindings
     ) {
     }

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.operationalcontext.adapter.local.OperationalContextAdapterTestCreator;
@@ -29,8 +30,8 @@ class OperationalContextEvidenceProviderTest {
         var provider = new OperationalContextEvidenceProvider(
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
-                new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
+                new OperationalContextCatalogMatcher(properties, OperationalContextNavigationTestCreator.navigation()),
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.navigation())
         );
 
         var section = provider.collect(sampleContext());
@@ -49,8 +50,8 @@ class OperationalContextEvidenceProviderTest {
         var provider = new OperationalContextEvidenceProvider(
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
-                new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
+                new OperationalContextCatalogMatcher(properties, OperationalContextNavigationTestCreator.navigation()),
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.navigation())
         );
 
         var section = provider.collect(sampleContext());
@@ -107,7 +108,7 @@ class OperationalContextEvidenceProviderTest {
     void shouldKeepAllDirectlyDetectedInternalServicesAboveGenericLimit() {
         var properties = new OperationalContextProperties();
         properties.setMaxItemsPerType(1);
-        var matcher = new OperationalContextCatalogMatcher(properties);
+        var matcher = new OperationalContextCatalogMatcher(properties, OperationalContextNavigationTestCreator.navigation());
         var context = AnalysisContext.initialize("corr-multi-service")
                 .withSection(new AnalysisEvidenceSection(
                         "elasticsearch",
@@ -150,7 +151,7 @@ class OperationalContextEvidenceProviderTest {
     void shouldKeepInternalServicesMentionedInLogMessagesAboveGenericLimit() {
         var properties = new OperationalContextProperties();
         properties.setMaxItemsPerType(1);
-        var matcher = new OperationalContextCatalogMatcher(properties);
+        var matcher = new OperationalContextCatalogMatcher(properties, OperationalContextNavigationTestCreator.navigation());
         var context = AnalysisContext.initialize("corr-multi-service-message")
                 .withSection(new AnalysisEvidenceSection(
                         "elasticsearch",

@@ -135,6 +135,25 @@ Przy każdej zmianie podaj krótkie `reason`: wyjaśnij konkretnie, dlaczego
 wartość `after` wynika ze wskazanych `sourceRefs`; jeśli to hipoteza, nazwij ją
 i wskaż, czego brakuje do potwierdzenia. Samo `basis` nie jest uzasadnieniem.
 
+Przy porządkowaniu stosuj procedurę `Cleanup verification` z instrukcji
+maintenance. Porównaj pełne źródło encji z zapisywalnym payloadem; pominięte
+nieznane pola mogą zawierać wiedzę. Każdą usuwaną treść rozlicz przez aktualne
+pole albo zachowane kanoniczne źródło tego samego faktu. Nie regeneruj encji
+z domyślnej, skróconej odpowiedzi toola. Sprawdź pełne cele mapy, odrębne
+role i kierunki, ownership, wyniki wyszukiwania oraz granice każdego scope'u
+i repozytorium. Zniknięcie powtórnej ścieżki nie upoważnia do usunięcia celu
+ani innego znaczenia relacji. Jeśli nie możesz potwierdzić równoważności,
+pomiń destrukcyjną propozycję i opisz konkretny brak w `visibilityLimits`.
+
+Wszystkie siły systemowych `matchSignals`, także `weak`, oraz `aliases`
+i `useFor` wpływają na dopasowanie systemu w GitLabie. Nie przenoś tam
+opisowych metadanych lub nierozpoznanych terminów w celu zachowania tekstu;
+mogłoby to zmienić dobór scope'ów. Brak glossary ID pozostaje jawną luką:
+nie zgaduj definicji ani podobnego celu. `gaps` i `sourceCoverage` na encji
+są zapisywalne tylko dla systemu, repozytorium i bounded contextu. Dla
+innych typów użyj obsługiwanego opisu lub `visibilityLimits`. Pomijaj puste
+opcjonalne wartości; `after: null` nie służy do usuwania pola głównego.
+
 ## Granice wiedzy i ownership
 
 Oddziel dosłowną informację operatora (`USER_STATEMENT`), obserwację z
@@ -199,3 +218,38 @@ propozycje muszą razem tworzyć poprawny katalog; nie zostawiaj referencji do
 wpisów, których nie proponujesz.
 Gdy nie da się uzasadnić poprawki,
 zwróć `proposals: []` i konkretne `visibilityLimits`.
+
+## Mapa dalszej eksploracji
+
+Domyslny zakres `opctx_get_entity` zalezy od typu encji. `navigation`
+jest lekkim indeksem celow: odrebne relacje, kierunki, role i liczby sciezek
+sa zachowane, a kazdy cel ma jeden `read` z `tool + arguments + reason`.
+`summaryTruncated=true` oznacza skrocony opis; pelne granice celu sprawdz
+jego odczytem. Nie traktuj liczby sciezek jako liczby roznych encji.
+
+`include=[navigation]` zwraca caly lekki indeks, a
+`include=[navigationDetails]` wszystkie oryginalne sciezki z `via`, source refs
+i provenance. Szczegoly czytaj, gdy potrzebujesz uzasadnienia konkretnego
+powiazania. `affordances.links` zawiera ekspansje, bez drugiej kopii readow.
+Brak `references` po jednej stronie nie oznacza braku powiazania.
+
+Dla `codeSearch.detail=index` wybierz karte scope'u i jej `read`, aby poznac
+repozytoria, role i pelne `searchMode/pathPrefixes`. Domyslny odczyt wybranego
+`codeSearchScope` zawiera komplet granic. `include=[codeSearch]` dowolnej
+encji zwraca wszystkie scope'y i granice per scope/repository. Nie rozszerzaj
+prefixow ani nie lacz roznych granic tego samego repozytorium.
+Jawny `include` zwraca tylko zadane sekcje w calosci. Przy pominietych danych
+uzyj odpowiadajacej sekcji z `availableExpansions`, zamiast ponawiac default.
+
+Scope przypisany bezpośrednio do bounded contextu jest jego pierwszym
+zakresem kodu. Bez niego odczyt korzysta z powiązanych scope'ów jako
+fallbacku. Szerszy systemowy scope czytaj osobno, gdy uzasadnia to zadanie;
+nie łącz granic tego samego repozytorium z kilku scope'ów. Zewnętrzny system
+bez dostępnego kodu może nie mieć scope'u; nie wymyślaj repozytorium.
+
+Relacja posrednia jest wskazowka nawigacyjna. Nie dowodzi ownershipu,
+realizacji bounded contextu ani rzeczywistego przeplywu runtime. Link nie
+rozszerza hidden scope, uprawnien ani granic code-search scope. Samo istnienie
+linku nie nakazuje odczytu wszystkich sasiadow; obowiazkowe weryfikacje wynikaja
+z celu i polityki feature'a. Nie zapisuj reverse/derived links jako nowych
+faktow katalogu.

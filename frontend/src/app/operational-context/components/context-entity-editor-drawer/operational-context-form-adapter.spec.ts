@@ -4,6 +4,21 @@ import { OperationalContextFormAdapter, operationalContextFieldTooltip } from '.
 describe('OperationalContextFormAdapter', () => {
   const adapter = new OperationalContextFormAdapter();
 
+  it('explains that weak CRM system signals can change GitLab scope selection', () => {
+    const signals = adapter.fields('system').find((field) => field.path === 'matchSignals')!;
+    const tooltip = operationalContextFieldTooltip(signals, 'system');
+    expect(tooltip).toContain('także weak');
+    expect(tooltip).toContain('aliases i useFor');
+    expect(tooltip).toContain('dodatkowe scope’y');
+    expect(tooltip).toContain('Porównaj dobór źródeł przed i po');
+  });
+
+  it('does not advertise unsupported repository notes or team relationships', () => {
+    expect(adapter.fields('repository').map((field) => field.path)).not.toContain('notes');
+    expect(adapter.fields('team').map((field) => field.path)).not.toContain('references');
+    expect(adapter.fields('team').map((field) => field.path)).not.toContain('relations');
+  });
+
   it.each(OPERATIONAL_CONTEXT_WRITABLE_TYPES)('round-trips the complete anonymized CRM payload for %s', (type) => {
     const payload = crmPayload(type);
     const form = adapter.build(type, payload);

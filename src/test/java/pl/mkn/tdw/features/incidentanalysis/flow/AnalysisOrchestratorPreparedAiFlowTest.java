@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.incidentanalysis.flow;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
@@ -112,8 +113,8 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         return new OperationalContextEvidenceProvider(
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
-                new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
+                new OperationalContextCatalogMatcher(properties, OperationalContextNavigationTestCreator.navigation()),
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.navigation())
         );
     }
 

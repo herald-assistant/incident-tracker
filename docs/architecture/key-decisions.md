@@ -1091,6 +1091,39 @@ przypiety commit nadal ograniczaja odczyt. Prompt jest widoczny w jobie i
 zachowywany w lokalnej historii; dane z repozytorium pozostaja niezaufanym
 materialem, a nie instrukcjami zmieniajacymi zasady asysty.
 
+## 27b. Operational Context przechowuje fakt raz i zwraca mape dalszych odczytow
+
+Jednostronny zapis relacji jest kontraktem maintenance, a odczyt musi
+udostepniac incoming/outgoing oraz jawne sciezki posrednie z provenance.
+Neutralny `OperationalContextNavigationPort` jest wspolnym zrodlem mapy dla
+search, tools, operator API i konsumentow feature'ow. Wykonywalny link
+wskazuje target, nastepny tool i powod odczytu. Truncation musi pozwalac
+odzyskac pozostale powiazania.
+
+Nawigacja nie jest ownershipem ani authorization scope. Udzial w integracji
+nie zastepuje jawnego przypisania bounded contextu do systemu. Dwa rozne
+znaczenia relacji tej samej pary pozostaja odrebne. Redundancja jest uwaga
+maintenance; usuniecie faktu wymaga zachowania discovery, ownership i
+code-search boundaries, a nie tylko poprawy licznika walidacji.
+
+Jawne ownership.ownerTeamIds systemu lub bounded contextu jest kanonicznym
+faktem indeksowanym jako owned-by-team z pochodzeniem na tym polu. Zespol
+odczytuje swoje systemy i konteksty z incoming edges; nie utrzymuje
+team.references/relations. Zespol nie jest posrednikiem grafu ani zrodlem
+rozszerzenia hidden application scope. Owner label i inferowany owner nie
+tworza potwierdzonej krawedzi.
+
+Sekcja `codeSearch` tools jest wspolna dla wszystkich typow encji i korzysta
+z neutralnego portu code-search. Jawnie rozroznia dostepny scope od braku
+definicji w odczycie. Granice `searchMode/pathPrefixes` pozostaja przypisane
+do repozytorium w konkretnym scope; focused odczyt odzyskuje wszystkie
+dane bez kompakcji. Wynik discovery nie nadaje uprawnien do kodu.
+
+Domyslny zakres odpowiedzi AI zalezy od typu encji. Lekki indeks grupuje
+cele i zachowuje rozne znaczenia/role; pelne sciezki z provenance sa osobnym
+focused odczytem. Jawny include nie dokleja niezamowionych sekcji. Wybrany
+code scope zawsze przekazuje pelne granice, niezaleznie od limitu indeksu.
+
 ## 28. Behavior Change Assessment rozdziela discovery, interpretacje i scoring
 
 Operator podaje typowane kryteria `projectKey`, `fromDate` i `toDate`, a nie

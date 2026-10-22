@@ -1274,3 +1274,22 @@ odczyty i mutacje korzystaja tylko z tej lokalnej kopii. Store nie ma trybow,
 rewizji, manifestow, historii ani rollbacku. Zapis podmienia atomowo jeden
 zmieniany dokument po walidacji domenowej.
 
+
+## Mapa nawigacyjna Operational Context
+
+Jednostronnie utrzymywane fakty sa projektowane przez
+`OperationalContextNavigationPort` na incoming/outgoing i ograniczone sciezki
+posrednie. `opctx_get_entity.navigation` oraz operator detail prowadza do
+konkretnych encji z uzasadnieniem i source refs. `include=[navigation]`
+pozwala AI doczytac cala lokalna mape. Search, incident matching, Config Drift
+DEEP i code-search read model reuse'uja projekcje; maintenance zachowuje
+osobny kanoniczny payload bez reverse/derived edges. Nawigacja nie nadaje
+ownershipu i nie rozszerza uprawnien do repozytoriow.
+
+AI detail ma profile domyslne zalezne od dziewieciu typow encji i wspolny
+resolver `OperationalContextCodeSearchPort`. Wybrany code scope domyslnie
+zachowuje pelne granice repozytoriow (`searchMode/pathPrefixes`), inne typy
+pokazuja indeks scope'ow. Jawny `include` zwraca tylko wybrane sekcje,
+w calosci. `navigation` grupuje cele i role, a `navigationDetails` pozwala
+odczytac wszystkie oryginalne sciezki i provenance. Puste sekcje i powtorzone
+neighbor reads nie sa serializowane.

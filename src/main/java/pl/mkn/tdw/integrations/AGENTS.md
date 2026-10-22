@@ -117,3 +117,22 @@ scope, ale `integrations.database` nie importuje MCP ani `agenttools`.
   Dynatrace, Jira, Elasticsearch, Database, Operational Context i GitLab,
   importow ich konsumentow oraz tego, by nowa integracja zostala objeta testem.
 - Dla adapterow REST preferuj testy z `MockRestServiceServer`.
+
+## Nawigacja Operational Context
+
+Read-only mapa korzysta z neutralnego `OperationalContextNavigationPort` i
+indeksu relacji. Jednostronny zapis musi dawac dostep do obu stron relacji.
+`navigation` odroznia bezposredni fakt od sciezki przez integracje/scope/krok;
+nie jest zrodlem ownershipu ani zgody na szerszy code search. Tools zwracaja
+konkretne linki nastepnego odczytu; `include=[navigation]` odzyskuje cala mape.
+UI pokazuje role, direction, posrednikow i source refs oraz otwiera target.
+Maintenance nie zapisuje projekcji jako nowych faktow.
+Jawne ownership.ownerTeamIds systemu i bounded contextu tworzy owned-by-team
+z pochodzeniem na tym polu. Zespol nie ma writable references/relations i nie
+jest posrednikiem do systemow innych czlonkow zespolu ani ich hidden scope.
+
+Neutralny port code-search jest wspolnym resolverem scope'ow dla tools i
+operator API. Repozytorium odnajduje scope przez jawne czlonkostwo w
+`code-search-scopes.yml`; nie wymaga dodatkowej referencji zwrotnej.
+Konsumenci zachowuja `searchMode/pathPrefixes` per scope/repository i nie
+przenosza nawigacyjnego wyniku do hidden authorization scope.

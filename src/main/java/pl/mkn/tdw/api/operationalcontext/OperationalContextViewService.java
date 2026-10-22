@@ -1,5 +1,7 @@
 package pl.mkn.tdw.api.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextNavigation;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
 
 import lombok.RequiredArgsConstructor;
@@ -103,6 +105,7 @@ public class OperationalContextViewService {
     private final OperationalContextPort operationalContextPort;
     private final OperationalContextCatalogValidationPort validationService;
     private final OperationalContextRelationIndexPort relationIndexBuilder;
+    private final OperationalContextNavigationPort navigationPort;
     private final OperationalContextCodeSearchPort codeSearchReadModelBuilder;
     private final OperationalContextProfiledReadModelMapper profiledReadModelMapper =
             new OperationalContextProfiledReadModelMapper();
@@ -269,6 +272,7 @@ public class OperationalContextViewService {
                 relations.outgoingRelations(),
                 relations.incomingRelations(),
                 relations.neighbors(),
+                view.navigation().forEntity(entityType, id),
                 view.relationIndex().validationFindings()
         );
     }
@@ -305,7 +309,7 @@ public class OperationalContextViewService {
                 resolvedOwnership,
                 summaryText(system),
                 systemCodeSearchRepositoriesAggregate(view, system),
-                referenceAggregate(view, SYSTEM, system.id(), system.references()),
+                referenceAggregate(view, SYSTEM, system.id(), view.navigation().references(SYSTEM, system.id())),
                 signalAggregate(SYSTEM, system.id(), system.matchSignals()),
                 resolvedOwnershipAggregate(SYSTEM, system.id(), resolvedOwnership),
                 validationAggregate(SYSTEM, system.id(), view.validationFindings()),
@@ -321,10 +325,10 @@ public class OperationalContextViewService {
                 repository.git().group(),
                 ownerValue(resolvedOwnership, REPOSITORY, repository.id()),
                 resolvedOwnership,
-                idAggregate("Systems", REPOSITORY, repository.id(), SYSTEM, repository.references().systems(), view.systemsById()),
-                idAggregate("Contexts", REPOSITORY, repository.id(), BOUNDED_CONTEXT, repository.references().boundedContexts(), view.contextsById()),
-                idAggregate("Processes", REPOSITORY, repository.id(), PROCESS, repository.references().processes(), view.processesById()),
-                idAggregate("Integrations", REPOSITORY, repository.id(), INTEGRATION, repository.references().integrations(), view.integrationsById()),
+                idAggregate("Systems", REPOSITORY, repository.id(), SYSTEM, view.navigation().references(REPOSITORY, repository.id()).systems(), view.systemsById()),
+                idAggregate("Contexts", REPOSITORY, repository.id(), BOUNDED_CONTEXT, view.navigation().references(REPOSITORY, repository.id()).boundedContexts(), view.contextsById()),
+                idAggregate("Processes", REPOSITORY, repository.id(), PROCESS, view.navigation().references(REPOSITORY, repository.id()).processes(), view.processesById()),
+                idAggregate("Integrations", REPOSITORY, repository.id(), INTEGRATION, view.navigation().references(REPOSITORY, repository.id()).integrations(), view.integrationsById()),
                 repositoryCodeSearchScopesAggregate(view, repository),
                 repositoryCodeSearchRolesAggregate(view, repository),
                 resolvedOwnershipAggregate(REPOSITORY, repository.id(), resolvedOwnership),
@@ -354,10 +358,10 @@ public class OperationalContextViewService {
                 ownerValue(resolvedOwnership, PROCESS, process.id()),
                 resolvedOwnership,
                 summaryText(process),
-                idAggregate("Systems", PROCESS, process.id(), SYSTEM, process.references().systems(), view.systemsById()),
+                idAggregate("Systems", PROCESS, process.id(), SYSTEM, view.navigation().references(PROCESS, process.id()).systems(), view.systemsById()),
                 idAggregate("External systems", PROCESS, process.id(), SYSTEM, process.participants().externalSystems(), view.systemsById()),
-                idAggregate("Repositories", PROCESS, process.id(), REPOSITORY, process.references().repositories(), view.repositoriesById()),
-                idAggregate("Contexts", PROCESS, process.id(), BOUNDED_CONTEXT, process.references().boundedContexts(), view.contextsById()),
+                idAggregate("Repositories", PROCESS, process.id(), REPOSITORY, view.navigation().references(PROCESS, process.id()).repositories(), view.repositoriesById()),
+                idAggregate("Contexts", PROCESS, process.id(), BOUNDED_CONTEXT, view.navigation().references(PROCESS, process.id()).boundedContexts(), view.contextsById()),
                 valueAggregate("Steps", PROCESS, process.id(), process.steps().stream().map(step -> firstNonBlank(step.name(), step.id())).toList(), "Process steps listed in catalog.", "step"),
                 valueAggregate("Completion signals", PROCESS, process.id(), process.values("completionSignals.successful"), "Successful completion signals listed in catalog.", "completion-signal"),
                 validationAggregate(PROCESS, process.id(), view.validationFindings())
@@ -377,8 +381,8 @@ public class OperationalContextViewService {
                 integration.category(),
                 integration.integrationStyle(),
                 integration.flowDirection(),
-                idAggregate("Processes", INTEGRATION, integration.id(), PROCESS, integration.references().processes(), view.processesById()),
-                idAggregate("Contexts", INTEGRATION, integration.id(), BOUNDED_CONTEXT, integration.references().boundedContexts(), view.contextsById()),
+                idAggregate("Processes", INTEGRATION, integration.id(), PROCESS, view.navigation().references(INTEGRATION, integration.id()).processes(), view.processesById()),
+                idAggregate("Contexts", INTEGRATION, integration.id(), BOUNDED_CONTEXT, view.navigation().references(INTEGRATION, integration.id()).boundedContexts(), view.contextsById()),
                 signalAggregate(INTEGRATION, integration.id(), integration.matchSignals()),
                 resolvedOwnershipAggregate(INTEGRATION, integration.id(), resolvedOwnership),
                 validationAggregate(INTEGRATION, integration.id(), view.validationFindings())
@@ -393,8 +397,8 @@ public class OperationalContextViewService {
                 ownerValue(resolvedOwnership, BOUNDED_CONTEXT, context.id()),
                 resolvedOwnership,
                 summaryText(context),
-                idAggregate("Systems", BOUNDED_CONTEXT, context.id(), SYSTEM, context.references().systems(), view.systemsById()),
-                idAggregate("Terms", BOUNDED_CONTEXT, context.id(), GLOSSARY_TERM, context.references().terms(), glossaryMap(view)),
+                idAggregate("Systems", BOUNDED_CONTEXT, context.id(), SYSTEM, view.navigation().references(BOUNDED_CONTEXT, context.id()).systems(), view.systemsById()),
+                idAggregate("Terms", BOUNDED_CONTEXT, context.id(), GLOSSARY_TERM, view.navigation().references(BOUNDED_CONTEXT, context.id()).terms(), glossaryMap(view)),
                 valueAggregate("Relations", BOUNDED_CONTEXT, context.id(), context.relations().stream().map(this::relationLabel).toList(), "Relations listed on bounded context.", "relation"),
                 validationAggregate(BOUNDED_CONTEXT, context.id(), view.validationFindings())
         );
@@ -405,11 +409,11 @@ public class OperationalContextViewService {
                 team.id(),
                 team.label(),
                 summaryText(team),
-                idAggregate("Owns systems", TEAM, team.id(), SYSTEM, team.references().systems(), view.systemsById()),
-                idAggregate("Owns repositories", TEAM, team.id(), REPOSITORY, team.references().repositories(), view.repositoriesById()),
-                idAggregate("Owns processes", TEAM, team.id(), PROCESS, team.references().processes(), view.processesById()),
-                idAggregate("Owns contexts", TEAM, team.id(), BOUNDED_CONTEXT, team.references().boundedContexts(), view.contextsById()),
-                idAggregate("Owns integrations", TEAM, team.id(), INTEGRATION, team.references().integrations(), view.integrationsById()),
+                idAggregate("Owns systems", TEAM, team.id(), SYSTEM, view.navigation().references(TEAM, team.id()).systems(), view.systemsById()),
+                idAggregate("Owns repositories", TEAM, team.id(), REPOSITORY, view.navigation().references(TEAM, team.id()).repositories(), view.repositoriesById()),
+                idAggregate("Owns processes", TEAM, team.id(), PROCESS, view.navigation().references(TEAM, team.id()).processes(), view.processesById()),
+                idAggregate("Owns contexts", TEAM, team.id(), BOUNDED_CONTEXT, view.navigation().references(TEAM, team.id()).boundedContexts(), view.contextsById()),
+                idAggregate("Owns integrations", TEAM, team.id(), INTEGRATION, view.navigation().references(TEAM, team.id()).integrations(), view.integrationsById()),
                 signalAggregate(TEAM, team.id(), team.matchSignals()),
                 notOwnershipSourceAggregate(TEAM, team.id()),
                 validationAggregate(TEAM, team.id(), view.validationFindings())
@@ -438,7 +442,8 @@ public class OperationalContextViewService {
                 validationFor(type, entry.id(), view.validationFindings()),
                 openQuestionsFor(type, entry.id(), view.openQuestions()),
                 List.of(sourceRef(type, entry.id())),
-                rawPreview(entry.payload())
+                rawPreview(entry.payload()),
+                view.navigation().forEntity(type, entry.id())
         );
     }
 
@@ -605,7 +610,8 @@ public class OperationalContextViewService {
                 validationFor(CODE_SEARCH_SCOPE, scope.id(), view.validationFindings()),
                 openQuestionsFor(CODE_SEARCH_SCOPE, scope.id(), view.openQuestions()),
                 List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id())),
-                rawPreview(scope.payload())
+                rawPreview(scope.payload()),
+                view.navigation().forEntity(CODE_SEARCH_SCOPE, scope.id())
         );
     }
 
@@ -633,7 +639,8 @@ public class OperationalContextViewService {
                 validationFor(GLOSSARY_TERM, term.id(), view.validationFindings()),
                 openQuestionsFor(GLOSSARY_TERM, term.id(), view.openQuestions()),
                 List.of(sourceRef(GLOSSARY_TERM, term.id())),
-                rawPreview(map("id", term.id(), "term", term.term()))
+                rawPreview(map("id", term.id(), "term", term.term())),
+                view.navigation().forEntity(GLOSSARY_TERM, term.id())
         );
     }
 
@@ -660,7 +667,8 @@ public class OperationalContextViewService {
                 validationFor(HANDOFF_RULE, rule.id(), view.validationFindings()),
                 openQuestionsFor(HANDOFF_RULE, rule.id(), view.openQuestions()),
                 List.of(sourceRef(HANDOFF_RULE, rule.id())),
-                rawPreview(map("id", rule.id(), "title", rule.title()))
+                rawPreview(map("id", rule.id(), "title", rule.title())),
+                view.navigation().forEntity(HANDOFF_RULE, rule.id())
         );
     }
 
@@ -684,6 +692,7 @@ public class OperationalContextViewService {
                 indexById(catalog.boundedContexts()),
                 indexById(catalog.teams()),
                 relationIndex,
+                navigationPort.build(catalog),
                 openQuestions,
                 validation
         );
@@ -800,6 +809,7 @@ public class OperationalContextViewService {
             String entityId,
             pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextReferences references
     ) {
+        references = view.navigation().references(entityType, entityId);
         return nonEmptyGroups(
                 groupFromIds("Systems", SYSTEM, references.systems(), view.systemsById()),
                 groupFromIds("Repositories", REPOSITORY, references.repositories(), view.repositoriesById()),
@@ -1282,7 +1292,8 @@ public class OperationalContextViewService {
                 detail.validationFindings(),
                 detail.openQuestions(),
                 detail.sourceReferences(),
-                detail.rawSourcePreview()
+                detail.rawSourcePreview(),
+                detail.navigation()
         );
     }
 
@@ -1743,6 +1754,7 @@ public class OperationalContextViewService {
             Map<String, OperationalContextBoundedContext> contextsById,
             Map<String, OperationalContextTeam> teamsById,
             OperationalContextRelationIndex relationIndex,
+            OperationalContextNavigation navigation,
             List<OpenQuestionDto> openQuestions,
             List<ValidationFindingDto> validationFindings
     ) {

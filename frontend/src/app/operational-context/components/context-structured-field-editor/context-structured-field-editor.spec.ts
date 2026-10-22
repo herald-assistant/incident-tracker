@@ -7,6 +7,13 @@ import { ContextStructuredFieldEditorComponent } from './context-structured-fiel
 describe('ContextStructuredFieldEditorComponent', () => {
   const adapter = new OperationalContextFormAdapter();
 
+  it('keeps the CRM signal strength help explicit about GitLab scope selection', async () => {
+    const fixture = await createFixture('system', 'matchSignals', { weak: { aliases: ['CRM contact core'] } });
+    const help = fixture.componentInstance.tooltip('signalStrength');
+    expect(help).toContain('także weak uczestniczy w doborze');
+    expect(help).toContain('Siła nie ogranicza zakresu kodu');
+  });
+
   it('offers only the governed CRM target types and matching catalogue entities', async () => {
     const fixture = await createFixture('code-search-scope', 'target', { type: 'system', id: 'crm-contact-core' });
     fixture.componentRef.setInput('referenceOptions', {

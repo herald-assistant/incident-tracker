@@ -244,3 +244,32 @@ Przekaz:
 - source refs dla `flow-explorer-write-report`,
 - wskazanie, czy potrzebne jest dalsze code grounding albo handoff poza
   analizowany system.
+
+## Mapa dalszej eksploracji
+
+Domyslny zakres `opctx_get_entity` zalezy od typu encji. `navigation`
+jest lekkim indeksem celow: odrebne relacje, kierunki, role i liczby sciezek
+sa zachowane, a kazdy cel ma jeden `read` z `tool + arguments + reason`.
+`summaryTruncated=true` oznacza skrocony opis; pelne granice celu sprawdz
+jego odczytem. Nie traktuj liczby sciezek jako liczby roznych encji.
+
+`include=[navigation]` zwraca caly lekki indeks, a
+`include=[navigationDetails]` wszystkie oryginalne sciezki z `via`, source refs
+i provenance. Szczegoly czytaj, gdy potrzebujesz uzasadnienia konkretnego
+powiazania. `affordances.links` zawiera ekspansje, bez drugiej kopii readow.
+Brak `references` po jednej stronie nie oznacza braku powiazania.
+
+Dla `codeSearch.detail=index` wybierz karte scope'u i jej `read`, aby poznac
+repozytoria, role i pelne `searchMode/pathPrefixes`. Domyslny odczyt wybranego
+`codeSearchScope` zawiera komplet granic. `include=[codeSearch]` dowolnej
+encji zwraca wszystkie scope'y i granice per scope/repository. Nie rozszerzaj
+prefixow ani nie lacz roznych granic tego samego repozytorium.
+Jawny `include` zwraca tylko zadane sekcje w calosci. Przy pominietych danych
+uzyj odpowiadajacej sekcji z `availableExpansions`, zamiast ponawiac default.
+
+Relacja posrednia jest wskazowka nawigacyjna. Nie dowodzi ownershipu,
+realizacji bounded contextu ani rzeczywistego przeplywu runtime. Link nie
+rozszerza hidden scope, uprawnien ani granic code-search scope. Samo istnienie
+linku nie nakazuje odczytu wszystkich sasiadow; obowiazkowe weryfikacje wynikaja
+z celu i polityki feature'a. Nie zapisuj reverse/derived links jako nowych
+faktow katalogu.

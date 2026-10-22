@@ -1,5 +1,6 @@
 package pl.mkn.tdw.api.operationalcontext;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextGlossaryTerm;
@@ -30,8 +31,9 @@ final class OperationalContextApiTestFixtures {
     ) {
         return new OperationalContextViewService(port, validation,
                 new OperationalContextRelationIndexBuilder(),
+                OperationalContextNavigationTestCreator.navigation(),
                 new OperationalContextCodeSearchReadModelBuilder(),
-                new OperationalContextOwnershipResolver(), new OperationalContextCatalogSearch());
+                new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.search());
     }
 
     static OperationalContextCatalog emptyCatalog() {
@@ -124,9 +126,9 @@ final class OperationalContextApiTestFixtures {
                         "summary", "Repository for customer consent service source.",
                         "git", map(
                                 "provider", "gitlab",
-                                "group", "Group",
+                                "group", "CRM",
                                 "project", "crm-consent-service",
-                                "projectPath", "Group/crm-consent-service",
+                                "projectPath", "CRM/crm-consent-service",
                                 "defaultBranch", "main"
                         ),
                         "references", map(

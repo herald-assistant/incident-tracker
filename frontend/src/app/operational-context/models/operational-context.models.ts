@@ -264,6 +264,7 @@ export interface OperationalContextEntityDetailDto {
   openQuestions: OpenQuestionDto[];
   sourceReferences: SourceReferenceDto[];
   rawSourcePreview: string;
+  navigation: OperationalContextNavigationLink[];
 }
 
 export interface ReadModelEntityRef {
@@ -320,6 +321,7 @@ export interface OperationalContextEntityRelationsReadModelDto {
   outgoingRelations: ReadModelRelation[];
   incomingRelations: ReadModelRelation[];
   neighbors: ReadModelEntityRef[];
+  navigation: OperationalContextNavigationLink[];
   validationFindings: ReadModelValidationFinding[];
 }
 
@@ -423,3 +425,14 @@ export type OperationalContextCatalogRow =
   | OperationalContextTeamRowDto
   | OperationalContextGlossaryRowDto
   | OperationalContextHandoffRuleRowDto;
+
+export interface OperationalContextNavigationLink {
+  target: ReadModelEntityRef;
+  relationType: string;
+  direction: string;
+  indirect: boolean;
+  via: ReadModelEntityRef[];
+  path: ReadModelRelation[];
+  reason: string;
+  sourceRefs: ReadModelSourceRef[];
+}

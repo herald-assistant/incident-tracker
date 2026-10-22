@@ -83,6 +83,7 @@ class IntegrationPackageBoundaryTest {
                 "OperationalContextCatalogMaintenancePort.java", "OperationalContextCatalogSearchPort.java",
                 "OperationalContextCatalogValidationPort.java",
                 "OperationalContextCodeSearchPort.java", "OperationalContextOwnershipPort.java",
+                "OperationalContextNavigationPort.java",
                 "OperationalContextPort.java", "OperationalContextReadModelValidationPort.java",
                 "OperationalContextRelationIndexPort.java", "OperationalContextRepositoryPathPort.java",
                 "OperationalContextSettingsPort.java");
@@ -184,7 +185,7 @@ class IntegrationPackageBoundaryTest {
     @Test
     void operationalContextConsumersDependOnlyOnPortsAndContract() throws IOException {
         assertConsumersDependOnlyOnPortAndContract(OPERATIONAL_CONTEXT_PACKAGE, null,
-                "OperationalContextCatalogMaintenancePort", "OperationalContextCatalogSearchPort",
+                "OperationalContextCatalogMaintenancePort", "OperationalContextCatalogSearchPort", "OperationalContextNavigationPort",
                 "OperationalContextCatalogValidationPort",
                 "OperationalContextCodeSearchPort", "OperationalContextOwnershipPort", "OperationalContextPort",
                 "OperationalContextReadModelValidationPort", "OperationalContextRelationIndexPort",

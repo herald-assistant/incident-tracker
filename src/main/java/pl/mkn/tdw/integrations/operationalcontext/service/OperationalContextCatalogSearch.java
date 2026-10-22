@@ -4,6 +4,8 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogSearc
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogSearchMatch;
 
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextNavigationPort;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.*;
 
@@ -16,14 +18,14 @@ import java.util.Locale;
 
 /** Searchable catalog values shared by the operator API and the agent tool. */
 @Component
+@RequiredArgsConstructor
 public final class OperationalContextCatalogSearch implements OperationalContextCatalogSearchPort {
+
+    private final OperationalContextNavigationPort navigationPort;
 
     @Override
     public List<OperationalContextCatalogSearchMatch> find(OperationalContextCatalog catalog, String query) {
-        return search(catalog, query);
-    }
-
-    public static List<OperationalContextCatalogSearchMatch> search(OperationalContextCatalog catalog, String query) {
+        var navigation = navigationPort.build(catalog);
         if (!StringUtils.hasText(query)) {
             return List.of();
         }
@@ -38,7 +40,19 @@ public final class OperationalContextCatalogSearch implements OperationalContext
             score = Math.max(score, score("identity", document.identity(), normalizedQuery, tokens, fields, signals, 100, 90, 75));
             score = Math.max(score, score("signals", document.signals(), normalizedQuery, tokens, fields, signals, 70, 65, 55));
             score = Math.max(score, score("summary", document.summaryValues(), normalizedQuery, tokens, fields, signals, 50, 45, 35));
-            score = Math.max(score, score("relations", document.relations(), normalizedQuery, tokens, fields, signals, 40, 35, 25));
+            var related = new ArrayList<>(document.relations());
+            var keyType = switch (document.type()) {
+                case "boundedContext" -> "bounded-context";
+                case "codeSearchScope" -> "code-search-scope";
+                case "glossaryTerm" -> "term";
+                case "handoffRule" -> "handoff-rule";
+                default -> document.type();
+            };
+            navigation.forEntity(keyType, document.id()).forEach(link -> {
+                related.add(link.target().id());
+                related.add(link.target().label());
+            });
+            score = Math.max(score, score("relations", related, normalizedQuery, tokens, fields, signals, 40, 35, 25));
             if (score > 0) {
                 matches.add(new OperationalContextCatalogSearchMatch(document.type(), document.id(), score, List.copyOf(fields),
                         signals.stream().limit(8).toList(),

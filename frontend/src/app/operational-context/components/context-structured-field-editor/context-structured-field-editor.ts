@@ -288,7 +288,7 @@ const FIELD_TOOLTIPS: Record<string, string> = {
   completionPartial: 'Wpisz obserwowalne oznaki postępu bez pełnego zakończenia.',
   completionFailed: 'Wpisz obserwowalne oznaki niepowodzenia. Opisuj objawy, nie zgadywaną przyczynę.',
   completionCancelled: 'Wpisz obserwowalne oznaki świadomego anulowania procesu.',
-  signalStrength: 'Wybierz siłę wskazówki: exact oznacza jednoznaczne dopasowanie, strong mocną wskazówkę, medium wymaga dodatkowego kontekstu, a weak służy tylko do wstępnego szukania.',
+  signalStrength: 'Wybierz siłę wskazówki: exact i strong oznaczają mocniejsze rozpoznanie, medium i weak wymagają dodatkowego kontekstu. W sygnałach systemu także weak uczestniczy w doborze scope’ów GitLaba. Siła nie ogranicza zakresu kodu; nie przenoś opisowych metadanych do sygnałów.',
   signalKey: 'Wybierz rodzaj danych, z których pochodzi sygnał, np. nazwa usługi lub adres ścieżki.',
   signalValues: 'Wpisz trwałe wartości sygnału, po jednej w wierszu. Nie podawaj sekretów ani jednorazowych identyfikatorów.',
   relationType: 'Podaj rodzaj powiązania, np. depends-on (zależy od), uses (używa) lub supports (wspiera). Wpis nie uruchamia żadnego działania.',

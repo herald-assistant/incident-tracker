@@ -36,6 +36,7 @@ export class ContextEntityDrawerComponent {
   readonly entityPreviewError = input('');
   readonly referenceOptions = input<OperationalContextReferenceOptions>({});
   readonly closeDrawer = output<void>();
+  readonly openRelatedEntity = output<{ type: string; id: string }>();
   readonly writable = input(false);
   readonly editEntity = output<void>();
   readonly assistEntity = output<void>();
@@ -43,6 +44,10 @@ export class ContextEntityDrawerComponent {
   readonly assistOpenQuestion = output<OpenQuestionDto>();
   readonly deleteEntity = output<void>();
   readonly copiedEntity = signal(false);
+
+  protected openNavigationTarget(target: { type: string; id: string }): void {
+    this.openRelatedEntity.emit({ type: target.type === 'term' ? 'glossary-term' : target.type, id: target.id });
+  }
 
   protected canAssistIssue(type: string, id: string | null | undefined): boolean {
     return Boolean(id && isOperationalContextWritableType(type));

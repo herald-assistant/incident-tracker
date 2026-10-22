@@ -47,7 +47,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 preflightService,
                 codeSearch,
                 operationalContext,
-                ownership, new OperationalContextCodeSearchReadModelBuilder());
+                ownership, new OperationalContextCodeSearchReadModelBuilder(), pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator.navigation());
 
         var result = service.build(
                 ConfigDriftViewerMode.BASIC,
@@ -74,7 +74,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 preflightService,
                 codeSearch,
                 operationalContext,
-                new OperationalContextOwnershipResolver(), new OperationalContextCodeSearchReadModelBuilder());
+                new OperationalContextOwnershipResolver(), new OperationalContextCodeSearchReadModelBuilder(), pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator.navigation());
 
         var result = service.build(
                 ConfigDriftViewerMode.DEEP,
@@ -117,7 +117,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 preflightService,
                 codeSearch,
                 operationalContext,
-                new OperationalContextOwnershipResolver(), new OperationalContextCodeSearchReadModelBuilder());
+                new OperationalContextOwnershipResolver(), new OperationalContextCodeSearchReadModelBuilder(), pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator.navigation());
 
         var result = service.build(
                 ConfigDriftViewerMode.DEEP,
@@ -146,7 +146,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                         "backend-repo",
                         "primary",
                         1,
-                        "platform/backend",
+                        "CRM/backend",
                         "backend",
                         "whole-repository",
                         List.of(),
@@ -169,7 +169,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                         "code-grounding-001",
                         "backend-scope",
                         "backend-repo",
-                        "platform/backend",
+                        "CRM/backend",
                         "release-42",
                         "src/main/java/NotificationClient.java",
                         12,
@@ -296,9 +296,9 @@ class ConfigDriftViewerDeepContextServiceTest {
                 "name", "Backend repository",
                 "git", map(
                         "provider", "gitlab",
-                        "group", "platform",
+                        "group", "CRM",
                         "project", "backend",
-                        "projectPath", "platform/backend",
+                        "projectPath", "CRM/backend",
                         "defaultBranch", "main"
                 ),
                 "references", map("systems", systemIds)

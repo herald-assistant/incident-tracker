@@ -67,8 +67,8 @@ class OperationalContextReadModelValidatorTest {
                 List.of()
         ));
 
-        assertHasError(findings, "DUPLICATED_PARTICIPANT_REFERENCE_SYSTEM");
-        assertHasError(findings, "DUPLICATED_PARTICIPANT_REFERENCE_BOUNDED_CONTEXT");
+        assertHasWarning(findings, "DUPLICATED_PARTICIPANT_REFERENCE_SYSTEM");
+        assertHasWarning(findings, "DUPLICATED_PARTICIPANT_REFERENCE_BOUNDED_CONTEXT");
     }
 
     @Test
@@ -111,7 +111,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of()
         ));
 
-        assertHasError(findings, "SYSTEM_DEPENDENCY_DERIVED_FROM_INTEGRATION");
+        assertHasWarning(findings, "SYSTEM_DEPENDENCY_DERIVED_FROM_INTEGRATION");
     }
 
     @Test
@@ -141,8 +141,9 @@ class OperationalContextReadModelValidatorTest {
                 List.of()
         ));
 
-        assertHasError(findings, "BOUNDED_CONTEXT_SYSTEM_REFERENCE_DERIVED");
-        assertHasError(findings, "BOUNDED_CONTEXT_INTEGRATION_REFERENCE_DERIVED");
+        assertFalse(findings.stream().anyMatch(finding -> finding.code().equals("BOUNDED_CONTEXT_SYSTEM_REFERENCE_DERIVED")),
+                "Integration participation does not replace explicit context-to-system assignment");
+        assertHasWarning(findings, "BOUNDED_CONTEXT_INTEGRATION_REFERENCE_DERIVED");
     }
 
     @Test
@@ -167,7 +168,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of()
         ));
 
-        assertHasError(findings, "PROCESS_PARTICIPANT_REFERENCE_SYSTEM");
+        assertHasWarning(findings, "PROCESS_PARTICIPANT_REFERENCE_SYSTEM");
     }
 
     @Test
@@ -236,7 +237,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of()
         ));
 
-        assertHasError(findings, "BIDIRECTIONAL_REFERENCE");
+        assertHasWarning(findings, "BIDIRECTIONAL_REFERENCE");
     }
 
     @Test

@@ -11,13 +11,11 @@ related catalog entities. It should help analysts avoid mixing business
 meanings that look similar in code, logs, or user reports.
 
 Keep entries semantic. Do not use this file as a map of low-level code details.
-Do not use it as the primary map from bounded context to repositories. Code
-navigation starts from the system's single `code-search-scopes.yml` entry and
-then resolves bounded-context meaning through catalog references and code
-evidence. An optional bounded-context code-search scope may be added only as a
-semantic slice when it clarifies a durable domain boundary or helps route code
-locations back to bounded-context ownership; it does not replace the system
-scope.
+Keep repository lists and module boundaries in `code-search-scopes.yml`. A
+directly targeted bounded-context scope is the first code slice returned for
+this context. Without it, the read model falls back through effective links to
+related scopes, including the system scope. An optional context scope refines
+the semantic boundary and does not replace a required system scope.
 
 ## Ownership rule
 
@@ -32,38 +30,42 @@ fields.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 boundedContexts:
   - id: crm-contact-preferences
     name: CRM Contact Preferences
-    shortName: Contact Preferences
-    type: core-domain
+    type: supporting-domain
     lifecycleStatus: active
-    summary: Maintains channel preferences for anonymized CRM contacts.
-    purpose: Separates contact preference language from CRM campaign audience language.
-    aliases:
-      - CRM channel preference
-    useFor:
-      - Explain how an anonymized CRM contact preference is interpreted.
-      - Disambiguate contact preferences from CRM campaign selection.
+    summary: Defines the local meaning and validation of CRM contact channel choices.
+    purpose: Keeps preference semantics separate from authentication and campaign selection.
     localLanguageSummary:
-      - A preferred channel is the channel enabled for an anonymized CRM contact.
+      - A contact preference is the channel choice maintained for an anonymized CRM contact.
+    ownership:
+      ownerTeamIds:
+        - crm-domain-team
+      ownershipStatus: explicit
+      confidence: high
+      source: Explicit operator statement in the fictional CRM scenario.
     scope:
       includes:
-        - Validate and maintain CRM contact preferences.
+        - Validate and maintain contact preferences
       excludes:
-        - Manage authentication credentials.
+        - Manage authentication credentials
       businessCapabilities:
         - CRM contact preference management
       coreEntities:
         - ContactPreference
       keyDecisions:
-        - Whether a requested CRM channel can be enabled.
+        - Whether a requested contact channel is supported
     semanticBoundary:
       coreConcepts:
-        - CRM contact preference
+        - Contact preference
       localConcepts:
-        - preferred channel
+        - Preferred contact channel
       canonicalEntities:
         - ContactPreference
       commands:
@@ -71,61 +73,41 @@ boundedContexts:
       events:
         - CRM contact preference changed
       invariants:
-        - An enabled CRM channel must be supported for the anonymized contact.
+        - An enabled CRM channel must be supported for the contact.
       ownsLanguage:
-        - contact preference
+        - CRM contact preference
       doesNotOwn:
-        - authentication credential
-    ownership:
-      ownerTeamIds:
-        - crm-domain-team
-      ownershipStatus: explicit
-      confidence: high
-      source: bounded-contexts.yml
-      notes:
-        - CRM domain owner confirmed the local language and boundary.
+        - Authentication credential
     references:
       systems:
         - crm-contact-core
-      processes:
-        - crm-contact-preference-management
-      integrations:
-        - crm-contact-to-profile-store
-      terms:
-        - crm-contact-preference
-      teams:
-        - crm-domain-team
-      handoffRules:
-        - crm-contact-preference-boundary
-    matchSignals:
-      exact:
-        terms:
-          - CRM contact preference
-      strong:
-        aliases:
-          - preferred channel
-      weak:
-        phrases:
-          - CRM channel choice
-    relations:
-      - type: hands-off-to
-        targetType: bounded-context
-        target: crm-engagement
-        via:
-          - crm-contact-to-profile-store
-        evidence: confirmed contact preferences become input to CRM engagement decisions
     evidence:
       - sourceRef: crm-domain-notes.md
         evidenceType: domain-note
-        note: Defines the CRM contact preference boundary without customer data.
+        note: Defines the fictional CRM preference boundary without customer records.
+    sourceCoverage:
+      status: partial
+      scannedSources:
+        - Fictional CRM domain notes
+      limitations:
+        - CRM retry behavior has not been reviewed.
+    gaps:
+      - id: crm-retry-confirmation
+        summary: Confirm the CRM retry behavior and its completion evidence.
+        severity: info
+        status: open
+    matchSignals:
+      strong:
+        businessTerms:
+          - CRM contact preference
     llmToolHints:
       answerWhenUserMentions:
-        - CRM contact preference
+        - CRM contact channel choice
       disambiguateFrom:
         - CRM campaign audience
       usefulSearchKeywords:
         - contact preference changed
-      explanationStyle: Explain the CRM boundary in business language and state visibility limits.
+      explanationStyle: Explain the boundary and state visibility limits.
 ```
 
 ## Update rules
@@ -143,7 +125,14 @@ boundedContexts:
 - Keep ownership at bounded-context level only when it describes durable domain
   accountability.
 - Use `references.terms` for glossary entries that define the local language.
-- Add relations only when they help navigation across contexts.
+  If the term already has this context in `canonicalReferences`, do not add
+  the inverse link just for discovery. Missing glossary IDs remain explicit
+  gaps; do not invent definitions or guess a similarly named target.
+- Keep explicit `references.systems` assignments here. An integration's
+  participants do not replace a context-to-system assignment or ownership fact.
+- Processes own process-to-context references and integration participants own
+  their context roles. Do not mirror those links here.
+- Add relations only for distinct semantic facts, never reverse/derived links.
 - Keep aliases and recognition signals stable and business-readable.
 - Keep repository and module boundaries in the related system-targeted
   code-search scope. Add a bounded-context-targeted scope only when it provides
@@ -156,9 +145,8 @@ boundedContexts:
 - The entry helps explain the system to an analyst or tester.
 - It clarifies what belongs here and what should be resolved through another
   context or system owner.
-- Its code ownership path is available through the related system-targeted
-  code-search scope when code navigation is needed, with an optional
-  bounded-context scope only as a semantic slice for attribution.
+- Its code path uses a directly targeted context scope first, or related scopes
+  as fallback. Preserve each scope's own search boundary and limitations.
 - It does not duplicate code details that tools can discover.
 - Every guided field explains what to enter, its runtime/AI effect and accepted
   format, using only strongly anonymized CRM examples where an example helps.

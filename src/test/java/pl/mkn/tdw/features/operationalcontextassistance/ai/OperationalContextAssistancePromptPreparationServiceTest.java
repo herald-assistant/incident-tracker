@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.operationalcontextassistance.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.io.ClassPathResource;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkill;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkillState;
@@ -14,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,6 +23,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class OperationalContextAssistancePromptPreparationServiceTest {
+
+    @TempDir Path temporaryDirectory;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CopilotSkillRuntimeLoader skillLoader = mock(CopilotSkillRuntimeLoader.class);
@@ -420,6 +424,35 @@ class OperationalContextAssistancePromptPreparationServiceTest {
                 "code-search-scope", "ownershipStatus: explicit", "proposals: []",
                 "Ta asysta nie prowadzi dialogu", "Nie dodawaj pola");
         assertThat(markdown).doesNotContain("teraz zapytaj", "zadaj pytanie", "pytanie do człowieka");
+    }
+
+    @Test
+    void restoredEffectiveSkillAndAllActualMaintenanceRulesReachThePreparedPrompt() {
+        var properties = new pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties();
+        properties.setCopilotHome(temporaryDirectory.resolve("copilot").toString());
+        var loader = new CopilotSkillRuntimeLoader(properties);
+        var name = "operational-context-catalog-revision";
+        var original = loader.availableSkills().stream().filter(skill -> name.equals(skill.name())).findFirst().orElseThrow();
+        loader.updateSkill(name, original.rawMarkdown().replace("# Asysta przy Operational Context", "# Lokalna instrukcja CRM"));
+        var restored = loader.restoreDefault(name);
+        assertThat(restored.rawMarkdown()).isEqualTo(original.rawMarkdown());
+        assertThat(restored.state()).isEqualTo(CopilotRuntimeSkillState.DEFAULT);
+        var rules = new LinkedHashMap<String, String>();
+        for (var rule : OperationalContextAssistanceCatalogMaterialService.GUIDANCE_NAMES) {
+            try {
+                rules.put(rule, new String(new ClassPathResource("operational-context-maintenance/" + rule)
+                        .getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+            } catch (java.io.IOException exception) { throw new java.io.UncheckedIOException(exception); }
+        }
+        var prompt = new OperationalContextAssistancePromptPreparationService(loader, objectMapper).prepare(
+                new OperationalContextAssistanceAiInput(OperationalContextAssistanceMode.CREATE_AREA,
+                        "Uporządkuj fikcyjny katalog CRM bez utraty wiedzy.", objectMapper.createObjectNode(),
+                        rules, null, null, null, List.of())).prompt();
+        assertThat(prompt).contains(restored.rawMarkdown().trim());
+        rules.values().forEach(rule -> assertThat(prompt).contains(rule.strip()));
+        assertThat(prompt).contains("Cleanup verification", "all system signal values, including `weak`",
+                "include=[navigationDetails]", "Preserve boundaries per scope and repository",
+                "pomiń destrukcyjną propozycję", "nie zgaduj definicji ani podobnego celu");
     }
 
     @Test

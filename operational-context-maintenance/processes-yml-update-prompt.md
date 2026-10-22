@@ -30,118 +30,89 @@ owner-like fields.
 
 ## YAML shape
 
+The first YAML examples in all nine file prompts form one fictional CRM
+catalogue and are validated together. Copy only facts justified for the task;
+examples are not templates to regenerate complete entities.
+
 ```yaml
 processes:
-  - id: customer-request-handling
-    name: Customer request handling
-    shortName: Request handling
-    type: business
+  - id: crm-contact-preference-update
+    name: CRM Contact Preference Update
+    type: business-process
     lifecycleStatus: active
     criticality: high
-    summary: Customer starts a request, the portal validates it, and case management continues handling.
-    purpose: Gives analysts one business path for incidents, changes, and test scenarios.
+    summary: A CRM agent submits a contact preference and verifies its accepted state.
+    purpose: Grounds the expected CRM journey, milestones and handoff.
     aliases:
-      - customer request
-      - request intake
+      - CRM contact preference change
     useFor:
-      - Explain what the user expected to happen.
-      - Prepare development stories or acceptance test scenarios.
-      - Decide which system or bounded context should be checked next.
+      - Explain the expected contact update journey.
+      - Identify the next system or context to inspect.
     participants:
       actors:
-        - customer
-        - support operator
+        - CRM agent
       primarySystems:
-        - customer-portal
+        - crm-agent-portal
       supportingSystems:
-        - case-management
-      externalSystems: []
-      platformComponents: []
+        - crm-contact-core
     processBoundary:
+      startsWhen:
+        - The CRM agent submits an anonymized contact preference.
       endsWhen:
-        - The request is visible to the case handling context.
+        - The CRM contact view confirms the accepted preference.
     completionSignals:
       successful:
-        - The customer request is accepted.
-        - A case is visible for handling.
+        - CRM contact acceptance confirmation is visible.
     references:
-      repositories:
-        - customer-portal-ui
-        - case-management-service
       boundedContexts:
-        - customer-requests
-        - case-lifecycle
+        - crm-contact-preferences
       integrations:
-        - portal-to-case-management
+        - crm-contact-to-core
       terms:
-        - customer-request
+        - crm-contact-preference
       handoffRules:
-        - customer-request-boundary
+        - crm-contact-sync-delayed
     matchSignals:
-      exact:
-        terms:
-          - customer request handling
       strong:
-        aliases:
-          - request intake
-      weak:
-        phrases:
-          - customer cannot submit a request
-    relations:
-      - type: uses
-        targetType: integration
-        target: portal-to-case-management
-        evidence: process boundary between request intake and case handling
+        businessTerms:
+          - CRM contact preference change
     steps:
-      - id: submit-request
-        name: Submit request
+      - id: submit-contact-update
+        name: Submit CRM contact update
         type: user-action
-        summary: Customer enters the request and submits it in the portal.
+        summary: The CRM agent submits an anonymized contact channel choice.
         references:
           systems:
-            - customer-portal
-          boundedContexts:
-            - customer-requests
+            - crm-agent-portal
         matchSignals:
           strong:
             terms:
-              - submit request
-      - id: accept-for-handling
-        name: Accept for handling
+              - submit CRM contact update
+      - id: accept-contact-update
+        name: Accept CRM contact update
         type: system-handoff
-        summary: Request is accepted and becomes visible in the case handling context.
+        summary: CRM Contact Core validates and accepts the preference.
         references:
           systems:
-            - case-management
+            - crm-contact-core
           boundedContexts:
-            - case-lifecycle
+            - crm-contact-preferences
           integrations:
-            - portal-to-case-management
-        matchSignals:
-          strong:
-            terms:
-              - accepted for case handling
+            - crm-contact-to-core
     failureModes:
       - id: crm-request-validation-failed
         name: CRM request validation failed
-        summary: The anonymized CRM request is rejected before it can be accepted for handling.
-        affectedStep: submit-request
+        summary: The anonymized CRM contact update is rejected before acceptance.
+        affectedStep: accept-contact-update
         signals:
-          - CRM request validation rejection
-          - CRM case confirmation is absent
+          - CRM contact validation rejection
     dataAndArtifacts:
       primaryObjects:
-        - CrmCustomerRequest
+        - ContactPreference
       inputArtifacts:
-        - Anonymized CRM customer request
+        - Anonymized CRM contact change request
       outputArtifacts:
-        - CRM case acceptance confirmation
-      persistedEntities:
-        - CrmCustomerRequest
-      readModels:
-        - CRM case handling view
-      auditArtifacts:
-        - CRM request change audit metadata
+        - CRM contact acceptance confirmation
       notes:
         - Store artifact kinds only, never CRM customer records or payloads.
 ```
@@ -207,6 +178,10 @@ completionSignals:
   integrations, glossary terms and handoff rules. Participant system roles
   already connect the process to systems; do not duplicate them in
   `references.systems`.
+- This process owns its context and integration references. Do not request the
+  inverse reference on those entities; effective navigation supplies both ends.
+  Use step references for a distinct milestone role, not a second root-level
+  `relations` edge with the same meaning.
 - Do not use `outcomes` or `observability`; they are outside the process schema.
 - Keep step `matchSignals` as business words or durable labels.
 - Keep `processBoundary` limited to `businessCapability`, `startsWhen`,
@@ -226,7 +201,9 @@ completionSignals:
 - Keep `dataAndArtifacts` to durable artifact kinds in `primaryObjects`,
   `inputArtifacts`, `outputArtifacts`, `persistedEntities`, `readModels`,
   `auditArtifacts` and `notes`; never copy CRM records or payloads.
-- Put uncertainty in open questions rather than inventing a process path.
+- Processes have no entity-level `gaps` or `sourceCoverage` field. Put durable
+  uncertainty in an accepted descriptive field and draft `visibilityLimits`,
+  rather than inventing a process path or an unsupported property.
 
 ## Quality check
 

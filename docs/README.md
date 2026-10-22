@@ -170,3 +170,8 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
   zastany bundle z `src/main/resources/static`, wiec ten wariant nie potwierdza
   spojnosci zmian backendu i UI i nie powinien zastepowac pelnego builda przed
   wydaniem.
+
+## Operational Context
+
+- [Model, tools i zasady uzycia](architecture/operational-context-model-tools-and-usage.md)
+- [Zrealizowana potrzeba mapy dalszej analizy](needs/operational-context-navigation-map.md)

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence;
 
+import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFile;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
@@ -296,8 +297,8 @@ class AnalysisEvidenceCollectorTest {
         return new OperationalContextEvidenceProvider(
                 properties,
                 OperationalContextAdapterTestCreator.create(properties),
-                new OperationalContextCatalogMatcher(properties),
-                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver())
+                new OperationalContextCatalogMatcher(properties, OperationalContextNavigationTestCreator.navigation()),
+                new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.navigation())
         );
     }
 

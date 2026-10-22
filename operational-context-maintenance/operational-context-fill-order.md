@@ -30,8 +30,9 @@ glossary terms and handoff rules never define owners.
 
 Boundary problems should resolve both sides through referenced systems and
 bounded contexts. If a concrete team is not cataloged, the resolver may expose
-an inferred label such as "owner of system Salesforce" or "owner of domain
-customer".
+an inferred display label such as "owner of CRM Contact Core". That read-side
+label must not be saved as confirmed ownership. Uncertain ownership belongs in
+a supported gap or draft visibility limit.
 
 Generated YAML should follow the current shapes in the file-specific
 prompts. If a fact does not fit a shape, link the right catalog entity or record
@@ -65,7 +66,9 @@ an open question instead of inventing extra ownership or routing fields.
   `queue` alone do not establish a system, owner or handoff route.
 - Use entity-level `gaps` only for durable missing knowledge that affects
   navigation, interpretation, ownership, code-search scope or handoff. They
-  feed Open Questions and AI visibility limits. Keep temporary scan-order
+  are writable only on systems, repositories and bounded contexts and feed
+  Open Questions and AI visibility limits. For other types use an accepted
+  descriptive field or draft `visibilityLimits`. Keep temporary scan-order
   uncertainty in working notes or discovery reports, not in catalog `gaps`.
 - Never store secrets, credentials, tokens, personal contact data, other
   personal data, full production payloads or sensitive business records in
@@ -98,11 +101,14 @@ Minimum useful entry:
 - for every `internal-service`, one explicit `systemSubtype`: `frontend`,
   `backend`, `worker`, `mixed` or `unknown`,
 - aliases and use cases,
-- references to known processes, contexts, integrations, teams and terms,
+- references only for additional facts owned by the system; incoming context,
+  process and integration links are available through the effective map,
 - `ownership` only when there is durable system-level accountability.
 
 Do not list repositories on a system. Repository navigation for a system goes
-through exactly one system-targeted entry in `code-search-scopes.yml`.
+through one system-targeted entry in `code-search-scopes.yml` when the system
+requires code discovery. An external SaaS or partner system with no accessible
+implementation needs an explicit visibility boundary, not an invented repository.
 
 Use `systemSubtype: frontend` only after review confirms that the durable
 system is the user-facing frontend boundary. Do not infer it from a repository
@@ -120,18 +126,16 @@ Minimum useful bounded-context entry:
 - local meaning,
 - what belongs here,
 - what not to confuse with,
-- related systems, processes and terms,
+- explicit context-to-system assignments; processes own process-to-context
+  references and glossary terms may own their canonical context link,
 - `ownership` only when there is durable bounded-context accountability.
 
-Do not use `bounded-contexts.yml` as the primary map from context to
-repositories or modules. The default code path for a bounded context starts
-from the related system scope:
-
-`bounded-context -> system -> code-search scope -> repository -> path prefix -> code`.
-
-An optional bounded-context code-search scope may be added later when it helps
-describe a durable semantic slice or route a code location back to bounded
-context ownership, but it must not replace the required system scope.
+Do not embed repository lists in `bounded-contexts.yml`. A directly targeted
+bounded-context code-search scope is the first code slice returned for that
+context. Without one, the read model falls back through effective links to
+related scopes, including its system scope. System scopes remain the broader
+implementation map; a context scope must not replace a required system scope.
+Keep every returned scope's own `searchMode` and `pathPrefixes` intact.
 
 ### 4. Add team labels only after owners exist
 
@@ -142,8 +146,10 @@ Minimum useful entry:
 
 - team id/name,
 - aliases,
-- what the team label means,
-- references that help navigation.
+- what the team label means.
+
+Teams have no `references` or `relations`; their incoming ownership links are
+computed by the read model.
 
 Do not add reverse ownership to teams. If ownership is unclear, add an open
 question on the system or bounded context instead.
@@ -223,7 +229,8 @@ repositories are known.
 Each scope should define:
 
 - one target,
-- exactly one required code-search scope per system,
+- one system-targeted scope for each internal system requiring code discovery;
+  external systems without accessible code may have no scope,
 - for required system scopes, `target.type: system` and `target.id` matching
   the system id,
 - optional bounded-context scopes only when they provide useful semantic
@@ -268,6 +275,11 @@ The intended navigation paths are:
   `code/file path -> repository + path prefix -> code-search scope -> system ->
   bounded context or resolved system ownership`.
 
+The bounded-context path uses its directly targeted scope first and related
+scopes only as fallback. A broader system scope needs a separate justified
+read; the presence of a related scope never merges its boundaries into the
+selected semantic slice.
+
 ### 10. Run validation and record gaps
 
 Use the operational context API validation and maintenance findings before and
@@ -280,6 +292,41 @@ Check:
 - duplicate facts across files,
 - entries without useful navigation value,
 - open questions that block a concrete user task.
+
+### Cleanup verification
+
+Before proposing cleanup, capture the full source documents and compare them
+with the writable payload. For every removed key or reference, record either
+the accepted field preserving its meaningful content or the surviving canonical
+source of the same fact. Unsupported fields can contain useful knowledge;
+successful schema validation alone is not proof of preservation.
+
+For the complete resulting set compare before and after:
+
+- reachable navigation targets from every affected entity, using the full
+  index rather than the first eight targets; explain any intended change,
+- distinct semantic roles and directions, canonical provenance and explicit
+  context-to-system assignments; redundant paths may disappear, distinct facts
+  must remain,
+- resolved ownership and source/target handoff responsibility,
+- catalogue search membership for existing IDs, names, aliases and signals,
+- GitLab system/scope/repository selection for existing identity inputs,
+- every scope's `repoId`, `role`, `priority`, `searchMode`, `pathPrefixes` and
+  `limitations`, without combining boundaries from different scopes,
+- descriptions, source coverage and unresolved knowledge gaps.
+
+System `weak` signals, aliases and `useFor` can affect GitLab selection. Do not
+activate old descriptive metadata as a signal while cleaning its shape. If no
+safe writable field exists, retain the issue as a visible limitation and do
+not propose the destructive update. A missing glossary target remains a gap
+until its meaning is confirmed; do not invent a definition or substitute a
+similar name. A conditional change cannot remove a root field with `after:
+null`; disclose this constraint instead of fabricating replacement knowledge.
+
+Inspect the full source diff and candidate validation, then submit the concrete
+set to operator review and conditional batch preview. AI never publishes YAML.
+If the before/after comparison cannot be established, report the exact
+limitation in `visibilityLimits`; a lower count of findings is insufficient.
 
 ## Minimal useful catalog
 
@@ -298,10 +345,11 @@ For a new area, stop when these questions have clear answers:
 - Facts have one owner file.
 - References use existing catalog ids.
 - Handoff guidance is understandable to a business/system analyst.
-- Bounded-context-owned code is linked through the related system-targeted
-  code-search scope, optionally refined by a bounded-context scope, not through
-  repository lists embedded in the bounded context.
+- Bounded-context code uses its directly targeted scope first, or related
+  scopes as fallback, never repository lists embedded in the bounded context.
 - Repository scope explains why to inspect a project, not how the project is
   organized internally beyond the coarse `searchMode`/`pathPrefixes` search
   boundary.
 - Uncertainty is visible as a limitation, open question or validation finding.
+- Cleanup preserves knowledge, navigation, ownership and code-search boundaries
+  under the before/after procedure above.

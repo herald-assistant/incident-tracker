@@ -980,7 +980,8 @@ function entityDetail(): OperationalContextEntityDetailDto {
     validationFindings: [],
     openQuestions: [],
     sourceReferences: [],
-    rawSourcePreview: ''
+    rawSourcePreview: '',
+    navigation: []
   };
 }
 
