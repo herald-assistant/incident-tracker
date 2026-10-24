@@ -1,16 +1,16 @@
 @if (ledger(); as result) {
   <div class="rule-ledger">
-    <header [attr.class]="decisionClass(result.decision.status)">
+    <header class="rule-ledger__decision">
       <div>
-        <span class="field-label">Decyzja dla reguł autora</span>
-        <h3>{{ decisionLabel(result.decision.status) }}</h3>
-        <p>{{ decisionHint(result.decision.status) }}</p>
+        <span class="field-label">Wynik weryfikacji wymagań</span>
+        <h3>{{ decisions[result.decision.status].label }} <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.decision, label: 'Znaczenie decyzji' }" /></h3>
+        <p>{{ decisions[result.decision.status].hint }}</p>
       </div>
       <dl class="rule-ledger__counts" aria-label="Podsumowanie reguł">
-        <div><dt>Reguły</dt><dd>{{ result.decision.totalRules }}</dd></div>
+        <div><dt>Wymagania</dt><dd>{{ result.decision.totalRules }}</dd></div>
         <div><dt>Spełnione</dt><dd>{{ result.decision.satisfied }}</dd></div>
         <div><dt>Niespełnione</dt><dd>{{ result.decision.notSatisfied }}</dd></div>
-        <div><dt>Brak dowodu</dt><dd>{{ result.decision.notVerified }}</dd></div>
+        <div><dt>Niezweryfikowane</dt><dd>{{ result.decision.notVerified }}</dd></div>
       </dl>
     </header>
 
@@ -18,6 +18,7 @@
       <aside class="rule-ledger__global-limit" role="status">
         <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
         <div>
+          <strong>Ograniczenia weryfikacji</strong>
           @for (limit of globalLimits(); track limit.message) {
             <p>{{ limit.message }}</p>
           }
@@ -45,7 +46,7 @@
             <div class="rule-ledger__group-heading">
               <div>
                 <span class="field-label">{{ scope === 'STORY' ? 'Jira i Confluence' : 'Repozytorium' }}</span>
-                <h4>{{ scope === 'STORY' ? 'Reguły story' : 'Instrukcje' }}</h4>
+                <h4>{{ scope === 'STORY' ? 'Wymagania z Jira i Confluence' : 'Wymagania z instrukcji repozytorium' }} <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.source + ' ' + help.action, label: 'Jak czytać wymaganie i następny krok' }" /></h4>
               </div>
               <span>{{ rulesForScope($any(scope)).length }} / {{ sourceRuleCount($any(scope)) }}</span>
             </div>
@@ -73,7 +74,7 @@
       <details class="rule-ledger__additional">
         <summary>
           <span class="material-symbols-outlined" aria-hidden="true">lightbulb</span>
-          <span><strong>Dodatkowe kontrole AI</strong><small>Nie zmieniają decyzji dla reguł autora.</small></span>
+          <span><strong>Dodatkowe kontrole AI</strong><small>Nie zmieniają decyzji z weryfikacji wymagań.</small></span>
           <b>{{ result.additionalChecks.length }}</b>
           <span class="material-symbols-outlined rule-ledger__expand" aria-hidden="true">expand_more</span>
         </summary>
@@ -87,50 +88,74 @@
   </div>
 }
 
-<ng-template #ruleCard let-rule="rule" let-additional="additional">
-  <details class="rule-ledger__rule" [open]="isAttention(rule)">
-    <summary>
-      <span [attr.class]="outcomeClass(rule.outcome)">{{ outcomeLabel(rule.outcome) }}</span>
-      <span class="rule-ledger__rule-title">
-        <strong>{{ rule.source.quote }}</strong>
-        <small>{{ rule.source.label }} · {{ rule.source.reference }}</small>
-        <span>{{ rule.conclusion }}</span>
-        @if (isAttention(rule) && hasText(rule.action)) {
-          <em><b>Następny krok:</b> {{ rule.action }}</em>
-        }
+<ng-template #info let-text="text" let-label="label">
+  <span class="rule-ledger__info material-symbols-outlined" role="img" tabindex="0"
+    [attr.aria-label]="label" [matTooltip]="text" matTooltipPosition="below"
+    matTooltipClass="analysis-rich-tooltip">info</span>
+</ng-template>
+
+<ng-template #ruleCard let-value="rule" let-additional="additional">
+  @let rule = asRule(value);
+  <article class="rule-ledger__rule">
+    <div class="rule-ledger__assessment">
+      <span class="rule-ledger__assessment-label">Wynik sprawdzenia:</span>
+      <strong [attr.class]="outcomeClass(rule.outcome)">{{ outcomes[rule.outcome].label }}</strong>
+      <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: assessmentHint(rule), label: 'Znaczenie wyniku i wpływu na release' }" />
+      <span class="rule-ledger__impact" [class.rule-ledger__impact--blocker]="rule.releaseImpact === 'BLOCKER'">
+        Wpływ na release: <strong>{{ impacts[rule.releaseImpact].label }}</strong>
       </span>
-      @if (rule.releaseImpact !== 'NONE') {
-        <span class="rule-ledger__impact" [class.rule-ledger__impact--blocker]="rule.releaseImpact === 'BLOCKER'">
-          {{ impactLabel(rule.releaseImpact) }}
-        </span>
-      }
-      <span class="material-symbols-outlined rule-ledger__expand" aria-hidden="true">expand_more</span>
-    </summary>
+    </div>
 
-    <div class="rule-ledger__detail">
-      <dl>
-        <div><dt>Interpretacja AI</dt><dd>{{ rule.normalizedRule }}</dd></div>
-        <div><dt>Typ interpretacji</dt><dd>{{ sourceTypeLabel(rule.interpretationType) }}</dd></div>
-        @if (additional && hasText(rule.rationale)) {
-          <div><dt>Dlaczego warto sprawdzić</dt><dd>{{ rule.rationale }}</dd></div>
-        }
-        @if (additional && hasText(rule.riskIfOmitted)) {
-          <div><dt>Ryzyko pominięcia</dt><dd>{{ rule.riskIfOmitted }}</dd></div>
-        }
-      </dl>
-
-      @if (rule.evidence.length) {
-        <section><h5>Dowody</h5><ul>@for (evidence of rule.evidence; track evidence.reference + evidence.summary) {<li>{{ evidence.summary }} <code>{{ evidence.reference }}</code></li>}</ul></section>
-      }
-      @if (rule.missingEvidence.length) {
-        <section><h5>Brakujący materiał</h5><ul>@for (gap of rule.missingEvidence; track gap) {<li>{{ gap }}</li>}</ul></section>
-      }
-      @if (additional && rule.signals.length) {
-        <section><h5>Sygnały</h5><ul>@for (signal of rule.signals; track signal) {<li>{{ signal }}</li>}</ul></section>
-      }
-      @if (limitsFor(rule).length) {
-        <section class="rule-ledger__limits"><h5>Ograniczenia widoczności</h5><ul>@for (limit of limitsFor(rule); track limit.message) {<li>{{ limit.message }}</li>}</ul></section>
+    <div class="rule-ledger__overview">
+      <div class="rule-ledger__source">
+        <span class="rule-ledger__label">{{ additional ? 'Kontrola zaproponowana przez AI' : 'Wymaganie ze źródła' }}</span>
+        <blockquote>{{ rule.source.quote }}</blockquote>
+        <p class="rule-ledger__reference"><span>Źródło: {{ sources[rule.source.type] }}</span> · {{ rule.source.label }} · {{ rule.source.reference }}</p>
+      </div>
+      <div class="rule-ledger__conclusion">
+        <span class="rule-ledger__label">Wniosek z weryfikacji</span>
+        <p>{{ rule.conclusion }}</p>
+      </div>
+      @if (isAttention(rule) && hasText(rule.action)) {
+        <div class="rule-ledger__action">
+          <span class="rule-ledger__label">Następny krok</span>
+          <p>{{ rule.action }}</p>
+        </div>
       }
     </div>
-  </details>
+
+    <details class="rule-ledger__details">
+      <summary>Szczegóły weryfikacji <span class="material-symbols-outlined rule-ledger__expand" aria-hidden="true">expand_more</span></summary>
+      <div class="rule-ledger__detail">
+        <dl>
+          <div>
+            <dt>Interpretacja wymagania przez AI <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.interpretation + ' ' + interpretations[rule.interpretationType].hint, label: 'Znaczenie interpretacji AI' }" /></dt>
+            <dd>{{ rule.normalizedRule }}</dd>
+          </div>
+          <div><dt>Typ interpretacji</dt><dd>{{ interpretations[rule.interpretationType].label }}</dd></div>
+          @if (additional && hasText(rule.rationale)) {
+            <div><dt>Dlaczego warto sprawdzić</dt><dd>{{ rule.rationale }}</dd></div>
+          }
+          @if (additional && hasText(rule.riskIfOmitted)) {
+            <div><dt>Ryzyko pominięcia</dt><dd>{{ rule.riskIfOmitted }}</dd></div>
+          }
+          @if (additional && hasText(rule.confidence)) {
+            <div><dt>Pewność oceny AI <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.confidence, label: 'Znaczenie pewności oceny AI' }" /></dt><dd>{{ confidence[rule.confidence] || rule.confidence }}</dd></div>
+          }
+        </dl>
+        @if (rule.evidence.length) {
+          <section><h5>Dowody weryfikacji <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.evidence, label: 'Znaczenie dowodów weryfikacji' }" /></h5><ul>@for (evidence of rule.evidence; track $index) {<li>{{ evidence.summary }} <code>{{ evidence.reference }}</code></li>}</ul></section>
+        }
+        @if (rule.missingEvidence.length) {
+          <section><h5>Brakujący materiał do weryfikacji <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.missing, label: 'Znaczenie brakującego materiału' }" /></h5><ul>@for (gap of rule.missingEvidence; track $index) {<li>{{ gap }}</li>}</ul></section>
+        }
+        @if (additional && rule.signals.length) {
+          <section><h5>Sygnały uzasadniające kontrolę</h5><ul>@for (signal of rule.signals; track $index) {<li>{{ signal }}</li>}</ul></section>
+        }
+        @if (limitsFor(rule).length) {
+          <section><h5>Ograniczenia weryfikacji <ng-container [ngTemplateOutlet]="info" [ngTemplateOutletContext]="{ text: help.limits, label: 'Znaczenie ograniczeń weryfikacji' }" /></h5><ul>@for (limit of limitsFor(rule); track $index) {<li>{{ limit.message }}</li>}</ul></section>
+        }
+      </div>
+    </details>
+  </article>
 </ng-template>

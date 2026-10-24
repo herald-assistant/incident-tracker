@@ -197,6 +197,26 @@ conclusion i action sa widoczne przed szczegolami. Dodatkowe kontrole AI sa
 domyslnie zwiniete i jawnie opisane jako niewplywajace na decyzje. Po
 zakonczeniu joba rozbudowany composer przechodzi w kompaktowy kontekst.
 
+Prezentacja rozdziela „Wynik sprawdzenia” od „Wpływu na release”. Cytat
+ma etykietę „Wymaganie ze źródła”, osobną referencję i neutralną formę;
+wniosek oraz istniejący następny krok pozostają widoczne bez rozwijania.
+Szczegóły każdej reguły są domyślnie zwinięte niezależnie od outcome.
+Zawierają interpretację AI, polską nazwę typu interpretacji, dowody,
+brakujący materiał i ograniczenia przypisane przez `affectedRuleIds`.
+Dodatkowe kontrole pokazują także uzasadnienie, ryzyko, sygnały oraz
+pewność AI, jeżeli występuje. Globalne ograniczenia fallbacku pozostają
+widoczne nad listą.
+
+Etykiety i krótkie definicje są lokalnym słownikiem prezentacji
+`change-verification-presentation.ts`, bez zmiany enumów i kontraktów.
+Ikony informacji używają Material Tooltip i wspólnej klasy
+`analysis-rich-tooltip`; są fokusowalne i mają nazwy dostępne. Nie należą
+do `summary`, więc objaśnianie nie przełącza szczegółów. Ekran używa
+tokenów platformy, neutralnych powierzchni i małych akcentów wyniku;
+nie koduje całych bloków tekstu kolorem. UI nie przelicza decyzji,
+nie parafrazuje cytatów i nie scala ograniczeń po treści. Live wynik,
+historia i import nadal korzystają z tego samego renderera.
+
 ## Mapa implementacji
 
 - `source/ChangeVerificationSourceDiscoveryService` - Jira, MR, branch refs,
