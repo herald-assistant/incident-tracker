@@ -11,7 +11,7 @@ terms:
           - RemoteApiError
           - api.crm-notifications.example.invalid
     canonicalReferences:
-      - crm-customer-to-notification-sync
+      - integration:crm-customer-to-notification-sync
 gaps:
   - id: confirm-remote-api-error-taxonomy
     type: human-confirmation-required

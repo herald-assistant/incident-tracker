@@ -31,8 +31,39 @@ public final class OperationalContextCatalogQueryService {
                 filterEntries(catalog.boundedContexts(), effectiveQuery, OperationalContextEntryType.BOUNDED_CONTEXT),
                 filterGlossaryTerms(catalog.glossaryTerms(), effectiveQuery),
                 filterHandoffRules(catalog.handoffRules(), effectiveQuery),
-                catalog.openQuestions()
+                catalog.openQuestions().stream()
+                        .filter(OperationalContextDtos.OperationalContextOpenQuestion::active)
+                        .filter(question -> !question.global() && questionTargetIncluded(catalog, effectiveQuery, question))
+                        .toList(),
+                catalog.sourceFindings()
         );
+    }
+
+    private boolean questionTargetIncluded(
+            OperationalContextCatalog catalog, OperationalContextQuery query,
+            OperationalContextDtos.OperationalContextOpenQuestion question
+    ) {
+        return switch (question.entityType()) {
+            case "system" -> filterEntries(catalog.systems(), query, OperationalContextEntryType.SYSTEM).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "repository" -> filterEntries(catalog.repositories(), query, OperationalContextEntryType.REPOSITORY).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "process" -> filterEntries(catalog.processes(), query, OperationalContextEntryType.PROCESS).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "integration" -> filterEntries(catalog.integrations(), query, OperationalContextEntryType.INTEGRATION).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "bounded-context" -> filterEntries(catalog.boundedContexts(), query, OperationalContextEntryType.BOUNDED_CONTEXT).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "team" -> filterEntries(catalog.teams(), query, OperationalContextEntryType.TEAM).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "code-search-scope" -> filterCodeSearchScopes(catalog.codeSearchScopes(), query).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "glossary-term" -> filterGlossaryTerms(catalog.glossaryTerms(), query).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            case "handoff-rule" -> filterHandoffRules(catalog.handoffRules(), query).stream()
+                    .anyMatch(entry -> entry.id().equals(question.entityId()));
+            default -> false;
+        };
     }
 
     private <T extends OperationalContextEntry> List<T> filterEntries(
@@ -147,6 +178,7 @@ public final class OperationalContextCatalogQueryService {
             case "doNotConfuseWith" -> term.doNotConfuseWith();
             case "matchSignals" -> term.matchSignals();
             case "canonicalReferences" -> term.canonicalReferences();
+            case "relatedTerms" -> term.relatedTerms();
             case "synonyms" -> term.synonyms();
             case "notes" -> term.notes();
             default -> List.of();

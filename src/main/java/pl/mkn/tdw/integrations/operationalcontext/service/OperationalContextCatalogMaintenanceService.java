@@ -9,6 +9,7 @@ import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCat
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalMutationCommand;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogEntityType;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogFieldError;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextGapContract;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationCommand;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationPreview;
@@ -635,6 +636,7 @@ public class OperationalContextCatalogMaintenanceService implements OperationalC
         validateMatchSignals(payload.get("matchSignals"), errors);
         validateSourceCoverage(payload.get("sourceCoverage"), errors);
         validateGaps(payload.get("gaps"), errors);
+        errors.addAll(OperationalContextGapContract.unresolvedSignalErrors(payload, "/payload"));
         if (type == OperationalContextCatalogEntityType.SYSTEM) {
             validateSystemClassification(payload, errors);
             validateSystemParticipants(payload.get("participants"), errors);
@@ -1253,45 +1255,7 @@ public class OperationalContextCatalogMaintenanceService implements OperationalC
     }
 
     private void validateGaps(Object value, List<OperationalContextCatalogFieldError> errors) {
-        if (value == null) {
-            return;
-        }
-        if (!(value instanceof Collection<?> collection)) {
-            errors.add(new OperationalContextCatalogFieldError("/payload/gaps", "Gaps must be a list"));
-            return;
-        }
-        var ids = new LinkedHashSet<String>();
-        var index = 0;
-        for (var item : collection) {
-            var base = "/payload/gaps/" + index;
-            var gap = asMap(item);
-            if (gap == null) {
-                errors.add(new OperationalContextCatalogFieldError(base, "Gap must be an object"));
-                index++;
-                continue;
-            }
-            var id = text(gap.get("id"));
-            if (StringUtils.hasText(id) && !ID_PATTERN.matcher(id).matches()) {
-                errors.add(new OperationalContextCatalogFieldError(base + "/id", "Gap ID must use lowercase letters, digits and hyphens"));
-            } else if (StringUtils.hasText(id) && !ids.add(id)) {
-                errors.add(new OperationalContextCatalogFieldError(base + "/id", "Gap ID must be unique"));
-            }
-            if (java.util.stream.Stream.of(
-                    text(gap.get("summary")), text(gap.get("question")), text(gap.get("description")), text(gap.get("impact"))
-            ).noneMatch(StringUtils::hasText)) {
-                errors.add(new OperationalContextCatalogFieldError(base + "/summary", "Gap requires an actionable summary"));
-            }
-            var severity = text(gap.get("severity"));
-            if (StringUtils.hasText(severity) && !Set.of("error", "warning", "info").contains(severity)) {
-                errors.add(new OperationalContextCatalogFieldError(base + "/severity", "Gap severity must be error, warning or info"));
-            }
-            var status = text(gap.get("status"));
-            if (StringUtils.hasText(status) && !Set.of("open", "resolved").contains(status)) {
-                errors.add(new OperationalContextCatalogFieldError(base + "/status", "Gap status must be open or resolved"));
-            }
-            validateOptionalTextList(gap.get("suggestedNextSources"), base + "/suggestedNextSources", errors);
-            index++;
-        }
+        errors.addAll(OperationalContextGapContract.validateList(value, "/payload/gaps"));
     }
 
     private void validateOptionalTextList(
@@ -1714,7 +1678,9 @@ public class OperationalContextCatalogMaintenanceService implements OperationalC
         var pointer = "/catalog";
         if (violation.entityType() != null && violation.entityId() != null) {
             pointer += "/" + violation.entityType() + "/" + violation.entityId();
-            if (violation.fieldPath() != null && violation.fieldPath().contains(".")) {
+            if (violation.fieldPath() != null && violation.fieldPath().startsWith("/")) {
+                pointer += violation.fieldPath();
+            } else if (violation.fieldPath() != null && violation.fieldPath().contains(".")) {
                 pointer += "/" + violation.fieldPath().substring(violation.fieldPath().lastIndexOf('.') + 1);
             }
         }

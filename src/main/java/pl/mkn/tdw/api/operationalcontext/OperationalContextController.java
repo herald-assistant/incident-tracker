@@ -79,8 +79,8 @@ class OperationalContextController {
     }
 
     @GetMapping("/open-questions")
-    List<OpenQuestionDto> openQuestions() {
-        return viewService.openQuestions();
+    List<OpenQuestionDto> openQuestions(@RequestParam(defaultValue = "open") String status) {
+        return viewService.openQuestions(status);
     }
 
     @GetMapping("/validation")

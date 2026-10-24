@@ -23,6 +23,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OperationalContextEvidenceProviderTest {
 
     @Test
+    void shouldPreserveRelatedTermMatchingAndInlineEvidenceAfterSeparatingSourceFields() {
+        var term = OperationalContextDtos.glossaryTerm(Map.of(
+                "id", "crm-contact-state", "canonicalReferences", List.of("system:crm-customer-api"),
+                "relatedTerms", List.of("crm-retry-policy")));
+        var catalog = OperationalContextDtos.catalogFromRaw(
+                List.of(), List.of(), List.of(Map.of("id", "crm-customer-api")), List.of(), List.of(), List.of(), List.of(),
+                List.of(term, OperationalContextDtos.glossaryTerm(Map.of("id", "crm-retry-policy"))), List.of(), List.of());
+        var context = AnalysisContext.initialize("crm-reference-correlation").withSection(new AnalysisEvidenceSection(
+                "elasticsearch", "logs", List.of(logItem("crm-retry-policy"))));
+        var matcher = new OperationalContextCatalogMatcher(new OperationalContextProperties(),
+                OperationalContextNavigationTestCreator.navigation());
+        var matches = matcher.match(catalog, OperationalContextIncidentSignals.from(context));
+        var match = matches.glossaryMatches().stream()
+                .filter(item -> item.entry().id().equals(term.id())).findFirst().orElseThrow();
+        assertTrue(match.score().reasons().stream().anyMatch(reason ->
+                reason.contains("canonicalReference") && reason.contains("crm-retry-policy")));
+        var selected = new OperationalContextMatchBundle(
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(match), List.of());
+        var mapper = new OperationalContextEvidenceMapper(new OperationalContextOwnershipResolver(),
+                OperationalContextNavigationTestCreator.navigation());
+        var view = OperationalContextEvidenceView.from(mapper.toEvidenceSection(selected, catalog));
+
+        assertEquals(List.of("system:crm-customer-api"), term.canonicalReferences());
+        assertEquals(List.of("crm-retry-policy"), term.relatedTerms());
+        assertEquals(List.of("system:crm-customer-api", "crm-retry-policy"), view.glossaryTerms().get(0).canonicalReferences());
+    }
+
+    @Test
     void shouldStayDisabledByDefault() {
         var properties = new OperationalContextProperties();
         properties.setEnabled(false);
@@ -133,6 +161,7 @@ class OperationalContextEvidenceProviderTest {
                 List.of(),
                 List.of(),
                 List.of(),
+                List.of(),
                 List.of()
         );
 
@@ -176,6 +205,7 @@ class OperationalContextEvidenceProviderTest {
                         internalService("crm-support", "crm-support-service"),
                         internalService("crm-decision", "crm-decision-service")
                 ),
+                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),

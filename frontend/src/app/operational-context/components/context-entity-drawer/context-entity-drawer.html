@@ -155,20 +155,20 @@
     <section class="entity-drawer__section">
       <h3>Mapa dalszej analizy</h3>
       @if (!entity.navigation.length) {
-        <p class="muted-text">Brak znanych powi¹zañ katalogowych.</p>
+        <p class="muted-text">Brak znanych powiï¿½zaï¿½ katalogowych.</p>
       }
       @for (link of entity.navigation; track $index) {
         <div class="drawer-group">
           <button type="button" class="text-button" (click)="openNavigationTarget(link.target)">
-            {{ link.target.label }} · {{ link.target.type }}
+            {{ link.target.label }} ï¿½ {{ link.target.type }}
           </button>
-          <small>{{ link.indirect ? 'Powi¹zanie poœrednie' : 'Relacja bezpoœrednia' }} · {{ link.relationType }} · {{ link.direction }}</small>
+          <small>{{ link.indirect ? 'Powiï¿½zanie poï¿½rednie' : 'Relacja bezpoï¿½rednia' }} ï¿½ {{ link.relationType }} ï¿½ {{ link.direction }}</small>
           <p>{{ link.reason }}</p>
           @if (link.via.length) {
             <small>Przez: @for (step of link.via; track step.id) { {{ step.label }} }</small>
           }
-          <details><summary>ród³a powi¹zania</summary>
-            @for (ref of link.sourceRefs; track $index) { <p>{{ ref.file }} · {{ ref.fieldPath }}</p> }
+          <details><summary>ï¿½rï¿½dï¿½a powiï¿½zania</summary>
+            @for (ref of link.sourceRefs; track $index) { <p>{{ ref.file }} ï¿½ {{ ref.fieldPath }}</p> }
           </details>
         </div>
       }
@@ -228,11 +228,11 @@
     @if (entity.openQuestions.length) {
       <section class="entity-drawer__section">
         <h3>Open questions</h3>
-        @for (question of entity.openQuestions; track question.id) {
+        @for (question of entity.openQuestions; track question.sourceFile + '#' + question.sourcePath + '#' + question.id) {
           <article class="drawer-issue" [attr.data-severity]="question.severity">
             <strong>{{ question.question }}</strong>
-            <small>{{ question.sourceFile }} Â· {{ question.status }}</small>
-            @if (writable() && canAssistIssue(question.entityType, question.entityId)) {
+            <small>{{ question.sourceFile }} {{ question.sourcePath }} Â· {{ question.id }} Â· {{ question.status }}</small>
+            @if (question.status === 'open' && writable() && canAssistIssue(question.entityType, question.entityId)) {
               <button type="button" class="entity-drawer__issue-action" (click)="assistOpenQuestion.emit(question)">PomÃ³Å¼ rozwiÄ…zaÄ‡</button>
             }
           </article>

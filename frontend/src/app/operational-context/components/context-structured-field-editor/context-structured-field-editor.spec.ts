@@ -5,6 +5,33 @@ import { OperationalContextFormAdapter } from '../context-entity-editor-drawer/o
 import { ContextStructuredFieldEditorComponent } from './context-structured-field-editor';
 
 describe('ContextStructuredFieldEditorComponent', () => {
+  it('requires stable gap IDs and canonical summaries while preserving additional context', async () => {
+    const fixture = await createFixture('system', 'gaps', [{
+      id: 'crm-owner', summary: 'Confirm CRM owner.', description: 'CRM source evidence.'
+    }]);
+    const id = fixture.nativeElement.querySelector('#gap-id-0') as HTMLInputElement;
+    const summary = fixture.nativeElement.querySelector('#gap-summary-0') as HTMLTextAreaElement;
+    const severity = fixture.nativeElement.querySelector('#gap-severity-0') as HTMLSelectElement;
+    expect(id.required).toBe(true);
+    expect(summary.required).toBe(true);
+    expect(summary.value).toBe('Confirm CRM owner.');
+    expect(severity.selectedOptions[0].textContent).toContain('Default: info');
+    const emitted = vi.fn();
+    fixture.componentInstance.valueChange.subscribe(emitted);
+    fixture.componentInstance.updateGap(0, 'summary', 'Confirm CRM retry owner.');
+    expect(emitted).toHaveBeenCalledWith([{
+      id: 'crm-owner', summary: 'Confirm CRM retry owner.', description: 'CRM source evidence.'
+    }]);
+
+    fixture.componentRef.setInput('value', [{
+      id: 'crm-old-text', question: 'Retired alias.', description: 'Additional CRM context.'
+    }]);
+    fixture.detectChanges();
+    expect(summary.value).toBe('');
+    expect((fixture.nativeElement.querySelector('#gap-description-0') as HTMLTextAreaElement).value)
+      .toBe('Additional CRM context.');
+  });
+
   const adapter = new OperationalContextFormAdapter();
 
   it('keeps the CRM signal strength help explicit about GitLab scope selection', async () => {

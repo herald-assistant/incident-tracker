@@ -19,6 +19,6 @@ handoffRules:
 gaps:
 - id: confirm-integration-ownership-boundary
   type: ownership-boundary
-  severity: medium
+  severity: warning
   status: open
-  description: Confirm ownership boundary evidence for the anonymized CRM notification boundary.
+  summary: Confirm ownership boundary evidence for the anonymized CRM notification boundary.

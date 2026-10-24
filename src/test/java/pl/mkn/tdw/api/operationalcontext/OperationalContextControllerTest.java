@@ -6,6 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.ExplainableAggregateDto;
+import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OpenQuestionDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextCodeSearchScopeRowDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityDetailDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextEntityRelationsReadModelDto;
@@ -34,6 +35,29 @@ class OperationalContextControllerTest {
 
     @MockitoBean
     private OperationalContextViewService viewService;
+
+    @Test
+    void shouldDefaultToOpenQuestionsAndAllowExplicitLifecycleReads() throws Exception {
+        var question = new OpenQuestionDto(
+                "crm-owner", "systems.yml", "system", "crm-customer-api", "Confirm CRM owner.",
+                "info", "open", "/systems/0/gaps/0");
+        when(viewService.openQuestions("open")).thenReturn(List.of(question));
+        when(viewService.openQuestions("resolved")).thenReturn(List.of());
+        when(viewService.openQuestions("all")).thenReturn(List.of(question));
+        when(viewService.openQuestions("invalid")).thenThrow(new OperationalContextQuestionStatusException());
+
+        mockMvc.perform(get("/api/operational-context/open-questions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("crm-owner"))
+                .andExpect(jsonPath("$[0].sourcePath").value("/systems/0/gaps/0"));
+        mockMvc.perform(get("/api/operational-context/open-questions").param("status", "resolved"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/operational-context/open-questions").param("status", "all"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(get("/api/operational-context/open-questions").param("status", "invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OPERATIONAL_CONTEXT_INVALID_QUESTION_STATUS"));
+    }
 
     @Test
     void shouldExposeSummaryEndpoint() throws Exception {

@@ -70,6 +70,8 @@ public class OperationalContextToolMapper {
                                 true
                         ))
                         .toList(),
+                catalog.openQuestions().stream().filter(OperationalContextOpenQuestion::active)
+                        .filter(OperationalContextOpenQuestion::global).map(this::openQuestion).toList(),
                 scopeAffordances()
         );
     }
@@ -675,6 +677,7 @@ public class OperationalContextToolMapper {
         var facets = facets(
                 "category", List.of(term.category()),
                 "canonicalReferences", term.canonicalReferences(),
+                "relatedTerms", term.relatedTerms(),
                 "synonyms", term.synonyms(),
                 "matchSignals", term.matchSignals()
         );
@@ -696,14 +699,14 @@ public class OperationalContextToolMapper {
                         "doNotConfuseWith", term.doNotConfuseWith(),
                         "notes", term.notes()
                 ),
-                values("canonicalReferences", term.canonicalReferences()),
+                values("canonicalReferences", term.canonicalReferences(), "relatedTerms", term.relatedTerms()),
                 values("matchSignals", term.matchSignals(), "synonyms", term.synonyms()),
                 Map.of(),
                 Map.of(),
                 values("sourceRefs", List.of("glossary.yml#" + term.id())),
                 openQuestionsFor(openQuestions, TYPE_GLOSSARY_TERM, term.id()),
                 List.of("glossary.yml#" + term.id()),
-                join(term.matchSignals(), join(term.canonicalReferences(), term.synonyms()))
+                join(term.matchSignals(), join(term.referenceValues(), term.synonyms()))
         );
     }
 
@@ -1232,16 +1235,16 @@ public class OperationalContextToolMapper {
         var normalizedType = normalize(type);
         var normalizedId = normalize(id);
         return safeList(openQuestions).stream()
+                .filter(OperationalContextOpenQuestion::active)
                 .filter(question -> matchesOpenQuestionType(question.entityType(), normalizedType))
-                .filter(question -> !StringUtils.hasText(question.entityId()) || normalize(question.entityId()).equals(normalizedId))
-                .map(question -> new OpctxOpenQuestion(
-                        question.id(),
-                        question.sourceFile(),
-                        question.question(),
-                        question.severity(),
-                        question.status()
-                ))
+                .filter(question -> !question.global() && normalize(question.entityId()).equals(normalizedId))
+                .map(this::openQuestion)
                 .toList();
+    }
+
+    private OpctxOpenQuestion openQuestion(OperationalContextOpenQuestion question) {
+        return new OpctxOpenQuestion(question.id(), question.sourceFile(), question.question(),
+                question.severity(), question.status(), question.sourcePath());
     }
 
     private boolean matchesOpenQuestionType(String candidateType, String normalizedType) {

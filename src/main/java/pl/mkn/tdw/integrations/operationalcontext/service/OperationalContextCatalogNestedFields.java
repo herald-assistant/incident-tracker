@@ -26,7 +26,7 @@ final class OperationalContextCatalogNestedFields {
             "status", "scannedSources", "expectedSources", "limitations"
     );
     private static final Shape GAPS = array(object(
-            "id", "type", "summary", "question", "description", "impact", "severity", "status", "suggestedNextSources"
+            "id", "type", "summary", "description", "severity", "status", "suggestedNextSources"
     ));
     private static final Shape SIGNALS = new Shape(Set.of(), Map.of(), null, true);
     private static final Shape EVIDENCE = array(object("sourceRef", "evidenceType", "note"));

@@ -84,8 +84,10 @@ export class OperationalContextApiService {
     );
   }
 
-  getOpenQuestions(): Observable<OpenQuestionDto[]> {
-    return this.http.get<OpenQuestionDto[]>(`${this.baseUrl}/open-questions`);
+  getOpenQuestions(status: 'open' | 'resolved' | 'all' = 'open'): Observable<OpenQuestionDto[]> {
+    return this.http.get<OpenQuestionDto[]>(`${this.baseUrl}/open-questions`, {
+      params: new HttpParams().set('status', status)
+    });
   }
 
   getValidation(): Observable<ValidationFindingDto[]> {

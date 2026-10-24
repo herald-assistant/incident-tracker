@@ -12,13 +12,13 @@ describe('ContextEntityDrawerComponent', () => {
       target: { type: 'system', id: 'crm-contact-service', label: 'CRM Contact Service' },
       relationType: 'related-via-integration', direction: 'incoming', indirect: true,
       via: [{ type: 'integration', id: 'crm-contact-events', label: 'CRM Contact Events' }],
-      path: [], reason: 'Odczytaj system uczestnicz¹cy w integracji; udzia³ nie potwierdza ownershipu.',
+      path: [], reason: 'Odczytaj system uczestniczï¿½cy w integracji; udziaï¿½ nie potwierdza ownershipu.',
       sourceRefs: [{ file: 'integrations.yml', entityType: 'integration', entityId: 'crm-contact-events', fieldPath: '$.integrations' }]
     }] });
     const opened = vi.fn();
     fixture.componentInstance.openRelatedEntity.subscribe(opened);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Powi¹zanie poœrednie');
+    expect(fixture.nativeElement.textContent).toContain('Powiï¿½zanie poï¿½rednie');
     expect(fixture.nativeElement.textContent).toContain('integrations.yml');
     (fixture.nativeElement.querySelector('.text-button') as HTMLButtonElement).click();
     expect(opened).toHaveBeenCalledWith({ type: 'system', id: 'crm-contact-service' });
@@ -75,7 +75,7 @@ describe('ContextEntityDrawerComponent', () => {
       suggestedFix: 'Set owner', impact: 'Unknown handoff'
     };
     const question = {
-      id: 'owner-question', sourceFile: 'systems.yml', entityType: 'system', entityId: 'crm-contact-service',
+      id: 'owner-question', sourceFile: 'systems.yml', sourcePath: '/systems/0/gaps/0', entityType: 'system', entityId: 'crm-contact-service',
       question: 'Who owns it?', severity: 'warning', status: 'open'
     };
     fixture.componentRef.setInput('detail', { ...entityDetail(), validationFindings: [finding], openQuestions: [question] });

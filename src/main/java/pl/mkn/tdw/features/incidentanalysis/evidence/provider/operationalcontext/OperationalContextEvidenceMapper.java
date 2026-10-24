@@ -259,7 +259,7 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TERM_ID, term.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_DEFINITION, term.definition());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCH_SIGNALS, joined(limit(term.matchSignals(), 4)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CANONICAL_REFERENCES, joined(limit(term.canonicalReferences(), 4)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CANONICAL_REFERENCES, joined(limit(term.referenceValues(), 4)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational glossary term " + term.id(),

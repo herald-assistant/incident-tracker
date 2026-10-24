@@ -2,6 +2,7 @@ package pl.mkn.tdw.integrations.operationalcontext.adapter.local;
 
 import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextProperties;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalMutationCommand;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalBatchCommand;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogEntityType;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationCommand;
@@ -34,6 +35,87 @@ class OperationalContextCatalogMaintenanceServiceTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void shouldRejectNonCanonicalGapCardsWithoutPublishing() {
+        try (var harness = harness("crm-invalid-gaps")) {
+            var digest = harness.digest();
+            var invalidCards = List.of(
+                    map("summary", "Confirm CRM owner."),
+                    map("id", "crm-owner", "summary", "Confirm CRM owner.", "severity", "medium"),
+                    map("id", "crm-owner", "summary", "Confirm CRM owner.", "status", "closed"),
+                    map("id", "crm-owner", "question", "Confirm CRM owner."),
+                    map("id", "crm-owner", "description", "Confirm CRM owner.")
+            );
+            for (var gap : invalidCards) {
+                var payload = new LinkedHashMap<>(harness.service().writablePayloadForUpdate("system", "crm-target-system"));
+                payload.put("gaps", List.of(gap));
+                var error = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                        () -> harness.service().update(new OperationalContextCatalogMutationCommand(
+                                "system", "crm-target-system", payload)));
+                assertTrue(error.fieldErrors().stream().anyMatch(field -> field.pointer().startsWith("/payload/gaps/0/")));
+                assertEquals(digest, harness.digest());
+            }
+        }
+    }
+
+    @Test
+    void shouldRejectDuplicateGapIdsInCompleteBatchPreviewAndCommit() {
+        try (var harness = harness("crm-duplicate-gaps")) {
+            var gap = List.of(map("id", "crm-owner", "summary", "Confirm CRM owner."));
+            var digest = harness.digest();
+            var mutations = List.of("crm-source-system", "crm-target-system").stream()
+                    .map(id -> new OperationalContextCatalogConditionalBatchCommand.Mutation(
+                            "system", id, UPDATE, List.of(change("gaps", null, gap)))).toList();
+            var command = new OperationalContextCatalogConditionalBatchCommand(
+                    digest, mutations);
+
+            var preview = harness.service().previewAcceptedBatch(command);
+            assertFalse(preview.valid());
+            assertTrue(preview.violations().stream().anyMatch(violation ->
+                    violation.ruleCode().equals("DUPLICATE_GAP_ID") && violation.fieldPath().endsWith("/gaps/0")));
+            assertEquals(digest, harness.digest());
+            var error = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().applyAcceptedBatch(command));
+            assertTrue(error.fieldErrors().stream().anyMatch(field -> field.pointer().contains("/gaps/0")));
+            assertEquals(digest, harness.digest());
+        }
+    }
+
+    @Test
+    void shouldRejectUnregisteredStructuralGapSignals() {
+        try (var harness = harness("crm-unregistered-gaps")) {
+            var digest = harness.digest();
+            var payload = new LinkedHashMap<>(harness.service().writablePayloadForUpdate("system", "crm-target-system"));
+            payload.put("matchSignals", map("strong", map("unresolvedGlossaryReferences", List.of("crm-contact-state"))));
+            var error = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().update(new OperationalContextCatalogMutationCommand(
+                            "system", "crm-target-system", payload)));
+            assertTrue(error.fieldErrors().stream().anyMatch(field ->
+                    field.pointer().equals("/payload/matchSignals/strong/unresolvedGlossaryReferences")));
+            assertEquals(digest, harness.digest());
+        }
+    }
+
+    @Test
+    void shouldRetainStableIdentityAcrossResolveAndAllowRemovingResolvedGap() {
+        try (var harness = harness("crm-gap-lifecycle")) {
+            for (var status : List.of("open", "resolved")) {
+                var payload = new LinkedHashMap<>(harness.service().writablePayloadForUpdate("system", "crm-target-system"));
+                payload.put("gaps", List.of(map("id", "crm-owner", "summary", "Confirm CRM owner.", "status", status)));
+                harness.service().update(new OperationalContextCatalogMutationCommand("system", "crm-target-system", payload));
+                var questions = harness.snapshotStore().currentStoredSnapshot().readSnapshot().catalog().openQuestions();
+                assertEquals(1, questions.size());
+                assertEquals("crm-owner", questions.get(0).id());
+                assertEquals(status.equals("open"), questions.get(0).active());
+                assertEquals("info", questions.get(0).severity());
+            }
+            var payload = new LinkedHashMap<>(harness.service().writablePayloadForUpdate("system", "crm-target-system"));
+            payload.remove("gaps");
+            harness.service().update(new OperationalContextCatalogMutationCommand("system", "crm-target-system", payload));
+            assertTrue(harness.snapshotStore().currentStoredSnapshot().readSnapshot().catalog().openQuestions().isEmpty());
+        }
+    }
 
     @Test
     void shouldRejectStaleCreateDigestWithoutChangingYaml() throws Exception {

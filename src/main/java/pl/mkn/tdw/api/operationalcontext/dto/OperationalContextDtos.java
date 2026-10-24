@@ -90,7 +90,8 @@ public final class OperationalContextDtos {
             String entityId,
             String question,
             String severity,
-            String status
+            String status,
+            String sourcePath
     ) {
     }
 

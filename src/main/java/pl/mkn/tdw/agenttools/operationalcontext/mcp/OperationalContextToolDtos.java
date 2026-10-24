@@ -13,10 +13,12 @@ public final class OperationalContextToolDtos {
     public record OpctxScopeResult(
             boolean enabled,
             List<OpctxEntityTypeSummary> entityTypes,
+            List<OpctxOpenQuestion> globalOpenQuestions,
             OpctxToolAffordances affordances
     ) {
         public OpctxScopeResult {
             entityTypes = entityTypes != null ? List.copyOf(entityTypes) : List.of();
+            globalOpenQuestions = List.copyOf(globalOpenQuestions);
             affordances = affordances != null ? affordances : OpctxToolAffordances.defaultProfile();
         }
     }
@@ -232,7 +234,8 @@ public final class OperationalContextToolDtos {
             String sourceFile,
             String question,
             String severity,
-            String status
+            String status,
+            String sourcePath
     ) {
     }
 }

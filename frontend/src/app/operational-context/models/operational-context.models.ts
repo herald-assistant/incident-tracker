@@ -83,11 +83,12 @@ export interface ValidationFindingDto {
 export interface OpenQuestionDto {
   id: string;
   sourceFile: string;
+  sourcePath: string;
   entityType: string;
   entityId: string | null;
   question: string;
-  severity: 'info' | 'warning' | 'error' | string;
-  status: string;
+  severity: 'info' | 'warning' | 'error';
+  status: 'open' | 'resolved';
 }
 
 export interface OperationalContextSummaryDto {

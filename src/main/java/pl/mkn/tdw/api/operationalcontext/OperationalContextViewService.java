@@ -56,6 +56,7 @@ import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDto
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextQuery;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityKey;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.EntityRef;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.SourceRef;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndexPort;
@@ -115,6 +116,7 @@ public class OperationalContextViewService {
     public OperationalContextSummaryDto summary() {
         var view = view();
         var validationCounts = validationCounts(view.validationFindings());
+        var openQuestionCount = (int) view.openQuestions().stream().filter(question -> "open".equals(question.status())).count();
         var healthCards = List.of(
                 countCard("Systems", view.catalog().systems().size(), SYSTEM),
                 countCard("Repositories", view.catalog().repositories().size(), REPOSITORY),
@@ -123,7 +125,7 @@ public class OperationalContextViewService {
                 countCard("Integrations", view.catalog().integrations().size(), INTEGRATION),
                 countCard("Bounded contexts", view.catalog().boundedContexts().size(), BOUNDED_CONTEXT),
                 countCard("Teams", view.catalog().teams().size(), TEAM),
-                countCard("Open questions", view.openQuestions().size(), "open-question"),
+                countCard("Open questions", openQuestionCount, "open-question"),
                 validationCard(view.validationFindings())
         );
         return new OperationalContextSummaryDto(
@@ -136,7 +138,7 @@ public class OperationalContextViewService {
                 view.catalog().teams().size(),
                 view.catalog().glossaryTerms().size(),
                 view.catalog().handoffRules().size(),
-                view.openQuestions().size(),
+                openQuestionCount,
                 validationCounts,
                 catalogStatus(validationCounts),
                 healthCards
@@ -193,7 +195,7 @@ public class OperationalContextViewService {
                         term.category(),
                         term.definition(),
                         valueAggregate("Recognition signals", GLOSSARY_TERM, term.id(), term.matchSignals(), "Signals listed on glossary term.", "signal"),
-                        valueAggregate("Canonical references", GLOSSARY_TERM, term.id(), term.canonicalReferences(), "Canonical references listed on glossary term.", "reference")
+                        valueAggregate("Canonical references", GLOSSARY_TERM, term.id(), term.referenceValues(), "Canonical and related-term references listed on glossary term.", "reference")
                 ))
                 .toList();
     }
@@ -210,8 +212,13 @@ public class OperationalContextViewService {
                 .toList();
     }
 
-    public List<OpenQuestionDto> openQuestions() {
-        return view().openQuestions();
+    public List<OpenQuestionDto> openQuestions(String status) {
+        if (!List.of("open", "resolved", "all").contains(status)) {
+            throw new OperationalContextQuestionStatusException();
+        }
+        return view().openQuestions().stream()
+                .filter(question -> status.equals("all") || question.status().equals(status))
+                .toList();
     }
 
     public List<ValidationFindingDto> validation() {
@@ -633,7 +640,7 @@ public class OperationalContextViewService {
                         "synonyms", term.synonyms(),
                         "notes", term.notes()
                 ))),
-                List.of(group("Canonical references", GLOSSARY_TERM, term.canonicalReferences(), "Glossary canonical reference.")),
+                List.of(group("Canonical references", GLOSSARY_TERM, term.referenceValues(), "Glossary canonical or related-term reference.")),
                 List.of(group("Recognition signals", "signal", term.matchSignals(), "Glossary recognition signal.")),
                 explainability(GLOSSARY_TERM, term.id(), "Glossary term from " + sourceFile(GLOSSARY_TERM) + "."),
                 validationFor(GLOSSARY_TERM, term.id(), view.validationFindings()),
@@ -724,8 +731,9 @@ public class OperationalContextViewService {
                 normalizeType(question.entityType()),
                 question.entityId(),
                 question.question(),
-                normalizeSeverity(question.severity()),
-                StringUtils.hasText(question.status()) ? question.status() : "open"
+                question.severity(),
+                question.status(),
+                question.sourcePath()
         );
     }
 
@@ -1488,20 +1496,18 @@ public class OperationalContextViewService {
     }
 
     private void requireReadModelEntity(CatalogView view, String type, String id) {
-        switch (normalizeReadModelType(type)) {
-            case SYSTEM -> require(view.systemsById(), SYSTEM, id);
-            case REPOSITORY -> require(view.repositoriesById(), REPOSITORY, id);
-            case CODE_SEARCH_SCOPE -> requireScope(view, id);
-            case PROCESS -> require(view.processesById(), PROCESS, id);
-            case INTEGRATION -> require(view.integrationsById(), INTEGRATION, id);
-            case BOUNDED_CONTEXT -> require(view.contextsById(), BOUNDED_CONTEXT, id);
-            case TEAM -> require(view.teamsById(), TEAM, id);
-            default -> throw new OperationalContextEntityNotFoundException(type, id);
+        var normalizedType = normalizeType(type);
+        var indexType = GLOSSARY_TERM.equals(normalizedType) ? "term" : normalizedType;
+        if (!SOURCE_FILES.containsKey(normalizedType)
+                || !view.relationIndex().entities().containsKey(
+                        new EntityKey(indexType, id))) {
+            throw new OperationalContextEntityNotFoundException(type, id);
         }
     }
 
     private String normalizeReadModelType(String type) {
-        return normalizeType(type);
+        var normalized = normalizeType(type);
+        return GLOSSARY_TERM.equals(normalized) ? "term" : normalized;
     }
 
     private String normalizeType(String type) {
@@ -1580,7 +1586,8 @@ public class OperationalContextViewService {
         var normalizedId = normalize(id);
         return questions.stream()
                 .filter(question -> normalizeType(question.entityType()).equals(normalizedType))
-                .filter(question -> !StringUtils.hasText(question.entityId()) || normalize(question.entityId()).equals(normalizedId))
+                .filter(question -> "open".equals(question.status()))
+                .filter(question -> StringUtils.hasText(question.entityId()) && normalize(question.entityId()).equals(normalizedId))
                 .toList();
     }
 

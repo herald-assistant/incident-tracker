@@ -207,6 +207,7 @@ class OperationalContextReadModelValidatorTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         List.of()
                 )),
                 List.of(),

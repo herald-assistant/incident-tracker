@@ -76,7 +76,8 @@ public final class OperationalContextDtos {
             List<OperationalContextBoundedContext> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
             List<OperationalContextHandoffRule> handoffRules,
-            List<OperationalContextOpenQuestion> openQuestions
+            List<OperationalContextOpenQuestion> openQuestions,
+            List<OperationalContextRelationIndex.ValidationFinding> sourceFindings
     ) {
 
         public OperationalContextCatalog {
@@ -90,10 +91,12 @@ public final class OperationalContextDtos {
             glossaryTerms = copyList(glossaryTerms);
             handoffRules = copyList(handoffRules);
             openQuestions = copyList(openQuestions);
+            sourceFindings = copyList(sourceFindings);
         }
 
         public static OperationalContextCatalog empty() {
             return new OperationalContextCatalog(
+                    List.of(),
                     List.of(),
                     List.of(),
                     List.of(),
@@ -883,6 +886,7 @@ public final class OperationalContextDtos {
             List<String> doNotConfuseWith,
             List<String> matchSignals,
             List<String> canonicalReferences,
+            List<String> relatedTerms,
             List<String> synonyms,
             List<String> notes
     ) {
@@ -892,8 +896,13 @@ public final class OperationalContextDtos {
             doNotConfuseWith = copyList(doNotConfuseWith);
             matchSignals = copyList(matchSignals);
             canonicalReferences = copyList(canonicalReferences);
+            relatedTerms = copyList(relatedTerms);
             synonyms = copyList(synonyms);
             notes = copyList(notes);
+        }
+
+        public List<String> referenceValues() {
+            return java.util.stream.Stream.concat(canonicalReferences.stream(), relatedTerms.stream()).distinct().toList();
         }
     }
 
@@ -946,8 +955,24 @@ public final class OperationalContextDtos {
             String entityId,
             String question,
             String severity,
-            String status
+            String status,
+            String sourcePath
     ) {
+        public OperationalContextOpenQuestion {
+            if (!StringUtils.hasText(sourceFile) || !StringUtils.hasText(sourcePath)) {
+                throw new IllegalArgumentException("Open question requires a source file and source path");
+            }
+            severity = severity != null ? severity : "info";
+            status = status != null ? status : "open";
+        }
+
+        public boolean active() {
+            return "open".equals(status);
+        }
+
+        public boolean global() {
+            return !StringUtils.hasText(entityId);
+        }
     }
 
     public static OperationalContextCatalog catalogFromRaw(
@@ -972,7 +997,8 @@ public final class OperationalContextDtos {
                 copyList(boundedContexts).stream().map(OperationalContextDtos::boundedContext).toList(),
                 glossaryTerms,
                 handoffRules,
-                openQuestions
+                openQuestions,
+                List.of()
         );
     }
 
@@ -1165,9 +1191,6 @@ public final class OperationalContextDtos {
     }
 
     public static OperationalContextGlossaryTerm glossaryTerm(Map<String, Object> source) {
-        var canonicalReferences = new ArrayList<String>();
-        canonicalReferences.addAll(textList(source, "canonicalReferences"));
-        canonicalReferences.addAll(textList(source, "relatedTerms"));
         var notes = new ArrayList<String>();
         addLabelled(notes, "Use For", textList(source, "useFor"));
         addLabelled(notes, "Lifecycle Status", textList(source, "lifecycleStatus"));
@@ -1182,7 +1205,8 @@ public final class OperationalContextDtos {
                 textList(source, "localMeaningAndBoundaries"),
                 textList(source, "doNotConfuseWith"),
                 matchSignals(source.get("matchSignals")).allValues(),
-                List.copyOf(new java.util.LinkedHashSet<>(canonicalReferences)),
+                textList(source, "canonicalReferences"),
+                textList(source, "relatedTerms"),
                 textList(source, "aliases"),
                 List.copyOf(new java.util.LinkedHashSet<>(notes))
         );

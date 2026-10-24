@@ -23,6 +23,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OperationalContextMcpToolsTest {
 
+    @Test
+    void shouldExposeGlobalOpenQuestionsOnlyInScopeAndActiveLocalQuestionsOnlyOnTheirEntity() {
+        var catalog = OperationalContextDtos.catalogFromRaw(
+                List.of(), List.of(), List.of(map("id", "crm-customer-api"), map("id", "crm-support-api")),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(
+                        new OperationalContextOpenQuestion("crm-global", "systems.yml", "system", null,
+                                "Confirm CRM coverage.", "info", "open", "/gaps/0"),
+                        new OperationalContextOpenQuestion("crm-local", "systems.yml", "system", "crm-customer-api",
+                                "Confirm CRM owner.", "warning", "open", "/systems/0/gaps/0"),
+                        new OperationalContextOpenQuestion("crm-resolved", "systems.yml", "system", "crm-customer-api",
+                                "Confirm CRM retry source.", "error", "resolved", "/systems/0/gaps/1")
+                ));
+        var mapper = new OperationalContextToolMapper(OperationalContextNavigationTestCreator.navigation(),
+                new OperationalContextOwnershipResolver(), OperationalContextNavigationTestCreator.search(),
+                OperationalContextNavigationTestCreator.codeSearch());
+
+        var scope = mapper.getScope(catalog);
+        assertEquals(List.of("crm-global"), scope.globalOpenQuestions().stream().map(item -> item.id()).toList());
+        assertEquals("/gaps/0", scope.globalOpenQuestions().get(0).sourcePath());
+        var detail = mapper.getEntity(catalog, "system", "crm-customer-api", null);
+        assertEquals(List.of("crm-local"), detail.openQuestions().stream().map(item -> item.id()).toList());
+        assertEquals("/systems/0/gaps/0", detail.openQuestions().get(0).sourcePath());
+        assertTrue(mapper.getEntity(catalog, "system", "crm-support-api", null).openQuestions().isEmpty());
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final OperationalContextMcpTools tools = new OperationalContextMcpTools(
             ignored -> catalog(),
@@ -286,13 +312,15 @@ class OperationalContextMcpToolsTest {
         var glossaryTerm = tools.getEntity(
                 "glossaryTerm",
                 "authorization",
-                List.of("overview", "signals"),
+                List.of("overview", "relations", "signals"),
                 "Sprawdzam termin slownikowy.",
                 null
         );
         assertEquals("Authorization", glossaryTerm.label());
         assertTrue(glossaryTerm.overview().get("definition").toString().contains("notification delivery"));
         assertTrue(glossaryTerm.signals().containsKey("synonyms"));
+        assertEquals(List.of("system:notifications"), glossaryTerm.relations().get("canonicalReferences"));
+        assertEquals(List.of("notification-status"), glossaryTerm.relations().get("relatedTerms"));
 
         var codeSearchScope = tools.getEntity(
                 "codeSearchScope",
@@ -586,7 +614,8 @@ class OperationalContextMcpToolsTest {
                 List.of("customer-notification"),
                 List.of("authentication"),
                 List.of("authorization", "notification delivery"),
-                List.of("notifications"),
+                List.of("system:notifications"),
+                List.of("notification-status"),
                 List.of("authz"),
                 List.of()
         );
@@ -612,7 +641,8 @@ class OperationalContextMcpToolsTest {
                 "notifications",
                 "Confirm fallback owner for provider outages.",
                 "warning",
-                "open"
+                "open",
+                "/systems/0/gaps/0"
         );
     }
 

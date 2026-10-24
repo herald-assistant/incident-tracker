@@ -28,8 +28,8 @@ boundedContexts:
 gaps:
   - id: confirm-crm-contact-context-boundary
     type: human-confirmation-required
-    severity: medium
+    severity: warning
     status: open
     entityType: bounded-context
     entityId: crm-contact-context
-    description: Confirm whether CRM Contact Context should include shared CRM contact rules.
+    summary: Confirm whether CRM Contact Context should include shared CRM contact rules.

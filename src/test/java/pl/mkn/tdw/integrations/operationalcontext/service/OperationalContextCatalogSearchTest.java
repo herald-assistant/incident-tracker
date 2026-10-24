@@ -33,9 +33,9 @@ class OperationalContextCatalogSearchTest {
     @Test
     void shouldFindPolishCatalogTermWithoutDiacritics() {
         var term = new OperationalContextGlossaryTerm("customer-request", "Żądanie klienta", null,
-                "Prośba o zmianę danych klienta.", List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+                "Prośba o zmianę danych klienta.", List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
         var catalog = new OperationalContextCatalog(List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(term), List.of(), List.of());
+                List.of(), List.of(), List.of(term), List.of(), List.of(), List.of());
 
         var match = OperationalContextNavigationTestCreator.search().find(catalog, "zadanie klienta").get(0);
 

@@ -352,7 +352,7 @@
               <span>Status</span>
               <select [formControl]="questionStatusControl">
                 <option value="">All statuses</option>
-                @for (status of questionStatusOptions(); track status) {
+                @for (status of questionStatusOptions; track status) {
                   <option [value]="status">{{ status }}</option>
                 }
               </select>
@@ -360,9 +360,9 @@
           </div>
           <div class="maintenance-inbox" aria-label="Open questions inbox">
             @if (!openQuestionRows().length) {
-              <div class="catalog-table__empty">No open questions.</div>
+              <div class="catalog-table__empty">No questions matching the selected filters.</div>
             } @else {
-              @for (question of openQuestionRows(); track question.id) {
+              @for (question of openQuestionRows(); track questionKey(question)) {
                 <article class="maintenance-card maintenance-card--question">
                   <div class="maintenance-card__main">
                     <span [class]="validationStatusClass(question.severity)">{{ question.severity }}</span>
@@ -377,8 +377,8 @@
                   <div class="maintenance-card__body maintenance-card__body--compact">
                     <section class="maintenance-target">
                       <span>Source</span>
-                      <strong>{{ question.sourceFile || 'unknown source' }}</strong>
-                      <small>{{ openQuestionEntityLabel(question) }}</small>
+                      <strong>{{ question.sourceFile }} {{ question.sourcePath }}</strong>
+                      <small>{{ question.id }} · {{ openQuestionEntityLabel(question) }}</small>
                     </section>
                     <section>
                       <span>Status</span>
@@ -391,19 +391,19 @@
                       type="button"
                       class="icon-action"
                       [attr.aria-label]="'Copy maintenance target for ' + question.id"
-                      (click)="copyMaintenanceTarget($event, openQuestionMaintenanceTarget(question), 'question:' + question.id)"
+                      (click)="copyMaintenanceTarget($event, openQuestionMaintenanceTarget(question), questionKey(question))"
                     >
                       <mat-icon fontSet="material-symbols-outlined">
-                        {{ copiedMaintenanceTarget() === 'question:' + question.id ? 'task_alt' : 'content_copy' }}
+                        {{ copiedMaintenanceTarget() === questionKey(question) ? 'task_alt' : 'content_copy' }}
                       </mat-icon>
                     </button>
                     @if (canEditSource(question.entityType, question.entityId)) {
                       <button type="button" class="secondary-button secondary-button--compact" (click)="editSource(question.entityType, question.entityId)">Edit source</button>
                     }
-                    @if (canAssistSource(question.entityType, question.entityId)) {
+                    @if (question.status === 'open' && canAssistSource(question.entityType, question.entityId)) {
                       <button type="button" class="secondary-button secondary-button--compact" (click)="assistOpenQuestion(question)">Pomóż rozwiązać</button>
                     } @else if (!question.entityId) {
-                      <small>Wskaż encję, aby skorzystać z asysty AI.</small>
+                      <small>Pytanie globalne katalogu; nie jest przypisane do pojedynczej encji.</small>
                     }
                     @if (question.entityId) {
                       <button

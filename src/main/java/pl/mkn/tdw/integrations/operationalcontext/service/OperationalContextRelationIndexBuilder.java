@@ -204,8 +204,11 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
     private void extractGlossaryRelations(BuildState state, List<OperationalContextGlossaryTerm> terms) {
         for (var term : terms) {
             var source = new EntityKey(TERM, term.id());
-            for (var reference : safeTextList(term.canonicalReferences())) {
-                glossaryReference(state, source, reference, term.id());
+            for (int index = 0; index < term.canonicalReferences().size(); index++) {
+                glossaryReference(state, source, term.canonicalReferences().get(index), term.id(), "canonicalReferences", index);
+            }
+            for (int index = 0; index < term.relatedTerms().size(); index++) {
+                glossaryReference(state, source, term.relatedTerms().get(index), term.id(), "relatedTerms", index);
             }
         }
     }
@@ -230,9 +233,16 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
             BuildState state,
             EntityKey source,
             String reference,
-            String termId
+            String termId,
+            String field,
+            int index
     ) {
-        if (isNone(reference)) {
+        var relationType = field.equals("relatedTerms") ? "related-term" : "canonical-reference";
+        var ref = sourceRef("glossary.yml", TERM, termId,
+                "$.terms[id=" + termId + "]." + field + "[" + index + "]", relationType);
+        if (!StringUtils.hasText(reference)) {
+            state.findings.add(new ValidationFinding("error", "INVALID_RELATION_TARGET",
+                    "Glossary reference must identify a target.", List.of(ref)));
             return;
         }
 
@@ -241,36 +251,32 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
             relation(
                     state,
                     source,
-                    "canonical-reference",
+                    relationType,
                     new EntityKey(typedReference.type(), typedReference.id()),
                     null,
                     source,
                     true,
                     false,
-                    "direct-markdown",
+                    "direct-yaml",
                     "medium",
-                    sourceRef("glossary.yml", TERM, termId, "$.terms[id=" + termId + "].canonicalReferences", "canonical-reference")
+                    ref
             );
             return;
         }
 
         var termReference = new EntityKey(TERM, reference);
-        if (!state.entities.containsKey(termReference)) {
-            return;
-        }
-
         relation(
                 state,
                 source,
-                "canonical-reference",
+                relationType,
                 termReference,
                 null,
                 source,
                 true,
                 false,
-                "direct-markdown",
+                "direct-yaml",
                 "medium",
-                sourceRef("glossary.yml", TERM, termId, "$.terms[id=" + termId + "].canonicalReferences", "canonical-reference")
+                ref
         );
     }
 
@@ -431,9 +437,6 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
         var supportingDerivation = file.endsWith(".md") ? "supporting-markdown-reference" : "supporting-yaml-reference";
         for (var targetId : safeTextList(targetIds)) {
             var target = new EntityKey(TERM, targetId);
-            if (!state.entities.containsKey(target)) {
-                continue;
-            }
             relation(
                     state,
                     source,
@@ -605,9 +608,6 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
     ) {
         for (var targetId : safeTextList(targetIds)) {
             var target = new EntityKey(targetType, targetId);
-            if (TERM.equals(targetType) && !state.entities.containsKey(target)) {
-                continue;
-            }
             if (!derivedTargets.add(relationType + "|" + targetType + "|" + targetId)) {
                 continue;
             }
@@ -867,12 +867,6 @@ public class OperationalContextRelationIndexBuilder implements OperationalContex
             case "handoff-rule" -> HANDOFF_RULE;
             default -> null;
         };
-    }
-
-    private boolean isNone(String value) {
-        return !StringUtils.hasText(value)
-                || "none".equalsIgnoreCase(value.trim())
-                || "null".equalsIgnoreCase(value.trim());
     }
 
     private String relationKey(

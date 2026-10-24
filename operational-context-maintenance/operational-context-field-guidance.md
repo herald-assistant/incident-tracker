@@ -273,17 +273,33 @@ they are not fields of a glossary term, rule or another entity. For other entity
 types, use an accepted descriptive field or draft `visibilityLimits`. Never
 invent a glossary definition or redirect a missing ID to a similar name.
 
-The UI writes a list of cards. Every card requires an actionable `summary`.
-Optional `id` uses lowercase kebab-case and is unique inside the entry; it is a
-maintenance identifier, not a catalogue entity. Optional `type` describes the
+The UI writes a list of cards. Every card requires an actionable `summary`
+and a stable lowercase kebab-case `id`, unique across all nine documents,
+including resolved gaps. Editing or reordering a question does not change its
+ID; splitting it requires separate IDs. It is a maintenance identifier, not a
+catalogue entity. `description` is optional additional context, never a fallback
+for `summary`. `question`, `impact` and alternate target fields are not accepted.
+Optional `type` describes the
 kind of missing knowledge. `severity` is `error`, `warning` or `info`, while
-`status` is `open` or `resolved`. `suggestedNextSources` lists useful evidence
+`status` is `open` or `resolved`. Missing severity defaults to `info`; missing
+status defaults to `open`. Importance is never inferred from wording. Other
+severity/status values are validation errors. `suggestedNextSources` lists useful evidence
 to inspect but does not fetch or trust it automatically.
 
-The codec turns every actionable card into an Open Questions inbox item and
-`opctx_get_entity` returns it to AI. A gap constrains conclusions; it is never
-evidence that a production defect exists. Each item must use the documented
-card shape.
+Only valid cards become question records. Invalid structures produce explicit
+validation findings with their original file and JSON Pointer. `gaps` is the
+only question registry: prose is not interpreted as questions, and structural
+`unresolvedGlossaryReferences` fields require cleanup rather than automatic
+conversion into questions. Unknown references are errors, not free-text hints.
+
+Counters, default reads and entity AI tools include only `open` questions.
+Resolved questions remain available explicitly; removing a resolved card is
+also valid. Entity cards inherit their parent and cannot override their target.
+Root document cards without a target are global catalog questions, exposed by
+`opctx_get_scope`, not copied onto each entity. Root cards can instead target
+exactly one existing entity using canonical `entityType` and `entityId` together.
+`opctx_get_entity` exposes only active local questions for that exact entity.
+A gap constrains conclusions; it is never evidence of a production defect.
 
 ```json
 [

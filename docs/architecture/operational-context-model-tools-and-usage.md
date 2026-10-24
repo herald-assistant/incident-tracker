@@ -1031,6 +1031,53 @@ jednoznacznego, writable i wspieranego targetu. UI nie utrzymuje
 kompatybilnosci ze starym payloadem i nie renderuje technicznych read modeli
 usunietych z backendu.
 
+### Kanoniczny rejestr Open Questions
+
+Jedynym rejestrem jest `gaps` w dziewieciu aktywnych dokumentach. Kazdy wpis
+wymaga stabilnego `id` w lowercase kebab-case, unikalnego w calym katalogu
+(takze wsrod resolved), oraz `summary` jako jedynej tresci pytania. Opcjonalne
+`description` jest dodatkowym kontekstem, nie fallbackiem. Kolejnosc i redakcja
+nie zmieniaja ID; rozdzielenie pytania wymaga nowych ID. Nie ma generatora
+slugow, parserowych aliasow `question`/`impact` ani wnioskowania z prose.
+
+Severity ma tylko `error`, `warning`, `info`; brak oznacza `info`. Nie wynika
+ze slow takich jak error, owner albo missing. Status ma `open`/`resolved`,
+domyslnie `open`. Nieprawidlowe wartosci lub struktury sa jawnie raportowane
+z plikiem i JSON Pointerem. Nie sa ukrywane ani zamieniane w pozorne pytania.
+Zastane `unresolvedGlossaryReferences` jest diagnostyka strukturalna do
+uporzadkowania, nie drugim rejestrem pytan.
+
+`GET /api/operational-context/open-questions` domyslnie zwraca open.
+Parametr `status=open|resolved|all` pozwala na jawny odczyt pozostalych stanow.
+UI pobiera `all`, ale rozpoczyna z filtrem open; liczniki summary i encji
+dotycza tylko open. Copy i karta pokazuja stabilne ID oraz `sourcePath`
+(JSON Pointer), niezalezny od ID i zmieniajacy sie przy przesunieciu w YAML.
+Resolved nie oferuje akcji rozwiazywania pytania; asysta odrzuca resolved,
+niezgodny target oraz niejednoznaczne ID przed wykonaniem AI. Usuniecie
+rozstrzygnietego wpisu pozostaje poprawna droga.
+
+Gap encji dziedziczy jej target. Gap dokumentu bez targetu jest globalny:
+pozostaje na liscie katalogu i w `opctx_get_scope.globalOpenQuestions`, ale nie
+jest dopinany do kazdej encji. Jawny target dokumentu wymaga jednoczesnie
+kanonicznych `entityType` i `entityId` wskazujacych jedna istniejaca encje.
+Filtrowane zapytanie katalogu oraz `opctx_get_entity` zwracaja tylko aktywne
+lokalne pytania w swoim zakresie. Pelny snapshot maintenance zachowuje oba
+statusy jako dane zrodlowe do przegladu i edycji.
+
+Nieznane `references.terms`, `canonicalReferences` i `relatedTerms` daja
+finding z faktycznym targetem i oryginalnym polem. Canonical references
+i related terms pozostaja osobnymi faktami z prawidlowym provenance YAML;
+odczyt nie tworzy ich odwrotnych kopii. Sekcja `relations` szczegolu glossary
+w MCP zachowuje osobne `canonicalReferences` i `relatedTerms`; puste listy
+podlegaja standardowemu pomijaniu pustych sekcji.
+Reklamowane linki relations/code-search
+sa wykonywalne dla wszystkich dziewieciu typow, takze glossary i handoff.
+Glossary ma wewnetrzny klucz indeksu `term`, mapowany na granicy HTTP.
+Brak zdefiniowanego code-search scope jest jawnym findingiem, nie 404 encji.
+Wyszukiwanie, matching incydentu i jego kompaktowa lista referencji glossary
+nadal korzystaja z unii obu list; rozdzielenie provenance nie usuwa kontekstu
+z dotychczasowego evidence.
+
 Trzy sciezki operatorskie na tym ekranie:
 
 1. Operator naciska `Uzupelnij z AI`, opisuje obszar i opcjonalnie wybiera projekt

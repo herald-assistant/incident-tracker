@@ -317,9 +317,10 @@ const FIELD_TOOLTIPS: Record<string, string> = {
   coverageScanned: 'Wymień źródła lub obszary repozytorium, które rzeczywiście sprawdzono.',
   coverageExpected: 'Wymień źródła, których jeszcze nie sprawdzono, choć mogą mieć znaczenie.',
   coverageLimitations: 'Opisz, czego nie da się obecnie potwierdzić. Ograniczenia będą widoczne przy korzystaniu z katalogu.',
-  gapId: 'Opcjonalnie podaj stały identyfikator pytania małymi literami i z myślnikami.',
+  gapId: 'Wymagany stały identyfikator pytania: małe litery i myślniki, unikalny w całym katalogu. Zmiana treści nie zmienia ID.',
   gapType: 'Określ, dlaczego brakuje informacji, np. niepotwierdzona odpowiedzialność lub niejasna granica obszaru.',
   gapSummary: 'Napisz jedno konkretne pytanie lub brak do wyjaśnienia. Pojawi się na liście otwartych pytań.',
+  gapDescription: 'Dodatkowy kontekst do pytania. Nie zastępuje wymaganej treści w summary.',
   gapSeverity: 'Ustal ważność pytania: błąd (error), ostrzeżenie (warning) albo informacja (info). Nie oznacza to, że wystąpił incydent.',
   gapStatus: 'Oznacz pytanie jako otwarte (open) albo rozwiązane (resolved), gdy odpowiedź została potwierdzona.',
   gapNextSources: 'Wskaż źródła, które warto sprawdzić w następnej kolejności. Nie zostaną pobrane automatycznie.'

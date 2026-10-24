@@ -187,6 +187,7 @@ class ConfigDriftViewerScopeResolverTest {
                 List.of(),
                 List.of(),
                 List.of(),
+                List.of(),
                 List.of()
         );
     }

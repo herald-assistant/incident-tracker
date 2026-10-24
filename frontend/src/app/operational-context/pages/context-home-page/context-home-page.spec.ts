@@ -406,7 +406,7 @@ describe('ContextHomePageComponent', () => {
     const cards = fixture.nativeElement.querySelectorAll('.maintenance-card--question') as NodeListOf<HTMLElement>;
     expect(cards[0].textContent).toContain('Pomóż rozwiązać');
     expect(cards[1].textContent).not.toContain('Pomóż rozwiązać');
-    expect(cards[1].textContent).toContain('Wskaż encję');
+    expect(cards[1].textContent).toContain('Pytanie globalne katalogu');
     const assist = Array.from(cards[0].querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
       .find((button) => button.textContent?.includes('Pomóż rozwiązać'));
     assist?.click();
@@ -661,6 +661,70 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Should this context be renamed?');
   });
 
+  it('defaults to open and shows resolved questions only through an explicit filter without resolution actions', async () => {
+    const active = openQuestion('crm-owner', 'info', 'Confirm CRM owner.');
+    const resolved: OpenQuestionDto = {
+      ...openQuestion('crm-retry', 'error', 'Confirm CRM retry source.'),
+      sourcePath: '/systems/0/gaps/1',
+      status: 'resolved'
+    };
+    const { fixture, api } = await createComponent(readySummary(), [], [active, resolved]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+    component.selectTab('open-questions');
+    fixture.detectChanges();
+    expect(api.getOpenQuestions).toHaveBeenCalledWith('all');
+    expect(component.questionStatusControl.value).toBe('open');
+    expect(fixture.nativeElement.textContent).toContain(active.question);
+    expect(fixture.nativeElement.textContent).not.toContain(resolved.question);
+
+    component.questionStatusControl.setValue('resolved');
+    fixture.detectChanges();
+    const card = fixture.nativeElement.querySelector('.maintenance-card--question') as HTMLElement;
+    expect(card.textContent).toContain(resolved.question);
+    expect(card.textContent).not.toContain('Pomóż rozwiązać');
+    const before = component.assistancePrefill();
+    component.assistOpenQuestion(resolved);
+    expect(component.assistancePrefill()).toEqual(before);
+
+    component.questionStatusControl.setValue('');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.maintenance-card--question')).toHaveLength(2);
+  });
+
+  it('copies stable ID, original pointer and explicit global scope', async () => {
+    const question = openQuestion('crm-coverage', 'info', 'Confirm CRM coverage.', 'systems.yml', 'system', null);
+    const { fixture } = await createComponent(readySummary(), [], [question]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.selectTab('open-questions');
+    fixture.detectChanges();
+    const writeText = vi.fn(() => Promise.resolve());
+    installNavigatorClipboard({ writeText });
+    const card = fixture.nativeElement.querySelector('.maintenance-card--question') as HTMLElement;
+    expect(card.textContent).toContain('Catalog (global)');
+    expect(card.textContent).toContain('/gaps/0');
+    expect(card.textContent).toContain('crm-coverage');
+    (card.querySelector('.icon-action') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(writeText).toHaveBeenCalledWith('systems.yml /gaps/0 | crm-coverage | Catalog (global) · system | open');
+  });
+
+  it('keeps cards with duplicate invalid identities distinguishable by original source pointer', async () => {
+    const first = openQuestion('crm-duplicate', 'info', 'Confirm CRM owner.');
+    const second = { ...first, sourcePath: '/systems/0/gaps/1', question: 'Confirm CRM retry owner.' };
+    const { fixture } = await createComponent(readySummary(), [], [first, second]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.selectTab('open-questions');
+    fixture.detectChanges();
+    const cards = fixture.nativeElement.querySelectorAll('.maintenance-card--question') as NodeListOf<HTMLElement>;
+    expect(cards).toHaveLength(2);
+    expect(cards[0].textContent).toContain('/systems/0/gaps/0');
+    expect(cards[1].textContent).toContain('/systems/0/gaps/1');
+  });
+
   it('should render open question maintenance target without null entity id noise', async () => {
     const { fixture } = await createComponent(readySummary(), [], [
       openQuestion('question-without-entity-id', 'info', 'Clarify CRM glossary term?', 'glossary.yml', 'glossary-term', null)
@@ -838,7 +902,7 @@ function handoffRule(): OperationalContextHandoffRuleRowDto {
 
 function openQuestion(
   id: string,
-  severity: string,
+  severity: OpenQuestionDto['severity'],
   question: string,
   sourceFile = 'systems.yml',
   entityType = 'system',
@@ -847,6 +911,7 @@ function openQuestion(
   return {
     id,
     sourceFile,
+    sourcePath: entityId ? '/systems/0/gaps/0' : '/gaps/0',
     entityType,
     entityId,
     question,

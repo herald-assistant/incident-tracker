@@ -1,6 +1,10 @@
 package pl.mkn.tdw.integrations.operationalcontext.adapter.local;
 
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogEntityType;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextGapContract;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.SourceRef;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex.ValidationFinding;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextImmutableValues;
 import pl.mkn.tdw.integrations.operationalcontext.internal.OperationalContextRawDocuments;
 
@@ -15,11 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.mapList;
-import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.normalize;
 import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextMaps.text;
 
 @Component
@@ -57,16 +59,17 @@ final class OperationalContextCatalogCodec {
         var glossaryDocument = documents.get(GLOSSARY);
         var handoffRulesDocument = documents.get(HANDOFF_RULES);
 
-        var rawTeams = mapList(teamsDocument.get("teams"));
-        var rawProcesses = mapList(processesDocument.get("processes"));
-        var rawSystems = mapList(systemsDocument.get("systems"));
-        var rawIntegrations = mapList(integrationsDocument.get("integrations"));
-        var rawRepositories = mapList(repositoriesDocument.get("repositories"));
-        var rawCodeSearchScopes = mapList(codeSearchScopesDocument.get("codeSearchScopes"));
-        var rawBoundedContexts = mapList(boundedContextsDocument.get("boundedContexts"));
-        var rawGlossaryTerms = mapList(glossaryDocument.get("terms"));
-        var rawHandoffRules = mapList(handoffRulesDocument.get("handoffRules"));
+        var rawTeams = entityMaps(teamsDocument, "teams");
+        var rawProcesses = entityMaps(processesDocument, "processes");
+        var rawSystems = entityMaps(systemsDocument, "systems");
+        var rawIntegrations = entityMaps(integrationsDocument, "integrations");
+        var rawRepositories = entityMaps(repositoriesDocument, "repositories");
+        var rawCodeSearchScopes = entityMaps(codeSearchScopesDocument, "codeSearchScopes");
+        var rawBoundedContexts = entityMaps(boundedContextsDocument, "boundedContexts");
+        var rawGlossaryTerms = entityMaps(glossaryDocument, "terms");
+        var rawHandoffRules = entityMaps(handoffRulesDocument, "handoffRules");
 
+        var questions = openQuestions(documents);
         var catalog = new OperationalContextCatalog(
                 rawTeams.stream().map(OperationalContextDtos::team).toList(),
                 rawProcesses.stream().map(OperationalContextDtos::process).toList(),
@@ -77,26 +80,8 @@ final class OperationalContextCatalogCodec {
                 rawBoundedContexts.stream().map(OperationalContextDtos::boundedContext).toList(),
                 rawGlossaryTerms.stream().map(OperationalContextDtos::glossaryTerm).toList(),
                 rawHandoffRules.stream().map(OperationalContextDtos::handoffRule).toList(),
-                openQuestions(
-                        systemsDocument,
-                        repositoriesDocument,
-                        codeSearchScopesDocument,
-                        processesDocument,
-                        integrationsDocument,
-                        boundedContextsDocument,
-                        teamsDocument,
-                        glossaryDocument,
-                        handoffRulesDocument,
-                        rawSystems,
-                        rawRepositories,
-                        rawCodeSearchScopes,
-                        rawProcesses,
-                        rawIntegrations,
-                        rawBoundedContexts,
-                        rawTeams,
-                        rawGlossaryTerms,
-                        rawHandoffRules
-                )
+                questions.questions(),
+                questions.findings()
         );
         return new OperationalContextCatalogDecodeResult(catalog, documents);
     }
@@ -117,153 +102,113 @@ final class OperationalContextCatalogCodec {
         return OperationalContextImmutableValues.copyMap(document);
     }
 
-    private List<OperationalContextOpenQuestion> openQuestions(
-            Map<String, Object> systemsDocument,
-            Map<String, Object> repositoriesDocument,
-            Map<String, Object> codeSearchScopesDocument,
-            Map<String, Object> processesDocument,
-            Map<String, Object> integrationsDocument,
-            Map<String, Object> boundedContextsDocument,
-            Map<String, Object> teamsDocument,
-            Map<String, Object> glossaryDocument,
-            Map<String, Object> handoffRulesDocument,
-            List<Map<String, Object>> systems,
-            List<Map<String, Object>> repositories,
-            List<Map<String, Object>> codeSearchScopes,
-            List<Map<String, Object>> processes,
-            List<Map<String, Object>> integrations,
-            List<Map<String, Object>> boundedContexts,
-            List<Map<String, Object>> teams,
-            List<Map<String, Object>> glossaryTerms,
-            List<Map<String, Object>> handoffRules
-    ) {
-        var questions = new ArrayList<OperationalContextOpenQuestion>();
-        addYamlGaps(questions, SYSTEMS, "system", null, systemsDocument.get("gaps"));
-        addEntityGaps(questions, SYSTEMS, "system", systems);
-        addYamlGaps(questions, REPOSITORIES, "repository", null, repositoriesDocument.get("gaps"));
-        addEntityGaps(questions, REPOSITORIES, "repository", repositories);
-        addYamlGaps(questions, CODE_SEARCH_SCOPES, "code-search-scope", null, codeSearchScopesDocument.get("gaps"));
-        addEntityGaps(questions, CODE_SEARCH_SCOPES, "code-search-scope", codeSearchScopes);
-        addYamlGaps(questions, PROCESSES, "process", null, processesDocument.get("gaps"));
-        addEntityGaps(questions, PROCESSES, "process", processes);
-        addYamlGaps(questions, INTEGRATIONS, "integration", null, integrationsDocument.get("gaps"));
-        addEntityGaps(questions, INTEGRATIONS, "integration", integrations);
-        addYamlGaps(questions, BOUNDED_CONTEXTS, "bounded-context", null, boundedContextsDocument.get("gaps"));
-        addEntityGaps(questions, BOUNDED_CONTEXTS, "bounded-context", boundedContexts);
-        addYamlGaps(questions, TEAMS, "team", null, teamsDocument.get("gaps"));
-        addEntityGaps(questions, TEAMS, "team", teams);
-        addYamlGaps(questions, GLOSSARY, "glossary-term", null, glossaryDocument.get("gaps"));
-        addEntityGaps(questions, GLOSSARY, "glossary-term", glossaryTerms);
-        addYamlGaps(questions, HANDOFF_RULES, "handoff-rule", null, handoffRulesDocument.get("gaps"));
-        addEntityGaps(questions, HANDOFF_RULES, "handoff-rule", handoffRules);
-        return List.copyOf(questions);
+    private List<Map<String, Object>> entityMaps(Map<String, Object> document, String collection) {
+        return mapList(document.get(collection)).stream()
+                .filter(entry -> entry.get("id") instanceof String id && StringUtils.hasText(id)).toList();
     }
 
-    private void addEntityGaps(
-            List<OperationalContextOpenQuestion> questions,
-            String sourceFile,
-            String entityType,
-            List<Map<String, Object>> entries
-    ) {
-        for (var entry : entries) {
-            var entityId = text(entry, "id");
-            addYamlGaps(questions, sourceFile, entityType, entityId, entry.get("gaps"));
+    private QuestionDecode openQuestions(Map<String, Map<String, Object>> documents) {
+        var questions = new ArrayList<OperationalContextOpenQuestion>();
+        var findings = new ArrayList<ValidationFinding>();
+        for (var type : OperationalContextCatalogEntityType.values()) {
+            var document = documents.get(type.logicalDocument());
+            addYamlGaps(questions, findings, type, null, false, "/gaps", document.get("gaps"));
+            var metadata = new LinkedHashMap<>(document);
+            metadata.remove(type.collectionName());
+            addSignalFindings(findings, type, null, metadata, "");
+            var collection = document.get(type.collectionName());
+            if (collection != null && !(collection instanceof List<?>)) {
+                findings.add(sourceFinding("INVALID_CATALOG_COLLECTION", type, null,
+                        "/" + type.collectionName(), "Entity collection must be a list"));
+            }
+            var entries = collection instanceof List<?> list ? list : List.of();
+            for (int index = 0; index < entries.size(); index++) {
+                var path = "/" + type.collectionName() + "/" + index;
+                if (!(entries.get(index) instanceof Map<?, ?>)) {
+                    findings.add(sourceFinding("INVALID_CATALOG_ENTITY", type, null, path, "Entity must be an object"));
+                    continue;
+                }
+                var entry = mapList(List.of(entries.get(index))).get(0);
+                var entityId = entry.get("id") instanceof String id && StringUtils.hasText(id) ? id : null;
+                if (entityId == null) {
+                    findings.add(sourceFinding("INVALID_CATALOG_ENTITY", type, null,
+                            path + "/id", "Entity requires a non-blank text ID"));
+                }
+                addYamlGaps(questions, findings, type, entityId, true, path + "/gaps", entry.get("gaps"));
+                addSignalFindings(findings, type, entityId, entry, path);
+            }
         }
+        return new QuestionDecode(List.copyOf(questions), List.copyOf(findings));
     }
 
     private void addYamlGaps(
             List<OperationalContextOpenQuestion> questions,
-            String sourceFile,
-            String entityType,
+            List<ValidationFinding> findings,
+            OperationalContextCatalogEntityType type,
             String entityId,
+            boolean entityScoped,
+            String path,
             Object source
     ) {
-        var entries = mapList(source);
-        var index = 0;
-        for (var item : entries) {
-            var question = firstNonBlank(
-                    text(item, "question"),
-                    text(item, "summary"),
-                    text(item, "description"),
-                    text(item, "impact")
-            );
-            if (!isActionableGap(question)) {
-                index++;
+        if (source == null) {
+            return;
+        }
+        if (entityScoped && !StringUtils.hasText(entityId)) {
+            findings.add(sourceFinding("INVALID_GAP_TARGET", type, null, path, "Entity gap requires a valid parent entity ID"));
+            return;
+        }
+        if (!(source instanceof List<?> entries)) {
+            findings.add(sourceFinding("INVALID_GAP", type, entityId, path, "Gaps must be a list"));
+            return;
+        }
+        for (int index = 0; index < entries.size(); index++) {
+            var entry = entries.get(index);
+            var itemPath = path + "/" + index;
+            var errors = OperationalContextGapContract.validateGap(entry, entityScoped);
+            if (!errors.isEmpty()) {
+                for (var error : errors) {
+                    findings.add(sourceFinding("INVALID_GAP", type, entityId,
+                            itemPath + error.pointer(), error.message()));
+                }
                 continue;
             }
-
-            var effectiveEntityType = firstNonBlank(text(item, "entityType"), text(item, "targetType"), entityType);
-            var effectiveEntityId = firstNonBlank(text(item, "entityId"), text(item, "targetId"), entityId);
+            var item = mapList(List.of(entry)).get(0);
             questions.add(new OperationalContextOpenQuestion(
-                    openQuestionId(sourceFile, effectiveEntityType, effectiveEntityId, question, index),
-                    sourceFile,
-                    effectiveEntityType,
-                    effectiveEntityId,
-                    question,
-                    firstNonBlank(text(item, "severity"), inferSeverity(question)),
-                    firstNonBlank(text(item, "status"), "open")
+                    text(item, "id"),
+                    type.logicalDocument(),
+                    entityId != null ? type.externalName() : defaultText(text(item, "entityType"), type.externalName()),
+                    entityId != null ? entityId : text(item, "entityId"),
+                    text(item, "summary"),
+                    defaultText(text(item, "severity"), "info"),
+                    defaultText(text(item, "status"), "open"),
+                    itemPath
             ));
-            index++;
         }
     }
 
-    private boolean isActionableGap(String question) {
-        if (!StringUtils.hasText(question)) {
-            return false;
-        }
-
-        var normalized = question.trim().toLowerCase(Locale.ROOT);
-        return !normalized.equals("none")
-                && !normalized.equals("n/a")
-                && !normalized.equals("todo")
-                && !normalized.equals("-");
-    }
-
-    private String inferSeverity(String question) {
-        var normalized = question != null ? question.toLowerCase(Locale.ROOT) : "";
-        if (normalized.contains("block") || normalized.contains("critical") || normalized.contains("error")) {
-            return "error";
-        }
-        if (normalized.contains("owner") || normalized.contains("handoff") || normalized.contains("missing")) {
-            return "warning";
-        }
-        return "info";
-    }
-
-    private String firstNonBlank(String... values) {
-        for (var value : values) {
-            if (StringUtils.hasText(value)) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String openQuestionId(
-            String sourceFile,
-            String entityType,
-            String entityId,
-            String question,
-            int index
+    private void addSignalFindings(
+            List<ValidationFinding> findings, OperationalContextCatalogEntityType type,
+            String entityId, Object source, String path
     ) {
-        var seed = String.join(":",
-                sourceFile,
-                entityType != null ? entityType : "",
-                entityId != null ? entityId : "",
-                Integer.toString(index),
-                question != null ? question : ""
-        );
-        return "open-question-" + slug(seed);
+        for (var error : OperationalContextGapContract.unresolvedSignalErrors(source, path)) {
+            findings.add(sourceFinding("UNREGISTERED_GAP_SIGNAL", type, entityId, error.pointer(), error.message()));
+        }
     }
 
-    private String slug(String value) {
-        var normalized = value.toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("(^-|-$)", "");
-        if (normalized.length() > 72) {
-            return normalized.substring(0, 72).replaceAll("-$", "");
-        }
-        return normalized;
+    private ValidationFinding sourceFinding(
+            String code, OperationalContextCatalogEntityType type, String entityId, String path, String message
+    ) {
+        return new ValidationFinding("error", code, message, List.of(new SourceRef(
+                type.logicalDocument(), entityId != null ? type.externalName() : "catalog",
+                entityId != null ? entityId : type.logicalDocument(), path, "catalog-contract"
+        )));
+    }
+
+    private String defaultText(String value, String defaultValue) {
+        return value != null ? value : defaultValue;
+    }
+
+    private record QuestionDecode(List<OperationalContextOpenQuestion> questions, List<ValidationFinding> findings) {
     }
 
 }

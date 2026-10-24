@@ -39,7 +39,9 @@ public class OperationalContextMcpTools {
             description = """
                     Returns available operational context catalog entity types and counts.
                     Use this to discover which catalog areas can be browsed or searched. It returns only catalog scope
-                    metadata, not entity details.
+                    metadata and active global catalog questions, not entity details.
+                    Global questions apply to the catalog, not automatically to each entity.
+                    Entity details expose only that entity's active local questions.
                     """
     )
     public OpctxScopeResult getScope(

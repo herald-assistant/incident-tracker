@@ -741,7 +741,7 @@ export class ContextHomePageComponent {
   readonly questionSeverityControl = new FormControl('', { nonNullable: true });
   readonly questionEntityTypeControl = new FormControl('', { nonNullable: true });
   readonly questionSourceFileControl = new FormControl('', { nonNullable: true });
-  readonly questionStatusControl = new FormControl('', { nonNullable: true });
+  readonly questionStatusControl = new FormControl('open', { nonNullable: true });
   readonly localFilter = signal('');
   readonly onlyWarnings = signal(false);
   readonly onlyMissingOwner = signal(false);
@@ -753,7 +753,7 @@ export class ContextHomePageComponent {
   readonly questionSeverity = signal('');
   readonly questionEntityType = signal('');
   readonly questionSourceFile = signal('');
-  readonly questionStatus = signal('');
+  readonly questionStatus = signal('open');
   readonly copiedMaintenanceTarget = signal('');
   readonly editorDirty = signal(false);
   readonly maintenanceNotice = signal('');
@@ -805,9 +805,7 @@ export class ContextHomePageComponent {
   readonly questionSourceFileOptions = computed(() =>
     this.uniqueValues(this.data().openQuestions.map((question) => question.sourceFile))
   );
-  readonly questionStatusOptions = computed(() =>
-    this.uniqueValues(this.data().openQuestions.map((question) => question.status))
-  );
+  readonly questionStatusOptions = ['open', 'resolved'];
   readonly statusLabel = computed(() => this.summary()?.catalogStatus || 'loading');
   readonly statusText = computed(() => this.formatStatus(this.statusLabel()));
   readonly isIncomplete = computed(() => {
@@ -1093,7 +1091,7 @@ export class ContextHomePageComponent {
   }
 
   assistOpenQuestion(question: OpenQuestionDto): void {
-    if (!this.canAssistSource(question.entityType, question.entityId)) return;
+    if (question.status !== 'open' || !this.canAssistSource(question.entityType, question.entityId)) return;
     this.openAssistance({
       mode: 'RESOLVE_FINDING',
       target: {
@@ -1327,7 +1325,8 @@ export class ContextHomePageComponent {
 
   protected openQuestionMaintenanceTarget(question: OpenQuestionDto): string {
     return [
-      question.sourceFile || 'unknown source',
+      `${question.sourceFile} ${question.sourcePath}`,
+      question.id,
       this.openQuestionEntityLabel(question),
       question.status
     ].filter(Boolean).join(' | ');
@@ -1336,7 +1335,11 @@ export class ContextHomePageComponent {
   protected openQuestionEntityLabel(question: OpenQuestionDto): string {
     return question.entityId
       ? `${question.entityType}/${question.entityId}`
-      : question.entityType;
+      : `Catalog (global) · ${question.entityType}`;
+  }
+
+  protected questionKey(question: OpenQuestionDto): string {
+    return `${question.sourceFile}#${question.sourcePath}#${question.id}`;
   }
 
   protected async copyMaintenanceTarget(
@@ -1388,7 +1391,7 @@ export class ContextHomePageComponent {
       glossary: this.api.getGlossary(),
       handoffRules: this.api.getHandoffRules(),
       validation: this.api.getValidation(),
-      openQuestions: this.api.getOpenQuestions()
+      openQuestions: this.api.getOpenQuestions('all')
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

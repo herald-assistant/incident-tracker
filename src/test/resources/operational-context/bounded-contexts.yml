@@ -33,8 +33,8 @@ boundedContexts:
 gaps:
   - id: confirm-customer-profile-context-boundary
     type: human-confirmation-required
-    severity: medium
+    severity: warning
     status: open
     entityType: bounded-context
     entityId: customer-profile-context
-    description: Confirm whether Customer Profile Context should include shared customer rule semantics.
+    summary: Confirm whether Customer Profile Context should include shared customer rule semantics.

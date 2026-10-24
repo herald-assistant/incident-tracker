@@ -756,11 +756,16 @@ public class OperationalContextAssistanceJobService {
                 maintenanceService.writablePayloadForUpdate(target.entityType(), target.entityId())
         ));
         if (target.kind() == OperationalContextAssistanceJobStartRequest.Target.Kind.OPEN_QUESTION) {
-            var question = snapshot.catalog().openQuestions().stream()
-                    .filter(item -> target.id().equals(item.id())
-                            && target.entityType().equals(item.entityType())
-                            && target.entityId().equals(item.entityId()))
-                    .findFirst().orElseThrow(() -> new BlockedRun("Wskazane otwarte pytanie nie istnieje."));
+            var questions = snapshot.catalog().openQuestions().stream()
+                    .filter(item -> target.id().equals(item.id())).toList();
+            if (questions.size() != 1) {
+                throw new BlockedRun("Wskazane pytanie nie istnieje albo jego ID nie jest unikalne.");
+            }
+            var question = questions.get(0);
+            if (!question.active() || !target.entityType().equals(question.entityType())
+                    || !target.entityId().equals(question.entityId())) {
+                throw new BlockedRun("Wskazane otwarte pytanie nie istnieje dla tej encji.");
+            }
             result.set("finding", objectMapper.valueToTree(question));
         } else if (target.kind() == OperationalContextAssistanceJobStartRequest.Target.Kind.VALIDATION_FINDING) {
             var finding = validationService.validate(snapshot.catalog()).fingerprintedFindings().stream()

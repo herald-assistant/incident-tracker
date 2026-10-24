@@ -17,6 +17,36 @@ class OperationalContextRelationIndexBuilderTest {
     private final OperationalContextRelationIndexBuilder builder = new OperationalContextRelationIndexBuilder();
 
     @Test
+    void shouldDiagnoseMissingTermsInTheirOriginalFieldsAndKeepSeparateFacts() {
+        var catalog = OperationalContextDtos.catalogFromRaw(
+                List.of(), List.of(),
+                List.of(map("id", "crm-customer-api", "references", map("terms", List.of("crm-missing-reference")))),
+                List.of(), List.of(), List.of(), List.of(),
+                List.of(OperationalContextDtos.glossaryTerm(map(
+                        "id", "crm-contact-state", "canonicalReferences", List.of("crm-missing-canonical", "crm-known"),
+                        "relatedTerms", List.of("crm-missing-related", "crm-known"))),
+                        OperationalContextDtos.glossaryTerm(map("id", "crm-known"))),
+                List.of(), List.of());
+        var index = builder.build(catalog);
+        var missing = index.validationFindings().stream()
+                .filter(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")).toList();
+
+        assertEquals(3, missing.size());
+        assertTrue(missing.stream().anyMatch(finding -> finding.message().contains("crm-missing-reference")
+                && finding.sourceRefs().get(0).fieldPath().endsWith(".references.terms")));
+        assertTrue(missing.stream().anyMatch(finding -> finding.message().contains("crm-missing-canonical")
+                && finding.sourceRefs().get(0).fieldPath().endsWith(".canonicalReferences[0]")));
+        assertTrue(missing.stream().anyMatch(finding -> finding.message().contains("crm-missing-related")
+                && finding.sourceRefs().get(0).fieldPath().endsWith(".relatedTerms[0]")));
+        var known = index.entityRelations("term", "crm-contact-state").outgoingRelations().stream()
+                .filter(relation -> relation.target().id().equals("crm-known")).toList();
+        assertEquals(2, known.size());
+        assertTrue(known.stream().anyMatch(relation -> relation.relationType().equals("canonical-reference")));
+        assertTrue(known.stream().anyMatch(relation -> relation.relationType().equals("related-term")));
+        assertTrue(known.stream().allMatch(relation -> relation.provenance().sourceRefs().size() == 1));
+    }
+
+    @Test
     void shouldBuildIncomingOutgoingAndNeighborIndexesFromCurrentCatalogShape() {
         var index = builder.build(sampleCatalog());
 
@@ -104,13 +134,13 @@ class OperationalContextRelationIndexBuilderTest {
                 .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
                         && finding.severity().equals("error")
                         && finding.message().contains("missing-system")));
-        assertFalse(index.validationFindings().stream()
+        assertTrue(index.validationFindings().stream()
                 .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
                         && finding.message().contains("free-text-term")));
     }
 
     @Test
-    void shouldLinkOnlyKnownReferenceTermsAndTreatUnknownTermsAsHints() {
+    void shouldKeepAndDiagnoseUnknownReferenceTerms() {
         var index = builder.build(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
@@ -132,6 +162,7 @@ class OperationalContextRelationIndexBuilderTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         List.of()
                 )),
                 List.of(),
@@ -144,16 +175,16 @@ class OperationalContextRelationIndexBuilderTest {
                 .anyMatch(relation -> relation.relationType().equals("references-term")
                         && relation.target().type().equals("term")
                         && relation.target().id().equals("known-term")));
-        assertFalse(relations.stream()
+        assertTrue(relations.stream()
                 .anyMatch(relation -> relation.relationType().equals("references-term")
                         && relation.target().id().equals("free-text-term")));
-        assertFalse(index.validationFindings().stream()
+        assertTrue(index.validationFindings().stream()
                 .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
                         && finding.message().contains("free-text-term")));
     }
 
     @Test
-    void shouldTreatGlossaryTypedReferencesAsRelationsAndFreeTextAsHints() {
+    void shouldDiagnoseUnknownGlossaryReferencesRatherThanTreatingThemAsHints() {
         var index = builder.build(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(map("id", "customer-support-process")),
@@ -173,6 +204,7 @@ class OperationalContextRelationIndexBuilderTest {
                                 List.of(),
                                 List.of("system:crm-customer-service", "process:customer-support-process", "related-term", "Business label", "None"),
                                 List.of(),
+                                List.of(),
                                 List.of()
                         ),
                         new OperationalContextDtos.OperationalContextGlossaryTerm(
@@ -180,6 +212,7 @@ class OperationalContextRelationIndexBuilderTest {
                                 "Related term",
                                 "business-term",
                                 "Related term.",
+                                List.of(),
                                 List.of(),
                                 List.of(),
                                 List.of(),
@@ -206,7 +239,7 @@ class OperationalContextRelationIndexBuilderTest {
                 .anyMatch(relation -> relation.relationType().equals("canonical-reference")
                         && relation.target().type().equals("term")
                         && relation.target().id().equals("related-term")));
-        assertFalse(index.validationFindings().stream()
+        assertTrue(index.validationFindings().stream()
                 .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
                         && finding.message().contains("Business label")));
     }

@@ -81,6 +81,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         List.of(),
                         List.of(),
                         List.of(),
+                        List.of(),
                         List.of()
                 )),
                 List.of(),

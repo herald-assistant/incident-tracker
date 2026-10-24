@@ -6,6 +6,8 @@ import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwne
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextValidationReport;
 
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pl.mkn.tdw.agenttools.operationalcontext.mcp.OperationalContextToolMapper;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogValidationService;
@@ -13,6 +15,7 @@ import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDto
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.brokenCatalog;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.emptyCatalog;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.map;
@@ -31,6 +36,75 @@ import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixture
 import static pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextValidationTestCreator.create;
 
 class OperationalContextViewServiceTest {
+
+    @Test
+    void shouldKeepDefaultCountersAndLocalDetailsActiveWithoutGlobalFanout() {
+        var global = new OperationalContextDtos.OperationalContextOpenQuestion(
+                "crm-global", "systems.yml", "system", null, "Confirm CRM coverage.", null, null, "/gaps/0");
+        var local = new OperationalContextDtos.OperationalContextOpenQuestion(
+                "crm-local", "systems.yml", "system", "crm-customer-api", "Confirm CRM API owner.",
+                "warning", "open", "/systems/0/gaps/0");
+        var resolved = new OperationalContextDtos.OperationalContextOpenQuestion(
+                "crm-resolved", "systems.yml", "system", "crm-customer-api", "Confirm CRM retry source.",
+                "error", "resolved", "/systems/0/gaps/1");
+        var catalog = OperationalContextDtos.catalogFromRaw(
+                List.of(), List.of(), List.of(map("id", "crm-customer-api", "systemType", "internal-service",
+                        "systemSubtype", "unknown")), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of(global, local, resolved));
+        var service = viewService(port(catalog), create());
+
+        assertEquals(2, service.summary().openQuestions());
+        assertEquals(List.of("crm-global", "crm-local"), service.openQuestions("open").stream().map(item -> item.id()).toList());
+        assertEquals(List.of("crm-resolved"), service.openQuestions("resolved").stream().map(item -> item.id()).toList());
+        assertEquals(3, service.openQuestions("all").size());
+        assertEquals(1, service.systems().get(0).openQuestions().count());
+        var detail = service.entity("system", "crm-customer-api");
+        assertEquals(List.of("crm-local"), detail.openQuestions().stream().map(item -> item.id()).toList());
+        assertEquals("/systems/0/gaps/0", detail.openQuestions().get(0).sourcePath());
+        assertThrows(OperationalContextQuestionStatusException.class, () -> service.openQuestions("closed"));
+    }
+
+    @Test
+    void shouldFollowAdvertisedRelationsAndCodeSearchLinksForEveryEntityType() throws Exception {
+        var service = viewService(port(typicalCatalog()), create());
+        var mvc = MockMvcBuilders.standaloneSetup(new OperationalContextController(service)).build();
+        var json = new ObjectMapper();
+        var targets = Map.of(
+                "system", "crm-consent-service",
+                "repository", "crm-consent-repo",
+                "code-search-scope", "crm-consent-service-scope",
+                "process", "customer-consent-capture-process",
+                "integration", "customer-consent-registry-handoff",
+                "bounded-context", "customer-consent-context",
+                "team", "team-a",
+                "glossary-term", "customer-consent",
+                "handoff-rule", "handoff-team-a");
+        for (var target : targets.entrySet()) {
+            var detail = (OperationalContextProfiledReadModelDto) service.entity(target.getKey(), target.getValue(), "default");
+            var links = detail.links().stream().filter(link -> List.of("relations", "code-search").contains(link.rel())).toList();
+            assertEquals(2, links.size(), target.getKey());
+            for (var link : links) {
+                var response = mvc.perform(get(link.href()))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse();
+                var body = json.readTree(response.getContentAsString());
+                assertEquals(target.getValue(), body.path("analysisTarget").path("id").asText(), link.href());
+                assertEquals("operational-context." + (link.rel().equals("relations") ? "entity-relations" : "code-search"),
+                        body.path("contract").asText(), link.href());
+            }
+        }
+        var glossary = service.entityRelationsReadModel("glossary-term", "customer-consent");
+        assertEquals("term", glossary.analysisTarget().type());
+        assertTrue(glossary.neighbors().stream().anyMatch(neighbor -> neighbor.id().equals("customer-consent-context")));
+        assertFalse(glossary.incomingRelations().isEmpty());
+        var scope = service.codeSearchReadModel("glossary-term", "customer-consent");
+        assertEquals("customer-consent", scope.analysisTarget().id());
+        assertTrue(scope.validationFindings().stream().anyMatch(finding -> finding.code().equals("NO_CODE_SEARCH_SCOPE")));
+        assertThrows(OperationalContextEntityNotFoundException.class,
+                () -> service.entityRelationsReadModel("glossary-term", "crm-missing"));
+        assertThrows(OperationalContextEntityNotFoundException.class,
+                () -> service.codeSearchReadModel("handoff-rule", "crm-missing"));
+    }
 
     @Test
     void shouldFindTheSameCatalogEntitiesAsOperationalContextTool() {

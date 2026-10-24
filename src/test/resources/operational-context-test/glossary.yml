@@ -11,7 +11,7 @@ terms:
       - SOAPFault
       - api.crm-notification.example.invalid
   canonicalReferences:
-  - crm-contact-to-notification-sync
+  - integration:crm-contact-to-notification-sync
 gaps:
 - id: confirm-soap-fault-taxonomy
   type: human-confirmation-required

@@ -28,6 +28,15 @@ describe('OperationalContextApiService', () => {
     request.flush({});
   });
 
+  it('defaults to open questions and requests other lifecycle states explicitly', () => {
+    service.getOpenQuestions().subscribe();
+    http.expectOne('/api/operational-context/open-questions?status=open').flush([]);
+    service.getOpenQuestions('resolved').subscribe();
+    http.expectOne('/api/operational-context/open-questions?status=resolved').flush([]);
+    service.getOpenQuestions('all').subscribe();
+    http.expectOne('/api/operational-context/open-questions?status=all').flush([]);
+  });
+
   it('should build search URL with q parameter', () => {
     service.search('crm-contact-service').subscribe();
 

@@ -3,6 +3,7 @@ package pl.mkn.tdw.integrations.operationalcontext.service;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadModelValidationPort;
 
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextGapContract;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
 
 import org.springframework.stereotype.Component;
@@ -95,6 +96,7 @@ public class OperationalContextReadModelValidator implements OperationalContextR
         var findings = new ArrayList<ValidationFinding>();
 
         findings.addAll(relationIndex.validationFindings());
+        validateQuestions(safeCatalog, relationIndex, findings);
         validateRelationProvenance(relationIndex.relations(), findings);
         validateMergedDuplicateRelations(safeCatalog, relationIndex.relations(), findings);
         validateIntegrationParticipantReferenceDuplicates(relationIndex, findings);
@@ -116,10 +118,48 @@ public class OperationalContextReadModelValidator implements OperationalContextR
         var findings = new ArrayList<ValidationFinding>();
 
         findings.addAll(relationIndex.validationFindings());
+        validateQuestions(safeCatalog, relationIndex, findings);
         validateSystemClassifications(safeCatalog.systems(), findings);
         validateOwnershipModel(safeCatalog, findings);
 
         return sortedDistinct(findings);
+    }
+
+    private void validateQuestions(
+            OperationalContextCatalog catalog, OperationalContextRelationIndex index, List<ValidationFinding> findings
+    ) {
+        findings.addAll(catalog.sourceFindings());
+        var ids = new LinkedHashMap<String, SourceRef>();
+        for (var question : catalog.openQuestions()) {
+            var documentGap = question.sourcePath().startsWith("/gaps/");
+            var ref = new SourceRef(question.sourceFile(), documentGap ? "catalog" : question.entityType(),
+                    documentGap ? question.sourceFile() : question.entityId(), question.sourcePath(), "gap");
+            var fields = new LinkedHashMap<String, Object>();
+            fields.put("id", question.id());
+            fields.put("summary", question.question());
+            fields.put("severity", question.severity());
+            fields.put("status", question.status());
+            for (var error : OperationalContextGapContract.validateGap(fields, false)) {
+                findings.add(new ValidationFinding("error", "INVALID_GAP", error.message(), List.of(new SourceRef(
+                        ref.file(), ref.entityType(), ref.entityId(),
+                        ref.fieldPath() + error.pointer(), "gap"
+                ))));
+            }
+            if (StringUtils.hasText(question.id())) {
+                var previous = ids.putIfAbsent(question.id(), ref);
+                if (previous != null) {
+                    findings.add(new ValidationFinding("error", "DUPLICATE_GAP_ID",
+                            "Gap ID must be unique across the catalog: " + question.id(), List.of(previous, ref)));
+                }
+            }
+            if (!question.global()) {
+                var type = question.entityType().equals("glossary-term") ? "term" : question.entityType();
+                if (!index.entities().containsKey(new EntityKey(type, question.entityId()))) {
+                    findings.add(new ValidationFinding("error", "UNKNOWN_GAP_TARGET",
+                            "Gap points to unknown target " + type + ":" + question.entityId(), List.of(ref)));
+                }
+            }
+        }
     }
 
     private void validateOwnershipModel(

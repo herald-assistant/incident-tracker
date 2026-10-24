@@ -235,7 +235,8 @@ final class OperationalContextApiTestFixtures {
                         List.of("customer-consent-capture-process"),
                         List.of(),
                         List.of("consent", "customer consent"),
-                        List.of("customer-consent-context"),
+                        List.of("bounded-context:customer-consent-context"),
+                        List.of(),
                         List.of("opt-in"),
                         List.of()
                 )),
@@ -254,8 +255,9 @@ final class OperationalContextApiTestFixtures {
                         "system",
                         "crm-consent-service",
                         "Clarify consent registry SLA ownership.",
-                        "medium",
-                        "open"
+                        "warning",
+                        "open",
+                        "/systems/0/gaps/0"
                 ))
         );
     }

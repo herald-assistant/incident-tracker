@@ -87,7 +87,7 @@ public final class OperationalContextCatalogSearch implements OperationalContext
         for (var term : safe.glossaryTerms()) {
             documents.add(new Document("glossaryTerm", term.id(), values(term.id(), term.term()),
                     join(term.synonyms(), term.matchSignals(), term.useInContext()),
-                    values(term.definition()), term.canonicalReferences()));
+                    values(term.definition()), term.referenceValues()));
         }
         for (var rule : safe.handoffRules()) {
             documents.add(new Document("handoffRule", rule.id(), values(rule.id(), rule.title()),

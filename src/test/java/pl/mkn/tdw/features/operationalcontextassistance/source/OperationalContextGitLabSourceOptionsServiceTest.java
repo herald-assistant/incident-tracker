@@ -120,7 +120,7 @@ class OperationalContextGitLabSourceOptionsServiceTest {
     private OperationalContextCatalog catalog(OperationalContextRepository... repositories) {
         return new OperationalContextCatalog(
                 List.of(), List.of(), List.of(), List.of(), List.of(repositories),
-                List.of(), List.of(), List.of(), List.of(), List.of()
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of()
         );
     }
 

@@ -437,7 +437,7 @@
             <div class="structured-grid">
               <div class="structured-control">
                 <label class="structured-label" [for]="'gap-id-' + index">Gap ID <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('gapId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
-                <input [id]="'gap-id-' + index" type="text" [value]="$any(gap)['id'] || ''" (input)="updateGap(index, 'id', $any($event.target).value)" />
+                <input [id]="'gap-id-' + index" type="text" required pattern="[a-z0-9]+(-[a-z0-9]+)*" [value]="$any(gap)['id'] || ''" (input)="updateGap(index, 'id', $any($event.target).value)" />
               </div>
               <div class="structured-control">
                 <label class="structured-label" [for]="'gap-type-' + index">Type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('gapType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
@@ -446,7 +446,7 @@
               <div class="structured-control" [hidden]="readonly() && !$any(gap)['severity']?.trim()">
                 <label class="structured-label" [for]="'gap-severity-' + index">Severity <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('gapSeverity')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'gap-severity-' + index" [value]="$any(gap)['severity'] || ''" (change)="updateGap(index, 'severity', $any($event.target).value)">
-                  <option value="">Infer from summary</option>
+                  <option value="">Default: info</option>
                   @for (severity of gapSeverities(); track severity) { <option [value]="severity">{{ severity }}</option> }
                 </select>
               </div>
@@ -458,7 +458,11 @@
               </div>
               <div class="structured-control structured-control--wide">
                 <label class="structured-label" [for]="'gap-summary-' + index">Actionable summary <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('gapSummary')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
-                <textarea cdkTextareaAutosize [id]="'gap-summary-' + index" cdkAutosizeMinRows="3" [value]="$any(gap)['summary'] || $any(gap)['question'] || ''" (input)="updateGap(index, 'summary', $any($event.target).value)"></textarea>
+                <textarea cdkTextareaAutosize [id]="'gap-summary-' + index" required cdkAutosizeMinRows="3" [value]="$any(gap)['summary'] || ''" (input)="updateGap(index, 'summary', $any($event.target).value)"></textarea>
+              </div>
+              <div class="structured-control structured-control--wide" [hidden]="readonly() && !$any(gap)['description']">
+                <label class="structured-label" [for]="'gap-description-' + index">Additional context <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('gapDescription')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
+                <textarea cdkTextareaAutosize [id]="'gap-description-' + index" cdkAutosizeMinRows="2" [value]="$any(gap)['description'] || ''" (input)="updateGap(index, 'description', $any($event.target).value)"></textarea>
               </div>
               <div class="structured-control structured-control--wide">
                 <label class="structured-label" [for]="'gap-next-sources-' + index">Suggested next sources <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Objaśnienie pola" [matTooltip]="tooltip('gapNextSources')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>

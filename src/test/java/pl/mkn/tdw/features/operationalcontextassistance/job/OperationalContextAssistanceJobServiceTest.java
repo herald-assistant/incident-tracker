@@ -5,6 +5,9 @@ import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextVal
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextOpenQuestion;
 import org.springframework.core.task.TaskExecutor;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceAiInput;
@@ -89,6 +92,50 @@ class OperationalContextAssistanceJobServiceTest {
     private final OperationalContextAssistanceLocalRunPersistence localRunPersistence =
             mock(OperationalContextAssistanceLocalRunPersistence.class);
     private OperationalContextAssistanceJobService service;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"open", "resolved", "duplicate", "wrong-target", "missing"})
+    void shouldResolveOnlyOneActiveQuestionWithItsExactTarget(String scenario) {
+        var question = new OperationalContextOpenQuestion("crm-owner", "systems.yml", "system",
+                scenario.equals("wrong-target") ? "crm-support-api" : "crm-customer-api",
+                "Confirm CRM ownership.", "info", scenario.equals("resolved") ? "resolved" : "open", "/systems/0/gaps/0");
+        var questions = scenario.equals("missing") ? List.<OperationalContextOpenQuestion>of()
+                : scenario.equals("duplicate") ? List.of(question,
+                new OperationalContextOpenQuestion("crm-owner", "repo-map.yml", "repository", "crm-repository",
+                        "Confirm CRM repository ownership.", "info", "open", "/repositories/0/gaps/0")) : List.of(question);
+        var catalog = new OperationalContextCatalog(
+                List.of(), List.of(), List.of(system("crm-customer-api")), List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), questions, List.of());
+        when(catalogMaterialService.capture()).thenReturn(new OperationalContextAssistanceCatalogMaterial(
+                "digest-1", catalog, Map.of(), Map.of()));
+        when(maintenanceService.entity("system", "crm-customer-api")).thenReturn(new OperationalContextEditableEntity(
+                "system", "crm-customer-api", "systems.yml", Map.of("id", "crm-customer-api")));
+        when(maintenanceService.writablePayloadForUpdate("system", "crm-customer-api"))
+                .thenReturn(Map.of("id", "crm-customer-api"));
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new OperationalContextAssistanceCopilotResult(
+                        new CopilotExecutionResult("{draft}", null), Set.of()));
+        when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(List.of(), List.of()));
+
+        var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
+                OperationalContextAssistanceMode.RESOLVE_FINDING, "Potwierdź odpowiedzialność CRM.",
+                new OperationalContextAssistanceJobStartRequest.Target(
+                        OperationalContextAssistanceJobStartRequest.Target.Kind.OPEN_QUESTION,
+                        "system", "crm-customer-api", "crm-owner"), null, null, null, null));
+        var finalState = service.getJob(accepted.jobId());
+        assertThat(finalState.status()).isEqualTo(OperationalContextAssistanceJobStatus.BLOCKED);
+        if (scenario.equals("open")) {
+            assertThat(finalState.errorCode()).isEqualTo("OPCTX_ASSISTANCE_NO_PROPOSALS");
+            var input = ArgumentCaptor.forClass(OperationalContextAssistanceAiInput.class);
+            verify(promptService).prepare(input.capture());
+            assertThat(input.getValue().targetContext().path("finding").path("id").asText()).isEqualTo("crm-owner");
+            assertThat(input.getValue().targetContext().path("finding").path("sourcePath").asText()).isEqualTo("/systems/0/gaps/0");
+        } else {
+            assertThat(finalState.errorCode()).isEqualTo("OPCTX_ASSISTANCE_CONTEXT_BLOCKED");
+            verify(promptService, never()).prepare(any());
+            verify(copilotProvider, never()).execute(anyString(), any(), any(), any(), any(), any(), any());
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -1013,7 +1060,7 @@ class OperationalContextAssistanceJobServiceTest {
     ) {
         return new OperationalContextCatalog(
                 List.of(), List.of(), systems, List.of(), List.of(), scopes,
-                List.of(), List.of(), List.of(), List.of()
+                List.of(), List.of(), List.of(), List.of(), List.of()
         );
     }
 

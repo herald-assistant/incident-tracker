@@ -385,7 +385,7 @@ public class OperationalContextCatalogMatcher {
         addSignalMatches(score, signals, term.useInContext(), 4, 2, "useContext");
         addSignalMatches(score, signals, term.doNotConfuseWith(), 4, 2, "doNotConfuse");
         addSignalMatches(score, signals, term.matchSignals(), 8, 5, "matchSignal");
-        addSignalMatches(score, signals, term.canonicalReferences(), 6, 3, "canonicalReference");
+        addSignalMatches(score, signals, term.referenceValues(), 6, 3, "canonicalReference");
         addSignalMatches(score, signals, term.synonyms(), 7, 4, "synonym");
         addSignalMatches(score, signals, term.notes(), 3, 1, "note");
         return score;
