@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
@@ -72,6 +73,10 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         var session = assembly.runRequest().sessionConfigRequest();
 
         assertThat(session.skillsEnabled()).isFalse();
+        assertThat(session.availableToolNames()).contains(OperationalContextToolNames.GET_SCOPE,
+                OperationalContextToolNames.LIST_ENTITIES, OperationalContextToolNames.SEARCH,
+                OperationalContextToolNames.GET_ENTITY);
+        assertThat(session.durableSystemInstructions()).contains(UxInspectorDurableSystemInstructions.operationalContextGuidance());
         assertThat(session.effectiveAvailableToolNames())
                 .contains(GitLabToolNames.LIST_REPOSITORY_TREE, GitLabToolNames.LIST_REPOSITORY_FILES,
                         GitLabToolNames.SEARCH_REPOSITORY_FILES, GitLabToolNames.READ_REPOSITORY_FILE,
@@ -123,6 +128,8 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 "skill"
         ));
         names.addAll(CopilotReportToolNames.allToolNames());
+        names.addAll(List.of(OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+                OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY));
         return names.stream().map(this::tool).toList();
     }
 

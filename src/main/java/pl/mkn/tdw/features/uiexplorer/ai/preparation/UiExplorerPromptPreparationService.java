@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.uiexplorer.ai.preparation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.tdw.features.uiexplorer.ai.copilot.UiExplorerDurableSystemInstructions;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 
@@ -114,7 +115,7 @@ public class UiExplorerPromptPreparationService {
                 artifactContent(contents, UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT),
                 UiExplorerArtifactService.REPORT_CONTRACT_ARTIFACT,
                 artifactContent(contents, UiExplorerArtifactService.REPORT_CONTRACT_ARTIFACT)
-        ).trim();
+        ).trim() + "\n\n" + UiExplorerDurableSystemInstructions.operationalContextGuidance();
         return new UiExplorerPromptPreparation(
                 prompt,
                 artifacts,

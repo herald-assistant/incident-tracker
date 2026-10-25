@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.uxinspector.ai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import pl.mkn.tdw.features.uxinspector.ai.copilot.UxInspectorDurableSystemInstructions;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
@@ -310,7 +311,8 @@ public class UxInspectorPromptPreparationService {
                 artifacts.get(REPOSITORY_TREE_ARTIFACT), REPOSITORY_GUIDANCE_ARTIFACT,
                 artifacts.get(REPOSITORY_GUIDANCE_ARTIFACT), REPOSITORY_GUIDANCE_ARTIFACT,
                 REPOSITORY_GUIDANCE_ARTIFACT, COMPONENT_SOURCE_PACK_ARTIFACT, REPOSITORY_TREE_ARTIFACT,
-                REPORT_ARTIFACT, artifacts.get(REPORT_ARTIFACT)).trim();
+                REPORT_ARTIFACT, artifacts.get(REPORT_ARTIFACT)).trim()
+                + "\n\n" + UxInspectorDurableSystemInstructions.operationalContextGuidance();
         return new UxInspectorPromptPreparation(prompt, artifacts);
     }
 

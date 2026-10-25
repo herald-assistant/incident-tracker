@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
@@ -71,6 +72,11 @@ public class UiExplorerLocalRunSnapshotSanitizer {
     private static final Set<String> TOOL_RESULTS_WITH_PUBLIC_CODE_CONTENT = Set.of(
             "gitlab_read_frontend_typescript_symbol_slice",
             "gitlab_read_repository_file"
+    );
+
+    private static final Set<String> OPERATIONAL_CONTEXT_TOOLS = Set.of(
+            OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY
     );
 
     private static final Set<String> SAFE_CONTEXT_TIER_ACTIVITY_DETAILS = Set.of(
@@ -349,6 +355,11 @@ public class UiExplorerLocalRunSnapshotSanitizer {
     private AnalysisEvidenceItem sanitizeToolEvidence(AnalysisEvidenceItem item) {
         var safeAttributes = new ArrayList<>(sanitizeAttributes(item, SAFE_TOOL_EVIDENCE_ATTRIBUTES));
         var toolName = attributeValue(item, "toolName");
+        if (toolName != null && OPERATIONAL_CONTEXT_TOOLS.contains(toolName)) {
+            for (var name : List.of("toolArguments", "resultSummary", "profile", "limitations")) {
+                addCopiedAttribute(item, safeAttributes, name);
+            }
+        }
         if (TOOL_RESULTS_WITH_PUBLIC_CODE_CONTENT.contains(toolName)) {
             addCopiedAttribute(item, safeAttributes, "content");
         }

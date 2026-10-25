@@ -62,6 +62,12 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- [UI Explorer i UX Inspector: wiedza z Operational Context](needs/ui-analysis-operational-context.md)
+  oraz [plan udostepnienia katalogu modelowi](plans/ui-analysis-operational-context.md)
+  obejmuja pelny odczyt kontekstu dla lepszej interpretacji, z zachowaniem
+  obecnych trybow, raportow i zakresu kodu. Zatwierdzony plan ma status
+  `in-progress`; obejmuje takze koncowy pilot interpretacji katalogu.
+
 - [UX Inspector: jedno przekazanie obserwacji](needs/ux-inspector-capture-snapshot.md)
   oraz [plan capture przez REST](plans/ux-inspector-capture-snapshot.md)
   opisuja upload calej obserwacji z badanej strony, snapshot w

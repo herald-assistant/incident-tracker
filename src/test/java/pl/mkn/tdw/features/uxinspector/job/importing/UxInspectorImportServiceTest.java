@@ -48,6 +48,25 @@ class UxInspectorImportServiceTest {
     }
 
     @Test
+    void shouldKeepOperationalContextEvidenceInTheCurrentReadOnlyExport() throws Exception {
+        ObjectNode document = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
+        var catalogEvidence = objectMapper.readTree("""
+                {"provider":"ai","category":"tool-affordances","items":[{
+                  "title":"CRM process knowledge","attributes":[
+                    {"name":"toolName","value":"opctx_get_entity"},
+                    {"name":"toolCallId","value":"crm-catalog-call"},
+                    {"name":"resultSummary","value":"CRM contact management"}]}]}
+                """);
+        ((com.fasterxml.jackson.databind.node.ArrayNode) document.at("/payload/job/toolEvidenceSections"))
+                .add(catalogEvidence);
+        var imported = service.importReadOnly(document);
+        assertThat(objectMapper.writeValueAsString(imported.toolEvidenceSections()))
+                .contains("opctx_get_entity", "CRM contact management");
+        assertThat(imported.chatAvailability().available()).isFalse();
+        verify(persistence).persistRunSnapshot(any());
+    }
+
+    @Test
     void shouldImportValidExportRegardlessOfWholeDocumentSize() {
         ObjectNode document = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         document.withObject("/payload/job").put("preparedPrompt", "x".repeat(1_100_000));

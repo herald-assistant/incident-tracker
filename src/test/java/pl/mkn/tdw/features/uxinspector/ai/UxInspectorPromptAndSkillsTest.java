@@ -21,6 +21,20 @@ import java.nio.charset.StandardCharsets;
 class UxInspectorPromptAndSkillsTest {
 
     @Test
+    void shouldKeepCatalogKnowledgeSeparateFromSourceAndRuntimeInInitialAndResumedSessions() {
+        var guidance = UxInspectorDurableSystemInstructions.operationalContextGuidance();
+        assertThat(service.prepare(request("Co oznacza preferencja kontaktu CRM?"), targetContext()).prompt())
+                .contains(guidance);
+        assertThat(UxInspectorDurableSystemInstructions.followUp()).contains(guidance);
+        assertThat(UxInspectorDurableSystemInstructions.followUp(true, "crm-run")).contains(guidance);
+        assertThat(guidance).contains("opctx_get_scope", "opctx_list_entities", "opctx_search", "opctx_get_entity",
+                "nieaktualny i niekompletny", "pierwszenstwo ma zweryfikowany kod odczytanej rewizji",
+                "Brak wpisu nie dowodzi braku funkcji",
+                "bez relacji z frontendem", "kolejnych stron", "capture/store", "regula procesowa nie dowodzi",
+                "nie rozszerza dostepu do kodu", "nie blokuje dotychczasowej analizy");
+    }
+
+    @Test
     void shouldAttachCompleteVisibleFieldsOrStateTheirAbsenceWithoutBlockingPreparation() {
         var base = request("Jakie pola są widoczne?");
         var capture = base.capture();

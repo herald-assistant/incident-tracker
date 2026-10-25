@@ -1118,6 +1118,28 @@ Feature dostarcza wlasny prompt, policy, hidden context, result contract i
 zasady uzycia tools. Operational context daje wspolny katalog orientacyjny,
 ale nie przejmuje odpowiedzialnosci feature'a za interpretacje wyniku.
 
+## UI Explorer i UX Inspector Usage
+
+Oba feature'y udostepniaja wszystkie cztery read-only `opctx_*` podczas
+initial analysis i follow-up, takze po wznowieniu z historii. Katalog
+uzupelnia wiedze o systemach, procesach, bounded contextach, logice procesowej,
+integracjach, handoffach i terminologii. Nie jest ograniczony do wybranego
+frontendu, jego relacji ani zamknietej listy encji. Model moze rozpoczac od
+dowolnego bytu, doczytywac kolejne strony i ekspansje bez feature'owego
+limitu liczby przejsc/wywolan. Nie musi pobierac calego katalogu przed analiza.
+
+Katalog moze byc miejscami nieaktualny i niekompletny. W kwestii implementacji
+pierwszenstwo ma zweryfikowany kod odczytanej rewizji. Brak wpisu nie dowodzi
+braku funkcji; braki i rozbieznosci sa jawne, bez dopasowywania kodu do katalogu.
+
+Guidance nalezy do feature'ow: istotna wiedza katalogowa ma jawnie wskazany
+katalog i encje oraz jest oddzielona od dowodu implementacji i obserwacji
+runtime. Regula procesowa nie dowodzi jej wykonania w ekranie lub backendzie.
+Katalog nie rozszerza dostepu do kodu przez odczyt repository/code-search
+scope i nie zmienia trybow COMPACT/DEEP, readiness, tematu ani struktury
+raportow. Nie dodaje tez prawa do ich edycji podczas follow-up.
+Brak katalogu lub narzedzi nie blokuje dotychczasowej analizy.
+
 ## Anty-Wzorce
 
 Nie przywracaj:

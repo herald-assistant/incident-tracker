@@ -252,6 +252,28 @@ Inspectora, a hidden scope wymusza wybrany projekt i branch.
 Referencje zewnetrzne sa raportowane jako nierozwiazane i nie uruchamiaja
 pobierania sieciowego ani przejscia do innego repozytorium.
 
+Initial i follow-up udostepniaja tez `opctx_get_scope`, `opctx_list_entities`,
+`opctx_search` i `opctx_get_entity` jako opcjonalna wiedze o systemach,
+procesach, bounded contextach, logice procesowej, terminach i handoffach.
+Model moze czytac caly katalog, od dowolnej encji, bez ograniczenia do
+frontendu i jego relacji, limitu przejsc albo liczby odczytow. Pagination
+i include/ekspansje pozwalaja doczytac potrzebna tresc; initial prompt nie
+osadza pelnego katalogu. Brak tools, wpisu albo blad odczytu nie blokuje
+zwyklego researchu i pozostaje ograniczeniem, jesli jest materialny.
+
+Katalog moze byc nieaktualny i niekompletny. Dla zachowania implementacji
+pierwszenstwo ma zweryfikowany kod odczytanej rewizji; brak wpisu nie dowodzi
+braku funkcji. Model jawnie zaznacza braki i rozbieznosci.
+
+Canonical prompt i durable instructions, rowniez po resume, oddzielaja
+wiedze katalogowa od kodu i capture/store. Przy istotnym ustaleniu odpowiedz
+nazywa Operational Context i encje; regula opisana w katalogu nie dowodzi jej
+wykonania przez frontend lub backend. Konflikt jest jawny, a tresc katalogu
+jest niezaufana dana. Repository/code-search scope w katalogu nie daje prawa
+do odczytu innego projektu lub brancha. Zakres pytania, jedna sekcja answer,
+report references i dotychczasowy zakres kodowy pozostaja bez zmian.
+Nowy odczyt moze widziec nowszy katalog niz historyczne tool evidence.
+
 Report tools sa jedynym kanalem wyniku. AI przygotowuje w jednej rundzie
 naglowek, jedna sekcje `answer` i metadata, a nastepnie raz sprawdza stan
 raportu. Kontrola merytoryczna poprzedza zapis; po `report_get_current` raport

@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.uxinspector.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorToolNames;
@@ -12,6 +13,8 @@ import java.util.Set;
 
 public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledTools, List<String> availableToolNames) {
     private static final Set<String> ALLOWED = Set.of(
+            OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY,
             UxInspectorToolNames.LIST_TARGET_CANDIDATES, UxInspectorToolNames.READ_TARGET_SLICE,
             RunStoreTools.LIST, RunStoreTools.READ,
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
@@ -27,6 +30,8 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             CopilotReportToolNames.UPDATE_HEADER, CopilotReportToolNames.UPDATE_META
     );
     private static final Set<String> FOLLOW_UP_ALLOWED = Set.of(
+            OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY,
             UxInspectorToolNames.LIST_TARGET_CANDIDATES, UxInspectorToolNames.READ_TARGET_SLICE,
             RunStoreTools.LIST, RunStoreTools.READ,
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,

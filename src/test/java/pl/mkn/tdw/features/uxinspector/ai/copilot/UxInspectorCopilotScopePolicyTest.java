@@ -4,6 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.BudgetMode;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
@@ -14,6 +19,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.targetContext;
 
 class UxInspectorCopilotScopePolicyTest {
+
+    @Test
+    void shouldKeepFullCatalogNavigationIndependentOfTheBoundRepositoryAfterResume() {
+        var factory = new UxInspectorCopilotToolSessionContextFactory();
+        var properties = new CopilotToolBudgetProperties();
+        properties.setMode(BudgetMode.HARD);
+        var registry = new CopilotToolBudgetRegistry(properties);
+        var budget = new CopilotToolBudgetPolicy(registry);
+        var contexts = java.util.List.of(factory.create("crm-catalog-run", targetContext()),
+                factory.createFollowUp("crm-catalog-run", "crm-resumed-session", targetContext()));
+        for (var session : contexts) {
+            registry.registerSession(session.copilotSessionId());
+            for (var index = 0; index < 50; index++) {
+                var read = request(session, OperationalContextToolNames.GET_ENTITY,
+                        "{\"type\":\"process\",\"id\":\"crm-contact-policy\",\"include\":[\"navigationDetails\"]}");
+                assertThatCode(() -> policy.beforeInvocation(read)).doesNotThrowAnyException();
+                assertThatCode(() -> budget.beforeInvocation(read)).doesNotThrowAnyException();
+            }
+            assertThatThrownBy(() -> policy.beforeInvocation(request(session, GitLabToolNames.READ_REPOSITORY_FILE,
+                    """
+                    {"projectName":"crm-policy-backend","branchRef":"main","filePath":"README.md",
+                     "reason":"Sprawdzenie wpisu katalogowego CRM."}
+                    """))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                    .hasMessageContaining("projectName");
+        }
+    }
     private final UxInspectorCopilotScopePolicy policy = new UxInspectorCopilotScopePolicy(new ObjectMapper());
 
     @Test

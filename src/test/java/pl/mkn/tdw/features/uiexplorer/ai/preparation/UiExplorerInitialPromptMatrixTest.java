@@ -4,6 +4,7 @@ import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenIden
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
+import pl.mkn.tdw.features.uiexplorer.ai.copilot.UiExplorerDurableSystemInstructions;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerReachabilityBoundary;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSectionContextCoverage;
@@ -43,6 +44,7 @@ import static org.springframework.util.StringUtils.countOccurrencesOf;
 class UiExplorerInitialPromptMatrixTest {
 
     private static final int MAX_FIXED_PROMPT_OVERHEAD = 12_000;
+    private static final int MAX_CATALOG_GUIDANCE_CHARACTERS = 2_000;
     private static final Map<String, Integer> MAX_PROMPT_CHARACTERS = Map.of(
             "simple-screen", 17_000,
             "deep-routed-container", 21_000,
@@ -68,6 +70,14 @@ class UiExplorerInitialPromptMatrixTest {
             var scenario = preparedCase.scenario();
             var preparation = preparedCase.preparation();
             var prompt = preparation.prompt();
+            var catalogGuidance = UiExplorerDurableSystemInstructions.operationalContextGuidance();
+            assertThat(catalogGuidance.length()).isLessThanOrEqualTo(MAX_CATALOG_GUIDANCE_CHARACTERS);
+            assertThat(prompt).endsWith("\n\n" + catalogGuidance);
+            // Preserve the reviewed source/packing budget; account separately for the new instruction.
+            var sourcePromptCharacters = prompt.length() - catalogGuidance.length() - 2;
+            assertThat(countOccurrencesOf(prompt, "## Operational Context jako wiedza pomocnicza"))
+                    .as("catalog guidance must be embedded once without copying the catalog")
+                    .isEqualTo(1);
 
             assertThat(prompt).containsSubsequence(
                     "## 1. Analysis request and active sections",
@@ -94,11 +104,11 @@ class UiExplorerInitialPromptMatrixTest {
             var artifactCharacters = preparation.artifacts().stream()
                     .mapToInt(artifact -> artifact.content().length())
                     .sum();
-            assertThat(prompt.length() - artifactCharacters)
+            assertThat(sourcePromptCharacters - artifactCharacters)
                     .as("fixed instructions and headings in matrix case %s", scenario.id())
                     .isPositive()
                     .isLessThan(MAX_FIXED_PROMPT_OVERHEAD);
-            assertThat(prompt.length())
+            assertThat(sourcePromptCharacters)
                     .as("reviewed initial prompt baseline in matrix case %s", scenario.id())
                     .isLessThanOrEqualTo(MAX_PROMPT_CHARACTERS.get(scenario.id()));
             assertThat(preparation.visibilityLimits()).containsExactlyElementsOf(

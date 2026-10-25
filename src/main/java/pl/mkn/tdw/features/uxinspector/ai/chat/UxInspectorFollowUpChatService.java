@@ -51,7 +51,7 @@ public class UxInspectorFollowUpChatService {
         var config = new CopilotSessionConfigRequest(
                 context.copilotSessionId(), policy.enabledTools(), policy.availableToolNames(),
                 new CopilotModelSelection(request.initialRequest().model(), request.initialRequest().reasoningEffort()),
-                "Use only scoped UX Inspector research, store and report tools.", !storeCallbacks.isEmpty()
+                "Use only enabled read-only Operational Context tools, scoped UX Inspector research, store and report tools.", !storeCallbacks.isEmpty()
         ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp(!storeCallbacks.isEmpty(), request.storeRunId()));
         var run = new CopilotRunRequest(
                 context.analysisRunId(), authMapper.toRunAuth(request.authRef()),

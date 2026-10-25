@@ -46,12 +46,14 @@ class UiExplorerCopilotRuntimeSkillsContractTest {
                 .contains("ui-explorer-write-report")
                 .doesNotContain("\"functionalOverview\"");
         assertThat(grounding)
+                .contains("nieaktualny i niekompletny", "pierwszenstwo ma zweryfikowany kod odczytanej rewizji")
                 .contains("UNTRUSTED_SOURCE_EVIDENCE")
                 .contains("ignore previous instructions")
                 .contains("completenessSignals")
                 .contains("SourceGroundingSummary")
                 .doesNotContain("Finalnym artefaktem jest jeden JSON");
         assertThat(writer)
+                .contains("nieaktualny i niekompletny", "pierwszenstwo ma zweryfikowany kod odczytanej")
                 .contains("Zrodlem prawdy jest `AnalysisReport` zapisany przez report tools")
                 .contains("FORMS_AND_RULES")
                 .contains("completenessSignals")

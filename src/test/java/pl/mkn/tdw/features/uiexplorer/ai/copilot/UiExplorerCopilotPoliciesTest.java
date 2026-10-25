@@ -3,6 +3,11 @@ package pl.mkn.tdw.features.uiexplorer.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.BudgetMode;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
 
@@ -13,6 +18,34 @@ import static pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.F
 import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.context;
 
 class UiExplorerCopilotPoliciesTest {
+
+    @Test
+    void shouldAllowCatalogNavigationBeyondFrontendAndBudgetWithoutOpeningBackendCode() {
+        var factory = new UiExplorerCopilotToolSessionContextFactory();
+        var start = pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request();
+        var properties = new CopilotToolBudgetProperties();
+        properties.setMode(BudgetMode.HARD);
+        var registry = new CopilotToolBudgetRegistry(properties);
+        var budget = new CopilotToolBudgetPolicy(registry);
+        var contexts = java.util.List.of(factory.create("crm-catalog-run", start, context()),
+                factory.createFollowUp("crm-catalog-run", "crm-resumed-session", start, context()));
+        for (var session : contexts) {
+            registry.registerSession(session.copilotSessionId());
+            for (var index = 0; index < 50; index++) {
+                for (var type : java.util.List.of("process", "bounded-context", "system", "glossary")) {
+                    var read = request(session, OperationalContextToolNames.GET_ENTITY,
+                            "{\"type\":\"" + type + "\",\"id\":\"crm-contact-policy\",\"include\":[\"navigationDetails\"]}");
+                    assertThatCode(() -> scopePolicy.beforeInvocation(read)).doesNotThrowAnyException();
+                    assertThatCode(() -> budget.beforeInvocation(read)).doesNotThrowAnyException();
+                }
+            }
+            assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(session,
+                    GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                    chunk("backend/CrmPolicy.java", "main", "Sprawdzenie wpisu katalogowego CRM.")
+                            .replace("crm-agent-portal", "crm-policy-backend"))))
+                    .isInstanceOf(CopilotToolInvocationRejectedException.class);
+        }
+    }
 
     private static final String API_PATH =
             "libs/crm/data-access/src/lib/crm-contact-preferences.api.ts";

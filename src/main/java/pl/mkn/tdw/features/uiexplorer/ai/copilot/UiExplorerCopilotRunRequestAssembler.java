@@ -25,7 +25,7 @@ public class UiExplorerCopilotRunRequestAssembler {
     private static final CopilotToolDescriptionContext DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("ui-explorer");
     private static final String DENIED_TOOL_MESSAGE =
-            "Use only UI Explorer skills and explicitly enabled, scoped GitLab fallback tools.";
+            "Use only enabled UI Explorer skills, report tools, read-only Operational Context tools and scoped GitLab fallback tools.";
 
     private final CopilotSdkToolFactory toolFactory;
     private final UiExplorerCopilotToolSessionContextFactory contextFactory;

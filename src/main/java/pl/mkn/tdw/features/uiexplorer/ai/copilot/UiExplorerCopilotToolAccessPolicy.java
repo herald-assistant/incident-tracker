@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.uiexplorer.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 
 import java.util.List;
@@ -22,6 +23,13 @@ public record UiExplorerCopilotToolAccessPolicy(
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
     );
 
+    private static final Set<String> OPERATIONAL_CONTEXT_TOOLS = Set.of(
+            OperationalContextToolNames.GET_SCOPE,
+            OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH,
+            OperationalContextToolNames.GET_ENTITY
+    );
+
     public UiExplorerCopilotToolAccessPolicy {
         enabledTools = enabledTools != null ? List.copyOf(enabledTools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
@@ -33,6 +41,7 @@ public record UiExplorerCopilotToolAccessPolicy(
     ) {
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
                 .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
+                        || OPERATIONAL_CONTEXT_TOOLS.contains(tool.name())
                         || CopilotReportToolNames.isReportTool(tool.name())
                         && !CopilotReportToolNames.PATCH_SECTION.equals(tool.name())
                         && !CopilotReportToolNames.READ_SECTION_CHUNK.equals(tool.name()))
@@ -49,6 +58,7 @@ public record UiExplorerCopilotToolAccessPolicy(
     public static UiExplorerCopilotToolAccessPolicy forFollowUp(List<ToolDefinition> registeredTools) {
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
                 .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
+                        || OPERATIONAL_CONTEXT_TOOLS.contains(tool.name())
                         || CopilotReportToolNames.isReportTool(tool.name()))
                 .toList();
         var names = enabled.stream().map(ToolDefinition::name).toList();

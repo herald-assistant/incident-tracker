@@ -27,7 +27,7 @@ public class UiExplorerFollowUpChatService {
 
     private static final CopilotToolDescriptionContext DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("ui-explorer");
-    private static final String DENIED = "Use only scoped UI Explorer research and report tools.";
+    private static final String DENIED = "Use only enabled read-only Operational Context tools, scoped UI Explorer research and report tools.";
 
     private final UiExplorerFollowUpPromptService promptService;
     private final UiExplorerCopilotToolSessionContextFactory contextFactory;

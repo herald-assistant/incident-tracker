@@ -3,9 +3,12 @@ package pl.mkn.tdw.features.uiexplorer.ai.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
@@ -18,6 +21,9 @@ import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadinessGate;
 import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportFactory;
+import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
+import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
+import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.util.List;
@@ -49,10 +55,15 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
         );
         assertThat(policy.availableToolNames()).containsAll(CopilotReportToolNames.allToolNames());
+        assertThat(policy.availableToolNames()).contains(
+                OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+                OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY);
+        assertThat(UiExplorerDurableSystemInstructions.followUp())
+                .contains(UiExplorerDurableSystemInstructions.operationalContextGuidance());
     }
 
     @Test
-    void shouldAssemblePartialCrmRunWithOnlyScopedFallbackToolsAndSkill() {
+    void shouldAssemblePartialCrmRunWithCatalogKnowledgeAndScopedCodeTools() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
         when(toolFactory.createToolDefinitions(contextCaptor.capture(), eq(DESCRIPTION_CONTEXT)))
@@ -88,6 +99,10 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.toolAccessPolicy().availableToolNames())
                 .containsAll(CopilotReportToolNames.initialToolNames());
         assertThat(assembly.toolAccessPolicy().reportToolsAvailable()).isTrue();
+        assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames()).contains(
+                OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+                OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY);
+        assertThat(preparation.prompt()).contains(UiExplorerDurableSystemInstructions.operationalContextGuidance());
         assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
                 .doesNotContain("gitlab_list_available_repositories", "db_describe_table");
@@ -106,6 +121,9 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 .containsExactly("OVERVIEW", "FORMS_AND_RULES");
         var durableInstructions = assembly.runRequest().sessionConfigRequest().durableSystemInstructions();
         assertThat(durableInstructions)
+                .contains(UiExplorerDurableSystemInstructions.operationalContextGuidance())
+                .contains("nieaktualny i niekompletny", "pierwszenstwo ma zweryfikowany kod odczytanej rewizji",
+                        "Brak wpisu nie dowodzi braku funkcji")
                 .contains("Zrodlem prawdy initial result jest `AnalysisReport`")
                 .contains("`report_get_current`")
                 .contains(preparation.artifactContents().get(UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT))
@@ -147,8 +165,40 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 tool(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES),
                 tool("db_describe_table")
         ));
+        tools.addAll(List.of(OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
+                OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY).stream().map(this::tool).toList());
         CopilotReportToolNames.allToolNames().forEach(name -> tools.add(tool(name)));
         return List.copyOf(tools);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UiExplorerSectionMode.class, names = {"COMPACT", "DEEP"})
+    void shouldOfferTheSameCatalogWithoutChangingSectionModeOrRequiringCatalogRegistration(UiExplorerSectionMode mode) {
+        var base = request();
+        var section = mode == UiExplorerSectionMode.COMPACT
+                ? UiExplorerSectionId.OVERVIEW : UiExplorerSectionId.FORMS_AND_RULES;
+        var request = new UiExplorerJobStartRequest(base.systemId(), base.branch(), base.screenId(),
+                Map.of(section, mode), base.scenarioDescription(), base.model(), base.reasoningEffort());
+        var toolFactory = mock(CopilotSdkToolFactory.class);
+        var preparation = new UiExplorerPromptPreparationService(new UiExplorerArtifactService(new ObjectMapper()),
+                new CopilotArtifactContentMapper()).prepare(request, context());
+        var assembler = new UiExplorerCopilotRunRequestAssembler(toolFactory,
+                new UiExplorerCopilotToolSessionContextFactory(), new CopilotRunAuthMapper(), new UiExplorerReportFactory());
+        var readiness = new UiExplorerAiReadinessGate().evaluate(request, context());
+        when(toolFactory.createToolDefinitions(org.mockito.ArgumentMatchers.any(), eq(DESCRIPTION_CONTEXT)))
+                .thenReturn(registeredTools());
+        var assembly = assembler.assemble("crm-catalog-mode", request, context(), preparation, readiness,
+                AnalysisAiAuthRef.localToken(null));
+        assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
+                .contains(OperationalContextToolNames.GET_ENTITY);
+        assertThat(assembly.runRequest().initialReport().sections()).extracting(resultSection -> resultSection.id())
+                .containsExactly(section.name());
+        assertThat(request.sectionModes()).containsExactly(Map.entry(section, mode));
+
+        var withoutCatalog = registeredTools().stream()
+                .filter(tool -> !tool.name().startsWith(OperationalContextToolNames.PREFIX)).toList();
+        assertThat(UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(withoutCatalog, false).fallbackAvailable()).isTrue();
+        assertThat(UiExplorerCopilotToolAccessPolicy.forFollowUp(withoutCatalog).reportToolsAvailable()).isTrue();
     }
 
     private ToolDefinition tool(String name) {

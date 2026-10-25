@@ -167,6 +167,7 @@ oraz hidden report scope. Default-deny allowlista zawiera:
 - `gitlab_read_frontend_typescript_symbol_slice`,
 - `gitlab_search_repository_candidates`,
 - `gitlab_read_repository_file` lub chunked read,
+- `opctx_get_scope`, `opctx_list_entities`, `opctx_search`, `opctx_get_entity`,
 - cztery platformowe `report_*` tools.
 
 Route i TypeScript slices sa preferowane dla znanych targetow. Generyczny
@@ -177,6 +178,27 @@ generyczne tools wymagaja poprawnych wspolrzednych brancha z artefaktu.
 Feature nie naklada limitu poprawnych wywolan; petla konczy sie po readiness
 albo po potwierdzeniu rzeczywistej granicy runtime, zewnetrznej biblioteki lub
 scope.
+
+Operational Context jest opcjonalnym zrodlem szerszej wiedzy o systemach,
+procesach, bounded contextach, logice procesowej, terminach i handoffach.
+Model ma odczyt calego katalogu w COMPACT i DEEP, bez filtrow do frontendu,
+limitu przejsc i liczby wywolan; korzysta z pagination i include/ekspansji
+wedlug potrzeby zamiast wczytywac calosc przed kazdym runem. Brak rejestracji
+tools, wpisu lub odczytu nie blokuje dotychczasowego source researchu.
+
+Katalog moze byc nieaktualny i niekompletny. Dla zachowania implementacji
+pierwszenstwo ma zweryfikowany kod odczytanej rewizji; brak wpisu nie dowodzi
+braku funkcji. Model jawnie zaznacza braki i rozbieznosci.
+
+Canonical prompt i durable instrukcje initial/follow-up rozrozniaja wiedze
+katalogowa, dowod z kodu i obserwacje runtime. Istotny kontekst nazywa katalog
+i encje; katalogowa regula nie dowodzi wykonania przez UI lub backend ani
+nie stanowi source reference kodu. Sprzecznosci sa jawne. Odczyt repozytorium
+lub code-search scope w katalogu nie rozszerza hidden scope GitLaba.
+Dotychczasowe znaczenie trybow, readiness i struktura raportu pozostaja.
+Tool evidence korzysta ze wspolnego capture; local sanitizer zachowuje
+tool/call, arguments, result summary, profile i limitations odczytu katalogu
+w istniejacym modelu attributes. Nie powstaje osobny kontrakt raportowy.
 
 Przed sesja powstaje pusty `AnalysisReport` ograniczony do aktywnych sekcji.
 Model zapisuje header, sekcje i globalne meta przez report tools, a na koncu
@@ -232,7 +254,10 @@ szczegoly backendu pozostaja ograniczeniem widocznosci.
 
 Follow-up wznawia ta sama sesje Copilota i zachowuje wybrany branch oraz
 hidden repository scope. Kazdy odczyt moze widziec nowszy stan brancha. Ma piec read-only research tools oraz
-piec report tools w hidden scope biezacego raportu. Prompt zawiera jedynie
+piec report tools w hidden scope biezacego raportu oraz te same cztery
+Operational Context tools bez ograniczenia katalogu do frontendu. Wiedza
+katalogowa nie zmienia prawa do edycji raportu ani dostepu do kodu.
+Prompt zawiera jedynie
 nowa wiadomosc i wskazowke skilla `ui-explorer-follow-up-chat`. Model moze
 odczytac raport przez `report_get_current`; tylko jawna prosba w najnowszej
 wiadomosci pozwala uzyc `report_update_header`, `report_upsert_section`,

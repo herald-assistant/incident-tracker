@@ -68,6 +68,10 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
 - Feature deterministycznie waliduje source references raportu wobec
   przygotowanego kontekstu i captured tool evidence, a nastepnie projektuje
   raport na feature-specific `UiExplorerResultResponse` dla publicznego API.
+- Operational Context jest opcjonalna wiedza pomocnicza przez wszystkie
+  cztery `opctx_*` w initial i follow-up, bez filtrow katalogu do frontendu
+  i limitu przejsc. Odróżniaj wiedze katalogowa od dowodu zachowania w kodzie;
+  katalog nie zmienia trybow, raportu ani zakresu dostepu do GitLaba.
 - Follow-up wznawia te sama sesje Copilota dla `COMPLETED` i `PARTIAL`, uzywa
   wybranego brancha i pieciu read-only research tools. Report tools
   maja hidden scope biezacego raportu; mutacja wymaga jawnej prosby operatora

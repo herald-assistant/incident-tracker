@@ -77,6 +77,16 @@ class UiExplorerPortabilityTest {
                 "internal-crm-ui-project"
         );
         contaminateUntrustedImport(document);
+        var catalogEvidence = objectMapper.readTree("""
+                {"provider":"ai","category":"tool-affordances","items":[{
+                  "title":"CRM process knowledge","attributes":[
+                    {"name":"toolName","value":"opctx_get_entity"},
+                    {"name":"toolCallId","value":"crm-catalog-call"},
+                    {"name":"toolArguments","value":"{\\"type\\":\\"process\\",\\"id\\":\\"crm-contact-management\\"}"},
+                    {"name":"resultSummary","value":"CRM contact management"},
+                    {"name":"hiddenScope","value":"CRM_HIDDEN_SCOPE_SECRET"}]}]}
+                """);
+        ((ArrayNode) document.at("/payload/job/toolEvidenceSections")).add(catalogEvidence);
 
         var importService = new UiExplorerImportService(objectMapper, properties, sanitizer, persister);
         var imported = importService.importReadOnly(document);
@@ -86,6 +96,9 @@ class UiExplorerPortabilityTest {
         assertThat(imported.exportAvailable()).isTrue();
         assertThat(imported.preparedPrompt()).isNull();
         assertThat(imported.toolFeedback()).isEmpty();
+        assertThat(objectMapper.writeValueAsString(imported.toolEvidenceSections()))
+                .contains("opctx_get_entity", "crm-contact-management", "CRM contact management")
+                .doesNotContain("CRM_HIDDEN_SCOPE_SECRET");
         assertThat(imported.sourceRevision()).isEqualTo(source.sourceRevision());
         assertThat(imported.result().visibilityLimits()).isEqualTo(source.result().visibilityLimits());
         assertThat(imported.report().header()).isEqualTo("/contacts/:contactId/preferences");
@@ -118,6 +131,7 @@ class UiExplorerPortabilityTest {
                 sanitizer
         ).export(imported.jobId());
         var reExportedJson = objectMapper.writeValueAsString(reExported);
+        assertThat(reExportedJson).contains("opctx_get_entity", "crm-contact-management", "CRM contact management");
 
         assertThat(reExported.schema()).isEqualTo(UiExplorerExportEnvelope.SCHEMA);
         assertThat(reExported.payload().job().jobId()).isEqualTo(imported.jobId());

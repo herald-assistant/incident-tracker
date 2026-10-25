@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.uxinspector.ai.copilot;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorToolNames;
 
@@ -26,12 +27,26 @@ class UxInspectorFollowUpToolAccessPolicyTest {
         registered.add(tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK));
         registered.add(tool(GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE));
         CopilotReportToolNames.allToolNames().forEach(name -> registered.add(tool(name)));
+        var catalogTools = java.util.List.of(OperationalContextToolNames.GET_SCOPE,
+                OperationalContextToolNames.LIST_ENTITIES, OperationalContextToolNames.SEARCH,
+                OperationalContextToolNames.GET_ENTITY);
+        catalogTools.forEach(name -> registered.add(tool(name)));
+        registered.add(tool(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES));
+        registered.add(tool("opctx_delete_entity"));
 
         var policy = UxInspectorCopilotToolAccessPolicy.forFollowUp(registered);
 
         assertThat(policy.followUpResearchAvailable()).isTrue();
         assertThat(policy.availableToolNames()).containsAll(UxInspectorToolNames.ALL);
         assertThat(policy.availableToolNames()).containsAll(CopilotReportToolNames.allToolNames());
+        assertThat(policy.availableToolNames()).containsAll(catalogTools)
+                .doesNotContain(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES, "opctx_delete_entity");
+        assertThat(UxInspectorCopilotToolAccessPolicy.from(registered).availableToolNames())
+                .containsAll(catalogTools)
+                .doesNotContain(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES, "opctx_delete_entity");
+        var withoutCatalog = registered.stream().filter(tool -> !tool.name().startsWith("opctx_")).toList();
+        assertThat(UxInspectorCopilotToolAccessPolicy.from(withoutCatalog).sourceToolsAvailable()).isTrue();
+        assertThat(UxInspectorCopilotToolAccessPolicy.forFollowUp(withoutCatalog).followUpResearchAvailable()).isTrue();
     }
 
     private static ToolDefinition tool(String name) {

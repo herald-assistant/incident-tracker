@@ -41,6 +41,10 @@ report, historie oraz import/export.
   sie przez to rozstrzygnietym targetem.
 - Jedynym wynikiem AI jest `AnalysisReport` z sekcja `answer`; tekst finalny
   Copilota nigdy nie jest fallbackiem.
+- Operational Context uzupelnia wiedze modelu przez cztery `opctx_*` w initial
+  i follow-up. Caly katalog jest dostepny bez filtrow do frontendu i limitu
+  przejsc. Regula katalogowa nie dowodzi wykonania przez frontend/backend;
+  odczyt repository/code-search scope nie rozszerza kodowego scope ani raportu.
 - Follow-up chat wznawia te sama sesje i zachowuje branchowy repository scope.
   Report tools moga zmienic raport tylko po jawnej prosbie w najnowszej
   wiadomosci operatora; mapper ponownie waliduje report/result. Odpowiedzi

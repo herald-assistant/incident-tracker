@@ -18,6 +18,20 @@ Zapisz biznesowo czytelna dokumentacje funkcjonalna wybranego widoku do
 aktywnego `AnalysisReport`, zachowujac potwierdzone sekcje nawet wtedy, gdy
 inna sekcja ma jawna luke albo ograniczenie widocznosci.
 
+## Wiedza katalogowa
+
+Operational Context moze byc miejscami nieaktualny i niekompletny. Dla
+zachowania implementacji pierwszenstwo ma zweryfikowany kod odczytanej
+rewizji. Brak wpisu nie dowodzi braku funkcji; braki i rozbieznosci pokaz jawnie.
+
+Operational Context moze uzupelniac znaczenie pojec, procesow, bounded
+contextow i systemow we wlasciwej aktywnej sekcji. Przy istotnym twierdzeniu
+nazwij katalog i encje. Nie tworz osobnej sekcji katalogowej ani source
+reference kodu z wpisu katalogowego. Regula opisana w katalogu nie potwierdza
+jej wykonania przez frontend lub backend; oddziel ja od potwierdzonego
+zachowania i obserwacji runtime, a rozbieznosci nazwij jawnie. Zachowaj
+dotychczasowe znaczenie COMPACT/DEEP, strukture raportu i readiness.
+
 ## Wejscia
 
 Przyjmij:
