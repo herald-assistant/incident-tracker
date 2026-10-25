@@ -155,22 +155,37 @@
     <section class="entity-drawer__section">
       <h3>Mapa dalszej analizy</h3>
       @if (!entity.navigation.length) {
-        <p class="muted-text">Brak znanych powi�za� katalogowych.</p>
+        <p class="muted-text">Brak znanych powiązań katalogowych.</p>
       }
       @for (link of entity.navigation; track $index) {
-        <div class="drawer-group">
-          <button type="button" class="text-button" (click)="openNavigationTarget(link.target)">
-            {{ link.target.label }} � {{ link.target.type }}
+        <article class="navigation-entry">
+          <button type="button" class="navigation-entry__target" (click)="openNavigationTarget(link.target)">
+            <span>{{ link.target.label || link.target.id }}</span>
+            <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">arrow_forward</mat-icon>
           </button>
-          <small>{{ link.indirect ? 'Powi�zanie po�rednie' : 'Relacja bezpo�rednia' }} � {{ link.relationType }} � {{ link.direction }}</small>
-          <p>{{ link.reason }}</p>
+          <div class="navigation-entry__meta">
+            <span class="navigation-entry__type">{{ link.target.type }}</span>
+            <span>{{ link.indirect ? 'Powiązanie pośrednie' : 'Relacja bezpośrednia' }}</span>
+            <span>{{ link.relationType }}</span>
+            <span>{{ link.direction === 'incoming' ? 'Przychodząca' : link.direction === 'outgoing' ? 'Wychodząca' : link.direction }}</span>
+          </div>
+          <p class="navigation-entry__reason">{{ link.reason }}</p>
           @if (link.via.length) {
-            <small>Przez: @for (step of link.via; track step.id) { {{ step.label }} }</small>
+            <p class="navigation-entry__via">Przez:
+              @for (step of link.via; track step.id; let last = $last) {
+                {{ step.label || step.id }}@if (!last) { → }
+              }
+            </p>
           }
-          <details><summary>�r�d�a powi�zania</summary>
-            @for (ref of link.sourceRefs; track $index) { <p>{{ ref.file }} � {{ ref.fieldPath }}</p> }
-          </details>
-        </div>
+          @if (link.sourceRefs.length) {
+            <details class="navigation-entry__sources">
+              <summary>Źródła powiązania ({{ link.sourceRefs.length }})</summary>
+              @for (ref of link.sourceRefs; track $index) {
+                <p><span>{{ ref.file }}</span><code>{{ ref.fieldPath }}</code></p>
+              }
+            </details>
+          }
+        </article>
       }
     </section>
 

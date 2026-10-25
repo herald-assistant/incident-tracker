@@ -12,15 +12,21 @@ describe('ContextEntityDrawerComponent', () => {
       target: { type: 'system', id: 'crm-contact-service', label: 'CRM Contact Service' },
       relationType: 'related-via-integration', direction: 'incoming', indirect: true,
       via: [{ type: 'integration', id: 'crm-contact-events', label: 'CRM Contact Events' }],
-      path: [], reason: 'Odczytaj system uczestnicz�cy w integracji; udzia� nie potwierdza ownershipu.',
+      path: [], reason: 'Odczytaj system uczestniczący w integracji; udział nie potwierdza ownershipu.',
       sourceRefs: [{ file: 'integrations.yml', entityType: 'integration', entityId: 'crm-contact-events', fieldPath: '$.integrations' }]
     }] });
     const opened = vi.fn();
     fixture.componentInstance.openRelatedEntity.subscribe(opened);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Powi�zanie po�rednie');
+    expect(fixture.nativeElement.textContent).toContain('Powiązanie pośrednie');
     expect(fixture.nativeElement.textContent).toContain('integrations.yml');
-    (fixture.nativeElement.querySelector('.text-button') as HTMLButtonElement).click();
+    expect(fixture.nativeElement.textContent).toContain('Przychodząca');
+    expect(fixture.nativeElement.textContent).toContain('CRM Contact Events');
+    expect(fixture.nativeElement.textContent).not.toContain('\uFFFD');
+    const sources = fixture.nativeElement.querySelector('.navigation-entry__sources') as HTMLDetailsElement;
+    expect(sources.open).toBe(false);
+    expect(sources.querySelector('summary')?.textContent).toContain('Źródła powiązania (1)');
+    (fixture.nativeElement.querySelector('.navigation-entry__target') as HTMLButtonElement).click();
     expect(opened).toHaveBeenCalledWith({ type: 'system', id: 'crm-contact-service' });
   });
 
