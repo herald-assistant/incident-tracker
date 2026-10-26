@@ -32,6 +32,7 @@ public class CopilotContextTierActivator {
     private SessionOptionsUpdateParams longContextPatch() {
         return new SessionOptionsUpdateParams(
                 null, // sessionId is injected by the session-scoped RPC API
+                null, // imageGeneration
                 null, // model
                 null, // modelCapabilitiesOverrides
                 null, // reasoningEffort
@@ -55,10 +56,16 @@ public class CopilotContextTierActivator {
                 null, // shellInitProfile
                 null, // shellProcessFlags
                 null, // sandboxConfig
+                null, // sandboxConfigSource
                 null, // logInteractiveShells
                 null, // envValueMode
                 null, // allowAllMcpServerInstructions
                 null, // skillDirectories
+                null, // agentDirectories
+                null, // instructionDirectories
+                null, // hookDirectories
+                null, // ignoredSkillsLocations
+                null, // includedBuiltinSkills
                 null, // disabledSkills
                 null, // enableOnDemandInstructionDiscovery
                 null, // maxInlineBinaryBytes
@@ -88,7 +95,8 @@ public class CopilotContextTierActivator {
                 null, // enableSessionStore
                 null, // enableSkills
                 OptionsUpdateContextTier.LONG_CONTEXT,
-                null // sessionLimits
+                null, // sessionLimits
+                null // autopilot
         );
     }
 }

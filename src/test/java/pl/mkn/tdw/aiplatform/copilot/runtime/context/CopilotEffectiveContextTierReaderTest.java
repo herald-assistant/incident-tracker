@@ -24,8 +24,14 @@ class CopilotEffectiveContextTierReaderTest {
                 assertThat(method).isEqualTo("session.model.getCurrent");
                 var result = new SessionModelGetCurrentResult(
                         "gpt-synthetic-crm",
+                        null,
+                        null,
+                        null,
                         "high",
-                        ContextTier.LONG_CONTEXT
+                        ContextTier.LONG_CONTEXT,
+                        null,
+                        null,
+                        null
                 );
                 return CompletableFuture.completedFuture(resultType.cast(result));
             }

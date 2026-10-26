@@ -11,7 +11,7 @@ Obecnie obejmuje:
   techniczny runtime Copilot SDK: properties, model listing, skill runtime
   loading, `CopilotRunRequest`, `CopilotPreparedSession`,
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory budujace
-  `SessionConfig` i `MessageOptions`. Build przypina Java SDK 1.0.11 oraz
+  `SessionConfig` i `MessageOptions`. Build przypina Java SDK 1.0.26 oraz
   minimalny Copilot CLI 1.0.57. Po `client.start()` runtime pobiera rzeczywista
   wersje CLI i protokolu przez `status.get`, publikuje
   `platform.copilot_runtime` i nie otwiera sesji dla starszego CLI.
@@ -158,3 +158,7 @@ globalnie do konsumentow bez konfiguracji overflow.
   i `COPILOT_TEST_MODEL`; pokrywa sekwencje
   `create + send -> abort -> resume(long_context) -> options.update ->
   model.getCurrent -> continuation` oraz potwierdza wzrost `tokenLimit`.
+- Sam katalog modeli mozna sprawdzic bez tworzenia sesji i wysylania promptu:
+  przy `COPILOT_SDK_LIVE_TEST=true` uruchom tylko
+  `mvn -q '-Dtest=CopilotSdkContextTierLiveTest#shouldListModelCatalogWithoutStartingModelSession' test`.
+  Test wypisuje wersje SDK/CLI i liczbe modeli, bez PAT i pelnego katalogu.

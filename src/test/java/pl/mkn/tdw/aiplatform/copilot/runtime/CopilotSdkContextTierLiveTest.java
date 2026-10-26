@@ -19,6 +19,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.WorkspaceCopilotAccessTokenRes
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,13 +30,29 @@ class CopilotSdkContextTierLiveTest {
     Path copilotHome;
 
     @Test
-    void shouldIncreaseActualWindowAfterResumeAndExplicitLongContextActivation() throws Exception {
-        var sessionId = "tdw-context-tier-live-" + UUID.randomUUID();
+    void shouldListModelCatalogWithoutStartingModelSession() throws Exception {
+        try (var client = new CopilotClient(clientOptions())) {
+            try {
+                client.start().get(30, TimeUnit.SECONDS);
+                var runtime = new CopilotRuntimeCompatibility().inspect(client);
+                assertThat(runtime.compatible()).isTrue();
+                var catalog = client.getRpc().models.list().get(30, TimeUnit.SECONDS);
+                assertThat(catalog.models()).isNotEmpty();
+                assertThat(catalog.models()).allSatisfy(model -> assertThat(model.id()).isNotBlank());
+                System.out.printf("Copilot SDK %s / CLI %s: models.list returned %d models.%n",
+                        runtime.sdkVersion(), runtime.cliVersion(), catalog.models().size());
+            } finally {
+                client.stop().get(20, TimeUnit.SECONDS);
+            }
+        }
+    }
+
+    private CopilotClientOptions clientOptions() {
         var cliPath = new CopilotCliExecutableResolver().resolve(
                 System.getenv().getOrDefault("COPILOT_CLI_PATH", "copilot"),
                 System.getProperty("user.dir")
         );
-        var options = new CopilotClientOptions()
+        return new CopilotClientOptions()
                 .setCliPath(cliPath)
                 .setCwd(System.getProperty("user.dir"))
                 .setCopilotHome(copilotHome.toString())
@@ -49,8 +66,12 @@ class CopilotSdkContextTierLiveTest {
                         throw new IllegalStateException("Cannot read Copilot PAT from Workspace Settings", exception);
                     }
                 }).resolve(CopilotRunAuth.localToken()).value());
+    }
 
-        try (var client = new CopilotClient(options)) {
+    @Test
+    void shouldIncreaseActualWindowAfterResumeAndExplicitLongContextActivation() throws Exception {
+        var sessionId = "tdw-context-tier-live-" + UUID.randomUUID();
+        try (var client = new CopilotClient(clientOptions())) {
             client.start().join();
             var runtime = new CopilotRuntimeCompatibility().inspect(client);
             assertThat(runtime.compatible()).isTrue();

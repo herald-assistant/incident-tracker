@@ -245,11 +245,17 @@ resume nie jest wykonywana. Zasada fail-before-send pozostaje ograniczona do
 jawnego `LONG_CONTEXT_REQUIRED`; UI Explorer i Change Verification korzystaja
 z `AUTO`.
 
-Build przypina Java SDK 1.0.11 i minimalny Copilot CLI 1.0.57, czyli pierwsza
+Build przypina Java SDK 1.0.26 i minimalny Copilot CLI 1.0.57, czyli pierwsza
 wersje schematu CLI wystawiajaca `contextTier` dla `model.getCurrent`. Po
 `client.start()` runtime odczytuje `status.get`, odrzuca starszy CLI i
 publikuje neutralne activity `platform.copilot_runtime` z wersjami SDK, CLI i
 protokolu. Change Verification zapisuje te pola w diagnostyce eksportu v6.
+
+Typowane `models.list` korzysta ze schematu SDK obslugujacego wartosc
+`adaptive_thinking=adaptive_only` zwracana przez CLI 1.0.103. Nie ignorujemy
+tej capability podczas deserializacji katalogu. `session.options.update`
+przekazuje tylko `contextTier`; pozostale opcje rozszerzonego schematu SDK
+pozostaja nieustawione.
 
 `session.model.getCurrent` potwierdza stan tieru zapisany przez sesje, ale nie
 jest samodzielnym dowodem rozmiaru aktywnego okna. Platforma publikuje dlatego

@@ -1035,7 +1035,9 @@ Znaczenie grup UI:
   provider'a opcji Copilota przez backendowy shared/operator endpoint opcji AI.
   Frontend nie jest source of truth dla mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
-- Build przypina Java SDK 1.0.11 i wymaga Copilot CLI 1.0.57 lub nowszego.
+- Build przypina Java SDK 1.0.26 i wymaga Copilot CLI 1.0.57 lub nowszego.
+  Schemat katalogu modeli obsluguje `adaptive_thinking=adaptive_only`
+  wystawiane przez CLI 1.0.103.
   Po starcie klienta `status.get` dostarcza rzeczywista wersje CLI i protokolu;
   neutralne activity `platform.copilot_runtime` zachowuje je dla lifecycle i
   eksportow diagnostycznych, a starszy CLI jest odrzucany przed otwarciem sesji.

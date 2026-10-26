@@ -122,9 +122,25 @@ class CopilotSdkExecutionGatewayTest {
         var result = new ToolExecutionCompleteResult(
                 "Tool completed", detailedContent, null, null, null, null, null, null);
         event.setData(new ToolExecutionCompleteEvent.ToolExecutionCompleteEventData(
-                "tool-call-1", true, null, null, null, null, null, result, null,
-                toolTelemetry, null, toolName == null ? null : new ToolExecutionCompleteToolDescription(toolName, null, null),
-                null, null));
+                "tool-call-1",
+                true,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                result,
+                null,
+                toolTelemetry,
+                null,
+                toolName == null ? null : new ToolExecutionCompleteToolDescription(toolName, null, null),
+                null,
+                null,
+                null,
+                null,
+                null
+        ));
         return event;
     }
 
@@ -673,6 +689,7 @@ class CopilotSdkExecutionGatewayTest {
                                         null,
                                         null,
                                         null,
+                                        null,
                                         null
                                 ))
                         ));
@@ -1057,10 +1074,32 @@ class CopilotSdkExecutionGatewayTest {
     private AssistantMessageEvent assistantMessage(String content) {
         var event = new AssistantMessageEvent();
         event.setData(new AssistantMessageEvent.AssistantMessageEventData(
-                "message-1", null, content, null,
-                null, null, null, null, null,
-                null, null, null,
-                "interaction-1", null, null, null, null, null, null, null, null, null
+                "message-1",
+                null,
+                null,
+                null,
+                content,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "interaction-1",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
         ));
         return event;
     }
@@ -1072,10 +1111,32 @@ class CopilotSdkExecutionGatewayTest {
     ) {
         var event = new AssistantMessageEvent();
         event.setData(new AssistantMessageEvent.AssistantMessageEventData(
-                "message-reasoning", null, content, toolRequests,
-                null, reasoningText, null, null, null,
-                null, null, null,
-                "interaction-reasoning", null, null, null, null, null, null, null, "reasoning-1", null
+                "message-reasoning",
+                null,
+                null,
+                null,
+                content,
+                toolRequests,
+                null,
+                reasoningText,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "interaction-reasoning",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "reasoning-1",
+                null,
+                null
         ));
         return event;
     }
@@ -1097,22 +1158,19 @@ class CopilotSdkExecutionGatewayTest {
             Double duration
     ) {
         var event = new AssistantUsageEvent();
-        event.setData(new AssistantUsageEvent.AssistantUsageEventData(
-                model,
-                inputTokens != null ? inputTokens.longValue() : null,
-                outputTokens != null ? outputTokens.longValue() : null,
-                cacheReadTokens != null ? cacheReadTokens.longValue() : null,
-                cacheWriteTokens != null ? cacheWriteTokens.longValue() : null,
-                null,
-                reasoningTokens != null ? reasoningTokens.longValue() : null,
-                null,
-                duration != null ? duration.longValue() : null,
-                null, null, null, null, null, null, null, null, null, null,
-                Map.of(),
-                new AssistantUsageCopilotUsage(null, nanoAiu), null, null, null, null,
-                Map.of(),
-                null, null
-        ));
+        var fields = new java.util.LinkedHashMap<String, Object>();
+        fields.put("model", model);
+        fields.put("inputTokens", inputTokens);
+        fields.put("outputTokens", outputTokens);
+        fields.put("cacheReadTokens", cacheReadTokens);
+        fields.put("cacheWriteTokens", cacheWriteTokens);
+        fields.put("reasoningTokens", reasoningTokens);
+        fields.put("duration", duration);
+        fields.put("quotaSnapshots", Map.of());
+        fields.put("copilotUsage", new AssistantUsageCopilotUsage(null, null, nanoAiu));
+        fields.put("toolCounts", Map.of());
+        event.setData(new com.fasterxml.jackson.databind.ObjectMapper().convertValue(
+                fields, AssistantUsageEvent.AssistantUsageEventData.class));
         return event;
     }
 
@@ -1142,9 +1200,12 @@ class CopilotSdkExecutionGatewayTest {
         var event = new SessionCompactionStartEvent();
         event.setData(new SessionCompactionStartEvent.SessionCompactionStartEventData(
                 null,
+                null,
                 systemTokens,
                 conversationTokens,
                 toolDefinitionsTokens,
+                null,
+                null,
                 null,
                 null,
                 null

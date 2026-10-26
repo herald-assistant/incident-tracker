@@ -115,9 +115,17 @@ class CopilotSdkModelOptionsProviderTest {
                 id,
                 name,
                 new ModelCapabilities(
-                        new ModelCapabilitiesSupports(true, true, null),
+                        new ModelCapabilitiesSupports(
+                                null,
+                                true,
+                                null,
+                                true,
+                                null
+                        ),
                         new ModelCapabilitiesLimits(980L, 20L, 1_000L, null)
                 ),
+                null,
+                null,
                 null,
                 new ModelBilling(1D, new ModelBillingTokenPrices(
                         0.2D,
@@ -125,23 +133,60 @@ class CopilotSdkModelOptionsProviderTest {
                         0.02D,
                         null,
                         0.25D,
+                        null,
                         1_000L,
                         80L,
                         null,
-                        new ModelBillingTokenPricesLongContext(0.4D, 1.8D, 0.04D, null, 0.5D, 980L, null)
+                        new ModelBillingTokenPricesLongContext(
+                                0.4D,
+                                1.8D,
+                                0.04D,
+                                null,
+                                0.5D,
+                                null,
+                                980L,
+                                null
+                        )
                 ), null, null),
                 reasoningEfforts,
+                null,
+                null,
                 ModelPickerCategory.VERSATILE,
+                null,
+                null,
+                null,
+                null,
                 null
         );
     }
 
     @Test
     void shouldPreserveDefaultCapacityWithoutBillingOrLongContextTier() {
-        var model = new Model("crm-basic", "CRM basic",
-                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+        var model = new Model(
+                "crm-basic",
+                "CRM basic",
+                new ModelCapabilities(new ModelCapabilitiesSupports(
+                        null,
+                        false,
+                        null,
+                        false,
+                        null
+                ),
                         new ModelCapabilitiesLimits(80L, 20L, 100L, null)),
-                null, null, null, null, null);
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
         var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model),
                 new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
         var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
@@ -152,12 +197,42 @@ class CopilotSdkModelOptionsProviderTest {
 
     @Test
     void shouldPreserveBilledDefaultCapacityWhenMaximumWindowIsNotLarger() {
-        var model = new Model("crm-basic", "CRM basic",
-                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+        var model = new Model(
+                "crm-basic",
+                "CRM basic",
+                new ModelCapabilities(new ModelCapabilitiesSupports(
+                        null,
+                        false,
+                        null,
+                        false,
+                        null
+                ),
                         new ModelCapabilitiesLimits(80L, 20L, 100L, null)),
-                null, new ModelBilling(1D, new ModelBillingTokenPrices(
-                        null, null, null, null, null, 1000L, 80L, null, null), null, null),
-                null, null, null);
+                null,
+                null,
+                null,
+                new ModelBilling(1D, new ModelBillingTokenPrices(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        1000L,
+                        80L,
+                        null,
+                        null
+                ), null, null),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
         var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model),
                 new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
         var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
@@ -169,12 +244,42 @@ class CopilotSdkModelOptionsProviderTest {
 
     @Test
     void shouldPreferCurrentPromptBudgetAndNeverExceedReportedTotalWindow() {
-        var model = new Model("crm-basic", "CRM basic",
-                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null),
+        var model = new Model(
+                "crm-basic",
+                "CRM basic",
+                new ModelCapabilities(new ModelCapabilitiesSupports(
+                        null,
+                        false,
+                        null,
+                        false,
+                        null
+                ),
                         new ModelCapabilitiesLimits(80L, 30L, 100L, null)),
-                null, new ModelBilling(1D, new ModelBillingTokenPrices(
-                        null, null, null, null, null, 1000L, 90L, 80L, null), null, null),
-                null, null, null);
+                null,
+                null,
+                null,
+                new ModelBilling(1D, new ModelBillingTokenPrices(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        1000L,
+                        90L,
+                        80L,
+                        null
+                ), null, null),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
         var provider = new CopilotSdkModelOptionsProvider(auth -> List.of(model),
                 new CopilotSdkProperties(), () -> "github_pat_crm_test_token");
         var option = provider.modelOptions(CopilotRunAuth.localToken()).models().get(0);
@@ -187,7 +292,21 @@ class CopilotSdkModelOptionsProviderTest {
         return new Model(
                 id,
                 name,
-                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null), null),
+                new ModelCapabilities(new ModelCapabilitiesSupports(
+                        null,
+                        false,
+                        null,
+                        false,
+                        null
+                ), null),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,

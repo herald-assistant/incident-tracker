@@ -19,7 +19,7 @@ class CopilotRuntimeCompatibilityTest {
         var info = compatibility.inspect(client("1.0.57-5", 3));
 
         assertThat(info).isEqualTo(new CopilotRuntimeVersionInfo(
-                "1.0.11",
+                "1.0.26",
                 "1.0.57-5",
                 3,
                 "1.0.57",
