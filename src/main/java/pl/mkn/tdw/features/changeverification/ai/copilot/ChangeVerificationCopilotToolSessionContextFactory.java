@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.changeverification.ai.copilot;
 
+import pl.mkn.tdw.agenttools.gitlab.GitLabDiffToolScope;
+
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
@@ -42,6 +44,10 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
             String runKind
     ) {
         var context = new LinkedHashMap<String, Object>();
+        context.put(AgentToolContextKeys.GITLAB_DIFF_SCOPE, new GitLabDiffToolScope(
+                sourceDiscovery != null && sourceDiscovery.mergeRequests() != null
+                        ? sourceDiscovery.mergeRequests().group() : "",
+                sourceDiscovery != null ? sourceDiscovery.mergeRequestDiffs() : List.of()));
         var repositories = sourceDiscovery != null ? sourceDiscovery.repositories() : List.<ChangeVerificationRepositorySnapshot>of();
 
         context.put(ChangeVerificationCopilotToolContextKeys.FEATURE, ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE);

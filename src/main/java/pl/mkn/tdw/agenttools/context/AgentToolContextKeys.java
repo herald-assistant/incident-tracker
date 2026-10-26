@@ -16,6 +16,7 @@ public final class AgentToolContextKeys {
     public static final String GITLAB_GROUP = "gitLabGroup";
     public static final String GITLAB_ALLOWED_APPLICATION_NAMES = "gitLabAllowedApplicationNames";
     public static final String GITLAB_REPOSITORY_SCOPE = "gitLabRepositoryScope";
+    public static final String GITLAB_DIFF_SCOPE = "gitLabDiffScope";
     public static final String GITLAB_COMPLETE_VERIFIED_READ = "gitLabCompleteVerifiedRead";
     public static final String REPORT_ID = "reportId";
     public static final String REPORT_FEATURE = "reportFeature";

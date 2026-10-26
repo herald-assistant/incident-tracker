@@ -16,8 +16,6 @@ public record ChangeVerificationRepositorySnapshot(
         String targetRef,
         String analysisRef,
         String analysisRefSource,
-        Boolean sourceRefAvailable,
-        Boolean targetRefAvailable,
         List<GitLabMergeRequest> mergeRequests,
         List<ChangeVerificationChangedFileSnapshot> changedFiles,
         List<InstructionSource> instructionSources,
@@ -26,9 +24,9 @@ public record ChangeVerificationRepositorySnapshot(
 ) {
 
     public ChangeVerificationRepositorySnapshot {
-        analysisRef = normalize(analysisRef).isEmpty() ? ref(sourceRef, targetRef) : normalize(analysisRef);
+        analysisRef = normalize(analysisRef);
         analysisRefSource = normalize(analysisRefSource).isEmpty()
-                ? refSource(analysisRef, sourceRef, targetRef)
+                ? ChangeVerificationRepositoryRefSelection.UNRESOLVED
                 : normalize(analysisRefSource);
         mergeRequests = mergeRequests != null ? List.copyOf(mergeRequests) : List.of();
         changedFiles = changedFiles != null ? List.copyOf(changedFiles) : List.of();
@@ -57,10 +55,8 @@ public record ChangeVerificationRepositorySnapshot(
                 projectName,
                 sourceRef,
                 targetRef,
-                ref(sourceRef, targetRef),
-                refSource(ref(sourceRef, targetRef), sourceRef, targetRef),
-                null,
-                null,
+                "",
+                ChangeVerificationRepositoryRefSelection.UNRESOLVED,
                 mergeRequests,
                 changedFiles,
                 instructionSources,
@@ -91,8 +87,6 @@ public record ChangeVerificationRepositorySnapshot(
                 targetRef,
                 refSelection.analysisRef(),
                 refSelection.analysisRefSource(),
-                refSelection.sourceRefAvailable(),
-                refSelection.targetRefAvailable(),
                 mergeRequests,
                 changedFiles,
                 instructionSources,
@@ -115,8 +109,6 @@ public record ChangeVerificationRepositorySnapshot(
                 targetRef,
                 analysisRef,
                 analysisRefSource,
-                sourceRefAvailable,
-                targetRefAvailable,
                 mergeRequests,
                 changedFiles,
                 instructionSources,
@@ -147,17 +139,4 @@ public record ChangeVerificationRepositorySnapshot(
         return value != null ? value.trim().replace('\\', '/') : "";
     }
 
-    private static String ref(String sourceRef, String targetRef) {
-        return !normalize(sourceRef).isEmpty() ? normalize(sourceRef) : normalize(targetRef);
-    }
-
-    private static String refSource(String analysisRef, String sourceRef, String targetRef) {
-        if (!normalize(analysisRef).isEmpty() && normalize(analysisRef).equals(normalize(sourceRef))) {
-            return ChangeVerificationRepositoryRefSelection.SOURCE_REF;
-        }
-        if (!normalize(analysisRef).isEmpty() && normalize(analysisRef).equals(normalize(targetRef))) {
-            return ChangeVerificationRepositoryRefSelection.TARGET_REF;
-        }
-        return ChangeVerificationRepositoryRefSelection.UNRESOLVED;
-    }
 }

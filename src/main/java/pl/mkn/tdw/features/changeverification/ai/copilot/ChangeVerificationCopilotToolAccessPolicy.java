@@ -15,6 +15,7 @@ record ChangeVerificationCopilotToolAccessPolicy(
 ) {
 
     private static final Set<String> TOOL_ALLOWLIST = Set.of(
+            GitLabToolNames.READ_MERGE_REQUEST_DIFF,
             GitLabToolNames.LIST_REPOSITORY_ENDPOINTS,
             GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT,
             GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,

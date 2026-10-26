@@ -256,7 +256,23 @@ public class ChangeVerificationPromptPreparationService {
                 .map(this::renderMergeRequest)
                 .reduce((left, right) -> left + "\n\n" + right)
                 .orElse("- none");
-        return "# Merge Requests\n\n" + body;
+        var revisions = sourceDiscovery.mergeRequestDiffs().stream().map(diff -> """
+                ## Pinned MR diff: %s !%s
+                versionId: %s
+                baseSha (before, merge base): %s
+                startSha (target tip, context only): %s
+                headSha (after, source head): %s
+                revisionsAvailable: %s
+                limitations: %s
+                availableDiffFileCount: %s
+                """.formatted(diff.projectPath(), diff.mergeRequestIid(), diff.versionId(),
+                value(diff.baseSha()), value(diff.startSha()), value(diff.headSha()), diff.hasRevisions(), diff.limitations(),
+                diff.files().size()))
+                .collect(java.util.stream.Collectors.joining("\n"));
+        return "# Merge Requests\n\n" + body + "\n\n# Immutable diff versions\n"
+                + "Uzyj gitlab_read_merge_request_diff dla wybranych sciezek. Odczytuj oldPath@baseSha i newPath@headSha "
+                + "obecnymi GitLab file-read tools (branchRef=pelny SHA). Nie lacz snapshotow roznych MR. "
+                + "Brak rewizji/patcha jest luka, nie dowodem braku zmiany.\n\n" + revisions;
     }
 
     private String renderRepositoryScope(ChangeVerificationSourceDiscoveryResult sourceDiscovery) {
@@ -265,13 +281,27 @@ public class ChangeVerificationPromptPreparationService {
         }
 
         var body = sourceDiscovery.repositories().stream()
-                .map(this::renderRepository)
+                .map(repository -> renderRepository(repository, sourceDiscovery.mergeRequestDiffs()))
                 .reduce((left, right) -> left + "\n\n" + right)
                 .orElse("- none");
         return "# Repository Scope\n\n" + body;
     }
 
-    private String renderRepository(ChangeVerificationRepositorySnapshot repository) {
+    private String renderRepository(ChangeVerificationRepositorySnapshot repository,
+            List<pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestDiffSnapshot> diffs) {
+        var pinnedDiffs = diffs.stream().filter(diff -> repository.projectPath().equals(diff.projectPath())
+                && repository.mergeRequests().stream().anyMatch(mr -> mr.iid() != null && mr.iid() == diff.mergeRequestIid()))
+                .toList();
+        var fileIndex = pinnedDiffs.isEmpty()
+                ? repository.changedFiles().stream().map(this::renderRepositoryChangedFile)
+                        .collect(java.util.stream.Collectors.joining("\n"))
+                : pinnedDiffs.stream().flatMap(diff -> diff.files().stream().map(file -> "- "
+                        + (java.util.Objects.equals(file.oldPath(), file.newPath()) ? file.newPath() : file.oldPath() + " -> " + file.newPath())
+                        + " | MR !" + diff.mergeRequestIid()
+                        + (file.newFile() ? " [new]" : "") + (file.renamedFile() ? " [renamed]" : "")
+                        + (file.deletedFile() ? " [deleted]" : "") + (file.collapsed() ? " [collapsed]" : "")
+                        + (file.tooLarge() ? " [too-large]" : "")))
+                        .collect(java.util.stream.Collectors.joining("\n"));
         return """
                 ## %s
                 repositoryKey: %s
@@ -283,9 +313,7 @@ public class ChangeVerificationPromptPreparationService {
                 GitLab tool input: projectName=%s, branchRef=%s
                 GitLab path context: projectPath=%s
                 sourceRef: %s
-                sourceRefAvailable: %s
                 targetRef: %s
-                targetRefAvailable: %s
                 analysisRef: %s
                 analysisRefSource: %s
                 mergeRequests: %s
@@ -311,18 +339,13 @@ public class ChangeVerificationPromptPreparationService {
                 value(repository.analysisRef()),
                 value(repository.projectPath()),
                 value(repository.sourceRef()),
-                String.valueOf(repository.sourceRefAvailable()),
                 value(repository.targetRef()),
-                String.valueOf(repository.targetRefAvailable()),
                 value(repository.analysisRef()),
                 value(repository.analysisRefSource()),
                 repository.mergeRequests().stream()
                         .map(mergeRequest -> value(mergeRequest.webUrl()))
                         .toList(),
-                repository.changedFiles().stream()
-                        .map(this::renderRepositoryChangedFile)
-                        .reduce((left, right) -> left + "\n" + right)
-                        .orElse("- none"),
+                fileIndex.isEmpty() ? "- none" : fileIndex,
                 repository.instructionSources().stream()
                         .map(source -> "- %s | %s | %s".formatted(
                                 value(source.path()),

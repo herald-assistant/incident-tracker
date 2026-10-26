@@ -109,6 +109,7 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
   opisuje wykonanie glownych sciezek Incident Analysis oraz jego uzycie
   neutralnego runtime Copilota.
 - `architecture/change-verification-runtime-flow.md`
+- `architecture/gitlab-mr-diff-tools.md`
   opisuje source scope, rule ledger, deterministyczna decyzje, prompt, skille,
   tools, report, import/export i UI Change Verification.
 - `architecture/ui-explorer-runtime-flow.md`

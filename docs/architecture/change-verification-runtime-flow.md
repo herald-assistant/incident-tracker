@@ -43,11 +43,15 @@ lokalnej historii analiz.
 3. Merge requesty sa wyszukiwane dla target issue oraz jego bezposrednich
    subtaskow. Parent i sibling issues nie rozszerzaja automatycznie zakresu MR.
    Powtorzone MR-y sa deduplikowane.
-4. Dla kazdego repozytorium wybierany jest `analysisRef`: preferowany source
-   branch, z kontrolowanym fallbackiem do target branch. Ograniczenia wyboru
-   ref trafiaja do diagnostyki discovery.
+4. Dla kazdego MR pobierana jest jedna konkretna wersja diffu z pelnymi
+   `baseSha`, `startSha` i `headSha`. `baseSha` jest merge base (stan przed
+   zmiana), `headSha` stanem po zmianie, a `startSha` historycznym tipem
+   targetu. Odczyty kodu uzywaja tych SHA, takze po usunieciu source branch.
+   Brak wersji lub SHA jest jawna luka; nie ma fallbacku do ruchomego brancha.
+   `analysisRef` jest przypietym head SHA tylko wtedy, gdy scope repozytorium
+   ma jeden head; przy kilku roznych headach obowiazuja osobne pary per MR.
 5. Gdy wlaczono Instruction Compliance, instruction discovery jest wykonywane
-   raz dla unikalnego `(projectPath, analysisRef)`. Zmienione sciezki ze
+   raz dla unikalnego `(projectPath, headSha)`. Zmienione sciezki ze
    wszystkich MR-ow tego scope'u sa laczone i deduplikowane.
 6. `ChangeVerificationOperationalContextMatcher` wzbogaca snapshoty
    repozytoriow o dopasowanie do neutralnego katalogu Operational Context.
@@ -163,6 +167,30 @@ do oceny konkretnej reguly. Allowlista zawiera wybrane read-only GitLab tools
 oraz `opctx_*`. Local filesystem, shell, terminal, Database tools i report
 tools nie naleza do tego flow.
 
+Artifact `repository-scope.md` zawiera jeden indeks plikow old/new z
+przypisaniem do MR, oparty na przypietych snapshotach. `merge-requests.md`
+zawiera pelne SHA i metadata wersji kazdego MR, bez ponownego indeksu plikow.
+Tresc patchy jest pobierana na zadanie przez
+neutralny `gitlab_read_merge_request_diff`: projekt, iid MR, opcjonalne
+sciezki i ograniczony budzet znakow. Tool czyta przygotowany snapshot tej
+samej wersji; nie pobiera ponownie ruchomego latest diffu podczas sesji.
+Kontynuacja uzywa `nextFileOffset` i `nextPatchOffset` z tymi samymi filtrami.
+Pliki oldPath@baseSha oraz newPath@headSha sa czytane obecnymi full/chunk/batch
+tools z pelnym SHA jako `branchRef`. Rename/delete, collapsed/too-large,
+binary/pusty patch i niekompletnosc GitLaba pozostaja jawne; pusty patch nie
+jest dowodem braku zmiany ani rownowaznosci zachowania.
+
+Hidden `GitLabDiffToolScope` zawiera przygotowane wersje MR i dopuszczone
+rewizje. `ChangeVerificationCopilotRevisionScopePolicy` sprawdza przed kazdym
+odczytem/research GitLab projekt i SHA, wszystkie projekty wyszukiwania oraz
+wszystkie projekty batch chunks. Nowy diff tool sprawdza tez iid MR.
+Pominiety projekt nie otwiera automatycznie katalogu innych repozytoriow.
+Inne feature'y zachowuja wlasne scope'y i allowlisty. Snapshoty rewizji oraz
+wyniki diff toola sa widoczne w generycznych context/tool evidence i historii
+bez zmiany requestu ani rule ledgeru.
+Neutralny kontrakt i limity narzedzia opisuje
+[GitLab MR diff tools](gitlab-mr-diff-tools.md).
+
 Packaged skille sa immutable seedem. Runtime loader dopisuje tylko brakujace
 pliki do efektywnego katalogu i nie nadpisuje lokalnej tresci. Przy zmianie
 packaged skilla najpierw porownaj effective kopie z poprzednim seedem. Kopie
@@ -173,7 +201,7 @@ skilli nie usuwaj bez jawnej decyzji operatora.
 
 Ograniczenie zwrocone przez model musi wskazywac `affectedRuleIds` i wyjasniac,
 jak brak widocznosci wplynal na ocene tych regul. Surowe bledy transportu,
-truncation, brak MR, branch fallback i pozostale limity discovery zostaja w
+truncation, brak MR, niedostepne rewizje i pozostale limity discovery zostaja w
 krokach joba oraz evidence diagnostycznym. Nie kopiuj ich do ledgeru jako
 samodzielnych regul, findings ani globalnych actions.
 

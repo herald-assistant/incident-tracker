@@ -23,7 +23,8 @@ class ChangeVerificationToolDescriptionCustomizerTest {
                 .contains("Change Verification guidance:")
                 .contains("Use projectName exactly from change-verification/repository-scope.md")
                 .contains("Do not pass projectPath, gitLabPath, rootGroup/projectName or the full merge-request path as projectName.")
-                .contains("Pass branchRef from analysisRef in change-verification/repository-scope.md");
+                .contains("Pass branchRef as an exact full baseSha/headSha")
+                .contains("gitlab_read_merge_request_diff");
     }
 
     @Test

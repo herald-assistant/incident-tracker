@@ -1,5 +1,8 @@
 package pl.mkn.tdw.features.changeverification.source;
 
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestDiffPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestDiffSnapshot;
+
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +35,7 @@ public class ChangeVerificationSourceDiscoveryService {
 
     private final JiraIssuePort jiraIssuePort;
     private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final GitLabMergeRequestDiffPort gitLabMergeRequestDiffPort;
     private final GitLabSettingsPort gitLabProperties;
     private final GitLabInstructionContextPort instructionContextDiscoveryService;
     private final ChangeVerificationOperationalContextMatcher operationalContextMatcher;
@@ -50,6 +54,7 @@ public class ChangeVerificationSourceDiscoveryService {
         GitLabMergeRequestSearchResult mergeRequests = null;
         InstructionContextResult instructionContext = null;
         List<ChangeVerificationRepositoryRefSelection> refSelections = List.of();
+        var diffSnapshots = new ArrayList<GitLabMergeRequestDiffSnapshot>();
 
         if (!StringUtils.hasText(issueKey)) {
             limitations.add("Jira issue key could not be resolved from request.");
@@ -59,14 +64,34 @@ public class ChangeVerificationSourceDiscoveryService {
             listener.onJiraMaterialCompleted(issueKey, jiraIssue, List.copyOf(limitations));
             listener.onMergeRequestDiscoveryStarted(issueKey);
             mergeRequests = fetchMergeRequests(issueKeysForMergeRequests(issueKey, jiraIssue), limitations);
+            if (mergeRequests != null) {
+                for (var mr : mergeRequests.mergeRequests()) {
+                    if (mr.iid() == null) {
+                        limitations.add("MR without iid cannot be pinned to a diff version.");
+                        continue;
+                    }
+                    var project = pl.mkn.tdw.common.GitLabPathUtils.relativeProjectPath(gitLabProperties.getGroup(), mr.projectPath());
+                    try {
+                        var diff = gitLabMergeRequestDiffPort.readMergeRequestDiff(gitLabProperties.getGroup(), project, mr.iid());
+                        if (diff == null || !mr.projectPath().equals(diff.projectPath()) || mr.iid() != diff.mergeRequestIid()) {
+                            throw new IllegalStateException("MR diff identity did not match discovery.");
+                        }
+                        diffSnapshots.add(diff);
+                        diff.limitations().forEach(l -> limitations.add(mr.projectPath() + "!" + mr.iid() + ": " + l));
+                    } catch (RuntimeException exception) {
+                        limitations.add("MR diff unavailable for " + mr.projectPath() + "!" + mr.iid() + ": " + safeMessage(exception));
+                    }
+                }
+            }
             listener.onMergeRequestDiscoveryCompleted(issueKey, mergeRequests, List.copyOf(limitations));
             refSelections = resolveRepositoryRefs(
                     ChangeVerificationRepositorySnapshotFactory.from(mergeRequests, null, gitLabProperties.getGroup()),
+                    diffSnapshots,
                     limitations
             );
             if (Boolean.TRUE.equals(request.checkInstructionCompliance())) {
                 listener.onInstructionContextStarted(mergeRequests);
-                instructionContext = fetchInstructionContext(mergeRequests, refSelections, limitations);
+                instructionContext = fetchInstructionContext(mergeRequests, diffSnapshots, limitations);
                 listener.onInstructionContextCompleted(mergeRequests, instructionContext, List.copyOf(limitations));
             }
         }
@@ -86,6 +111,7 @@ public class ChangeVerificationSourceDiscoveryService {
                 mergeRequests,
                 instructionContext,
                 repositories,
+                diffSnapshots,
                 limitations
         );
     }
@@ -174,7 +200,7 @@ public class ChangeVerificationSourceDiscoveryService {
 
     private InstructionContextResult fetchInstructionContext(
             GitLabMergeRequestSearchResult mergeRequests,
-            List<ChangeVerificationRepositoryRefSelection> refSelections,
+            List<GitLabMergeRequestDiffSnapshot> diffs,
             List<String> limitations
     ) {
         if (mergeRequests == null || mergeRequests.mergeRequests().isEmpty()) {
@@ -183,9 +209,8 @@ public class ChangeVerificationSourceDiscoveryService {
         }
 
         try {
-            var refsByKey = refSelectionsByKey(refSelections);
             return instructionContextDiscoveryService.discover(new InstructionContextRequest(
-                    instructionRepositoryScopes(mergeRequests, refsByKey)
+                    instructionRepositoryScopes(mergeRequests, diffs)
             ));
         } catch (RuntimeException exception) {
             log.warn("Change Verification instruction context discovery failed reason={}", exception.getMessage());
@@ -196,37 +221,35 @@ public class ChangeVerificationSourceDiscoveryService {
 
     private List<ChangeVerificationRepositoryRefSelection> resolveRepositoryRefs(
             List<ChangeVerificationRepositorySnapshot> repositories,
+            List<GitLabMergeRequestDiffSnapshot> diffs,
             List<String> limitations
     ) {
         if (repositories == null || repositories.isEmpty()) {
             return List.of();
         }
         return repositories.stream()
-                .map(repository -> resolveRepositoryRef(repository, limitations))
+                .map(repository -> resolveRepositoryRef(repository, diffs, limitations))
                 .toList();
     }
 
     private ChangeVerificationRepositoryRefSelection resolveRepositoryRef(
             ChangeVerificationRepositorySnapshot repository,
+            List<GitLabMergeRequestDiffSnapshot> diffs,
             List<String> limitations
     ) {
         var selectionLimitations = new ArrayList<String>();
-        var sourceAvailable = branchAvailable(repository, repository.sourceRef(), selectionLimitations);
-        var targetAvailable = branchAvailable(repository, repository.targetRef(), selectionLimitations);
-        var analysisRef = repository.sourceRef();
-        var analysisRefSource = ChangeVerificationRepositoryRefSelection.SOURCE_REF;
-
-        if (!Boolean.TRUE.equals(sourceAvailable) && Boolean.TRUE.equals(targetAvailable)) {
-            analysisRef = repository.targetRef();
-            analysisRefSource = ChangeVerificationRepositoryRefSelection.TARGET_REF;
-            selectionLimitations.add("Source branch '%s' is not available for %s; target branch '%s' will be used for GitLab analysis."
-                    .formatted(repository.sourceRef(), repository.projectName(), repository.targetRef()));
-        } else if (!StringUtils.hasText(analysisRef) && StringUtils.hasText(repository.targetRef())) {
-            analysisRef = repository.targetRef();
-            analysisRefSource = ChangeVerificationRepositoryRefSelection.TARGET_REF;
-        } else if (!Boolean.TRUE.equals(sourceAvailable) && !Boolean.TRUE.equals(targetAvailable)) {
-            selectionLimitations.add("Neither source branch '%s' nor target branch '%s' could be confirmed for %s; GitLab analysis will use '%s' as a best-effort ref."
-                    .formatted(repository.sourceRef(), repository.targetRef(), repository.projectName(), analysisRef));
+        var matching = diffs.stream().filter(d -> d.hasRevisions()
+                && repository.projectPath().equals(d.projectPath())
+                && repository.mergeRequests().stream().anyMatch(mr -> mr.iid() != null && mr.iid() == d.mergeRequestIid()))
+                .toList();
+        var heads = matching.stream().map(d -> d.headSha()).distinct().toList();
+        boolean singleCompleteHead = heads.size() == 1 && matching.size() == repository.mergeRequests().size();
+        var analysisRef = singleCompleteHead ? heads.get(0) : "";
+        var analysisRefSource = singleCompleteHead
+                ? ChangeVerificationRepositoryRefSelection.MR_HEAD_SHA : ChangeVerificationRepositoryRefSelection.UNRESOLVED;
+        if (!singleCompleteHead) {
+            selectionLimitations.add("No single pinned MR head for " + repository.projectName()
+                    + "; use the individual MR base/head SHAs, never a moving branch fallback.");
         }
 
         selectionLimitations.stream()
@@ -239,54 +262,23 @@ public class ChangeVerificationSourceDiscoveryService {
                 repository.targetRef(),
                 analysisRef,
                 analysisRefSource,
-                sourceAvailable,
-                targetAvailable,
                 List.copyOf(selectionLimitations)
         );
     }
 
-    private Boolean branchAvailable(
-            ChangeVerificationRepositorySnapshot repository,
-            String branchRef,
-            List<String> limitations
-    ) {
-        if (!StringUtils.hasText(branchRef)) {
-            return false;
-        }
-        try {
-            return gitLabRepositoryPort.branchExists(
-                    gitLabProperties.getGroup(),
-                    repository.projectName(),
-                    branchRef
-            );
-        } catch (RuntimeException exception) {
-            limitations.add("GitLab branch availability could not be checked for %s@%s: %s"
-                    .formatted(repository.projectName(), branchRef, safeMessage(exception)));
-            return null;
-        }
-    }
-
-    private Map<String, ChangeVerificationRepositoryRefSelection> refSelectionsByKey(
-            List<ChangeVerificationRepositoryRefSelection> refSelections
-    ) {
-        var result = new LinkedHashMap<String, ChangeVerificationRepositoryRefSelection>();
-        if (refSelections == null) {
-            return result;
-        }
-        refSelections.stream()
-                .filter(selection -> selection != null && StringUtils.hasText(selection.key()))
-                .forEach(selection -> result.putIfAbsent(selection.key(), selection));
-        return result;
-    }
-
     private List<InstructionRepositoryScope> instructionRepositoryScopes(
             GitLabMergeRequestSearchResult mergeRequests,
-            Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
+            List<GitLabMergeRequestDiffSnapshot> diffs
     ) {
         var scopes = new LinkedHashMap<String, InstructionScopeAccumulator>();
         for (var mergeRequest : mergeRequests.mergeRequests()) {
             var projectPath = value(mergeRequest.projectPath());
-            var ref = analysisRef(mergeRequest, refsByKey);
+            var ref = diffs.stream().filter(d -> d.hasRevisions() && projectPath.equals(d.projectPath())
+                    && mergeRequest.iid() != null && mergeRequest.iid() == d.mergeRequestIid())
+                    .map(d -> d.headSha()).findFirst().orElse("");
+            if (!StringUtils.hasText(ref)) {
+                continue;
+            }
             var key = projectPath + "|" + ref;
             var accumulator = scopes.computeIfAbsent(
                     key,
@@ -305,24 +297,6 @@ public class ChangeVerificationSourceDiscoveryService {
                         List.copyOf(accumulator.changedFilePaths)
                 ))
                 .toList();
-    }
-
-    private String analysisRef(
-            pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequest mergeRequest,
-            Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
-    ) {
-        var sourceRef = StringUtils.hasText(mergeRequest.sourceBranch())
-                ? mergeRequest.sourceBranch().trim()
-                : value(mergeRequest.targetBranch());
-        var targetRef = value(mergeRequest.targetBranch());
-        var refSelection = refsByKey.get(ChangeVerificationRepositoryRefSelection.key(
-                mergeRequest.projectPath(),
-                sourceRef,
-                targetRef
-        ));
-        return refSelection != null && StringUtils.hasText(refSelection.analysisRef())
-                ? refSelection.analysisRef()
-                : sourceRef;
     }
 
     private String resolveIssueKey(ChangeVerificationJobStartRequest request) {

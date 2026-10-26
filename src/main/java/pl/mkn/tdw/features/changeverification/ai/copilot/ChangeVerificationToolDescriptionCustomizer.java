@@ -48,6 +48,14 @@ public class ChangeVerificationToolDescriptionCustomizer implements CopilotToolD
         }
 
         var normalizedToolName = toolName.trim();
+        if (GitLabToolNames.READ_MERGE_REQUEST_DIFF.equals(normalizedToolName)) {
+            return List.of(
+                    "Use the exact projectName and MR iid from prepared context; select filePaths from the Repository Scope index.",
+                    "The prepared version is immutable. Continue with returned nextFileOffset/nextPatchOffset and the same filePaths.",
+                    "Read oldPath at baseSha and newPath at headSha using the existing file-read tools when the patch is insufficient.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
         if (GitLabToolNames.LIST_AVAILABLE_REPOSITORIES.equals(normalizedToolName)) {
             return List.of(
                     "Use when Repository Scope does not provide a grounded projectName or when operational context is needed to choose related repositories.",
@@ -59,7 +67,7 @@ public class ChangeVerificationToolDescriptionCustomizer implements CopilotToolD
             return List.of(
                     "Use projectName exactly from change-verification/repository-scope.md or a previous GitLab tool result.",
                     "Do not pass projectPath, gitLabPath, rootGroup/projectName or the full merge-request path as projectName.",
-                    "Pass branchRef from analysisRef in change-verification/repository-scope.md; sourceRef and targetRef are merge-request context only.",
+                    "Pass branchRef as an exact full baseSha/headSha (or startSha for target context) from the prepared MR diff version; moving sourceRef/targetRef are context only. Use gitlab_read_merge_request_diff for focused patches.",
                     "If changed files exceed a single tool batch, split focused reads into multiple GitLab tool calls instead of reporting no access to changes.",
                     "Use Operational Context tools when you need to understand the system, bounded context, process or code-search scope behind the repository.",
                     "Always provide reason as one short Polish sentence for the operator."

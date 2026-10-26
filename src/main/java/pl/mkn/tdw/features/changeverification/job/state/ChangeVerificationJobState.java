@@ -473,6 +473,17 @@ public final class ChangeVerificationJobState {
         if (sourceDiscovery != null && sourceDiscovery.mergeRequests() != null) {
             sections.add(mergeRequestSection(sourceDiscovery.mergeRequests().mergeRequests()));
         }
+        if (sourceDiscovery != null && !sourceDiscovery.mergeRequestDiffs().isEmpty()) {
+            sections.add(new AnalysisEvidenceSection("change-verification", "merge-request-revisions",
+                    sourceDiscovery.mergeRequestDiffs().stream().map(diff -> new AnalysisEvidenceItem(
+                            diff.projectPath() + " !" + diff.mergeRequestIid() + " immutable diff version",
+                            List.of(new AnalysisEvidenceAttribute("versionId", String.valueOf(diff.versionId())),
+                                    new AnalysisEvidenceAttribute("baseSha", fallback(diff.baseSha(), "unavailable")),
+                                    new AnalysisEvidenceAttribute("startSha", fallback(diff.startSha(), "unavailable")),
+                                    new AnalysisEvidenceAttribute("headSha", fallback(diff.headSha(), "unavailable")),
+                                    new AnalysisEvidenceAttribute("limitations", String.join("\n", diff.limitations())))))
+                            .toList()));
+        }
 
         if (sourceDiscovery != null && !sourceDiscovery.repositories().isEmpty()) {
             sections.add(repositoryScopeSection(sourceDiscovery.repositories()));
@@ -689,9 +700,7 @@ public final class ChangeVerificationJobState {
                         attribute("repositoryName", repository.repositoryName()),
                         attribute("projectName", repository.projectName()),
                         attribute("sourceRef", repository.sourceRef()),
-                        attribute("sourceRefAvailable", repository.sourceRefAvailable()),
                         attribute("targetRef", repository.targetRef()),
-                        attribute("targetRefAvailable", repository.targetRefAvailable()),
                         attribute("analysisRef", repository.analysisRef()),
                         attribute("analysisRefSource", repository.analysisRefSource()),
                         attribute("mergeRequestCount", repository.mergeRequests().size()),

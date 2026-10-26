@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab.adapter.rest;
 
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestDiffPort;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestDiffSnapshot;
+
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.config.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
@@ -49,7 +52,7 @@ import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
-public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
+public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLabMergeRequestDiffPort {
 
     private static final int PROJECT_SEARCH_PAGE_SIZE = 100;
     private static final int MERGE_REQUEST_DIFFS_PAGE_SIZE = 100;
@@ -58,6 +61,68 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     private final GitLabRestClientFactory gitLabRestClientFactory;
     private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
     private final GitLabRepositoryAnalysisCache analysisCache;
+
+    @Override
+    public GitLabMergeRequestDiffSnapshot readMergeRequestDiff(
+            String group, String projectName, long mergeRequestIid
+    ) {
+        var projectPath = group + "/" + projectName;
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || mergeRequestIid <= 0
+                || projectName.startsWith("/") || projectName.contains("..")) {
+            throw new IllegalArgumentException("A project in the configured group and a positive MR iid are required.");
+        }
+        var limits = new ArrayList<String>();
+        var path = apiBaseUrl() + "/projects/" + encodePathSegment(projectPath)
+                + "/merge_requests/" + mergeRequestIid + "/versions";
+        try {
+            var versions = restClient().get().uri(URI.create(path + "?per_page=1&page=1"))
+                    .retrieve().body(GitLabDiffVersionResponse[].class);
+            if (versions == null || versions.length == 0 || versions[0].id() == null) {
+                limits.add("No collected diff version is available for this MR.");
+                return new GitLabMergeRequestDiffSnapshot(
+                        projectPath, mergeRequestIid, null, null, null, null, List.of(), limits);
+            }
+            var version = restClient().get().uri(URI.create(path + "/" + versions[0].id()))
+                    .retrieve().body(GitLabDiffVersionResponse.class);
+            if (version == null || !versions[0].id().equals(version.id())) {
+                throw new IllegalStateException("GitLab returned an inconsistent diff version.");
+            }
+            if (!"collected".equals(version.state())) {
+                limits.add("GitLab diff version state: " + version.state() + "; patch coverage is not confirmed.");
+            }
+            var diffs = version.diffs() == null ? List.<GitLabMergeRequestDiffResponse>of() : version.diffs();
+            if (version.realSize() != null && (version.realSize().endsWith("+")
+                    || (version.realSize().matches("[0-9]+")
+                    && new java.math.BigInteger(version.realSize()).compareTo(java.math.BigInteger.valueOf(diffs.size())) > 0))) {
+                limits.add("GitLab returned fewer diff files than real_size=" + version.realSize() + ".");
+            }
+            int maxFiles = Math.max(1, properties.getMaxMergeRequestChangedFiles());
+            if (diffs.size() > maxFiles) {
+                limits.add("Diff file limit reached: " + maxFiles + ".");
+            }
+            var files = diffs.stream().limit(maxFiles).map(file ->
+                    new GitLabMergeRequestDiffSnapshot.FileDiff(
+                            file.oldPath(), file.newPath(), file.newFile(), file.renamedFile(), file.deletedFile(),
+                            file.diff(), file.collapsed(), file.tooLarge())).toList();
+            var snapshot = new GitLabMergeRequestDiffSnapshot(
+                    projectPath, mergeRequestIid, version.id(), version.baseSha(), version.startSha(), version.headSha(), files, limits);
+            if (!snapshot.hasRevisions()) {
+                limits.add("Full base/start/head commit SHAs are unavailable for this diff version.");
+            }
+            return new GitLabMergeRequestDiffSnapshot(
+                    projectPath, mergeRequestIid, version.id(), version.baseSha(), version.startSha(), version.headSha(), files, limits);
+        } catch (RestClientResponseException exception) {
+            return new GitLabMergeRequestDiffSnapshot(
+                    projectPath, mergeRequestIid, null, null, null, null, List.of(),
+                    List.of("MR diff could not be fetched: HTTP " + exception.getStatusCode().value() + "."));
+        }
+    }
+
+    private record GitLabDiffVersionResponse(Long id, String state, @JsonProperty("real_size") String realSize,
+            @JsonProperty("base_commit_sha") String baseSha,
+            @JsonProperty("start_commit_sha") String startSha,
+            @JsonProperty("head_commit_sha") String headSha,
+            List<GitLabMergeRequestDiffResponse> diffs) {}
 
     @Override
     public List<GitLabRepositoryProjectCandidate> searchProjects(String group, List<String> projectHints) {
@@ -1364,7 +1429,9 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
             boolean renamedFile,
             @JsonProperty("deleted_file")
             boolean deletedFile,
-            String diff
+            String diff,
+            boolean collapsed,
+            @JsonProperty("too_large") boolean tooLarge
     ) {
     }
 

@@ -18,6 +18,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChangeVerificationCopilotToolInvocationEvidenceCaptureListenerTest {
 
     @Test
+    void shouldPersistImmutableDiffWithItsRevisionProvenance() {
+        var store = new CopilotToolEvidenceSessionStore();
+        var captured = new ArrayList<AnalysisEvidenceSection>();
+        store.registerSession("session-1", captured::add);
+        var raw = "{\"versionId\":11,\"baseSha\":\"%s\",\"headSha\":\"%s\",\"files\":[{\"patch\":\"-old +new\"}]}"
+                .formatted("a".repeat(40), "c".repeat(40));
+        listener(store).onToolInvocationFinished(new CopilotToolInvocationFinishedEvent(changeVerificationContext(),
+                "session-1", "call-diff", "gitlab_read_merge_request_diff",
+                "{\"projectName\":\"customer-api\",\"mergeRequestIid\":7,\"reason\":\"Porownuje rewizje.\"}",
+                CopilotToolInvocationOutcome.COMPLETED, raw, 1L, null));
+        assertThat(captured).singleElement().satisfies(section -> {
+            assertThat(section.category()).isEqualTo("tool-fetched-diff");
+            assertThat(section.items().get(0).attributes()).anySatisfy(attribute -> {
+                assertThat(attribute.name()).isEqualTo("content");
+                assertThat(attribute.value()).isEqualTo(raw);
+            });
+        });
+    }
+
+    @Test
     void shouldCaptureChangeVerificationGitLabToolEvidenceUsingSharedGitLabShape() {
         var evidenceStore = new CopilotToolEvidenceSessionStore();
         var listener = listener(evidenceStore);

@@ -3,6 +3,7 @@ package pl.mkn.tdw.agenttools.gitlab;
 public final class GitLabToolNames {
 
     public static final String PREFIX = "gitlab_";
+    public static final String READ_MERGE_REQUEST_DIFF = PREFIX + "read_merge_request_diff";
 
     public static final String LIST_AVAILABLE_REPOSITORIES = PREFIX + "list_available_repositories";
     public static final String LIST_REPOSITORY_BRANCHES = PREFIX + "list_repository_branches";

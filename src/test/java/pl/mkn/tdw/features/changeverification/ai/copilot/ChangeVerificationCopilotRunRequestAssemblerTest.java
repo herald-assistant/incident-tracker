@@ -32,6 +32,13 @@ import static org.mockito.Mockito.when;
 
 class ChangeVerificationCopilotRunRequestAssemblerTest {
 
+    @Test
+    void shouldEnableReadOnlyDiffToolInFeatureAllowlist() {
+        assertThat(ChangeVerificationCopilotToolAccessPolicy.fromRegisteredTools(
+                List.of(tool(GitLabToolNames.READ_MERGE_REQUEST_DIFF))).availableToolNames())
+                .containsExactly(GitLabToolNames.READ_MERGE_REQUEST_DIFF);
+    }
+
     private static final CopilotToolDescriptionContext CHANGE_VERIFICATION_DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("change-verification");
 
@@ -183,6 +190,7 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                         operationalContextMatch("crm-entry", "crm-entry-code-search"),
                         operationalContextMatch("crm-support", "crm-support-code-search")
                 ))),
+                List.of(),
                 List.of()
         );
     }

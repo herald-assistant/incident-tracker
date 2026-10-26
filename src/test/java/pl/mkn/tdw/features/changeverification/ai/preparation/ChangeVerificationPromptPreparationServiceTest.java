@@ -19,6 +19,27 @@ class ChangeVerificationPromptPreparationServiceTest {
     private final ChangeVerificationPromptPreparationService service = new ChangeVerificationPromptPreparationService();
 
     @Test
+    void shouldExposeFullBeforeAfterShasAndFocusedDiffToolWithoutInliningPatch() {
+        var source = sourceDiscovery();
+        var diff = new pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestDiffSnapshot(
+                "CRM/runtime/customer-api", 2, 11L, "a".repeat(40), "b".repeat(40), "c".repeat(40),
+                List.of(new pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestDiffSnapshot.FileDiff(
+                        "Old.java", "New.java", false, true, false, "-secretOld\n+secretNew", false, false)), List.of());
+        var prepared = service.prepare(new ChangeVerificationJobStartRequest("CRM-123", null, true, false, null, null, null),
+                new ChangeVerificationSourceDiscoveryResult(source.issueKey(), source.issueUrl(), source.jiraIssue(),
+                        source.mergeRequests(), source.instructionContext(), source.repositories(), List.of(diff), source.limitations()));
+        assertThat(prepared.prompt()).contains("a".repeat(40), "b".repeat(40), "c".repeat(40),
+                "gitlab_read_merge_request_diff", "Old.java -> New.java", "versionId: 11", "startSha (target tip, context only)");
+        assertThat(prepared.prompt()).doesNotContain("secretOld", "secretNew");
+        assertThat(prepared.artifactContents().get("change-verification/repository-scope.md"))
+                .contains("Old.java -> New.java | MR !2 [renamed]")
+                .doesNotContain("src/main/java/CustomerController.java | MRs:");
+        assertThat(prepared.artifactContents().get("change-verification/merge-requests.md"))
+                .doesNotContain("Old.java", "New.java")
+                .contains("availableDiffFileCount: 1");
+    }
+
+    @Test
     void shouldRenderPromptWithJiraMergeRequestInstructionsAndContract() {
         var preparation = service.prepare(
                 new ChangeVerificationJobStartRequest(

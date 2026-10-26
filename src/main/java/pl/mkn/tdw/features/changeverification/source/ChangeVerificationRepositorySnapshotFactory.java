@@ -151,7 +151,7 @@ final class ChangeVerificationRepositorySnapshotFactory {
     }
 
     private static boolean refMatches(String sourceRef, InstructionSource source) {
-        return !StringUtils.hasText(source.ref()) || value(sourceRef).equals(value(source.ref()));
+        return !StringUtils.hasText(sourceRef) || !StringUtils.hasText(source.ref()) || value(sourceRef).equals(value(source.ref()));
     }
 
     private static String ref(String sourceBranch, String targetBranch) {

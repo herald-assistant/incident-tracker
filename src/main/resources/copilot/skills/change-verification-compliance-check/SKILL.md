@@ -30,7 +30,18 @@ konkretne wymaganie do sprawdzenia; wtedy uzyj `OPERATOR_INSTRUCTION`.
    `normalizedRule` zapisz sprawdzalna interpretacje. Konflikt zrodel oznacz
    `interpretationType=CONFLICTING`, bez cichego wyboru jednej wersji.
 4. Dla kazdej reguly odczytaj tylko dowody potrzebne do jej oceny. Repository
-   Scope podaje kanoniczne `projectName` i `analysisRef` dla GitLab tools.
+   Scope podaje kanoniczne `projectName`, a Merge Requests pelne SHA dla
+   przypietej wersji diffu. Uzyj `gitlab_read_merge_request_diff` z iid MR
+   i wybranymi sciezkami. Porownuj `oldPath` na `baseSha` z `newPath` na
+   `headSha`, przekazujac pelny SHA jako `branchRef` obecnych file-read tools.
+   `startSha` jest kontekstem targetu, nie zastepuje merge base. Zachowaj
+   osobna pare SHA i referencje dla kazdego MR. Nie uzywaj biezacego brancha
+   jako dowodu historycznej zmiany. Dla wymagania przeniesienia 1:1 odczytaj
+   kod obu wersji; sam patch nie dowodzi rownowaznosci zachowania.
+   Po ucieciu patcha kontynuuj z `nextFileOffset`/`nextPatchOffset` przy tych
+   samych `filePaths`. Rename wymaga old/new path, a delete odczytu base.
+   Pusty, binarny, collapsed lub too-large patch nie dowodzi braku zmiany;
+   odczytaj dostepne pliki lub wskaz brakujacy dowod. Nie zgaduj rewizji.
 5. Ustaw outcome:
    - `SATISFIED` tylko przy konkretnym pozytywnym evidence,
    - `NOT_SATISFIED` przy konkretnym dowodzie rozjazdu,

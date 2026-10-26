@@ -116,6 +116,7 @@ class ChangeVerificationJobServiceTest {
                         "change-source",
                         "jira-issue",
                         "merge-requests",
+                        "merge-request-revisions",
                         "instruction-context",
                         "source-discovery-limits"
                 );
@@ -164,6 +165,8 @@ class ChangeVerificationJobServiceTest {
                 new ChangeVerificationSourceDiscoveryService(
                         new TestJiraIssuePort(),
                         gitLabRepositoryPort,
+                        (group, project, iid) -> new pl.mkn.tdw.integrations.gitlab.contract.GitLabMergeRequestDiffSnapshot(
+                                group + "/" + project, iid, 11L, "a".repeat(40), "b".repeat(40), "c".repeat(40), List.of(), List.of()),
                         gitLabProperties,
                         new InstructionContextDiscoveryService(
                                 gitLabRepositoryPort,
