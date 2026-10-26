@@ -34,7 +34,7 @@ export function parseUiExplorerLocalRunEnvelope(payload: unknown): {
   if (!isUiExplorerJobSnapshot(job)) {
     throw new Error('Lokalny run UI Explorer zawiera uszkodzony snapshot.');
   }
-  if (!['COMPLETED', 'PARTIAL'].includes(job.status) || !job.report || !job.result) {
+  if (['COMPLETED', 'PARTIAL'].includes(job.status) && (!job.report || !job.result)) {
     throw new Error('Lokalny run UI Explorer nie zawiera zakończonego raportu.');
   }
 

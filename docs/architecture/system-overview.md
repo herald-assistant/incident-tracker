@@ -119,7 +119,9 @@ przygotowanie promptu i provider poza watkiem HTTP. Atomowy snapshot publikuje
 kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane
 `COMPLETED`, `PARTIAL`, `BLOCKED` albo `FAILED`. Kazdy krok wskazuje
 `consumesEvidence` i `producesEvidence`, a przygotowany prompt pozostaje
-dostepny rowniez po bledzie pozniejszej sesji AI. Terminalne snapshoty sa
+dostepny rowniez po bledzie pozniejszej sesji AI. Poczatkowy snapshot `QUEUED`
+jest zapisywany best-effort przed uruchomieniem executora, a terminalny
+snapshot aktualizuje ten sam wpis. Snapshoty sa
 sanitizowane z ukrytego scope'u i szczegolow tools, zachowuja prompt i sa
 zapisywane w lokalnej historii pod feature key `ui-explorer`;
 shared `/api/analysis/runs` odczytuje je po restarcie i dla zakonczonej albo

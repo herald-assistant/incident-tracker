@@ -38,6 +38,38 @@ import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparat
 class UiExplorerJobServiceTest {
 
     @Test
+    void shouldPersistQueuedCrmRunBeforeSchedulingWork() {
+        var persistence = mock(UiExplorerLocalRunPersistence.class);
+        var executor = mock(TaskExecutor.class);
+        var service = UiExplorerJobServiceTestCreator.create(
+                UiExplorerJobServiceTestCreator.reachabilityContextService(context()),
+                mock(UiExplorerAnalysisProvider.class), executor, persistence);
+
+        var accepted = service.startJob(request());
+
+        var order = org.mockito.Mockito.inOrder(persistence, executor);
+        order.verify(persistence).persistSnapshot(accepted);
+        order.verify(executor).execute(any(Runnable.class));
+        assertThat(accepted.status()).isEqualTo(UiExplorerJobStatus.QUEUED);
+    }
+
+    @Test
+    void shouldStillScheduleCrmAnalysisWhenInitialHistoryWriteFails() {
+        var persistence = mock(UiExplorerLocalRunPersistence.class);
+        doThrow(new IllegalStateException("Synthetic CRM storage failure"))
+                .when(persistence).persistSnapshot(any());
+        var executor = mock(TaskExecutor.class);
+        var service = UiExplorerJobServiceTestCreator.create(
+                UiExplorerJobServiceTestCreator.reachabilityContextService(context()),
+                mock(UiExplorerAnalysisProvider.class), executor, persistence);
+
+        var accepted = service.startJob(request());
+
+        assertThat(accepted.status()).isEqualTo(UiExplorerJobStatus.QUEUED);
+        verify(executor).execute(any(Runnable.class));
+    }
+
+    @Test
     void shouldReturnQueuedImmediatelyAndPublishCompletedCrmAnalysisAfterWorkerRunsOnce() {
         var reachabilityContextService = UiExplorerJobServiceTestCreator.reachabilityContextService(context());
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);

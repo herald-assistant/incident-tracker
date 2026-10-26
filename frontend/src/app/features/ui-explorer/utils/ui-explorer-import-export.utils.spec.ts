@@ -2,6 +2,21 @@ import { UiExplorerJobStateSnapshot } from '../models/ui-explorer.models';
 import { parseUiExplorerLocalRunEnvelope } from './ui-explorer-import-export.utils';
 
 describe('UI Explorer import and export contract', () => {
+  it.each(['QUEUED', 'ANALYZING', 'BLOCKED', 'FAILED'])('restores a CRM %s run without a report', (status) => {
+    const envelope = localEnvelope() as any;
+    envelope.payload.job = { ...envelope.payload.job, status, report: null, result: null };
+
+    const parsed = parseUiExplorerLocalRunEnvelope(envelope);
+
+    expect(parsed.job.status).toBe(status);
+    expect(parsed.job.report).toBeNull();
+  });
+
+  it('still rejects a completed CRM run without its report', () => {
+    const envelope = localEnvelope() as any;
+    envelope.payload.job.report = null;
+    expect(() => parseUiExplorerLocalRunEnvelope(envelope)).toThrow('zakończonego raportu');
+  });
   it('restores only the exact local CRM run contract', () => {
     const parsed = parseUiExplorerLocalRunEnvelope(localEnvelope());
 

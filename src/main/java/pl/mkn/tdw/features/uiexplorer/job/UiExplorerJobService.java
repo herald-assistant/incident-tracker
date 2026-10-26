@@ -63,6 +63,7 @@ public class UiExplorerJobService {
         jobs.put(jobId, job);
         authRefs.put(jobId, authRef);
         var acceptedSnapshot = job.snapshot();
+        persistSnapshot(job);
         try {
             applicationTaskExecutor.execute(() -> runJob(jobId, job, request, authRef));
         } catch (RuntimeException exception) {
@@ -72,7 +73,7 @@ public class UiExplorerJobService {
             );
             log.error("UI Explorer job scheduling failed jobId={} systemId={}",
                     jobId, request.systemId(), exception);
-            persistTerminalSnapshot(job);
+            persistSnapshot(job);
             return job.snapshot();
         }
         return acceptedSnapshot;
@@ -121,19 +122,19 @@ public class UiExplorerJobService {
                     job::markAiActivity
             );
             job.markAiAnalysisCompleted(analysis);
-            persistTerminalSnapshot(job);
+            persistSnapshot(job);
         } catch (UserFacingApplicationException exception) {
             job.markBlocked(exception.code(), exception.getMessage());
             log.warn("UI Explorer job blocked jobId={} systemId={} code={} message={}",
                     jobId, request.systemId(), exception.code(), exception.getMessage());
-            persistTerminalSnapshot(job);
+            persistSnapshot(job);
         } catch (RuntimeException exception) {
             job.markFailed(
                     "UI_EXPLORER_ANALYSIS_FAILED",
                     "UI Explorer analysis failed unexpectedly. Retry the analysis or inspect server logs."
             );
             log.error("UI Explorer job failed jobId={} systemId={}", jobId, request.systemId(), exception);
-            persistTerminalSnapshot(job);
+            persistSnapshot(job);
         }
     }
 
@@ -275,7 +276,7 @@ public class UiExplorerJobService {
         return StringUtils.hasText(value) ? value.trim() : "";
     }
 
-    private void persistTerminalSnapshot(UiExplorerJobState job) {
+    private void persistSnapshot(UiExplorerJobState job) {
         var snapshot = job.snapshot();
         try {
             var context = reachabilityContexts.get(snapshot.jobId());
@@ -283,7 +284,7 @@ public class UiExplorerJobService {
             if (context != null) {
                 localRunPersistence.persistRunSnapshot(snapshot, authRef, job.copilotSessionId(), context);
             } else {
-                localRunPersistence.persistTerminalSnapshot(snapshot);
+                localRunPersistence.persistSnapshot(snapshot);
             }
         } catch (RuntimeException exception) {
             log.warn(

@@ -12,18 +12,10 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
-import java.util.EnumSet;
-
 @Component
 public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistence {
 
     static final String FEATURE = "ui-explorer";
-    private static final EnumSet<UiExplorerJobStatus> TERMINAL_STATUSES = EnumSet.of(
-            UiExplorerJobStatus.COMPLETED,
-            UiExplorerJobStatus.PARTIAL,
-            UiExplorerJobStatus.BLOCKED,
-            UiExplorerJobStatus.FAILED
-    );
 
     private final ObjectMapper objectMapper;
     private final LocalAnalysisRunStore localAnalysisRunStore;
@@ -52,8 +44,8 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
     }
 
     @Override
-    public void persistTerminalSnapshot(UiExplorerJobStateSnapshot snapshot) {
-        if (snapshot == null || snapshot.status() == null || !TERMINAL_STATUSES.contains(snapshot.status())) {
+    public void persistSnapshot(UiExplorerJobStateSnapshot snapshot) {
+        if (snapshot == null || snapshot.status() == null) {
             return;
         }
         var sanitizedSnapshot = sanitizer.sanitize(snapshot);
@@ -69,7 +61,7 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
             String copilotSessionId,
             UiExplorerScreenReachabilityContext context
     ) {
-        if (snapshot == null || snapshot.status() == null || !TERMINAL_STATUSES.contains(snapshot.status())) {
+        if (snapshot == null || snapshot.status() == null) {
             return;
         }
         var sanitizedSnapshot = sanitizer.sanitize(snapshot);

@@ -391,6 +391,49 @@ describe('UiExplorerFacade', () => {
     expect(polling.poll).not.toHaveBeenCalled();
   });
 
+  it('restores an active CRM history run and starts live polling', () => {
+    const envelope = crmLocalEnvelope();
+    envelope.payload.job = crmJobSnapshot('QUEUED');
+    historyApi.getRun.mockReturnValueOnce(of({
+      analysisId: envelope.payload.job.jobId, feature: 'ui-explorer', name: 'CRM queued run',
+      status: 'QUEUED', createdAt: envelope.payload.job.createdAt,
+      updatedAt: envelope.payload.job.updatedAt, completedAt: '',
+      exportEnvelope: envelope, continuationEnabled: false
+    }));
+    const stream = new Subject<UiExplorerJobStateSnapshot>();
+    polling.poll.mockReturnValueOnce(stream);
+    const facade = TestBed.inject(UiExplorerFacade);
+
+    facade.loadLocalRun(envelope.payload.job.jobId);
+
+    expect(facade.job()?.status).toBe('QUEUED');
+    expect(facade.portabilityError()).toBe('');
+    expect(facade.pollingActive()).toBe(true);
+    stream.next(crmReadableSnapshot('COMPLETED'));
+    stream.complete();
+    expect(facade.job()?.status).toBe('COMPLETED');
+    expect(facade.pollingActive()).toBe(false);
+  });
+
+  it('keeps the saved CRM snapshot visible when the live job is unavailable after restart', () => {
+    const envelope = crmLocalEnvelope();
+    envelope.payload.job = crmJobSnapshot('QUEUED');
+    historyApi.getRun.mockReturnValueOnce(of({
+      analysisId: envelope.payload.job.jobId, feature: 'ui-explorer', name: 'CRM queued run',
+      status: 'QUEUED', createdAt: envelope.payload.job.createdAt,
+      updatedAt: envelope.payload.job.updatedAt, completedAt: '',
+      exportEnvelope: envelope, continuationEnabled: false
+    }));
+    polling.poll.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 404 })));
+    const facade = TestBed.inject(UiExplorerFacade);
+
+    facade.loadLocalRun(envelope.payload.job.jobId);
+
+    expect(facade.job()?.status).toBe('QUEUED');
+    expect(facade.pollingActive()).toBe(false);
+    expect(facade.jobError()).not.toBe('');
+  });
+
   it('sends a live CRM follow-up and keeps the report immutable', () => {
     const before = crmReadableSnapshot('COMPLETED');
     const completed = {

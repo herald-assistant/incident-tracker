@@ -41,7 +41,7 @@ public class UiExplorerImportService {
             throw new UiExplorerImportPersistenceException();
         }
         try {
-            localRunPersistence.persistTerminalSnapshot(imported);
+            localRunPersistence.persistSnapshot(imported);
         } catch (RuntimeException exception) {
             throw new UiExplorerImportPersistenceException();
         }

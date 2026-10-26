@@ -274,8 +274,14 @@ trescia odpowiedzi.
 
 ## Historia, restart i portability
 
-Terminalny snapshot jest sanitizowany i zapisywany pod feature key
-`ui-explorer`. Publiczny local run nie zawiera tokenow ani hidden repository
+Poczatkowy snapshot `QUEUED` jest sanitizowany i zapisywany synchronicznie
+przed przekazaniem analizy executorowi pod feature key `ui-explorer`.
+Zapis jest best-effort: blad storage jest logowany i nie blokuje startu.
+Terminalny snapshot aktualizuje ten sam wpis. Odczyt historii dopuszcza
+snapshot bez raportu i dla nieterminalnego stanu uruchamia polling live joba.
+Po restarcie backendu brak live joba pozostawia zapisany snapshot widoczny
+z bledem odczytu; nie uruchamia ponownie analizy.
+Publiczny local run nie zawiera tokenow ani hidden repository
 scope. Prywatny `tdw.ui-explorer-continuation/v1` zachowuje minimalny frozen
 scope, branch i fingerprint raportu potrzebne do bezpiecznego resume.
 

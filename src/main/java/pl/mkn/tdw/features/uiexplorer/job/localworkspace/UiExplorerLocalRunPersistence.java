@@ -7,12 +7,12 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 public interface UiExplorerLocalRunPersistence {
 
     UiExplorerLocalRunPersistence NO_OP = new UiExplorerLocalRunPersistence() {
-        @Override public void persistTerminalSnapshot(UiExplorerJobStateSnapshot snapshot) { }
+        @Override public void persistSnapshot(UiExplorerJobStateSnapshot snapshot) { }
         @Override public void persistRunSnapshot(UiExplorerJobStateSnapshot snapshot, AnalysisAiAuthRef authRef,
                                                  String copilotSessionId, UiExplorerScreenReachabilityContext context) { }
     };
 
-    void persistTerminalSnapshot(UiExplorerJobStateSnapshot snapshot);
+    void persistSnapshot(UiExplorerJobStateSnapshot snapshot);
 
     default void persistRunSnapshot(
             UiExplorerJobStateSnapshot snapshot,
@@ -20,6 +20,6 @@ public interface UiExplorerLocalRunPersistence {
             String copilotSessionId,
             UiExplorerScreenReachabilityContext context
     ) {
-        persistTerminalSnapshot(snapshot);
+        persistSnapshot(snapshot);
     }
 }

@@ -10,6 +10,7 @@ import pl.mkn.tdw.api.analysisruns.AnalysisRunHistoryService;
 import pl.mkn.tdw.api.analysisruns.LocalAnalysisRunCorruptedException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStatus;
+import pl.mkn.tdw.features.uiexplorer.job.state.UiExplorerJobState;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.localworkspace.analysisruns.FileSystemLocalAnalysisRunStore;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
@@ -32,6 +33,7 @@ import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalR
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.SOURCE_PATH;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.snapshot;
 import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.context;
+import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request;
 
 class UiExplorerLocalRunPersisterTest {
 
@@ -79,7 +81,7 @@ class UiExplorerLocalRunPersisterTest {
         var store = new CapturingLocalAnalysisRunStore();
         var persister = persister(store);
 
-        persister.persistTerminalSnapshot(snapshot(UiExplorerJobStatus.COMPLETED));
+        persister.persistSnapshot(snapshot(UiExplorerJobStatus.COMPLETED));
 
         assertThat(store.entries).singleElement().satisfies(entry -> {
             assertThat(entry.feature()).isEqualTo("ui-explorer");
@@ -156,22 +158,48 @@ class UiExplorerLocalRunPersisterTest {
     }
 
     @Test
-    void shouldPersistEveryTerminalCrmStatusAndIgnoreRunningSnapshot() {
+    void shouldPersistQueuedRunningAndTerminalCrmSnapshots() {
         var store = new CapturingLocalAnalysisRunStore();
         var persister = persister(store);
 
-        persister.persistTerminalSnapshot(snapshot(UiExplorerJobStatus.COMPLETED));
-        persister.persistTerminalSnapshot(snapshot(UiExplorerJobStatus.PARTIAL));
-        persister.persistTerminalSnapshot(snapshot(UiExplorerJobStatus.BLOCKED));
-        persister.persistTerminalSnapshot(snapshot(UiExplorerJobStatus.FAILED));
-        persister.persistTerminalSnapshot(snapshot(UiExplorerJobStatus.ANALYZING));
-        persister.persistTerminalSnapshot(null);
+        persister.persistSnapshot(new UiExplorerJobState("crm-queued-run", request()).snapshot());
+        persister.persistSnapshot(snapshot(UiExplorerJobStatus.COMPLETED));
+        persister.persistSnapshot(snapshot(UiExplorerJobStatus.PARTIAL));
+        persister.persistSnapshot(snapshot(UiExplorerJobStatus.BLOCKED));
+        persister.persistSnapshot(snapshot(UiExplorerJobStatus.FAILED));
+        persister.persistSnapshot(snapshot(UiExplorerJobStatus.ANALYZING));
+        persister.persistSnapshot(null);
 
         assertThat(store.entries).extracting(LocalAnalysisRunIndexEntry::status)
-                .containsExactly("COMPLETED", "PARTIAL", "BLOCKED", "FAILED");
-        assertThat(store.records).hasSize(4);
+                .containsExactly("QUEUED", "COMPLETED", "PARTIAL", "BLOCKED", "FAILED", "ANALYZING");
+        assertThat(store.records).hasSize(6);
+        assertThat(store.records.get(0).exportEnvelope().at("/payload/job/report").isNull()).isTrue();
         assertThat(store.records).allSatisfy(record ->
                 assertThat(record.continuation().enabled()).isFalse());
+    }
+
+    @Test
+    void shouldUpdateTheSameCrmHistoryEntryWhenAnalysisFails(@TempDir Path workspace) {
+        var properties = new LocalWorkspaceProperties();
+        properties.setEnabled(true);
+        properties.setDirectory(workspace.toString());
+        var store = new FileSystemLocalAnalysisRunStore(properties, new LocalWorkspacePaths(properties),
+                new LocalWorkspaceJsonFileStore(objectMapper));
+        var persister = persister(store);
+        var job = new UiExplorerJobState("crm-run-1", request());
+
+        persister.persistSnapshot(job.snapshot());
+        assertThat(store.listRuns()).singleElement().satisfies(entry ->
+                assertThat(entry.status()).isEqualTo("QUEUED"));
+        job.markFailed("CRM_SYNTHETIC_FAILURE", "Synthetic CRM failure");
+        persister.persistSnapshot(job.snapshot());
+
+        assertThat(store.listRuns()).singleElement().satisfies(entry -> {
+            assertThat(entry.analysisId()).isEqualTo("crm-run-1");
+            assertThat(entry.status()).isEqualTo("FAILED");
+        });
+        assertThat(store.findById("crm-run-1").orElseThrow().exportEnvelope()
+                .at("/payload/job/status").asText()).isEqualTo("FAILED");
     }
 
     @Test
@@ -183,7 +211,7 @@ class UiExplorerLocalRunPersisterTest {
         var jsonFileStore = new LocalWorkspaceJsonFileStore(objectMapper);
         var firstStore = new FileSystemLocalAnalysisRunStore(properties, paths, jsonFileStore);
         var snapshot = snapshot(UiExplorerJobStatus.COMPLETED);
-        persister(firstStore).persistTerminalSnapshot(snapshot);
+        persister(firstStore).persistSnapshot(snapshot);
 
         var restartedStore = new FileSystemLocalAnalysisRunStore(properties, paths, jsonFileStore);
         var historyService = new AnalysisRunHistoryService(

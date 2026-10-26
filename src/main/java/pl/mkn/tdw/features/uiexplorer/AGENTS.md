@@ -79,6 +79,10 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
 - Local history zapisuje minimalny prywatny continuation snapshot bez tokenow,
   kodu i promptu. Import nigdy nie aktywuje continuation. Przerwany turn po
   restarcie ma status `FAILED` i nie jest automatycznie ponawiany.
+- Poczatkowy snapshot `QUEUED` zapisuj best-effort przed uruchomieniem
+  executora. Terminalny snapshot aktualizuje ten sam wpis. Local restore
+  dopuszcza brak raportu i odpytuje live job dla aktywnego stanu; historia
+  nie jest kolejka wznawiajaca wykonanie po restarcie backendu.
 
 ## Non-goals MVP
 

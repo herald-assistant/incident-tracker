@@ -641,6 +641,9 @@ export class UiExplorerFacade {
         localRunName: detail.name,
         continuationEnabled: detail.continuationEnabled
       });
+      if (!isTerminalJobStatus(restored.job.status)) {
+        this.startPolling(restored.job.jobId);
+      }
     } catch (error) {
       this.portabilityError.set(
         error instanceof Error
