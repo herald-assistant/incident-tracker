@@ -1259,5 +1259,27 @@ commita. Nie gwarantuje to jednego snapshotu kodu ani najnowszego HEAD przy
 cache hit. UI pokazuje `Data:` przy `View` i nie prezentuje SHA.
 
 Neutralny `GitLabRepositoryToolScope` utrzymuje osobny tryb pinned dla
-Operational Context Assistance. Formaty cache, exportu, local runu i
+Operational Context Assistance oraz wariant wielu przypiętych rewizji dla
+Release summary. Formaty cache, exportu, local runu i
 continuation UI/UX uzywaja wylacznie wersji 1 i odrzucaja inne formaty.
+
+## 32. Release summary oddziela pełność źródeł od interpretacji AI
+
+Release summary przygotowuje pełne źródła Liquibase na obu SHA oraz pełne
+payloady encji systemu, repozytoriów i zakresów. Reuse'uje neutralne listing
+refów, repository tree, verified read, zamrożony odczyt Operational Context
+i `GitLabRepositoryToolScope.forRevisions`; nie importuje orchestration innych
+feature'ów. Dodatkowe projekty są przypinane osobno, bez zmiany pary porównania.
+
+Feature używa `GOAL_DRIVEN` bez limitu liczby wywołań, ale preflight całego
+promptu, scope i timeout pozostają platformowe. Niepełny materiał blokuje AI.
+SQL i custom changes nie zyskują deklaracji deterministycznej pełności tylko
+dlatego, że model opisał ich treść.
+
+`AnalysisReport` jest jedynym źródłem wyniku. Walidator feature'a wymaga
+każdego elementu w tabelach technicznej i funkcjonalnej, niezmienionych
+właściwości przed/po i odczytanych źródeł. Mutacje przez `report_*` mają
+checkpoint, a brak uzasadnienia lub niezweryfikowana konstrukcja pozostaje
+`PARTIAL`. Odpowiedź tekstowa nie zastępuje raportu. Follow-up domyślnie tylko
+odpowiada; korekta wymaga jawnego `updateReport`. Publiczny import V1 nie
+odtwarza sesji. Szczegóły: [runtime](release-summary-runtime-flow.md).

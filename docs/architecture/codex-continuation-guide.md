@@ -39,6 +39,10 @@ need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
 - `change-verification-runtime-flow.md`
   source discovery, rule-ledger contract, prompt/runtime, report, import/export
   i UI Change Verification.
+- `release-summary-runtime-flow.md`
+  porównanie Liquibase między przypiętymi refami, pełne encje katalogu,
+  coverage, report-first AI, kontynuacja i eksport V1. Kod jest w
+  `features.releasesummary` oraz `frontend/src/app/features/release-summary`.
 - `package-dependencies.md`
   dozwolony graf zaleznosci backendu i frontendu.
 - `operational-context-model-tools-and-usage.md`

@@ -1,6 +1,6 @@
 # Release summary — raport zmian Liquibase
 
-Status: in-progress
+Status: done
 
 Source need: [Release summary](../needs/release-summary.md)
 
@@ -38,7 +38,8 @@ parserów, promptu ani osobnego frameworka rozszerzeń.
 
 ### Baseline i reuse/gap analysis
 
-Poniższe wnioski wynikają z kodu, nie wyłącznie z dokumentacji.
+Poniższe wnioski opisują baseline kodu przed implementacją; wynikowy stan
+jest opisany w [runtime Release summary](../architecture/release-summary-runtime-flow.md).
 
 | Obszar | Obecny mechanizm | Reuse i brakujący zakres |
 | --- | --- | --- |
@@ -331,8 +332,9 @@ limitu „pierwszych N zmian”. Wszystkie section IDs trafiają do hidden scope
 W szczegółach używamy kilku czytelnych tabel zamiast jednej tabeli
 o kilkunastu bardzo szerokich kolumnach. Obie projekcje łączy `elementId`.
 
-Tabela techniczna: `elementId`, rodzaj i pełna nazwa obiektu, operacja,
-atrybut, przed, po, źródło. Dla nowej tabeli wymagane są wszystkie kolumny,
+Tabela techniczna: `elementId`, `Obiekt`, `Zmiana`, `Przed`, `Po`,
+`Opis techniczny`, `Źródła`. Przed/Po zachowują pełny JSON właściwości.
+Dla nowej tabeli wymagane są wszystkie kolumny,
 typy/rozmiary/precyzja, nullability, default/computed/identity, klucze,
 ograniczenia i komentarze obecne w źródle. Dla istniejącego obiektu opisujemy
 wszystkie zmienione atrybuty. Brak jawnej wartości nie jest zgadywanym defaultem.
@@ -343,10 +345,11 @@ referencje, reguły aktualizacji/usunięcia i sprawdzane warunki. Dla danych:
 operacja, zbiór docelowy, warunek i transformacja/backfill. Inne obiekty,
 np. widoki, sekwencje, procedury i triggery, mają własny jawny wiersz i opis.
 
-Tabela funkcjonalna: `elementId`, znaczenie, użycie w kodzie/procesie,
-uzasadnienie zmiany, dowody oraz status `CONFIRMED`, `INFERRED` albo `UNKNOWN`.
-Nie łączymy kilku kolumn w wiersz „pozostałe pola”. Dla `UNKNOWN` podajemy
-konkretny brak; dla `INFERRED` wyraźnie oddzielamy wniosek od źródłowego faktu.
+Tabela funkcjonalna: `elementId`, `Cel funkcjonalny`, `Działanie`, `Wpływ`,
+`Podstawa`, `Źródła`, `Luka`. Podstawa przyjmuje `FAKT`, `WNIOSEK` lub
+`BRAK_DANYCH`. Nie łączymy kilku kolumn w wiersz „pozostałe pola”. Dla
+`BRAK_DANYCH` podajemy konkretny brak; dla `WNIOSEK` wyraźnie oddzielamy
+wniosek od źródłowego faktu.
 Hipoteza o intencji autora nie staje się faktem tylko dlatego, że pasuje do nazwy.
 
 ### Kompletność i walidacja — osobna od obecności sekcji
@@ -383,8 +386,8 @@ potrzebny jest osobny przegląd pokrycia przez model oraz scenariusze akceptacyj
 z niezależnie ustaloną listą elementów. Nierozpoznany albo nieopisany fragment
 pozostaje jawnie niezweryfikowany; nie pokazujemy fikcyjnego „100%”.
 
-Publiczny `ReleaseSummaryResult` jest projekcją zapisanego raportu i manifestu:
-mode, comparison, coverage, sekcje, visibility limits i usage. Nie ma drugiego
+Publiczny `ReleaseSummarySnapshot` zawiera request z mode, comparison, raport,
+usage i result będący projekcją coverage oraz visibility limits. Nie ma drugiego
 JSON wyniku generowanego przez model ani parsera finalnej prozy jako zamiennika
 brakującego reportu. AI kończy krótkim niepustym potwierdzeniem zapisu.
 
@@ -397,15 +400,15 @@ overflow model/effort musi być jawną konfiguracją feature'a i widocznym
 wyborem runtime; nie zmieniamy modelu operatora po cichu.
 
 Jeśli pełny materiał nie mieści się w obsługiwanym oknie, przygotowanie kończy
-się `BLOCKED / CONTEXT_TOO_LARGE`, z wielkością i wskazaniem źródeł. Nie
+się `BLOCKED / CONTEXT_PREFLIGHT_FAILED`, z powodem odmowy platformy oraz
+zachowanym pełnym materiałem w snapshotcie runu. Nie
 streszczamy encji, nie usuwamy plików i nie wysyłamy „reprezentatywnej próbki”.
 Dzielenie całego wejścia między wiele sesji byłoby osobną zmianą delivery
 mode, wymagającą uzgodnienia; nie jest ukrytym fallbackiem tego planu.
 
-Job ma feature-owned kroki `RESOLVE_SCOPE`, `PIN_REVISIONS`, `COLLECT_CHANGES`,
-`PREPARE_CONTEXT`, `AI_ANALYSIS`, `VALIDATE_REPORT`. Udostępnia shared steps,
-evidence, tool evidence, activity, feedback i usage oraz jawne
-`consumes/producesEvidence`. Nie używa fałszywych incidentowych step codes,
+Job ma feature-owned kroki `RESOLVE_REFS`, `COLLECT_LIQUIBASE`
+oraz `AI_REPORT`; walidacja i checkpoint raportu należą do tego ostatniego. Udostępnia shared steps,
+evidence, tool evidence, activity i usage. Nie używa fałszywych incidentowych step codes,
 żeby pokazać prompt we wspólnym panelu.
 
 Status wykonania (`QUEUED`, `RUNNING`, `COMPLETED`, `PARTIAL`, `BLOCKED`,
@@ -530,7 +533,7 @@ Pinned scope nie zamienia GitLaba w kopię trwałą: usunięty/przepisany obiekt
 może uniemożliwić późniejszy odczyt. Follow-up wtedy zgłasza brak zamiast
 przypinać nowszy branch. Publiczny import nie odtwarza dostępu do repo.
 
-Rollback wdrożenia: flaga feature'a wyłącza nowe starty i route/CTA, pozostawia
+Rollback wdrożenia: flaga feature'a wyłącza nowe starty i formularz/CTA, pozostawia
 read-only historię; odwrócenie zmian współdzielonych wymaga spójnej zmiany
 wszystkich konsumentów, bez aliasów starych formatów. Existing feature'y nie
 otrzymują nowego scope/budgetu bez jawnego wyboru w swoim assemblerze.
@@ -641,7 +644,7 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   LFS, zmienione submodule i nierozwiązane symlinki. Kontrola indeksu obejmuje
   linki do szczegółów i zgodność statusów z coverage. Koszt chatu korzysta
   z istniejącej agregacji initial usage oraz usage wiadomości, bez drugiego licznika.
-- [ ] **7. Finalna regresja, dokumentacja i rollout.** Wykonać kolejno
+- [x] **7. Finalna regresja, dokumentacja i rollout.** Wykonać kolejno
   `npm --prefix frontend test -- --watch=false`, `npm --prefix frontend run build`,
   `mvn -q -Pbackend-dev clean package`; `npm ci` tylko przy zmianie zależności
   lub ich braku. Uaktualnić root/lokalne AGENTS, product direction, system
@@ -651,6 +654,18 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   Dowód: zielone testy, bundle/JAR, sprawdzone linki, opis flagi/rollbacku.
   Akceptacja: bieżące dokumenty opisują faktycznie dostarczony stan; plan
   otrzymuje `done` dopiero po spełnieniu wszystkich kryteriów.
+  Weryfikacja 2026-11-01: kolejno 684/684 testów Angulara, produkcyjny build UI
+  i czyste pakowanie `backend-dev` z pełnymi testami zakończone `BUILD SUCCESS`.
+  Backend: 2019 przypadków, 2016 wykonanych bez błędów, 3 testy opt-in pominięte;
+  pilot Release summary wykonano osobno w kroku 6. Pełna regresja ujawniła
+  współdzielenie request-scoped cache pomiędzy testami Source Resolve; testy
+  otrzymały izolację kontekstu przed/po przypadku. Dodatkowy przypadek dużych
+  komórek potwierdza unikalne cele patchy i zachowanie literalnych danych źródłowych.
+  Zweryfikowano aktualny bundle i zasoby Release summary w JAR-ze oraz brak
+  usuniętej klasy agregującej usage. Zaktualizowano dokumenty architektury,
+  root/lokalne AGENTS, potrzebę i indeks; sprawdzono 35 linków relatywnych
+  bez brakujących plików. Flaga `RELEASE_SUMMARY_ENABLED` wyłącza nowe operacje,
+  zachowując odczyt wyników. Przejrzano diff i anonimizację przykładów CRM.
 
 ## Macierz testów
 
@@ -668,8 +683,9 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
 
 ## Dowód przeprowadzonej analizy
 
-Worktree przed pracą był czysty. W tej zmianie powstają wyłącznie dokumenty
-potrzeby/planu i wpis w indeksie dokumentacji; kod produktu nie jest zmieniany.
+Worktree przed analizą był czysty. Początkowa analiza dostarczyła dokumenty
+potrzeby/planu i wpis w indeksie. Następnie użytkownik zatwierdził implementację
+całych siedmiu kroków; jej dowody weryfikacji są przy odpowiednich pozycjach.
 
 Uruchomiono baseline:
 

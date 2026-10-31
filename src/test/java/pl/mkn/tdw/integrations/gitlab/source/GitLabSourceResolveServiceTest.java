@@ -4,6 +4,8 @@ import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveExcepti
 import pl.mkn.tdw.integrations.gitlab.contract.source.GitLabSourceResolveRequest;
 import pl.mkn.tdw.integrations.gitlab.service.source.GitLabSourceResolveService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -27,6 +29,16 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class GitLabSourceResolveServiceTest {
+
+    @BeforeEach
+    void startWithIndependentRequestContext() {
+        RequestContextHolder.resetRequestAttributes();
+    }
+
+    @AfterEach
+    void releaseRequestContext() {
+        RequestContextHolder.resetRequestAttributes();
+    }
 
     @Test
     void shouldResolveBestFileAndFollowTreePagination() {

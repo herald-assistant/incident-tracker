@@ -31,6 +31,8 @@ public class ReleaseSummaryPrompt {
             report_read_section_chunk aż do hasMore=false. Nie pomijaj jednostek.
             Duże pliki mają wiele jednostek changesetów/grup operacji. Dla lokalnej korekty używaj
             report_patch_section z aktualnym digestem i unikalnym fragmentem; scaffold już zawiera pełne Przed/Po.
+            Znaczniki DO_UZUPELNIENIA_<elementId>_TECH i DO_UZUPELNIENIA_<elementId>_FUNCTION są unikalne:
+            możesz zastąpić sam znacznik bez przepisywania długiego JSON/SQL w sąsiedniej komórce.
             Każdy elementId musi wystąpić w obu tabelach sekcji szczegółowej. Przed i Po są dokładnymi obiektami
             JSON właściwości z manifestu albo null; nie usuwaj atrybutów. Źródła są tablicą JSON sourceRef.
             Nowe rozpoznane obiekty surowego SQL oznaczaj AI_<unitId>_<numer>; wypisz osobno każdą kolumnę,

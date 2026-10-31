@@ -32,8 +32,20 @@ feature analityczny
 ```
 
 Incident Analysis, Flow Explorer, Change Verification, Config Drift Viewer,
-UI Explorer i UX Inspector sa rodzenstwem. Zaden z nich nie jest generycznym
+UI Explorer, UX Inspector i Release summary sa rodzenstwem. Zaden z nich nie jest generycznym
 core dla pozostalych.
+
+`features.releasesummary` posiada discovery/parsing Liquibase, manifest
+pokrycia, walidator tabel, prompt/policy, job i adapter lokalnej historii.
+Neutralne `GitLabRepositoryRefPort` i `GitLabRepositorySnapshotPort` należą do
+integracji; pełne drzewo deleguje do tego samego tree service i cache co inni
+konsumenci. Snapshot zachowuje blob ID, mode/gitlinks i symlinki. Narzędzia
+posiadają scope wielu rewizji i opcjonalny captured read session katalogu,
+bez wiedzy o Liquibase. Platforma uruchamia przekazany `CopilotRunRequest`
+i report tools. Kontrakt wyniku oraz ocena kompletności pozostają w feature.
+Wspólne selecty, renderer raportu, fragmenty Markdown i agregacja usage są
+wspólnymi mechanizmami frontendu. [Runtime](release-summary-runtime-flow.md)
+opisuje konsumentów i kierunek przepływu.
 Operational Context Assistance jest kolejnym feature-owned use case'em:
 sklada neutralny katalog, ograniczony odczyt GitLaba i platforme AI, ale jego
 job, draft i decyzje operatora nie przechodza do `integrations`, `agenttools`

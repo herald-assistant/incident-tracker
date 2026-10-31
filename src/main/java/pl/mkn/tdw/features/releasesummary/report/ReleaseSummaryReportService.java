@@ -37,8 +37,8 @@ public class ReleaseSummaryReportService {
             var tech=new ArrayList<List<String>>(); var functional=new ArrayList<List<String>>();
             for(var element:unit.elements()) {
                 var refs=sourceRefs(unit);
-                tech.add(List.of(element.elementId(),element.kind()+" "+element.locator(),unit.changeType(),json(element.before()),json(element.after()),"DO_UZUPELNIENIA",json(refs)));
-                functional.add(List.of(element.elementId(),"BRAK_DANYCH","BRAK_DANYCH","BRAK_DANYCH","BRAK_DANYCH","[]","DO_UZUPELNIENIA"));
+                tech.add(List.of(element.elementId(),element.kind()+" "+element.locator(),unit.changeType(),json(element.before()),json(element.after()),"DO_UZUPELNIENIA_"+element.elementId()+"_TECH",json(refs)));
+                functional.add(List.of(element.elementId(),"BRAK_DANYCH","BRAK_DANYCH","BRAK_DANYCH","BRAK_DANYCH","[]","DO_UZUPELNIENIA_"+element.elementId()+"_FUNCTION"));
             }
             sections.add(section("DB_DETAIL_"+unit.unitId(),unit.repositoryId()+" / "+unit.path()+" — "+unitScope(unit,evidence),order++,
                     "### Zmiana techniczna\n\n"+ReleaseSummaryTables.table(TECH,tech)+"\n### Znaczenie funkcjonalne\n\n"+ReleaseSummaryTables.table(FUNCTION,functional)));
@@ -136,6 +136,12 @@ public class ReleaseSummaryReportService {
         return values;
     }
     private IllegalArgumentException invalid(String text) {return new IllegalArgumentException(text);}
+    private boolean pending(String value) {return value.matches("DO_UZUPELNIENIA(?:_[a-zA-Z0-9]+)*");}
+    private boolean pendingTableContent(String markdown) {
+        for(var table:ReleaseSummaryTables.parse(markdown))for(var row:table.rows())for(int i=0;i<row.size();i++)
+            if(!Set.of("Przed","Po","Źródła").contains(table.headers().get(i))&&pending(row.get(i)))return true;
+        return false;
+    }
     private void validateCoverageStatus(ReleaseSummaryEvidence.Unit unit,String status) {
         if(!Set.of("EXPECTED","DOCUMENTED","AI_IDENTIFIED","OPEN_GAP").contains(status))
             throw invalid("Status coverage: EXPECTED, DOCUMENTED, AI_IDENTIFIED lub OPEN_GAP.");
@@ -151,7 +157,8 @@ public class ReleaseSummaryReportService {
             if(section==null) {limits.add("Brak sekcji "+id);continue;}
             try {validateSection(id,section.markdown(),evidence,known);validateMeta(section.meta(),known);}
             catch(IllegalArgumentException e){limits.add(id+": "+e.getMessage());}
-            if(section.markdown().contains("DO_UZUPELNIENIA")) limits.add(id+": sekcja wymaga uzupełnienia.");
+            try {if(pendingTableContent(section.markdown()))limits.add(id+": sekcja wymaga uzupełnienia.");}
+            catch(IllegalArgumentException e){ /* The malformed table is already recorded above. */ }
             if(section.meta()!=null) {limits.addAll(section.meta().gaps());limits.addAll(section.meta().visibilityLimits());}
             if(id.equals("COVERAGE")) try {
                 var rows=requiredTable(ReleaseSummaryTables.parse(section.markdown()),HEADERS.get(id)).rows();
@@ -175,7 +182,7 @@ public class ReleaseSummaryReportService {
                 var functional=uniqueRows(requiredTable(tables,FUNCTION));
                 for(var element:unit.elements()) {
                     var a=technical.get(element.elementId()); var b=functional.get(element.elementId());
-                    if(a!=null&&b!=null&&a.stream().noneMatch(v->v.contains("DO_UZUPELNIENIA"))&&b.stream().noneMatch(v->v.contains("DO_UZUPELNIENIA"))) count++;
+                    if(a!=null&&b!=null&&!pending(a.get(5))&&b.subList(1,b.size()).stream().noneMatch(this::pending)) count++;
                     else gaps.add("Nieudokumentowany "+element.elementId());
                     if(b!=null&&b.get(4).equals("BRAK_DANYCH")) gaps.add("Brak uzasadnienia funkcjonalnego "+element.elementId());
                 }

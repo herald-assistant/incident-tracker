@@ -46,11 +46,12 @@ Przed wieksza zmiana przeczytaj:
 13. `architecture/package-dependencies.md`
 14. `architecture/operational-context-model-tools-and-usage.md`
 15. `architecture/codex-continuation-guide.md`
+16. `architecture/release-summary-runtime-flow.md`
 
 Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
 mechanizmu wspolnego przeczytaj dodatkowo:
 
-16. `architecture/analysis-feature-delivery-playbook.md`
+17. `architecture/analysis-feature-delivery-playbook.md`
 
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
@@ -65,14 +66,16 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - [Release summary](needs/release-summary.md) oraz
   [plan raportu zmian Liquibase](plans/release-summary.md) opisują porównanie
   dwóch refów aplikacji, pełny kontekst katalogowy i szczegółowy raport
-  wdrożeniowy. Plan ma status `in-progress`. Zapowiedziany tryb zmian kontraktów API
-  pozostaje poza bieżącą analizą i implementacją.
+  wdrożeniowy. Bieżący kontrakt jest w
+  [runtime Release summary](architecture/release-summary-runtime-flow.md).
+  Plan Liquibase jest zakończony; zachowana checklista dokumentuje weryfikację
+  siedmiu inkrementów przekazywanego rozwiązania.
+  Zapowiedziany tryb zmian kontraktów API pozostaje poza bieżącą implementacją.
 
-- [UI Explorer i UX Inspector: wiedza z Operational Context](needs/ui-analysis-operational-context.md)
-  oraz [plan udostepnienia katalogu modelowi](plans/ui-analysis-operational-context.md)
-  obejmuja pelny odczyt kontekstu dla lepszej interpretacji, z zachowaniem
-  obecnych trybow, raportow i zakresu kodu. Zatwierdzony plan ma status
-  `in-progress`; obejmuje takze koncowy pilot interpretacji katalogu.
+- Użycie Operational Context przez UI Explorer i UX Inspector opisują ich
+  kanoniczne [runtime UI](architecture/ui-explorer-runtime-flow.md) oraz
+  [runtime UX](architecture/ux-inspector-runtime-flow.md). Indeks odwołuje się
+  do bieżących kontraktów, bez linków do usuniętych planów.
 
 - [UX Inspector: jedno przekazanie obserwacji](needs/ux-inspector-capture-snapshot.md)
   oraz [plan capture przez REST](plans/ux-inspector-capture-snapshot.md)

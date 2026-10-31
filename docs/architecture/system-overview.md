@@ -40,7 +40,13 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer, Behavior Change Assessment i
-Technical Change Assessment. Frontendowy Delivery Trends laczy
+Technical Change Assessment oraz Release summary. Release summary porównuje
+dwa przypięte refy wszystkich repozytoriów wybranego systemu, zbiera Liquibase
+i pełne encje Operational Context, a następnie uruchamia report-first AI.
+Wynik, pokrycie, historia i read-only lub jawnie mutujący follow-up są opisane
+w [runtime Release summary](release-summary-runtime-flow.md).
+
+Frontendowy Delivery Trends laczy
 lokalnie biznesowe CSV jednego z assessmentow i pokazuje addytywny trend bez
 nowego backendowego API ani storage. Trend wymiarow wyjasnia, co napedza
 zmiane: Scope jako addytywny rozklad, a Assessment jako profil `0-4` lub
@@ -968,7 +974,7 @@ Znaczenie grup UI:
   pierwszym dostepnym feature'em; Flow Explorer i Change Verification sa
   kolejnymi dostepnymi feature'ami, podobnie jak Config Drift Viewer i
   Behavior Change Assessment, Technical Change Assessment
-  i client-only Delivery Trends, a Data Diagnostics pozostaje
+  i client-only Delivery Trends oraz Release summary, a Data Diagnostics pozostaje
   placeholderem dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
   GitLab, Jira, Confluence, Database i Operational Context sa

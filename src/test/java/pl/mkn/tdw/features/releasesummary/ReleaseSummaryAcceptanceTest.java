@@ -39,4 +39,26 @@ class ReleaseSummaryAcceptanceTest {
         var report=new AnalysisReport(complete.reportId(),complete.header(),complete.subHeader(),complete.markdownSummary(),complete.sections(),meta);
         assertEquals("PARTIAL",reports.project(report,ReleaseSummaryReportTest.evidence(true),reports.initialSources(ReleaseSummaryReportTest.SCOPE,ReleaseSummaryReportTest.evidence(true))).status());
     }
+    @Test void longSourceCellsHaveUniquePatchTargetsAndLiteralSourceValuesAreNotPlaceholders() {
+        var reports=new ReleaseSummaryReportService(new ObjectMapper());
+        var base=ReleaseSummaryReportTest.evidence(true);
+        var elements=List.of("first","second").stream().map(id->new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence.Element(
+                id,"column","/changeSet/column:"+id,null,Map.<String,Object>of("name",id,"defaultValue","DO_UZUPELNIENIA","remarks","CRM ".repeat(50000)))).toList();
+        var evidence=new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence(base.sources(),List.of(
+                new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence.Unit("unit1","customer","db/customer.xml","ADDED",null,
+                        ReleaseSummaryReportTest.SOURCE,elements,true)),List.of(),List.of(),1,true);
+        var scaffold=reports.scaffold("crm-report",ReleaseSummaryReportTest.SCOPE,evidence);
+        var sections=new ArrayList<>(scaffold.sections());var detail=sections.get(4);var text=detail.markdown();
+        for(var element:elements) {
+            var marker="DO_UZUPELNIENIA_"+element.elementId()+"_TECH";
+            assertEquals(text.indexOf(marker),text.lastIndexOf(marker));assertTrue(text.contains(marker));
+            text=text.replace(marker,"Wartość domyślna opisuje stan etykiety klienta.")
+                    .replace("DO_UZUPELNIENIA_"+element.elementId()+"_FUNCTION","Brak kodu wyjaśniającego cel pola.");
+        }
+        var known=reports.initialSources(ReleaseSummaryReportTest.SCOPE,evidence);
+        reports.validateSection(detail.id(),text,evidence,known);
+        sections.set(4,new AnalysisReportSection(detail.id(),detail.title(),detail.order(),text,detail.meta()));
+        var report=new AnalysisReport(scaffold.reportId(),scaffold.header(),scaffold.subHeader(),scaffold.markdownSummary(),sections,scaffold.meta());
+        assertEquals(2,reports.project(report,evidence,known).documentedElements());
+    }
 }

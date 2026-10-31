@@ -1767,6 +1767,22 @@ Dla rozwoju istniejacego feature'a wybieraj najmniejszy spojny delta, ktory
 zachowuje baseline, aktualizuje wszystkich konsumentow zmienionego kontraktu i
 nie zwieksza architecture drift.
 
+## Wzorzec porównania repozytoriów i kompletnego raportu
+
+[Release summary](release-summary-runtime-flow.md) jest referencją dla
+porównania dwóch przypiętych rewizji i kontroli każdej pozycji wyniku.
+Reuse obejmuje neutralne ref/tree/read, scope wielu rewizji, captured katalog,
+platformowy preflight i report tools. Discovery specyficzne dla Liquibase,
+expected manifest oraz walidacja tabel należą do feature'a.
+
+Przy podobnym feature sprawdzaj osobno pełność źródeł, pokrycie elementów
+i jakość interpretacji. Nie zastępuj braków źródeł swobodnym research AI.
+Duże dane dziel na jednostki pracy bez ich pomijania; całe wejście musi przejść
+preflight. `GOAL_DRIVEN` usuwa liczniki wywołań, nie scope ani limity modelu.
+Checkpoint każdej zaakceptowanej mutacji powinien przeżyć timeout, a chat
+domyślnie nie zmieniać raportu. Weryfikacja obejmuje niezależny manifest
+fikcyjnego CRM i opt-in pilot rzeczywistego runtime z fikcyjnymi źródłami.
+
 ## Mapa implementacji referencyjnej
 
 Czytaj te miejsca jako przyklady odpowiedzialnosci, nie jako klasy do importu:

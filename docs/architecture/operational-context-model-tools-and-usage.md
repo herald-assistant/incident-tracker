@@ -338,6 +338,15 @@ path, ale nie absolute local path. Wewnetrzny digest zawartosci sluzy tylko do
 identyfikacji captured snapshotu; nie jest publiczna wersja, ETagiem ani
 historia katalogu.
 
+Neutralne `opctx_*` przyjmują opcjonalny hidden
+`AgentToolContextKeys.OPERATIONAL_CONTEXT_READ_SESSION`. Gdy feature go
+przekazuje, wszystkie cztery narzędzia czytają ten sam captured katalog;
+bez klucza zachowują dotychczasowy odczyt bieżącego snapshotu. Model nie
+wybiera wersji katalogu ani nie dostaje parametru scope. Release summary
+utrwala ten snapshot do kontynuacji po restarcie oraz osobno dołącza pełne
+payloady wybranych encji do initial promptu. Nie zmienia to neutralnych,
+typowanych odpowiedzi tools ani ownershipu relacji.
+
 Aktywne read modele sa celowo waskie:
 
 - entity detail,

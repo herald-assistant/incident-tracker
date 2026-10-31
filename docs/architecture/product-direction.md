@@ -32,7 +32,7 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
   `Incident Analysis`, `Flow Explorer`, `Change Verification`,
   `Config Drift Viewer`, `Behavior Change Assessment`,
   `Technical Change Assessment`, `Delivery Trends`, `UI Explorer`,
-  `UX Inspector` oraz przyszle miejsce na Data Diagnostics.
+  `UX Inspector`, `Release summary` oraz przyszle miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
   i Operational Context. Te widoki sluza do testow, debugowania i recznego
@@ -136,6 +136,19 @@ przeniesienia do Swagger/OpenAPI. `Summary` ma okolo 20 slow, a `Description`
 zwykle okolo 100 slow; zlozony endpoint moze wymagac dluzszego opisu.
 Szczegolowe evidence, source refs i ograniczenia widocznosci pozostaja w meta
 raportu oraz aktywnych sekcjach.
+
+### Release summary
+
+Dostępny tryb Liquibase porównuje dwa refy aplikacji i dokumentuje każdą
+rozpoznaną zmianę tabel, kolumn, indeksów, constraints i danych razem z jej
+znaczeniem funkcjonalnym. Aplikacja oznacza system Operational Context oraz
+wszystkie jego jawne zakresy repozytoriów. Pełny materiał jest zbierany
+deterministycznie; AI doczytuje kod i katalog oraz zapisuje tabelaryczny raport.
+Pokrycie źródeł, udokumentowanie elementów i pewność funkcjonalna są osobnymi
+informacjami. Historia, chat, edycja oraz import/export używają wspólnego UX.
+Flaga `release-summary.enabled` steruje nowymi analizami; odczyt zapisanych
+wyników pozostaje dostępny. Tryb zmian kontraktów API nie jest zaimplementowany.
+Kontrakt opisuje [runtime Release summary](release-summary-runtime-flow.md).
 
 ### Change Verification
 

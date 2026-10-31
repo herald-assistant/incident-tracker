@@ -1,6 +1,6 @@
 # Release summary
 
-Status: potrzeba opisana; rozwiązanie wymaga zatwierdzenia planu.
+Status: zrealizowana w zakresie Liquibase; tryb zmian kontraktów API odłożony.
 
 ## Problem i użytkownicy
 
@@ -84,4 +84,5 @@ Ograniczenie techniczne ma być jawne; nie wolno po cichu obcinać materiału.
   ograniczeń technicznych dostawców. Błędy, timeout i zbyt duży kontekst są
   widocznymi stanami wykonania.
 
-Propozycja dostarczenia: [plan Release summary](../plans/release-summary.md).
+Wynikowy kontrakt: [runtime Release summary](../architecture/release-summary-runtime-flow.md).
+Checklista dostarczenia: [plan Release summary](../plans/release-summary.md).

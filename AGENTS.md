@@ -78,6 +78,8 @@ Przed wieksza zmiana zacznij od:
     dla zmian UI Explorera
 16. `docs/architecture/ux-inspector-runtime-flow.md`
     dla zmian UX Inspectora albo TDW Browser Tools
+17. `docs/architecture/release-summary-runtime-flow.md`
+    dla zmian Release summary, discovery Liquibase i raportu wdrożeniowego
 
 ## Najwazniejsze niezmienniki
 
@@ -355,6 +357,12 @@ Zasady granic:
   `features.incidentanalysis.ai.copilot` zawiera incident prompt/artifacts/tool
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
+- `src/main/java/pl/mkn/tdw/features/releasesummary`
+  Porównanie Liquibase dwóch refów wszystkich jawnych repozytoriów systemu,
+  pełne encje Operational Context, zweryfikowane źródła, manifest elementów,
+  report-first AI z GOAL_DRIVEN, checkpoint, historia, chat i eksport V1.
+  Brak źródeł blokuje AI; SQL/custom change zachowuje niezweryfikowane coverage.
+  Funkcjonalny cel wymaga dowodu albo jawnej luki. Tryb API jest poza zakresem.
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer`
   Feature porownania runtime configuration pomiedzy branchami: named GitLab
   source, deterministyczny parsing/diff, sanitizowana druga opinia AI,
@@ -587,6 +595,7 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/releasesummary/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/changeverification/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/operationalcontextassistance/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/AGENTS.md`

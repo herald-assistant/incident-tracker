@@ -53,6 +53,9 @@ Nie obejmuje:
   feature'owa policy/allowliste oraz test policy. Rejestracja callbacka
   potwierdza, ze runtime zna tool, a policy potwierdza, ze dany feature
   faktycznie go dopuszcza w sesji.
+- Hidden `OPERATIONAL_CONTEXT_READ_SESSION` jest opcjonalnym captured katalogiem
+  dla wszystkich czterech tools; bez niego używaj bieżącego odczytu. Nie dodawaj
+  model-facing wyboru snapshotu ani reguł dedykowanego feature'a.
 - Operational context tools uzywaja prefixu `opctx_` i pozostaja neutralnym
   katalogiem encji. Wystawiaja `opctx_get_scope`, `opctx_list_entities`,
   `opctx_search` i `opctx_get_entity`.
@@ -73,7 +76,11 @@ Nie obejmuje:
   wynika z konfiguracji. Lista galezi pozwala ustalic ref drugiego projektu.
   Hidden `GitLabRepositoryToolScope` ma tryb pinned dla Operational Context
   Assistance: przypina wybrany projekt do commita operatora i kolejne projekty
-  w tej grupie do osobnych commitow. Tryb branchowy UX Inspectora ogranicza
+  w tej grupie do osobnych commitow. `forRevisions` przyjmuje wiele jawnych
+  przypiętych rewizji na projekt; trzecia rewizja takiego projektu jest
+  odrzucana, a dodatkowe projekty są przypinane osobno. Snapshot rewizji można
+  zachować i odtworzyć bez powtórnego rozwiązywania branchy.
+  Tryb branchowy UX Inspectora ogranicza
   projekt i branch bez przypinania SHA. Tree/list/search
   zwracaja sciezki, nie `sourceRef`; pelny odczyt i odczyt fragmentu z
   przypietego commita rejestruja ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie

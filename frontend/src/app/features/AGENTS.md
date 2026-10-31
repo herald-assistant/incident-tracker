@@ -36,6 +36,17 @@ granatowo-niebieskiej kolorystyki logo `assets/brand/main-logo.png`; nie
 wprowadzaj osobnych zielonych, czerwonych, fioletowych ani innych
 semantycznych akcentow tylko po to, zeby rozroznic feature.
 
+## Release summary
+
+Release summary używa wspólnego application select (także Flow Explorer) oraz
+branch select z typowanymi refami i paginacją. Dla pary refów wyłącza auto-select.
+Polling, raport, editor, chat, aside i Share pozostają shared. Nie sumuj usage
+chatu drugi raz w initial job usage. Fragmenty Markdown raportu nawigują w tym
+samym dokumencie przez shared markdown-content, bez przejścia na bazową trasę.
+Import Release summary pozostaje read-only, a checkbox korekty raportu jest
+domyślnie wyłączony. Kontrakt opisuje
+`docs/architecture/release-summary-runtime-flow.md`.
+
 ## Incident Analysis
 
 Incident Analysis ma byc codziennym workspace'em, nie landing page.

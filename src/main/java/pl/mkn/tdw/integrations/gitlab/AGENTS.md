@@ -45,6 +45,14 @@ zawierac semantyki incident analysis, Copilota ani MCP runtime.
   `contract.GitLabRepositoryTreeException`, a mapowanie na kontrakt danej capability
   wykonuj w serwisie wywolujacym.
 
+Pełny `GitLabRepositorySnapshotPort` reuse'uje `fetchRepositoryNodes`, zachowuje
+blob ID, gitlinks i symlinki oraz waliduje tryb obiektu Git. Istniejące bounded
+odczyty i `fetchRepositoryBlobs` zachowują własne kontrakty. Nie filtruj
+pełnego snapshotu do zwykłych plików przed przekazaniem go konsumentowi.
+`GitLabRepositoryRefPort` odróżnia branch/tag/commit i stronicuje refy;
+`GitLabRepositoryRevisionPort` przypina je do SHA. Polityka zakresu porównania
+oraz interpretacja nieobsługiwanych źródeł należą do konsumenta.
+
 ## Endpoint inventory
 
 - Endpoint discovery ma pozostac neutralne domenowo: zwracaj endpointy,
