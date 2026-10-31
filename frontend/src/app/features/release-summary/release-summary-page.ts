@@ -55,6 +55,10 @@ export class ReleaseSummaryPageComponent {
   readonly modelCatalog = signal(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly reasoningOptions = computed(() => reasoningEffortsForAiModel(this.modelCatalog(), this.model()));
   readonly modelsLoading = signal(false);
+  readonly modelError = signal('');
+  readonly effectiveModel = computed(() => this.model() || this.modelCatalog().defaultModel);
+  readonly canStart = computed(() => !!this.systemId() && !!this.before() && !!this.after() && !!this.effectiveModel()
+    && !this.modelsLoading() && !this.busy() && !this.editing() && this.uiConfig.config().releaseSummaryEnabled);
   readonly busy = computed(() => this.starting() || this.saving() || this.chatSubmitting() || !!this.job() && !terminalReleaseSummary(this.job()!));
   readonly shareDocument = computed(() => this.job()?.report ? buildReportShareDocument(this.job()!.report!, 'release-summary.md') : null);
   readonly tabs = [{id: 'report', tabLabel: 'Raport'}, {id: 'coverage', tabLabel: 'Kompletność i źródła'}];
@@ -67,8 +71,8 @@ export class ReleaseSummaryPageComponent {
     this.loadApplications();
     this.modelsLoading.set(true);
     this.aiOptionsApi.getOptions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: options => { this.modelCatalog.set(normalizeAnalysisAiModelOptions(options)); this.selectModel(listedDefaultAiModel(this.modelCatalog())); this.modelsLoading.set(false); },
-      error: () => this.modelsLoading.set(false)
+      next: options => { this.modelCatalog.set(normalizeAnalysisAiModelOptions(options)); if(!this.model()) this.selectModel(listedDefaultAiModel(this.modelCatalog())); this.modelsLoading.set(false); },
+      error: () => { this.modelsLoading.set(false); this.modelError.set('Nie udało się pobrać modeli AI. Odśwież stronę, aby ponowić wybór modelu.'); }
     });
     const localRunId = this.route.snapshot.queryParamMap.get('localRunId');
     if (localRunId) this.restore(localRunId);
@@ -94,7 +98,7 @@ export class ReleaseSummaryPageComponent {
     this.model.set(model); this.reasoning.set(defaultReasoningEffortForAiModel(this.modelCatalog(), model));
   }
   start(): void {
-    if(!this.systemId() || !this.before() || !this.after() || this.busy() || this.editing() || !this.uiConfig.config().releaseSummaryEnabled) return;
+    if(!this.canStart()) return;
     this.starting.set(true); this.error.set(''); this.imported.set(false); this.editing.set(false);
     this.api.start({systemId: this.systemId(), mode: 'LIQUIBASE', baselineRef: releaseRef(this.before()), targetRef: releaseRef(this.after()),
       ...(this.model() ? {model: this.model()} : {}), ...(this.reasoning() ? {reasoningEffort: this.reasoning()} : {})})
@@ -109,6 +113,8 @@ export class ReleaseSummaryPageComponent {
       next: job => { this.job.set(job); this.systemId.set(job.request.systemId);
         this.beforeKind.set(job.request.baselineRef.kind); this.afterKind.set(job.request.targetRef.kind);
         this.before.set(this.canonical(job.request.baselineRef)); this.after.set(this.canonical(job.request.targetRef));
+        if(job.request.model) this.selectModel(job.request.model);
+        if(job.request.reasoningEffort) this.reasoning.set(job.request.reasoningEffort);
         if(!terminalReleaseSummary(job)) this.poll(id); },
       error: () => this.error.set('Nie można otworzyć zapisanej analizy.')
     });

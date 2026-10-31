@@ -52,7 +52,19 @@ class ReleaseSummaryJobTest {
                 new CopilotRunRequest("crm","prompt",new CopilotSessionConfigRequest("crm-session",List.of(),List.of(),CopilotModelSelection.DEFAULT,""),Map.of(),null));
         when(fixture.ai.execute(any())).thenReturn(new CopilotExecutionResult("Tekst nie jest raportem",null,"crm-session",null));
         var accepted=fixture.service.start(request());fixture.tasks.get(0).run();
-        assertEquals("REPORT_NOT_WRITTEN",fixture.service.get(accepted.jobId()).errorCode());
+        var result=fixture.service.get(accepted.jobId());
+        assertEquals("REPORT_NOT_WRITTEN",result.errorCode());
+        assertNull(result.report(),"A private scaffold is not a published report");
+    }
+    @Test void missingModelNeverPublishesScaffold() {
+        var fixture=new Fixture(ReleaseSummaryReportTest.evidence(true));
+        doThrow(new ReleaseSummaryException("MODEL_REQUIRED","Wybierz model AI"))
+                .when(fixture.ai).requireModel(any());
+        var accepted=fixture.service.start(request());fixture.tasks.get(0).run();
+        var result=fixture.service.get(accepted.jobId());
+        assertEquals("BLOCKED",result.status());assertEquals("MODEL_REQUIRED",result.errorCode());
+        assertNull(result.report());assertNotNull(result.evidence());
+        verify(fixture.ai,never()).execute(any());
     }
     private static ReleaseSummaryRequest request(){return new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,
             new GitLabRef(GitLabRef.Kind.BRANCH,"current"),new GitLabRef(GitLabRef.Kind.TAG,"next"),"crm-model",null);}

@@ -29,6 +29,18 @@ public class ReleaseSummaryAiRunner {
     private final CopilotSdkProperties properties;
     private final ReleaseSummaryReportService reports;
 
+    public void requireModel(ReleaseSummaryRequest request) {
+        selectedModel(request);
+    }
+
+    private CopilotModelSelection selectedModel(ReleaseSummaryRequest request) {
+        var model=new CopilotModelSelection(request.model()!=null?request.model():properties.getModel(),
+                request.reasoningEffort()!=null?request.reasoningEffort():request.model()!=null?null:properties.getReasoningEffort());
+        if(model.model()==null||model.model().isBlank())throw new ReleaseSummaryException("MODEL_REQUIRED",
+                "Wybierz model AI, aby przygotować raport. Analiza AI nie została uruchomiona.");
+        return model;
+    }
+
     public CopilotRunRequest assemble(String id,ReleaseSummaryRequest request,String prompt,AnalysisAiAuthRef auth,
             ReleaseSummaryAiContext context,AnalysisReport report,String existingSession,
             Consumer<AnalysisEvidenceSection> evidenceSink,Consumer<AnalysisAiActivityEvent> activitySink) {
@@ -48,10 +60,7 @@ public class ReleaseSummaryAiRunner {
                 .filter(t->ReleaseSummaryToolPolicy.ALLOWED.contains(t.name())).toList();
         if(!enabled.stream().map(t->t.name()).toList().containsAll(ReleaseSummaryToolPolicy.ALLOWED))
             throw new ReleaseSummaryException("TOOLS_UNAVAILABLE","Brakuje wymaganych narzędzi GitLab, Operational Context lub report.");
-        var model=new CopilotModelSelection(request.model()!=null?request.model():properties.getModel(),
-                request.reasoningEffort()!=null?request.reasoningEffort():request.model()!=null?null:properties.getReasoningEffort());
-        if(model.model()==null||model.model().isBlank())throw new ReleaseSummaryException("MODEL_REQUIRED",
-                "Wybierz model AI z katalogu lub skonfiguruj domyślny model backendu. Pełny kontekst wymaga sprawdzenia okna tego modelu.");
+        var model=selectedModel(request);
         var config=new CopilotSessionConfigRequest(session.copilotSessionId(),enabled,enabled.stream().map(t->t.name()).toList(),
                 model,"Używaj wyłącznie narzędzi odczytu GitLab, opctx oraz report z tej sesji.",true)
                 .withDurableSystemInstructions(existingSession==null?ReleaseSummaryPrompt.INSTRUCTIONS:

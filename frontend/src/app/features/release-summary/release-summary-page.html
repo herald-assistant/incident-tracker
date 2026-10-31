@@ -34,7 +34,7 @@
         <button type="button" class="secondary-button" [disabled]="busy()" (click)="swap()">Zamień kierunek</button>
         <label class="form-field">Model AI
           <select [value]="model()" [disabled]="busy() || modelsLoading()" (change)="selectModel($any($event.target).value)">
-            <option value="">Domyślny model backendu</option>
+            <option value="">{{modelCatalog().defaultModel ? 'Domyślny: '+modelCatalog().defaultModel : 'Wybierz model AI'}}</option>
             @for(option of modelCatalog().models;track option.id) { <option [value]="option.id">{{option.name}}</option> }
           </select>
         </label>
@@ -44,9 +44,11 @@
             @for(option of reasoningOptions();track option) { <option [value]="option">{{option}}</option> }
           </select>
         </label>
-        <button class="primary-button" type="button" [disabled]="!systemId() || !before() || !after() || busy()"
+        <button class="primary-button" type="button" [disabled]="!canStart()"
           (click)="start()">Generuj raport</button>
       </div>
+      @if(modelError()) {<p role="alert">{{modelError()}}</p>}
+      @else if(!modelsLoading() && !effectiveModel()) {<p class="model-hint">Wybierz model AI, aby wygenerować raport.</p>}
       } @else { <p>Nowe analizy Release summary są wyłączone. Zapisane wyniki pozostają dostępne.</p> }
       @if(error()) { <p role="alert">{{error()}}</p>
         @if(job() && busy()) { <button class="secondary-button" (click)="retryPolling()">Wznów odświeżanie</button> }

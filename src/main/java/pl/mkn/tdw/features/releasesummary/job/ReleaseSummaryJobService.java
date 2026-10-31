@@ -77,6 +77,7 @@ public class ReleaseSummaryJobService {
                         state.finish("NO_CHANGES",null,null);persist(state);return;
                     }
                 }
+                ai.requireModel(state.request);
                 var revisions=new ArrayList<GitLabRepositoryToolScope.PinnedRevision>();
                 for(var repo:scope.repositories()) {
                     revisions.add(new GitLabRepositoryToolScope.PinnedRevision(repo.project(),repo.baselineRef(),repo.baselineCommit()));
@@ -87,7 +88,7 @@ public class ReleaseSummaryJobService {
                         report->checkpoint(state,report),()->persistence.saveRuntime(state.id,state.context),true);
                 var prompt=prompts.render(scope,evidence);
                 synchronized(state) {
-                    state.context=context;state.prompt=prompt;state.report=initial;
+                    state.context=context;state.prompt=prompt;
                     state.result=reports.project(initial,evidence,context.sources());
                     state.step("AI_REPORT","Raport AI","RUNNING","Analiza funkcjonalna i zapis tabel.",evidence.units().size());
                     persist(state);persistence.saveRuntime(state.id,context);

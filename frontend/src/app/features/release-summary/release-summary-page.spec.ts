@@ -35,10 +35,18 @@ describe('ReleaseSummary workspace',()=>{
   it('sends typed comparison and locks selection until the run finishes',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);fixture.detectChanges();
     const page=fixture.componentInstance;page.selectSystem('crm');
-    page.before.set('refs/heads/release');page.after.set('refs/tags/release');page.start();
-    expect(api.start).toHaveBeenCalledWith({systemId:'crm',mode:'LIQUIBASE',baselineRef:{kind:'BRANCH',name:'release'},targetRef:{kind:'TAG',name:'release'}});
+    page.before.set('refs/heads/release');page.after.set('refs/tags/release');page.selectModel('crm-model');page.start();
+    expect(api.start).toHaveBeenCalledWith({systemId:'crm',mode:'LIQUIBASE',baselineRef:{kind:'BRANCH',name:'release'},targetRef:{kind:'TAG',name:'release'},model:'crm-model'});
     page.selectSystem('crm-other');expect(page.systemId()).toBe('crm');
     progress.next(releaseSnapshot());page.selectSystem('crm-other');expect(page.before()).toBe('');expect(page.after()).toBe('');
+  });
+  it('requires an effective model before allowing a run',()=>{
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
+    page.selectSystem('crm');page.before.set('refs/heads/current');page.after.set('refs/heads/next');fixture.detectChanges();
+    expect(page.canStart()).toBe(false);page.start();expect(api.start).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Wybierz model AI, aby wygenerować raport');
+    page.modelCatalog.set({models:[],defaultModel:'crm-default',defaultReasoningEffort:'',defaultReasoningEfforts:[]});
+    expect(page.canStart()).toBe(true);
   });
   it('defaults questions to read-only and requires an explicit report update choice',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
