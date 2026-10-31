@@ -38,7 +38,7 @@ public class ReleaseSummaryCatalog {
             var ref=new GitLabRef(kind,search);
             var found=new ArrayList<String>();
             selected.repositories().forEach(r -> {
-                revisionPort.resolveRevision(group(),r.project(),ref.canonical());
+                validateRevision(revisionPort.resolveRevision(group(),r.project(),ref.canonical()),r.project(),ref.canonical());
                 found.add(r.repositoryId());
             });
             return new RefOptions(List.of(new RefOption(ref.canonical(),ref.name(),kind,false,found)),null,false,List.of());
@@ -60,10 +60,13 @@ public class ReleaseSummaryCatalog {
     public ReleaseSummaryScope pin(ReleaseSummaryRequest request, OperationalContextReadSession session) {
         var selected=select(session, request.systemId());
         var pinned=new ArrayList<ReleaseSummaryScope.Repository>();
+        var resolved=new HashMap<String,GitLabRepositoryRevision>();
         for(var r:selected.repositories()) {
             try {
-                var before=revisionPort.resolveRevision(group(),r.project(),request.baselineRef().canonical());
-                var after=revisionPort.resolveRevision(group(),r.project(),request.targetRef().canonical());
+                var before=resolved.computeIfAbsent(r.project()+"@"+request.baselineRef().canonical(),
+                        key->revisionPort.resolveRevision(group(),r.project(),request.baselineRef().canonical()));
+                var after=resolved.computeIfAbsent(r.project()+"@"+request.targetRef().canonical(),
+                        key->revisionPort.resolveRevision(group(),r.project(),request.targetRef().canonical()));
                 validateRevision(before,r.project(),request.baselineRef().canonical());
                 validateRevision(after,r.project(),request.targetRef().canonical());
                 pinned.add(new ReleaseSummaryScope.Repository(r.repositoryId(),r.project(),r.prefixes(),

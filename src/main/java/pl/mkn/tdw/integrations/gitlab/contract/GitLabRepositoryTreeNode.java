@@ -3,6 +3,7 @@ package pl.mkn.tdw.integrations.gitlab.contract;
 public record GitLabRepositoryTreeNode(
         String path,
         String type,
-        String id
+        String id,
+        String mode
 ) {
 }

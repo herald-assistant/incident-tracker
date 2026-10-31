@@ -42,5 +42,13 @@ class ReleaseSummaryCatalogTest {
         when(revisions.resolveRevision("CRM","data","refs/tags/release")).thenThrow(new IllegalStateException());
         assertThrows(ReleaseSummaryException.class,()->service.pin(request,session));
         verify(revisions,never()).resolveRevision(anyString(),anyString(),eq("main"));
+        reset(revisions);
+        var sequence=new java.util.concurrent.atomic.AtomicInteger();
+        when(revisions.resolveRevision(eq("CRM"),anyString(),anyString())).thenAnswer(i->new GitLabRepositoryRevision(
+                "CRM",i.getArgument(1),i.getArgument(2),Integer.toHexString(sequence.incrementAndGet()).repeat(40),null));
+        var same=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,request.baselineRef(),request.baselineRef(),null,null);
+        var stable=service.pin(same,session);
+        assertEquals(2,sequence.get());
+        stable.repositories().forEach(r->assertEquals(r.baselineCommit(),r.targetCommit()));
     }
 }

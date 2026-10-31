@@ -82,6 +82,6 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
     }
 
     private GitLabRepositoryTreeNode node(String path, String type) {
-        return new GitLabRepositoryTreeNode(path, type, "a".repeat(40));
+        return new GitLabRepositoryTreeNode(path, type, "a".repeat(40), "tree".equals(type)?"040000":"100644");
     }
 }

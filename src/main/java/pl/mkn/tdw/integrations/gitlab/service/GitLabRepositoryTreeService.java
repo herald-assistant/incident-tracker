@@ -36,6 +36,14 @@ public class GitLabRepositoryTreeService {
     private final GitLabRestClientFactory gitLabRestClientFactory;
 
     public List<GitLabRepositoryTreeNode> fetchRepositoryBlobs(
+            String gitlabBaseUrl, String projectIdOrPath, String ref, String pathPrefix, GitLabRepositoryTreeSession session
+    ) {
+        return fetchRepositoryNodes(gitlabBaseUrl,projectIdOrPath,ref,pathPrefix,session).stream()
+                .filter(node->"blob".equals(node.type())).toList();
+    }
+
+    /** Complete recursive inventory, including gitlinks; bounded consumers keep using their existing methods. */
+    public List<GitLabRepositoryTreeNode> fetchRepositoryNodes(
             String gitlabBaseUrl,
             String projectIdOrPath,
             String ref,
@@ -78,14 +86,13 @@ public class GitLabRepositoryTreeService {
                 var body = entity.getBody();
                 if (body != null) {
                     for (var node : body) {
-                        if ("blob".equals(node.type())) {
-                            allNodes.add(node);
-                        }
+                        if(node==null)throw new IllegalStateException("Missing repository tree entry.");
+                        allNodes.add(node);
                     }
                 }
 
                 log.debug(
-                        "Fetched GitLab tree page={} projectIdOrPath={} ref={} pathPrefix={} blobCount={} nextPage={}",
+                        "Fetched GitLab tree page={} projectIdOrPath={} ref={} pathPrefix={} nodeCount={} nextPage={}",
                         page,
                         projectIdOrPath,
                         ref,

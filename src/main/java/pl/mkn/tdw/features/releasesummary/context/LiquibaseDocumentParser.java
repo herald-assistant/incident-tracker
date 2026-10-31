@@ -100,7 +100,10 @@ public class LiquibaseDocumentParser {
                 text.append(child.getNodeValue());
         }
         if(!text.toString().isBlank()) attrs.put("text",text.toString());
-        return new Node(e.getLocalName(),Collections.unmodifiableMap(attrs),List.copyOf(children));
+        var namespace=e.getNamespaceURI();
+        var kind=namespace==null||namespace.isBlank()||namespace.equals("http://www.liquibase.org/xml/ns/dbchangelog")?
+                e.getLocalName():"extension:"+e.getTagName();
+        return new Node(kind,Collections.unmodifiableMap(attrs),List.copyOf(children));
     }
     private List<Node> nodes(Object input) {
         var result=new ArrayList<Node>();
@@ -128,6 +131,16 @@ public class LiquibaseDocumentParser {
             var locator=parent+"/"+identity+"#"+counts.merge(identity,1,Integer::sum);
             result.put(locator,node); flatten(node.children(),locator,result);
         }
+    }
+    public List<String> childOrder(Node node) {
+        var counts=new HashMap<String,Integer>();var result=new ArrayList<String>();
+        for(var child:node.children()) {
+            var key=child.kind()+":"+List.of("id","name","columnName","indexName","tableName").stream()
+                    .filter(child.attributes()::containsKey).map(k->Objects.toString(child.attributes().get(k),""))
+                    .findFirst().orElse("");
+            result.add(key+"#"+counts.merge(key,1,Integer::sum));
+        }
+        return List.copyOf(result);
     }
 }
 

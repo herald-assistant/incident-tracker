@@ -11,6 +11,7 @@ describe('AnalysisReportPanelComponent', () => {
     expect(compiled.textContent).toContain('DOWNSTREAM_TIMEOUT');
     expect(compiled.textContent).toContain('incident-report-1');
     expect(compiled.textContent).toContain('TECHNICAL_HANDOFF');
+    expect(compiled.querySelector('#report-section-TECHNICAL_HANDOFF')).not.toBeNull();
     expect(compiled.textContent).toContain('CustomerClient.call');
     expect(compiled.textContent).toContain('Brak logow downstream.');
     expect(compiled.textContent).toContain('Potwierdzic timeout w systemie zewnetrznym.');

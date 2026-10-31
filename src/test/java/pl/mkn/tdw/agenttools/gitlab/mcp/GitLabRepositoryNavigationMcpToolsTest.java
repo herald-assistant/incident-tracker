@@ -68,7 +68,7 @@ class GitLabRepositoryNavigationMcpToolsTest {
     void selectedProjectUsesPinnedCommitAndCanNavigateSubgroupWithoutResolvingAgain() {
         when(port.listRepositoryTreeChildrenPage("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT,
                 "", "", 40)).thenReturn(new GitLabRepositoryTreePage(
-                List.of(new GitLabRepositoryTreeNode("pom.xml", "blob", "a".repeat(40))), null));
+                List.of(new GitLabRepositoryTreeNode("pom.xml", "blob", "a".repeat(40), "100644")), null));
         when(port.listRepositoryFilesPage("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT,
                 "", "", 200)).thenReturn(new GitLabRepositoryFilePage(List.of(
                 new GitLabRepositoryFile("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "pom.xml"),

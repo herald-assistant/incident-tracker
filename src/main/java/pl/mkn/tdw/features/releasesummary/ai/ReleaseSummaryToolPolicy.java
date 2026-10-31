@@ -22,8 +22,8 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
     public static final Set<String> ALLOWED=Set.of("gitlab_list_repository_branches","gitlab_list_repository_tree",
             "gitlab_list_repository_files","gitlab_search_repository_files","gitlab_read_repository_file","gitlab_read_repository_file_chunk",
             "opctx_get_scope","opctx_list_entities","opctx_search","opctx_get_entity",
-            "report_get_current","report_read_section_chunk","report_upsert_section","report_update_header","report_update_meta");
-    private static final Set<String> MUTATIONS=Set.of("report_upsert_section","report_update_header","report_update_meta");
+            "report_get_current","report_read_section_chunk","report_upsert_section","report_patch_section","report_update_header","report_update_meta");
+    private static final Set<String> MUTATIONS=Set.of("report_upsert_section","report_patch_section","report_update_header","report_update_meta");
     private final ObjectMapper mapper;
     private final ReleaseSummaryReportService reports;
     private final CopilotReportSessionStore reportStore;
@@ -37,6 +37,16 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
             if(args==null||!args.isObject()) throw new IllegalArgumentException("Wymagane argumenty JSON.");
             if(request.toolName().equals("report_upsert_section"))
                 reports.validateSection(args.path("id").asText(),args.path("markdown").asText(),context.evidence,context.sources());
+            if(request.toolName().equals("report_patch_section")) {
+                var reportId=(String)request.sessionContext().hiddenContext().get(AgentToolContextKeys.REPORT_ID);
+                var sectionId=args.path("sectionId").asText();
+                var section=reportStore.current(reportId).orElseThrow().sections().stream().filter(s->s.id().equals(sectionId)).findFirst().orElseThrow();
+                var old=args.path("oldText").asText();var replacement=args.path("newText").asText();
+                int at=section.markdown().indexOf(old);
+                if(old.isEmpty()||at<0||section.markdown().indexOf(old,at+old.length())>=0)throw new IllegalArgumentException("Fragment musi występować dokładnie raz.");
+                var candidate=section.markdown().substring(0,at)+replacement+section.markdown().substring(at+old.length());
+                reports.validateSection(sectionId,candidate,context.evidence,context.sources());
+            }
             if(args.hasNonNull("meta")) reports.validateMeta(mapper.treeToValue(args.get("meta"),AnalysisReportMeta.class),context.sources());
         } catch(Exception e) {
             throw new CopilotToolInvocationRejectedException(e.getMessage(),

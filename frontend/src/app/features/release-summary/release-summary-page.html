@@ -95,7 +95,8 @@
         }
       </section>
       <app-analysis-feature-aside [progressActive]="busy()" [aiActive]="busy()" [progressCount]="current.steps.length"
-        [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [showChat]="true" [showFeedback]="false">
+        [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [chatMessages]="current.chatMessages"
+        [chatCount]="current.chatMessages.length" [showChat]="true" [showFeedback]="false">
         <div chatPanel>
           @if(canChat()) {<label><input type="checkbox" [checked]="updateReport()" (change)="updateReport.set($any($event.target).checked)" />
             Zleć AI zmianę raportu</label><p>Bez zaznaczenia AI odpowiada na pytanie i nie zmienia raportu.</p>}

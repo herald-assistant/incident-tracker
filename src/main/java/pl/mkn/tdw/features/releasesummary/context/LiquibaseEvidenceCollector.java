@@ -30,8 +30,13 @@ public class LiquibaseEvidenceCollector {
         for(var repository:scope.repositories()) {
             try {
                 var before=scan(scope,repository,"BASELINE",repository.baselineCommit(),gaps);
-                var after=scan(scope,repository,"TARGET",repository.targetCommit(),gaps);
-                scanned+=before.reads.size()+after.reads.size();
+                var after=repository.baselineCommit().equals(repository.targetCommit())?before:
+                        scan(scope,repository,"TARGET",repository.targetCommit(),gaps);
+                var modules=new TreeSet<String>();modules.addAll(before.tree.gitlinks().keySet());modules.addAll(after.tree.gitlinks().keySet());
+                for(var module:modules)if(!Objects.equals(before.tree.gitlinks().get(module),after.tree.gitlinks().get(module))
+                        &&repository.prefixes().stream().anyMatch(p->p.isEmpty()||module.equals(p)||module.startsWith(p+"/")||p.startsWith(module+"/")))
+                    gaps.add(gap(repository,"COMPARISON",module,"SUBMODULE_CHANGED","Zmieniony submodule wymaga osobnego zakresu i analizy jego plików.",true));
+                scanned+=before.reads.size()+(after==before?0:after.reads.size());
                 var changed=new TreeSet<String>(); changed.addAll(before.documents.keySet()); changed.addAll(after.documents.keySet());
                 var required=new TreeSet<String>();
                 for(var path:changed) {
@@ -43,9 +48,10 @@ public class LiquibaseEvidenceCollector {
                     if(type==null) continue;
                     required.add(path);
                     var elements=elements(repository,path,old,next,type);
-                    units.add(new Unit(id(repository.project()+":"+path),repository.repositoryId(),path,type,
+                    var groups=groups(elements);
+                    for(var part:groups) units.add(new Unit(id(repository.project()+":"+path+(groups.size()>1?":"+part.get(0).elementId():"")),repository.repositoryId(),path,type,
                             old!=null?old.source.sourceRef():null,next!=null?next.source.sourceRef():null,
-                            elements,(old==null||old.parsed.structured())&&(next==null||next.parsed.structured())));
+                            part,(old==null||old.parsed.structured())&&(next==null||next.parsed.structured())));
                 }
                 for(var side:List.of(before,after)) {
                     var include=new TreeSet<String>();
@@ -77,6 +83,8 @@ public class LiquibaseEvidenceCollector {
         if(!scope.group().equals(tree.group()) || !repo.project().equals(tree.project()) || !sha.equals(tree.commitId()))
             throw new IllegalStateException("Snapshot scope mismatch");
         var state=new Side(tree);
+        for(var link:tree.symlinks().keySet())if(repo.prefixes().stream().anyMatch(p->p.isEmpty()||link.equals(p)||link.startsWith(p+"/")||p.startsWith(link+"/")))
+            gaps.add(gap(repo,side,link,"SYMLINK_UNRESOLVED","Zakres zawiera dowiązanie symboliczne; pełność jego plików nie jest potwierdzona.",true));
         for(var path:tree.blobs().keySet()) if(candidate(path) && repo.prefixes().stream().anyMatch(p->p.isEmpty()||path.equals(p)||path.startsWith(p+"/"))) {
             var content=read(scope,repo,state,path);
             var parsed=parser.parse(path,content);
@@ -107,7 +115,8 @@ public class LiquibaseEvidenceCollector {
                 }
                 try {
                     var directory="includeAll".equals(node.kind());
-                    var resolved=resolve(tree,path,raw.toString(),Boolean.parseBoolean(String.valueOf(attrs.get("relativeToChangelogFile"))),directory);
+                    var resolved=resolve(tree,path,raw.toString(),Boolean.parseBoolean(String.valueOf(attrs.get("relativeToChangelogFile"))),directory,
+                            directory&&"false".equalsIgnoreCase(Objects.toString(attrs.get("errorIfMissingOrEmpty"),"true")));
                     List<String> paths;
                     if(directory) {
                         var filter=Objects.toString(attrs.get("endsWithFilter"),"");
@@ -148,8 +157,10 @@ public class LiquibaseEvidenceCollector {
     }
     private String read(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,Side state,String path) {
         return state.reads.computeIfAbsent(path,p->{
+            if(state.tree.symlinks().containsKey(p))throw new IllegalStateException("Symbolic source is unresolved.");
             var file=verifiedPort.readComplete(readPort,scope.group(),repo.project(),state.tree.commitId(),p);
             if(file==null||!p.equals(file.path())) throw new IllegalStateException("Missing verified file");
+            if(file.content().startsWith("version https://git-lfs.github.com/spec/v1"))throw new IllegalArgumentException("Git LFS source is unavailable.");
             var bytes=file.content().getBytes(StandardCharsets.UTF_8);
             var expected=state.tree.blobs().get(p);
             if(expected==null) throw new IllegalStateException("File not in complete tree");
@@ -169,7 +180,7 @@ public class LiquibaseEvidenceCollector {
                 path.toLowerCase(Locale.ROOT).endsWith(".sql")?"sql":"data",Map.of("text",text),List.of())),false,List.of("AI_IDENTIFIED"));
     }
     private boolean candidate(String path) { return path.toLowerCase(Locale.ROOT).matches(".*\\.(xml|ya?ml|json|sql)$"); }
-    private String resolve(GitLabRepositorySnapshot tree,String owner,String raw,boolean relative,boolean directory) {
+    private String resolve(GitLabRepositorySnapshot tree,String owner,String raw,boolean relative,boolean directory,boolean allowMissing) {
         if(raw.contains("${")||raw.contains("\\")||raw.startsWith("/")||raw.contains("://")) throw new IllegalArgumentException("Dynamic path");
         var requested=raw.startsWith("classpath:")?raw.substring(10):raw;
         String base=relative&&owner.contains("/")?owner.substring(0,owner.lastIndexOf('/')+1):"";
@@ -189,6 +200,7 @@ public class LiquibaseEvidenceCollector {
             }
         } else for(var path:tree.blobs().keySet())
             if(path.equals(normalized)||!relative&&path.endsWith("/resources/"+normalized)) found.add(path);
+        if(found.isEmpty()&&directory&&allowMissing)return normalized;
         if(found.size()!=1) throw new IllegalArgumentException("Missing or ambiguous repository path");
         return found.first();
     }
@@ -212,6 +224,9 @@ public class LiquibaseEvidenceCollector {
         var result=new ArrayList<Element>();
         for(var key:keys) {
             var old=b.get(key); var next=a.get(key);
+            if(old!=null&&next!=null&&!parser.childOrder(old).equals(parser.childOrder(next)))
+                result.add(new Element(id(repo.project()+":"+path+":"+key+":order"),"ordering",key+"/$order",
+                        Map.of("children",parser.childOrder(old)),Map.of("children",parser.childOrder(next))));
             if(old!=null&&next!=null&&old.attributes().equals(next.attributes())&&!type.equals("INCLUSION_CHANGED")) continue;
             result.add(new Element(id(repo.project()+":"+path+":"+key),next!=null?next.kind():old.kind(),key,
                     old!=null?old.attributes():null,next!=null?next.attributes():null));
@@ -220,6 +235,20 @@ public class LiquibaseEvidenceCollector {
                 Map.of("dependencies",before!=null?before.source.dependencies():List.of()),
                 Map.of("dependencies",after!=null?after.source.dependencies():List.of())));
         return result;
+    }
+    /** Bounded report sections, never a cap on the source or total number of elements. */
+    private List<List<Element>> groups(List<Element> elements) {
+        if(elements.size()<=32)return List.of(elements);
+        var changesets=new LinkedHashMap<String,List<Element>>();
+        for(var element:elements) {
+            var path=element.locator();int start=path.indexOf("/changeSet:");int end=start<0?-1:path.indexOf('/',start+1);
+            var key=start<0?"file":end<0?path.substring(start):path.substring(start,end);
+            changesets.computeIfAbsent(key,ignored->new ArrayList<>()).add(element);
+        }
+        var result=new ArrayList<List<Element>>();
+        for(var values:changesets.values())for(int start=0;start<values.size();start+=32)
+            result.add(List.copyOf(values.subList(start,Math.min(start+32,values.size()))));
+        return List.copyOf(result);
     }
     private void detectCycles(Side side,ReleaseSummaryScope.Repository repo,String name,List<Gap> gaps) {
         var done=new HashSet<String>();

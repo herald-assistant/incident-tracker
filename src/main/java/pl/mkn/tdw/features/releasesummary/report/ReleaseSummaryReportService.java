@@ -15,7 +15,7 @@ public class ReleaseSummaryReportService {
     public static final List<String> FUNCTION=List.of("elementId","Cel funkcjonalny","Działanie","Wpływ","Podstawa","Źródła","Luka");
     public static final Map<String,List<String>> HEADERS=Map.of(
             "OVERVIEW",List.of("Obszar","Opis","Źródła"),
-            "CHANGE_INDEX",List.of("unitId","Plik","Zmiana"),
+            "CHANGE_INDEX",List.of("unitId","Plik","Zmiana","Repozytorium","Zakres","Szczegóły","Status"),
             "DEPLOYMENT_IMPACT",List.of("Obszar","Wpływ","Weryfikacja","Źródła"),
             "COVERAGE",List.of("unitId","Status","Ograniczenia"));
     public record Coverage(String unitId,int expectedElements,int documentedElements,boolean structurallyVerified,List<String> gaps) {}
@@ -29,7 +29,7 @@ public class ReleaseSummaryReportService {
     public AnalysisReport scaffold(String id,ReleaseSummaryScope scope,ReleaseSummaryEvidence evidence) {
         var sections=new ArrayList<AnalysisReportSection>();
         sections.add(section("OVERVIEW","Zakres wdrożenia",0,table("OVERVIEW",List.of(List.of("System",scope.systemName()!=null?scope.systemName():scope.systemId(),"[]")))));
-        sections.add(section("CHANGE_INDEX","Indeks zmian",1,table("CHANGE_INDEX",evidence.units().stream().map(u->List.of(u.unitId(),u.path(),u.changeType())).toList())));
+        sections.add(section("CHANGE_INDEX","Indeks zmian",1,table("CHANGE_INDEX",evidence.units().stream().map(u->List.of(u.unitId(),u.path(),u.changeType(),u.repositoryId(),unitScope(u,evidence),detailLink(u.unitId()),"EXPECTED")).toList())));
         sections.add(section("DEPLOYMENT_IMPACT","Wpływ wdrożenia",2,table("DEPLOYMENT_IMPACT",List.of(List.of("Migracje","DO_UZUPELNIENIA","DO_UZUPELNIENIA","[]")))));
         sections.add(section("COVERAGE","Kompletność",3,table("COVERAGE",evidence.units().stream().map(u->List.of(u.unitId(),"EXPECTED",u.structurallyVerified()?"Brak potwierdzenia raportu":"AI_IDENTIFIED")).toList())));
         int order=4;
@@ -37,10 +37,10 @@ public class ReleaseSummaryReportService {
             var tech=new ArrayList<List<String>>(); var functional=new ArrayList<List<String>>();
             for(var element:unit.elements()) {
                 var refs=sourceRefs(unit);
-                tech.add(List.of(element.elementId(),element.kind(),unit.changeType(),json(element.before()),json(element.after()),"DO_UZUPELNIENIA",json(refs)));
+                tech.add(List.of(element.elementId(),element.kind()+" "+element.locator(),unit.changeType(),json(element.before()),json(element.after()),"DO_UZUPELNIENIA",json(refs)));
                 functional.add(List.of(element.elementId(),"BRAK_DANYCH","BRAK_DANYCH","BRAK_DANYCH","BRAK_DANYCH","[]","DO_UZUPELNIENIA"));
             }
-            sections.add(section("DB_DETAIL_"+unit.unitId(),unit.path(),order++,
+            sections.add(section("DB_DETAIL_"+unit.unitId(),unit.repositoryId()+" / "+unit.path()+" — "+unitScope(unit,evidence),order++,
                     "### Zmiana techniczna\n\n"+ReleaseSummaryTables.table(TECH,tech)+"\n### Znaczenie funkcjonalne\n\n"+ReleaseSummaryTables.table(FUNCTION,functional)));
         }
         return new AnalysisReport(id,"Release summary",scope.systemName(),"Podsumowanie zmian Liquibase.",sections,AnalysisReportMeta.empty());
@@ -48,7 +48,13 @@ public class ReleaseSummaryReportService {
     private AnalysisReportSection section(String id,String title,int order,String markdown) {
         return new AnalysisReportSection(id,title,order,markdown,AnalysisReportMeta.empty());
     }
+    private String unitScope(ReleaseSummaryEvidence.Unit unit,ReleaseSummaryEvidence evidence) {
+        if(evidence.units().stream().filter(u->u.repositoryId().equals(unit.repositoryId())&&u.path().equals(unit.path())).count()==1)return "Zmiany w pliku";
+        var first=unit.elements().get(0);var last=unit.elements().get(unit.elements().size()-1);
+        return first.locator()+ (unit.elements().size()>1?" … "+last.locator():"");
+    }
     private String table(String id,List<List<String>> rows) {return ReleaseSummaryTables.table(HEADERS.get(id),rows);}
+    private String detailLink(String unitId) {return "[Szczegóły](#report-section-DB_DETAIL_"+unitId+")";}
     public String json(Object value) {
         try {return mapper.writeValueAsString(value);}catch(Exception e){throw new IllegalArgumentException("Nie można zapisać kontraktu raportu.",e);}
     }
@@ -70,13 +76,14 @@ public class ReleaseSummaryReportService {
                     throw invalid("Tabela musi zachować każdą unitId.");
                 if(id.equals("CHANGE_INDEX")) for(var unit:evidence.units()) {
                     var row=ids.get(unit.unitId());
-                    if(!row.get(1).equals(unit.path())||!row.get(2).equals(unit.changeType()))throw invalid("Indeks musi zachować ścieżkę i typ zmiany.");
+                    if(!row.get(1).equals(unit.path())||!row.get(2).equals(unit.changeType())||!row.get(3).equals(unit.repositoryId()))
+                        throw invalid("Indeks musi zachować repozytorium, ścieżkę i typ zmiany.");
+                    if(!row.get(5).equals(detailLink(unit.unitId())))throw invalid("Szczegóły muszą wskazywać "+detailLink(unit.unitId()));
+                    validateCoverageStatus(unit,row.get(6));
                 }
                 if(id.equals("COVERAGE")) for(var unit:evidence.units()) {
                     var status=ids.get(unit.unitId()).get(1);
-                    if(!Set.of("EXPECTED","DOCUMENTED","AI_IDENTIFIED","OPEN_GAP").contains(status))
-                        throw invalid("Status coverage: EXPECTED, DOCUMENTED, AI_IDENTIFIED lub OPEN_GAP.");
-                    if(!unit.structurallyVerified()&&status.equals("DOCUMENTED")) throw invalid("Surowy SQL lub custom change pozostaje AI_IDENTIFIED.");
+                    validateCoverageStatus(unit,status);
                 }
             }
             validateSources(table,knownSources,false); return;
@@ -96,7 +103,7 @@ public class ReleaseSummaryReportService {
         for(var key:technical.keySet()) if(!expected.contains(key)&&!key.matches("AI_"+unit.unitId()+"_[0-9]+"))
             throw invalid("Dodatkowe elementy SQL muszą mieć elementId AI_"+unit.unitId()+"_<numer>.");
         for(var row:function.rows()) if(!Set.of("FAKT","WNIOSEK","BRAK_DANYCH").contains(row.get(4)))
-            throw invalid("Podstawa wymaga FAKT, WNIOSEK albo BRAK_DANYCH.");
+            throw invalid("Element "+row.get(0)+": Podstawa wymaga jednej wartości FAKT, WNIOSEK albo BRAK_DANYCH; otrzymano: "+row.get(4));
         validateSources(tech,knownSources,true); validateSources(function,knownSources,false);
         for(var row:function.rows()) if(!row.get(4).equals("BRAK_DANYCH")&&parseJson(row.get(5)).isEmpty())
             throw invalid("Fakt lub wniosek wymaga źródeł.");
@@ -129,6 +136,11 @@ public class ReleaseSummaryReportService {
         return values;
     }
     private IllegalArgumentException invalid(String text) {return new IllegalArgumentException(text);}
+    private void validateCoverageStatus(ReleaseSummaryEvidence.Unit unit,String status) {
+        if(!Set.of("EXPECTED","DOCUMENTED","AI_IDENTIFIED","OPEN_GAP").contains(status))
+            throw invalid("Status coverage: EXPECTED, DOCUMENTED, AI_IDENTIFIED lub OPEN_GAP.");
+        if(!unit.structurallyVerified()&&status.equals("DOCUMENTED"))throw invalid("Surowy SQL lub custom change pozostaje AI_IDENTIFIED.");
+    }
 
     public Result project(AnalysisReport report,ReleaseSummaryEvidence evidence,Set<String> known) {
         var limits=new ArrayList<String>(); evidence.gaps().forEach(g->limits.add(g.code()+": "+g.detail()));
@@ -140,12 +152,20 @@ public class ReleaseSummaryReportService {
             try {validateSection(id,section.markdown(),evidence,known);validateMeta(section.meta(),known);}
             catch(IllegalArgumentException e){limits.add(id+": "+e.getMessage());}
             if(section.markdown().contains("DO_UZUPELNIENIA")) limits.add(id+": sekcja wymaga uzupełnienia.");
+            if(section.meta()!=null) {limits.addAll(section.meta().gaps());limits.addAll(section.meta().visibilityLimits());}
             if(id.equals("COVERAGE")) try {
                 var rows=requiredTable(ReleaseSummaryTables.parse(section.markdown()),HEADERS.get(id)).rows();
                 if(rows.stream().anyMatch(r->r.get(1).equals("EXPECTED")||r.get(1).equals("OPEN_GAP")))limits.add("COVERAGE: niezamknięte jednostki.");
             } catch(IllegalArgumentException e) { /* The structural error is already recorded above. */ }
         }
-        if(report!=null) {try{validateMeta(report.meta(),known);}catch(IllegalArgumentException e){limits.add(e.getMessage());}}
+        if(report!=null) {try{validateMeta(report.meta(),known);}catch(IllegalArgumentException e){limits.add(e.getMessage());}
+            if(report.meta()!=null){limits.addAll(report.meta().gaps());limits.addAll(report.meta().visibilityLimits());}}
+        if(sections.containsKey("CHANGE_INDEX")&&sections.containsKey("COVERAGE"))try {
+            var index=uniqueRows(requiredTable(ReleaseSummaryTables.parse(sections.get("CHANGE_INDEX").markdown()),HEADERS.get("CHANGE_INDEX")));
+            var declared=uniqueRows(requiredTable(ReleaseSummaryTables.parse(sections.get("COVERAGE").markdown()),HEADERS.get("COVERAGE")));
+            for(var unit:evidence.units())if(index.containsKey(unit.unitId())&&declared.containsKey(unit.unitId())
+                    &&!index.get(unit.unitId()).get(6).equals(declared.get(unit.unitId()).get(1)))limits.add("Niespójny status indeksu i coverage: "+unit.unitId());
+        }catch(IllegalArgumentException e){ /* The malformed table is already recorded above. */ }
         var coverage=new ArrayList<Coverage>();
         for(var unit:evidence.units()) {
             var gaps=new ArrayList<String>(); int count=0;

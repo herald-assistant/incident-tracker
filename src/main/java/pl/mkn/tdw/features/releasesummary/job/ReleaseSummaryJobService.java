@@ -110,9 +110,9 @@ public class ReleaseSummaryJobService {
             } catch(RuntimeException e) {
                 synchronized(state) {
                     boolean partial=state.context!=null&&state.context.reportMutated;
-                    String code=e instanceof CopilotRequiredContextTierException?"CONTEXT_TOO_LARGE":
+                    String code=e instanceof CopilotRequiredContextTierException?"CONTEXT_PREFLIGHT_FAILED":
                             e instanceof ReleaseSummaryException ex?ex.code():"ANALYSIS_FAILED";
-                    var status=partial?"PARTIAL":code.equals("CONTEXT_TOO_LARGE")||e instanceof ReleaseSummaryException?"BLOCKED":"FAILED";
+                    var status=partial?"PARTIAL":code.equals("CONTEXT_PREFLIGHT_FAILED")||e instanceof ReleaseSummaryException?"BLOCKED":"FAILED";
                     state.finish(status,code,e instanceof CopilotRequiredContextTierException||e instanceof ReleaseSummaryException?e.getMessage():
                             "Analiza została przerwana. Zachowano dostępny materiał i zapisane sekcje.");
                     persist(state);
@@ -211,7 +211,7 @@ public class ReleaseSummaryJobService {
     }
     private void followUp(ReleaseSummaryRunState state,String message,boolean updateReport,
             pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState assistant) {
-        var previous=state.report;var previousUsage=state.usage;var usage=new CopilotUsageAccumulator();
+        var previous=state.report;var usage=new CopilotUsageAccumulator();
         var old=state.context;
         var context=new ReleaseSummaryAiContext(state.scope,state.evidence,old.catalog,old.repositoryScope,old.sources(),
                 report->checkpoint(state,report),()->persistence.saveRuntime(state.id,state.context),updateReport);
@@ -224,14 +224,13 @@ public class ReleaseSummaryJobService {
             var run=ai.assemble(state.id+"-chat-"+assistant.id(),state.request,prompt,state.auth,context,previous,state.sessionId,
                     section->{synchronized(state){assistant.addToolEvidence(section);saveMessage(state,assistant);}},
                     event->{synchronized(state){assistant.addActivity(event);usage.recordActivity(event);
-                        state.usage=ReleaseSummaryUsage.combine(previousUsage,usage.snapshot());saveMessage(state,assistant);}});
+                        assistant.updateProgress(prompt,usage.snapshot());saveMessage(state,assistant);}});
             var response=ai.execute(run);
             synchronized(state) {
                 if(updateReport&&context.reportMutated&&response.report()!=null)checkpoint(state,response.report());
                 if(context.reportMutated)state.finish(state.result.status(),null,null);
                 state.sessionId=response.sessionId()!=null?response.sessionId():state.sessionId;
                 var turnUsage=response.usage()!=null?response.usage():usage.snapshot();
-                state.usage=ReleaseSummaryUsage.combine(previousUsage,turnUsage);
                 assistant.addToolEvidence(pl.mkn.tdw.shared.ai.report.AnalysisReportChangeEvidence.between(previous,state.report));
                 assistant.complete(response.content(),prompt,turnUsage);saveMessage(state,assistant);
                 persistence.saveRuntime(state.id,context);

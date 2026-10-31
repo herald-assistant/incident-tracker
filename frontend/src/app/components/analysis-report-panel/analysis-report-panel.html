@@ -125,7 +125,7 @@
         @if (currentReport.sections.length > 0) {
           <div class="analysis-report-panel__sections">
             @for (section of currentReport.sections; track section.id || $index) {
-              <details class="analysis-report-panel__section" open>
+              <details class="analysis-report-panel__section" [id]="'report-section-' + section.id" open>
                 <summary class="analysis-report-panel__section-summary">
                   <span class="analysis-report-panel__section-number">
                     {{ sectionOrdinal(section, $index) }}

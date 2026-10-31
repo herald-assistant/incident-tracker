@@ -29,7 +29,7 @@ class ReleaseSummaryReportTest {
                         List.of(List.of("column1","Oznaczenie klienta","Zapis i odczyt etykiety","Wyszukiwanie","WNIOSEK","[\""+SOURCE+"\"]","NIE_DOTYCZY")));
                 text=ReleaseSummaryTables.table(ReleaseSummaryReportService.TECH,rows.get(0).rows())+"\n"+functional;
             }
-            if(s.id().equals("COVERAGE"))text=text.replace("EXPECTED",structured?"DOCUMENTED":"AI_IDENTIFIED");
+            if(s.id().equals("COVERAGE")||s.id().equals("CHANGE_INDEX"))text=text.replace("EXPECTED",structured?"DOCUMENTED":"AI_IDENTIFIED");
             return new AnalysisReportSection(s.id(),s.title(),s.order(),text,s.meta());
         }).toList();
         return new AnalysisReport(draft.reportId(),draft.header(),draft.subHeader(),draft.markdownSummary(),sections,draft.meta());
@@ -50,6 +50,16 @@ class ReleaseSummaryReportTest {
         assertEquals("PARTIAL",reports.project(completed(reports,false),evidence,known).status());
         assertEquals(1,reports.project(completed(reports,false),evidence,known).documentedElements());
         assertEquals("PARTIAL",reports.project(reports.scaffold("report",SCOPE,evidence),evidence,known).status());
+    }
+    @Test void indexLinksMustMatchDetailSectionsAndCoverageCannotDisagree() {
+        var evidence=evidence(true);var known=reports.initialSources(SCOPE,evidence);
+        var report=completed(reports,true);var index=report.sections().get(1);
+        assertTrue(index.markdown().contains("[Szczegóły](#report-section-DB_DETAIL_unit1)"));
+        assertThrows(IllegalArgumentException.class,()->reports.validateSection(index.id(),index.markdown().replace("#report-section-DB_DETAIL_unit1","#missing"),evidence,known));
+        var sections=new ArrayList<>(report.sections());
+        sections.set(1,new AnalysisReportSection(index.id(),index.title(),index.order(),index.markdown().replace("DOCUMENTED","EXPECTED"),index.meta()));
+        var inconsistent=new AnalysisReport(report.reportId(),report.header(),report.subHeader(),report.markdownSummary(),sections,report.meta());
+        assertEquals("PARTIAL",reports.project(inconsistent,evidence,known).status());
     }
     @Test void parsesEscapedPipesAndRejectsMalformedOrFencedTables() {
         assertEquals(List.of("a|b","c"),ReleaseSummaryTables.parse("| x | y |\n| --- | --- |\n| a\\|b | c |").get(0).rows().get(0));

@@ -92,6 +92,12 @@ public final class AnalysisChatMessageState {
         completedAt = Instant.now();
         updatedAt = completedAt;
     }
+    /** Checkpoints prompt and usage without closing the active assistant turn. */
+    public void updateProgress(String prompt, AnalysisAiUsage usage) {
+        this.prompt = prompt;
+        this.usage = usage;
+        updatedAt = Instant.now();
+    }
 
     public void fail(String code, String message) {
         status = FAILED;

@@ -14,6 +14,50 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class LiquibaseEvidenceCollectorTest {
+    @Test void identicalPinnedCommitsReuseOneVerifiedInventory() {
+        var input=Map.of(ROOT,xml(""));var fixture=fixture(input,input);
+        var scope=new ReleaseSummaryScope("crm","CRM","CRM","digest",List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of(""),
+                "refs/heads/current",BEFORE,"refs/tags/next",BEFORE)),List.of());
+        var evidence=fixture.collector.collect(scope);assertTrue(evidence.noChanges());assertEquals(1,evidence.scannedFiles());
+        verify(fixture.files,times(1)).readComplete(any(),anyString(),anyString(),eq(BEFORE),eq(ROOT));
+    }
+    @Test void largeMigrationIsPartitionedWithoutLosingColumnsOrChangingStableIds() {
+        var xml=new StringBuilder("<databaseChangeLog><changeSet id=\"crm-fields\" author=\"crm\"><createTable tableName=\"customer\">");
+        for(int i=0;i<120;i++)xml.append("<column name=\"field_").append(i).append("\" type=\"varchar(40)\"/>");
+        xml.append("</createTable></changeSet></databaseChangeLog>");
+        var input=Map.of("db/customer.xml",xml.toString());var evidence=collect(Map.of(),input);
+        assertTrue(evidence.sourceComplete());assertTrue(evidence.units().size()>1);
+        assertTrue(evidence.units().stream().allMatch(u->u.elements().size()<=32));
+        var columns=evidence.units().stream().flatMap(u->u.elements().stream()).filter(e->e.kind().equals("column")).toList();
+        assertEquals(120,columns.size());assertEquals(120,columns.stream().map(e->e.after().get("name")).distinct().count());
+        assertEquals(evidence.units(),collect(Map.of(),input).units());
+    }
+    @Test void changedGitlinksAndLfsSourcesCannotDisappearFromCoverage() {
+        var snapshots=mock(GitLabRepositorySnapshotPort.class);
+        when(snapshots.snapshot("CRM","customer",BEFORE)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",BEFORE,Map.of(),Map.of("db/module",BEFORE),Map.of()));
+        when(snapshots.snapshot("CRM","customer",AFTER)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",AFTER,Map.of(),Map.of("db/module",AFTER),Map.of()));
+        var collector=new LiquibaseEvidenceCollector(snapshots,mock(GitLabRepositoryReadPort.class),mock(GitLabVerifiedRepositoryFilePort.class),new LiquibaseDocumentParser());
+        assertFalse(collector.collect(scope()).sourceComplete());
+        when(snapshots.snapshot("CRM","customer",AFTER)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",AFTER,Map.of(),Map.of("db/module",BEFORE),Map.of()));
+        assertTrue(collector.collect(scope()).noChanges());
+        assertFalse(collect(Map.of(),Map.of("db/change.xml","version https://git-lfs.github.com/spec/v1\noid sha256:fixture\nsize 128")).sourceComplete());
+    }
+    @Test void optionalMissingIncludeAllIsCompleteButDynamicAndCustomReferencesAreNot() {
+        var optional=Map.of("db/root.xml",xml("<includeAll path=\"optional\" relativeToChangelogFile=\"true\" errorIfMissingOrEmpty=\"false\"/>"));
+        assertTrue(collect(optional,optional).noChanges());
+        for(var reference:List.of("<include file=\"${crm.file}\"/>","<includeAll path=\"db\" filter=\"crm.CustomFilter\"/>")) {
+            var evidence=collect(Map.of(),Map.of("db/root.xml",xml(reference)));
+            assertFalse(evidence.sourceComplete());assertFalse(evidence.noChanges());
+        }
+    }
+    @Test void transportFailuresNeverLookLikeAnEmptyComparison() {
+        for(int status:List.of(401,403,404,429,504)) {
+            var fixture=fixture(Map.of(),Map.of(ROOT,xml("")));
+            when(fixture.files.readComplete(any(),anyString(),anyString(),anyString(),anyString())).thenThrow(
+                    new org.springframework.web.client.RestClientResponseException("CRM failure",status,"fixture",null,null,null));
+            var evidence=fixture.collector.collect(scope());assertFalse(evidence.sourceComplete());assertFalse(evidence.noChanges());
+        }
+    }
     static final String BEFORE="a".repeat(40), AFTER="b".repeat(40);
     private static final String ROOT="src/main/resources/db/root.xml";
     private static final String CHANGE="src/main/resources/db/customer.xml";
@@ -87,6 +131,14 @@ class LiquibaseEvidenceCollectorTest {
                 .thenReturn(new GitLabVerifiedFile(ROOT,xml("changed"),42));
         assertFalse(fixture.collector.collect(scope()).sourceComplete());
     }
+    @Test void symbolicDirectoryCannotBecomeNoChanges() {
+        var snapshots=mock(GitLabRepositorySnapshotPort.class);
+        when(snapshots.snapshot(eq("CRM"),eq("customer"),anyString())).thenAnswer(i->new GitLabRepositorySnapshot("CRM","customer",i.getArgument(2),Map.of(),Map.of(),Map.of("db/shared",BEFORE)));
+        var collector=new LiquibaseEvidenceCollector(snapshots,mock(GitLabRepositoryReadPort.class),mock(GitLabVerifiedRepositoryFilePort.class),new LiquibaseDocumentParser());
+        var result=collector.collect(scope());
+        assertFalse(result.noChanges());assertFalse(result.sourceComplete());
+        assertTrue(result.gaps().stream().anyMatch(g->g.code().equals("SYMLINK_UNRESOLVED")));
+    }
     private ReleaseSummaryEvidence collect(Map<String,String> before,Map<String,String> after) {return fixture(before,after).collector.collect(scope());}
     private record Fixture(LiquibaseEvidenceCollector collector,GitLabVerifiedRepositoryFilePort files) {}
     private Fixture fixture(Map<String,String> before,Map<String,String> after) {
@@ -102,7 +154,7 @@ class LiquibaseEvidenceCollectorTest {
     }
     private GitLabRepositorySnapshot snapshot(Map<String,String> files,String sha) {
         var blobs=new HashMap<String,String>(); files.forEach((path,text)->blobs.put(path,blob(text)));
-        return new GitLabRepositorySnapshot("CRM","customer",sha,blobs);
+        return new GitLabRepositorySnapshot("CRM","customer",sha,blobs,Map.of(),Map.of());
     }
     static String blob(String text) {
         try {

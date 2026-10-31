@@ -28,6 +28,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ReleaseSummaryAiTest {
+    @Test void fullOversizedInputIsBlockedBeforeExecutionWithoutTruncation() {
+        var properties=new CopilotSdkProperties();
+        var models=mock(pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsProvider.class);
+        when(models.modelOptions(any())).thenReturn(new pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsResponse("crm-model","",List.of(),
+                List.of(new pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOption("crm-model","CRM model",false,List.of(),"",128000,256000))));
+        var preparation=mock(CopilotRunPreparationService.class);var gateway=mock(CopilotSdkExecutionGateway.class);
+        var runner=new ReleaseSummaryAiRunner(mock(CopilotSdkToolFactory.class),mock(CopilotRunAuthMapper.class),preparation,gateway,
+                new CopilotInitialContextModelSelector(properties,models),properties,new ReleaseSummaryReportService(new ObjectMapper()));
+        var prompt="CRM ".repeat(400000);
+        var run=new CopilotRunRequest("crm-large",prompt,new CopilotSessionConfigRequest("session",List.of(),List.of(),new CopilotModelSelection("crm-model",null),""),Map.of(),null);
+        assertThrows(CopilotRequiredContextTierException.class,()->runner.execute(run));
+        assertEquals(prompt,run.prompt());verifyNoInteractions(preparation,gateway);
+    }
     final ObjectMapper mapper=new ObjectMapper();
     final ReleaseSummaryReportService reports=new ReleaseSummaryReportService(mapper);
     ReleaseSummaryAiContext context(java.util.function.Consumer<AnalysisReport> checkpoint,boolean writable) {
@@ -74,6 +87,10 @@ class ReleaseSummaryAiTest {
                 valid.replace(ReleaseSummaryReportTest.SOURCE,"gitlab:CRM/unknown@main:fake.xml"))));
         policy.completed(new CopilotToolInvocationFinishedEvent(session,"session","call","report_upsert_section",valid,CopilotToolInvocationOutcome.COMPLETED,"{\"status\":\"ok\"}",1,null));
         assertEquals(List.of(report),saved);assertTrue(context.reportMutated);
+        var patch=mapper.writeValueAsString(Map.of("sectionId",detail.id(),"oldText","Oznaczenie klienta","newText","Etykieta widoczna operatorowi"));
+        assertDoesNotThrow(()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","patch","report_patch_section",patch)));
+        var damaged=mapper.writeValueAsString(Map.of("sectionId",detail.id(),"oldText","varchar(20)","newText","varchar(999)"));
+        assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","patch","report_patch_section",damaged)));
         var readOnly=new CopilotToolSessionContext("run","session",Map.of(ReleaseSummaryAiContext.KEY,context(r->{},false)));
         assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(readOnly,"session","call","report_update_header","{}")));
     }

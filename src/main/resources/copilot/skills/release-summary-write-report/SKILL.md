@@ -26,6 +26,10 @@ Kontrakt sekcji, kolumn i identyfikatorów pochodzi z promptu oraz scaffolda.
 5. Zapisuj kolejne sekcje szczegółowe w trakcie pracy. Zachowuj pełne właściwości
    techniczne i odczytane źródła. Pojedyncza zmiana kolumny nie może zniknąć w
    ogólnym opisie tabeli. Używaj NIE_DOTYCZY w polach bez zastosowania.
+   Duży plik może mieć wiele jednostek changesetów/grup operacji; opisz wszystkie.
+   Scaffold zawiera pełne dane Przed/Po. Długie sekcje poprawiaj przez
+   report_patch_section: odczytaj aktualny digest i zastąp unikalny fragment.
+   Nie przepisuj wielkiego pola SQL tylko po to, żeby uzupełnić jego opis.
 6. Oceń skutki wdrożenia: kolejność aplikacja/baza, zależności, warunki, checksumy
    już istniejących changesetów, runAlways/runOnChange, odwracalność i możliwą
    utratę danych. Nie twierdź, że migracja już się wykonała; nie znasz historii DB.

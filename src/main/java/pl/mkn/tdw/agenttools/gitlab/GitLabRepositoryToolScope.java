@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 public final class GitLabRepositoryToolScope {
 
     private static final Pattern PROJECT_PATH = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,511}");
-    private static final Pattern BRANCH = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,254}");
     private static final Pattern COMMIT_ID = Pattern.compile("(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})");
 
     private final String group;

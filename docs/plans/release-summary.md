@@ -621,13 +621,26 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   i katalog po restarcie, brak ponownego wysłania przerwanej odpowiedzi,
   read-only pytanie, jawne zlecenie korekty, revision guard i niezmienność
   pól źródłowych. Stress test wspólnej blokady obejmuje 80000 prób przejęcia.
-- [ ] **6. Weryfikacja kompletności i granic.** Przeprowadzić scenariusz
+- [x] **6. Weryfikacja kompletności i granic.** Przeprowadzić scenariusz
   akceptacyjny CRM z niezależnie spisaną listą tabel, kolumn, indeksów,
   constraints i zmian danych; sprawdzić uzasadnienia na kodzie. Dodać
   przypadki large input/long output, unsupported SQL/plugin, brak refs,
   błędy sieci i przesunięcie branchy. Dowód: wyniki macierzy testów, pilot
   modelu oraz architecture diff. Akceptacja: żadna zgubiona pozycja nie jest
   oznaczona jako kompletna; brak wpływu nowego scope/budget na inne feature'y.
+  Weryfikacja 2026-10-31: 210 przypadków backendowych w uruchomionych zestawach
+  (209 wykonanych, 1 opt-in pominięty w zwykłej regresji), 684 testy Angulara,
+  produkcyjny bundle i guardy architektury bez błędów. Osobny rzeczywisty pilot
+  Copilota (`claude-sonnet-5`, high) odczytał fikcyjny kod CRM i udokumentował
+  21/21 niezależnie zinwentaryzowanych elementów. Zachował `PARTIAL` przy
+  niepotwierdzonym schemacie nadrzędnym i uzasadnieniu dodatkowej unikalności.
+  Walidator odrzucił złożoną wartość pola Podstawa, po czym model poprawił
+  raport w tej samej sesji; poprawne sekcje pozostały zapisane.
+  Sprawdzono 120 kolumn dzielonych na stabilne grupy do 32 elementów, tabelę
+  2000 wierszy, duży pełny prompt, kolejność operacji, scope obu SHA, błędy HTTP,
+  LFS, zmienione submodule i nierozwiązane symlinki. Kontrola indeksu obejmuje
+  linki do szczegółów i zgodność statusów z coverage. Koszt chatu korzysta
+  z istniejącej agregacji initial usage oraz usage wiadomości, bez drugiego licznika.
 - [ ] **7. Finalna regresja, dokumentacja i rollout.** Wykonać kolejno
   `npm --prefix frontend test -- --watch=false`, `npm --prefix frontend run build`,
   `mvn -q -Pbackend-dev clean package`; `npm ci` tylko przy zmianie zależności
