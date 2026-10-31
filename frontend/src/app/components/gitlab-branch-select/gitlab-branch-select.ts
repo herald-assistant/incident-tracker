@@ -25,6 +25,7 @@ interface BranchQuery {
   sourceKey: string;
   search: string;
   initial: boolean;
+  page?: number;
 }
 
 @Component({
@@ -35,7 +36,9 @@ interface BranchQuery {
 export class GitLabBranchSelectComponent {
   readonly systemId = input('');
   readonly sourceKey = input('');
-  readonly branchLoader = input<((sourceKey: string, search: string) => Observable<GitLabBranchesResponse>) | null>(null);
+  readonly branchLoader = input<((sourceKey: string, search: string, page?: number) => Observable<GitLabBranchesResponse>) | null>(null);
+  readonly autoSelect = input(true);
+  readonly nextPage = signal<number | null>(null);
   readonly selectedBranch = input('');
   readonly disabled = input(false);
   readonly label = input('Branch');
@@ -64,7 +67,7 @@ export class GitLabBranchSelectComponent {
         debounce((query) => query.initial ? of(0) : timer(200)),
         switchMap((query) =>
           (this.branchLoader()
-            ? this.branchLoader()!(query.sourceKey, query.search)
+            ? (query.page ? this.branchLoader()!(query.sourceKey, query.search, query.page) : this.branchLoader()!(query.sourceKey, query.search))
             : this.api.getBranches(query.sourceKey, query.search)).pipe(
             map((response) => ({ query, response, error: null as HttpErrorResponse | null })),
             catchError((error: HttpErrorResponse) =>
@@ -85,10 +88,12 @@ export class GitLabBranchSelectComponent {
           return;
         }
         this.error.set('');
-        this.branches.set(response.branches);
+        const items = query.page ? [...this.branches(), ...response.branches] : response.branches;
+        this.branches.set([...new Map(items.map(item => [item.name, item])).values()]);
+        this.nextPage.set(response.nextPage ?? null);
         this.truncated.set(response.truncated);
         this.warnings.set(response.warnings);
-        if (query.initial && !this.disabled()) {
+    if (query.initial && !query.page && !this.disabled() && this.autoSelect()) {
           const current = this.selectedBranch().trim();
           const selected = response.branches.find((branch) => branch.name === current);
           const next = selected?.name ?? response.branches.find((branch) => branch.isDefault)?.name
@@ -102,6 +107,7 @@ export class GitLabBranchSelectComponent {
       untracked(() => {
         this.open.set(false);
         this.filter.set('');
+        this.nextPage.set(null);
         this.branches.set([]);
         this.error.set('');
         this.truncated.set(false);
@@ -138,6 +144,13 @@ export class GitLabBranchSelectComponent {
   changeFilter(value: string): void {
     this.filter.set(value);
     this.search(this.effectiveSourceKey(), value, false);
+  }
+
+  loadMore(): void {
+    const page = this.nextPage();
+    if (!page || this.loading()) return;
+    this.loading.set(true);
+    this.queries.next({ sourceKey: this.effectiveSourceKey(), search: this.filter().trim(), initial: true, page });
   }
 
   retry(): void {

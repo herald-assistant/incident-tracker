@@ -144,11 +144,11 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     let controls = selectControls(fixture.nativeElement);
-    expect(controls[0]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
+    expect(controls[0]?.querySelector('.application-select-loader')).not.toBeNull();
     expect(controls[0]?.getAttribute('aria-busy')).toBe('true');
     expect(controls[4]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
     expect(controls[5]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(3);
+    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader')).toHaveLength(3);
 
     systems.next([systemOption('crm-service'), systemOption('crm-analytics')]);
     systems.complete();
@@ -156,10 +156,10 @@ describe('FlowExplorerPageComponent', () => {
     selectSystem(fixture, 'CRM Service');
 
     controls = selectControls(fixture.nativeElement);
-    expect(controls[0]?.querySelector('.flow-explorer-select-loader')).toBeNull();
+    expect(controls[0]?.querySelector('.application-select-loader')).toBeNull();
     expect(controls[1]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
     expect(controls[1]?.getAttribute('aria-busy')).toBe('true');
-    expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(3);
+    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader')).toHaveLength(3);
 
     endpointInventoryResponse.next(endpointInventory());
     endpointInventoryResponse.complete();
@@ -169,7 +169,7 @@ describe('FlowExplorerPageComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader')).toHaveLength(0);
   });
 
   it('should filter systems locally', () => {
@@ -180,7 +180,7 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
     setInputValue(
       fixture.nativeElement,
-      '.flow-explorer-select__search input[type="search"]',
+      '.application-select__menu input[type="search"]',
       'analytics'
     );
     fixture.detectChanges();
@@ -852,7 +852,7 @@ function setInputValue(nativeElement: HTMLElement, selector: string, value: stri
 }
 
 function selectControls(nativeElement: HTMLElement): HTMLButtonElement[] {
-  return Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control'));
+  return Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.application-select__control, .flow-explorer-select__control'));
 }
 
 function selectSystem(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
@@ -860,34 +860,34 @@ function selectSystem(fixture: ComponentFixture<FlowExplorerPageComponent>, labe
   openApplicationSelect(nativeElement);
   fixture.detectChanges();
   const systemButton = Array.from(
-    nativeElement.querySelectorAll<HTMLButtonElement>('button.flow-explorer-select-option')
+    nativeElement.querySelectorAll<HTMLButtonElement>('button.application-select__option')
   ).find((button) => button.textContent?.includes(label));
   systemButton?.click();
   fixture.detectChanges();
 }
 
 function openApplicationSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[0]?.click();
+  nativeElement.querySelector<HTMLButtonElement>('.application-select__control')?.click();
 }
 
 function openEndpointSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[1]?.click();
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[0]?.click();
 }
 
 function openGoalSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[2]?.click();
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[1]?.click();
 }
 
 function openFocusAreasSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[2]?.click();
 }
 
 function openAiModelSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[4]?.click();
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
 }
 
 function openReasoningEffortSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[5]?.click();
+  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[4]?.click();
 }
 
 function clickLoadEndpoints(nativeElement: HTMLElement): void {

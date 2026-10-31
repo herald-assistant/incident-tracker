@@ -48,14 +48,17 @@
               (click)="select(branch.name, $event)"
               (keydown)="onOptionKeydown($event, index)"
             >
-              <span>{{ branch.name }}</span>
+              <span>{{ branch.label || branch.name }}</span>
+              @if (branch.kind) { <small>{{ branch.kind }}</small> }
+              @if (branch.repositories) { <small>{{ branch.repositories.join(', ') }}</small> }
               @if (branch.isDefault) { <small>default</small> }
             </button>
           } @empty {
             <p class="branch-select__status">Brak gałęzi dla aktualnego filtra.</p>
           }
         </div>
-        @if (truncated()) {
+        @if (nextPage()) { <button type="button" (click)="loadMore()">Pokaż więcej</button> }
+        @if (truncated() && !nextPage()) {
           <p class="branch-select__status">Więcej gałęzi: zawęź filtr.</p>
         }
         @for (warning of warnings(); track warning) {

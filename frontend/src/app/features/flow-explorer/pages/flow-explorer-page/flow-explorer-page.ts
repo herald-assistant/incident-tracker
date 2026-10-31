@@ -50,6 +50,7 @@ import { AnalysisReportEditorComponent } from '../../../../components/analysis-r
 import { AnalysisShareMenuComponent } from '../../../../components/analysis-share-menu/analysis-share-menu';
 import { buildReportShareDocument } from '../../../../core/utils/analysis-share.utils';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { ApplicationSelectComponent } from '../../../../components/application-select/application-select';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
@@ -200,6 +201,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     AnalysisShareMenuComponent,
     AnalysisStepsPanelComponent,
     GitLabBranchSelectComponent,
+    ApplicationSelectComponent,
   ],
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
@@ -227,9 +229,7 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly endpointInventory = signal<FlowExplorerEndpointInventoryResponse | null>(null);
   readonly catalogError = signal('');
   readonly endpointError = signal('');
-  readonly systemSearch = signal('');
   readonly endpointSearch = signal('');
-  readonly systemSelectOpen = signal(false);
   readonly endpointSelectOpen = signal(false);
   readonly goalSelectOpen = signal(false);
   readonly focusAreasSelectOpen = signal(false);
@@ -261,15 +261,6 @@ export class FlowExplorerPageComponent implements OnInit {
   });
   readonly copiedFollowUpPromptIndex = signal<number | null>(null);
 
-  readonly filteredSystems = computed(() => {
-    const query = normalizeSearch(this.systemSearch());
-    const systems = this.systems();
-    if (!query) {
-      return systems;
-    }
-
-    return systems.filter((system) => this.systemSearchText(system).includes(query));
-  });
   readonly selectedSystem = computed(
     () => this.systems().find((system) => system.systemId === this.selectedSystemId()) ?? null
   );
@@ -544,7 +535,6 @@ export class FlowExplorerPageComponent implements OnInit {
 
   @HostListener('document:click')
   protected closeCustomSelects(): void {
-    this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
@@ -572,6 +562,11 @@ export class FlowExplorerPageComponent implements OnInit {
       });
   }
 
+  protected selectApplication(id: string): void {
+    const system = this.systems().find(s => s.systemId === id);
+    if (system) this.selectSystem(system);
+  }
+
   protected selectSystem(system: FlowExplorerSystemOption): void {
     if (this.selectedSystemId() === system.systemId) {
       return;
@@ -591,16 +586,6 @@ export class FlowExplorerPageComponent implements OnInit {
     event.stopPropagation();
   }
 
-  protected toggleSystemSelect(event: Event): void {
-    event.stopPropagation();
-    const willOpen = !this.systemSelectOpen();
-    this.systemSelectOpen.set(willOpen);
-    this.endpointSelectOpen.set(false);
-    this.goalSelectOpen.set(false);
-    this.focusAreasSelectOpen.set(false);
-    this.aiModelSelectOpen.set(false);
-    this.reasoningEffortSelectOpen.set(false);
-  }
 
   protected toggleEndpointSelect(event: Event): void {
     event.stopPropagation();
@@ -608,7 +593,6 @@ export class FlowExplorerPageComponent implements OnInit {
       return;
     }
     this.endpointSelectOpen.update((isOpen) => !isOpen);
-    this.systemSelectOpen.set(false);
     this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
@@ -618,7 +602,6 @@ export class FlowExplorerPageComponent implements OnInit {
   protected toggleGoalSelect(event: Event): void {
     event.stopPropagation();
     this.goalSelectOpen.update((isOpen) => !isOpen);
-    this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
@@ -628,7 +611,6 @@ export class FlowExplorerPageComponent implements OnInit {
   protected toggleFocusAreasSelect(event: Event): void {
     event.stopPropagation();
     this.focusAreasSelectOpen.update((isOpen) => !isOpen);
-    this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.goalSelectOpen.set(false);
     this.aiModelSelectOpen.set(false);
@@ -638,7 +620,6 @@ export class FlowExplorerPageComponent implements OnInit {
   protected toggleAiModelSelect(event: Event): void {
     event.stopPropagation();
     this.aiModelSelectOpen.update((isOpen) => !isOpen);
-    this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
@@ -648,7 +629,6 @@ export class FlowExplorerPageComponent implements OnInit {
   protected toggleReasoningEffortSelect(event: Event): void {
     event.stopPropagation();
     this.reasoningEffortSelectOpen.update((isOpen) => !isOpen);
-    this.systemSelectOpen.set(false);
     this.endpointSelectOpen.set(false);
     this.goalSelectOpen.set(false);
     this.focusAreasSelectOpen.set(false);
@@ -657,7 +637,6 @@ export class FlowExplorerPageComponent implements OnInit {
 
   protected selectSystemFromDropdown(system: FlowExplorerSystemOption, event: Event): void {
     event.stopPropagation();
-    this.systemSelectOpen.set(false);
     this.selectSystem(system);
   }
 
@@ -1456,22 +1435,6 @@ export class FlowExplorerPageComponent implements OnInit {
     return fallback;
   }
 
-  private systemSearchText(system: FlowExplorerSystemOption): string {
-    return normalizeSearch(
-      [
-        system.systemId,
-        system.name,
-        system.shortName,
-        system.kind,
-        system.lifecycleStatus,
-        system.operationalStatus,
-        system.criticality,
-        system.summary,
-        ...system.aliases,
-        ...system.ownerTeamIds
-      ].join(' ')
-    );
-  }
 
   private endpointSearchText(endpoint: FlowExplorerEndpointOption): string {
     return normalizeSearch(

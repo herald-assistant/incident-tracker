@@ -13,6 +13,7 @@ export const routes: Routes = [
     path: '',
     component: AppShellComponent,
     children: [
+      { path: 'release-summary', loadComponent: () => import('./features/release-summary/release-summary-page').then(m => m.ReleaseSummaryPageComponent), data: { section: 'Analysis Features', title: 'Release summary' } },
       {
         path: '',
         component: PlatformLandingPageComponent,

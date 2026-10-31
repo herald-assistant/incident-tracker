@@ -1,0 +1,46 @@
+package pl.mkn.tdw.features.releasesummary;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import pl.mkn.tdw.api.ApiExceptionHandler;
+import pl.mkn.tdw.features.releasesummary.api.ReleaseSummaryController;
+import pl.mkn.tdw.features.releasesummary.context.ReleaseSummaryCatalog;
+import pl.mkn.tdw.features.releasesummary.contract.*;
+import pl.mkn.tdw.features.releasesummary.job.ReleaseSummaryJobService;
+import pl.mkn.tdw.integrations.gitlab.*;
+import pl.mkn.tdw.integrations.gitlab.contract.*;
+import pl.mkn.tdw.integrations.operationalcontext.*;
+import pl.mkn.tdw.integrations.operationalcontext.contract.*;
+import java.util.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+class ReleaseSummarySelectionTest {
+    @Test void typedRefsAreDistinctAndCannotEscape() {
+        assertEquals("refs/heads/release/CRM",new GitLabRef(GitLabRef.Kind.BRANCH,"release/CRM").canonical());
+        assertEquals("refs/tags/release/CRM",new GitLabRef(GitLabRef.Kind.TAG,"release/CRM").canonical());
+        for(var bad:List.of("../main","a..b","a b","/main","a.lock","a\\b","a@{x}"))
+            assertThrows(IllegalArgumentException.class,()->new GitLabRef(GitLabRef.Kind.BRANCH,bad));
+        assertThrows(IllegalArgumentException.class,()->new GitLabRef(GitLabRef.Kind.COMMIT,"abc"));
+    }
+    @Test void startReturnsAcceptedSnapshotBeforeAsyncResolution() throws Exception {
+        var catalog=mock(ReleaseSummaryCatalog.class);
+        var tasks=new ArrayList<Runnable>();
+        var service=new ReleaseSummaryJobService(catalog,tasks::add);
+        var mvc=MockMvcBuilders.standaloneSetup(new ReleaseSummaryController(catalog,service))
+                .setControllerAdvice(new ApiExceptionHandler()).build();
+        mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content("""
+                {"systemId":"crm","mode":"LIQUIBASE","baselineRef":{"kind":"BRANCH","name":"current"},
+                 "targetRef":{"kind":"TAG","name":"next"}}
+                """)).andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("QUEUED"));
+        assertEquals(1,tasks.size());
+        verifyNoInteractions(catalog);
+        mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content("""
+                {"systemId":"crm","mode":"LIQUIBASE"}
+                """)).andExpect(status().isBadRequest());
+    }
+}
+

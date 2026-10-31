@@ -5,10 +5,14 @@ import { Observable } from 'rxjs';
 export interface GitLabBranchOption {
   name: string;
   isDefault: boolean;
+  label?: string;
+  kind?: string;
+  repositories?: string[];
 }
 
 export interface GitLabBranchesResponse {
   branches: GitLabBranchOption[];
+  nextPage?: number | null;
   truncated: boolean;
   warnings: string[];
 }

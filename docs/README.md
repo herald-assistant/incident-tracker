@@ -62,6 +62,12 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- [Release summary](needs/release-summary.md) oraz
+  [plan raportu zmian Liquibase](plans/release-summary.md) opisują porównanie
+  dwóch refów aplikacji, pełny kontekst katalogowy i szczegółowy raport
+  wdrożeniowy. Plan ma status `in-progress`. Zapowiedziany tryb zmian kontraktów API
+  pozostaje poza bieżącą analizą i implementacją.
+
 - [UI Explorer i UX Inspector: wiedza z Operational Context](needs/ui-analysis-operational-context.md)
   oraz [plan udostepnienia katalogu modelowi](plans/ui-analysis-operational-context.md)
   obejmuja pelny odczyt kontekstu dla lepszej interpretacji, z zachowaniem
