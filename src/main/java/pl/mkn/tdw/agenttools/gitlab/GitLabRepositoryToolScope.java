@@ -3,6 +3,8 @@ package pl.mkn.tdw.agenttools.gitlab;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevisionPort;
 
 import java.util.Set;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -20,6 +22,7 @@ public final class GitLabRepositoryToolScope {
     private final boolean branchScoped;
     private final ConcurrentHashMap<String, String> revisions = new ConcurrentHashMap<>();
     private final Set<String> readSourceRefs = ConcurrentHashMap.newKeySet();
+    private final Set<String> comparedProjects = ConcurrentHashMap.newKeySet();
 
     public GitLabRepositoryToolScope(
             String group, String selectedProject, String selectedBranch, String selectedCommit
@@ -45,6 +48,34 @@ public final class GitLabRepositoryToolScope {
 
     public static GitLabRepositoryToolScope forBranch(String group, String selectedProject, String selectedBranch) {
         return new GitLabRepositoryToolScope(group, selectedProject, selectedBranch);
+    }
+
+    public record PinnedRevision(String project, String ref, String commitId) {}
+
+    /** Multiple immutable operator-selected revisions; other projects pin their first requested revision. */
+    public static GitLabRepositoryToolScope forRevisions(String group, List<PinnedRevision> selected) {
+        if(selected == null || selected.isEmpty()) throw new IllegalArgumentException("Pinned revisions are required.");
+        var first=selected.get(0);
+        var scope=new GitLabRepositoryToolScope(group,first.project(),first.ref(),first.commitId());
+        for(var revision:selected) {
+            var project=scope.relativeProject(revision.project()); var ref=checkedBranch(revision.ref());
+            if(revision.commitId()==null||!COMMIT_ID.matcher(revision.commitId()).matches())
+                throw new IllegalArgumentException("Invalid pinned commit.");
+            var old=scope.revisions.put(project+"@"+ref,revision.commitId());
+            if(old!=null&&!old.equals(revision.commitId())) throw new IllegalArgumentException("Conflicting pinned revisions.");
+            scope.comparedProjects.add(project);
+        }
+        return scope;
+    }
+    public Map<String,String> pinnedRevisions() { return Map.copyOf(revisions); }
+    public void restoreResearchRevisions(List<PinnedRevision> values) {
+        for(var revision:values) {
+            var project=relativeProject(revision.project()); var ref=checkedBranch(revision.ref());
+            if(comparedProjects.contains(project) && !revisions.containsKey(project+"@"+ref)) throw new IllegalArgumentException("Unknown compared revision.");
+            if(revision.commitId()==null||!COMMIT_ID.matcher(revision.commitId()).matches()) throw new IllegalArgumentException("Invalid commit.");
+            var old=revisions.putIfAbsent(project+"@"+ref,revision.commitId());
+            if(old!=null&&!old.equals(revision.commitId())) throw new IllegalArgumentException("Conflicting commit.");
+        }
     }
 
     public String group() {
@@ -86,7 +117,10 @@ public final class GitLabRepositoryToolScope {
     public Target resolve(String projectName, String branchRef, GitLabRepositoryRevisionPort port) {
         var project = relativeProject(projectName);
         var branch = checkedBranch(branchRef);
-        if (selectedProject.equals(project) && !selectedBranch.equals(branch)) {
+        if (comparedProjects.contains(project) && !revisions.containsKey(project+"@"+branch)) {
+            throw new IllegalArgumentException("Only the selected comparison revisions are available for this project.");
+        }
+        if (comparedProjects.isEmpty() && selectedProject.equals(project) && !selectedBranch.equals(branch)) {
             throw new IllegalArgumentException("The selected GitLab project is pinned to the operator's branch.");
         }
         if (branchScoped) {
@@ -122,10 +156,11 @@ public final class GitLabRepositoryToolScope {
     }
 
     private static String checkedBranch(String value) {
-        if (value == null || !BRANCH.matcher(value).matches() || value.endsWith("/")
-                || value.contains("//") || value.contains("..")) {
-            throw new IllegalArgumentException("GitLab branch is invalid.");
-        }
+        if(value == null) throw new IllegalArgumentException("GitLab ref is required.");
+        var kind = value.startsWith("refs/tags/") ? pl.mkn.tdw.integrations.gitlab.contract.GitLabRef.Kind.TAG
+                : pl.mkn.tdw.integrations.gitlab.contract.GitLabRef.Kind.BRANCH;
+        var name=value.startsWith("refs/tags/")?value.substring(10):value.startsWith("refs/heads/")?value.substring(11):value;
+        new pl.mkn.tdw.integrations.gitlab.contract.GitLabRef(kind,name);
         return value;
     }
 

@@ -29,7 +29,10 @@ class ReleaseSummarySelectionTest {
     @Test void startReturnsAcceptedSnapshotBeforeAsyncResolution() throws Exception {
         var catalog=mock(ReleaseSummaryCatalog.class);
         var tasks=new ArrayList<Runnable>();
-        var service=new ReleaseSummaryJobService(catalog,mock(pl.mkn.tdw.features.releasesummary.context.LiquibaseEvidenceCollector.class),tasks::add);
+        var service=new ReleaseSummaryJobService(catalog,mock(pl.mkn.tdw.features.releasesummary.context.LiquibaseEvidenceCollector.class),
+                mock(pl.mkn.tdw.features.releasesummary.ai.ReleaseSummaryPrompt.class),mock(pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.class),
+                mock(pl.mkn.tdw.features.releasesummary.ai.ReleaseSummaryAiRunner.class),mock(pl.mkn.tdw.features.releasesummary.job.ReleaseSummaryPersistence.class),
+                ()->pl.mkn.tdw.shared.ai.AnalysisAiAuthRef.localToken("CRM"),new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard(),tasks::add);
         var mvc=MockMvcBuilders.standaloneSetup(new ReleaseSummaryController(catalog,service))
                 .setControllerAdvice(new ApiExceptionHandler()).build();
         mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content("""

@@ -22,9 +22,9 @@ public class ReleaseSummaryController {
         if(page<1 || search.length()>255) throw new ReleaseSummaryException("INVALID_REF_QUERY","Nieprawidłowy filtr refów.");
         return catalog.refs(systemId,kind,search,page);
     }
-    @PostMapping("/jobs") public ResponseEntity<ReleaseSummaryJobService.Snapshot> start(@Valid @RequestBody ReleaseSummaryRequest request) {
+    @PostMapping("/jobs") public ResponseEntity<ReleaseSummarySnapshot> start(@Valid @RequestBody ReleaseSummaryRequest request) {
         return ResponseEntity.accepted().body(jobs.start(request));
     }
-    @GetMapping("/jobs/{jobId}") public ReleaseSummaryJobService.Snapshot get(@PathVariable String jobId) { return jobs.get(jobId); }
+    @GetMapping("/jobs/{jobId}") public ReleaseSummarySnapshot get(@PathVariable String jobId) { return jobs.get(jobId); }
 }
 

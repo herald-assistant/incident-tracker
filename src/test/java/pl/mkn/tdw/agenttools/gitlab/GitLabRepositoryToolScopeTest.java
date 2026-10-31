@@ -10,6 +10,24 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 class GitLabRepositoryToolScopeTest {
 
+    @Test void comparedProjectsKeepBothRevisionsAndDenyAThirdWithoutCallingGitLab() {
+        var port=mock(GitLabRepositoryRevisionPort.class);
+        var scope=GitLabRepositoryToolScope.forRevisions("CRM",java.util.List.of(
+                new GitLabRepositoryToolScope.PinnedRevision("customer","refs/heads/release","a".repeat(40)),
+                new GitLabRepositoryToolScope.PinnedRevision("customer","refs/tags/release","b".repeat(40)),
+                new GitLabRepositoryToolScope.PinnedRevision("data","refs/heads/release","c".repeat(40))));
+        assertThat(scope.resolve("customer","refs/heads/release",port).readRef()).isEqualTo("a".repeat(40));
+        assertThat(scope.resolve("customer","refs/tags/release",port).readRef()).isEqualTo("b".repeat(40));
+        assertThatThrownBy(()->scope.resolve("customer","main",port)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->scope.resolve("data","main",port)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(port);
+        org.mockito.Mockito.when(port.resolveRevision("CRM","shared","main")).thenReturn(
+                new pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision("CRM","shared","main","d".repeat(40),null));
+        assertThat(scope.resolve("shared","main",port).readRef()).isEqualTo("d".repeat(40));
+        scope.resolve("shared","main",port);
+        org.mockito.Mockito.verify(port,org.mockito.Mockito.times(1)).resolveRevision("CRM","shared","main");
+    }
+
     private static final String COMMIT = "1234567890abcdef1234567890abcdef12345678";
 
     @Test

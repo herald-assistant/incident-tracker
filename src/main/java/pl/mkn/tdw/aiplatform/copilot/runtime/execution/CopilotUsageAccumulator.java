@@ -6,7 +6,21 @@ import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-final class CopilotUsageAccumulator {
+public final class CopilotUsageAccumulator {
+
+    /** Allows a feature to checkpoint the same public usage events before a run finishes. */
+    public void recordActivity(pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent event) {
+        var details=event.details();
+        if("assistant.usage".equals(event.type()) && details.containsKey("inputTokens")) {
+            recordAssistantUsage(java.util.Objects.toString(details.get("model"),null),number(details.get("inputTokens")),
+                    number(details.get("outputTokens")),number(details.get("cacheReadTokens")),number(details.get("cacheWriteTokens")),
+                    number(details.get("reasoningTokens")),number(details.get("totalNanoAiu")),number(details.get("durationMs")));
+        } else if("session.usage_info".equals(event.type())) {
+            recordSessionUsageInfo(numeric(number(details.get("tokenLimit"))),numeric(number(details.get("currentTokens"))),
+                    numeric(number(details.get("messagesLength"))));
+        }
+    }
+    private Number number(Object value) {return value instanceof Number n?n:null;}
 
     private int callCount;
     private double inputTokens;
@@ -76,7 +90,7 @@ final class CopilotUsageAccumulator {
         contextMessages = messagesLength;
     }
 
-    AnalysisAiUsage snapshot() {
+    public AnalysisAiUsage snapshot() {
         if (callCount <= 0) {
             return null;
         }

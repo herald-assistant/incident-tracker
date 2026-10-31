@@ -18,6 +18,7 @@ public final class AgentToolContextKeys {
     public static final String GITLAB_REPOSITORY_SCOPE = "gitLabRepositoryScope";
     public static final String GITLAB_DIFF_SCOPE = "gitLabDiffScope";
     public static final String GITLAB_COMPLETE_VERIFIED_READ = "gitLabCompleteVerifiedRead";
+    public static final String OPERATIONAL_CONTEXT_READ_SESSION = "operationalContextReadSession";
     public static final String REPORT_ID = "reportId";
     public static final String REPORT_FEATURE = "reportFeature";
     public static final String ALLOWED_REPORT_SECTION_IDS = "allowedReportSectionIds";

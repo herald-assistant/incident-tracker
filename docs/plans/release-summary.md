@@ -585,7 +585,7 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   XML/YAML/JSON/formatted SQL, CSV i SQL pod niezmienionym changelogiem,
   nowe include, includeAll, usunięcia, rollbackSqlFile, cykle, XXE, brak pliku
   i niezgodny blob. Nieobsługiwane konstrukcje mają jawne ograniczenia.
-- [ ] **3. Report-first AI i widoczny job.** Dodać wariant pinned scope obu
+- [x] **3. Report-first AI i widoczny job.** Dodać wariant pinned scope obu
   rewizji, opcjonalny captured katalog w `opctx_*`, feature-owned policy,
   `GOAL_DRIVEN`, prompt, polski skill, scaffold, validator i mapper reportu.
   Włączyć context preflight i checkpoint report mutations do historii od
@@ -593,6 +593,11 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   SHA, brak hard budgetu, complete/partial/timeout/report missing. Akceptacja:
   działający backendowy run z pełnym raportem i źródłami, brak final-prose
   fallbacku, częściowy zapis przetrwa błąd gatewaya.
+  Weryfikacja 2026-10-31: testy assemblera/allowlisty, 1000 wywołań GOAL_DRIVEN,
+  obu przypiętych refów, snapshotu opctx, walidacji tabel i cytowań,
+  checkpointu przed wyjątkiem gatewaya, NO_CHANGES/BLOCKED bez AI i odmowy
+  final-prose fallbacku. Przeszły guardy, regresja report/usage/opctx oraz
+  pełne uruchomienie kontekstu Springa. Pilot live pozostaje w kroku 6.
 - [ ] **4. Pełny ekran Liquibase.** Podłączyć polling, kroki, prompt,
   evidence/activity/usage, tabelaryczny raport i coverage, Share menu oraz
   routing/landing/history mapping. Dowód: FE testy API i strony, duże tabele,

@@ -1,5 +1,7 @@
 package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextNavigationTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextCatalogSearch;
 import pl.mkn.tdw.integrations.operationalcontext.service.OperationalContextOwnershipResolver;
@@ -22,6 +24,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OperationalContextMcpToolsTest {
+    @Test void capturedSessionUsesFrozenCatalogAndDefaultStillReadsLiveCatalog() {
+        var live=org.mockito.Mockito.mock(pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort.class);
+        var empty=OperationalContextCatalog.empty();
+        var frozen=pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextReadSession.fromSnapshot(
+                pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextSnapshot.local(empty));
+        var local=new OperationalContextMcpTools(live,new OperationalContextToolMapper(OperationalContextNavigationTestCreator.navigation(),
+                new OperationalContextOwnershipResolver(),OperationalContextNavigationTestCreator.search(),OperationalContextNavigationTestCreator.codeSearch()));
+        assertNotNull(local.getScope("CRM snapshot",new org.springframework.ai.chat.model.ToolContext(java.util.Map.of(
+                pl.mkn.tdw.agenttools.context.AgentToolContextKeys.OPERATIONAL_CONTEXT_READ_SESSION,frozen))));
+        org.mockito.Mockito.verifyNoInteractions(live);
+        org.mockito.Mockito.when(live.loadContext(org.mockito.ArgumentMatchers.any())).thenReturn(empty);
+        assertNotNull(local.getScope("CRM live",new org.springframework.ai.chat.model.ToolContext(java.util.Map.of())));
+        org.mockito.Mockito.verify(live).loadContext(org.mockito.ArgumentMatchers.any());
+    }
 
     @Test
     void shouldExposeGlobalOpenQuestionsOnlyInScopeAndActiveLocalQuestionsOnlyOnTheirEntity() {

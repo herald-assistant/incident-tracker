@@ -51,7 +51,7 @@ public class OperationalContextMcpTools {
     ) {
         var startedAt = System.nanoTime();
         logRequest(GET_SCOPE, toolContext, "request=no-args");
-        var result = mapper.getScope(loadCatalog());
+        var result = mapper.getScope(loadCatalog(toolContext));
         logResult(
                 GET_SCOPE,
                 toolContext,
@@ -88,7 +88,7 @@ public class OperationalContextMcpTools {
                 toolContext,
                 "type=%s page=%s pageSize=%s filter=%s".formatted(type, page, pageSize, filter)
         );
-        var result = mapper.listEntities(loadCatalog(), type, page, pageSize, filter);
+        var result = mapper.listEntities(loadCatalog(toolContext), type, page, pageSize, filter);
         logResult(
                 LIST_ENTITIES,
                 toolContext,
@@ -129,7 +129,7 @@ public class OperationalContextMcpTools {
                 toolContext,
                 "query=%s types=%s limit=%s".formatted(query, types, limit)
         );
-        var result = mapper.search(loadCatalog(), query, types, limit);
+        var result = mapper.search(loadCatalog(toolContext), query, types, limit);
         logResult(
                 SEARCH,
                 toolContext,
@@ -168,7 +168,7 @@ public class OperationalContextMcpTools {
                 toolContext,
                 "type=%s id=%s include=%s".formatted(type, id, include)
         );
-        var result = mapper.getEntity(loadCatalog(), type, id, include);
+        var result = mapper.getEntity(loadCatalog(toolContext), type, id, include);
         logResult(
                 GET_ENTITY,
                 toolContext,
@@ -183,7 +183,9 @@ public class OperationalContextMcpTools {
         return result;
     }
 
-    private pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog loadCatalog() {
+    private pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.OperationalContextCatalog loadCatalog(ToolContext toolContext) {
+        var captured = toolContext != null ? toolContext.getContext().get(AgentToolContextKeys.OPERATIONAL_CONTEXT_READ_SESSION) : null;
+        if (captured instanceof pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextReadSession session) return session.snapshot().catalog();
         return operationalContextPort.loadContext(new OperationalContextQuery(
                 java.util.Set.of(),
                 List.of()

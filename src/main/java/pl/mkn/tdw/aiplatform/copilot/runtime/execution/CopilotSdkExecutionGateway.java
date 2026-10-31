@@ -693,6 +693,8 @@ public class CopilotSdkExecutionGateway {
             put(details, "outputTokens", data.outputTokens());
             put(details, "cacheReadTokens", data.cacheReadTokens());
             put(details, "cacheWriteTokens", data.cacheWriteTokens());
+            put(details, "reasoningTokens", data.reasoningTokens());
+            put(details, "totalNanoAiu", data.copilotUsage() != null ? data.copilotUsage().totalNanoAiu() : null);
             put(details, "durationMs", data.duration());
             put(details, "initiator", data.initiator());
             put(details, "apiCallId", data.apiCallId());
