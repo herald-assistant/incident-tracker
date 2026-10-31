@@ -22,12 +22,25 @@ final class ReleaseSummaryRunState {
     AnalysisReport report;
     ReleaseSummaryReportService.Result result;
     AnalysisAiUsage usage;
+    boolean mutationsEnabled=true;
+    String continuationProblem;
     final List<AnalysisJobStepResponse> steps=new ArrayList<>();
     final List<AnalysisEvidenceSection> toolEvidence=new ArrayList<>();
     final List<AnalysisAiActivityEvent> activities=new ArrayList<>();
     final List<AnalysisChatMessageResponse> messages=new ArrayList<>();
     ReleaseSummaryRunState(String id,ReleaseSummaryRequest request,AnalysisAiAuthRef auth) {
-        this.id=id;this.request=request;this.auth=auth;createdAt=Instant.now();updatedAt=createdAt;
+        this(id,request,auth,Instant.now());
+    }
+    private ReleaseSummaryRunState(String id,ReleaseSummaryRequest request,AnalysisAiAuthRef auth,Instant createdAt) {
+        this.id=id;this.request=request;this.auth=auth;this.createdAt=createdAt;updatedAt=createdAt;
+    }
+    static ReleaseSummaryRunState restore(ReleaseSummarySnapshot saved,AnalysisAiAuthRef auth,String session) {
+        var state=new ReleaseSummaryRunState(saved.jobId(),saved.request(),auth,saved.createdAt());
+        state.status=saved.status();state.updatedAt=saved.updatedAt();state.completedAt=saved.completedAt();
+        state.scope=saved.comparison();state.evidence=saved.evidence();state.report=saved.report();state.result=saved.result();
+        state.error=saved.error();state.errorCode=saved.errorCode();state.prompt=saved.preparedPrompt();state.usage=saved.usage();
+        state.sessionId=session;state.steps.addAll(saved.steps());state.toolEvidence.addAll(saved.toolEvidenceSections());
+        state.activities.addAll(saved.aiActivityEvents());state.messages.addAll(saved.chatMessages());return state;
     }
     void step(String code,String label,String state,String message,int count) {
         var previous=steps.stream().filter(s->s.code().equals(code)).findFirst().orElse(null);
@@ -45,11 +58,12 @@ final class ReleaseSummaryRunState {
         }
     }
     ReleaseSummarySnapshot snapshot() {
-        var chat=Set.of("COMPLETED","PARTIAL").contains(status)&&report!=null&&sessionId!=null;
+        var chat=mutationsEnabled&&continuationProblem==null&&Set.of("COMPLETED","PARTIAL").contains(status)&&report!=null&&sessionId!=null;
         return new ReleaseSummarySnapshot(id,status,request,scope,evidence,errorCode,error,createdAt,updatedAt,completedAt,
                 steps,evidence!=null?evidence.sections():List.of(),toolEvidence,activities,List.of(),prompt,report,result,usage,messages,
-                new ReleaseSummarySnapshot.ChatAvailability(chat,chat?"AVAILABLE":"UNAVAILABLE",chat?"Możesz kontynuować analizę.":"Kontynuacja wymaga zapisanego raportu i sesji AI."),
-                !status.equals("RUNNING")&&!status.equals("QUEUED"));
+                new ReleaseSummarySnapshot.ChatAvailability(chat,chat?"AVAILABLE":"UNAVAILABLE",chat?"Możesz kontynuować analizę.":
+                        !mutationsEnabled?"Feature jest wyłączony; wynik jest tylko do odczytu.":continuationProblem!=null?continuationProblem:"Kontynuacja wymaga zapisanego raportu i sesji AI."),
+                !status.equals("RUNNING")&&!status.equals("QUEUED")&&messages.stream().noneMatch(m->m.status().equals("IN_PROGRESS")));
     }
 }
 

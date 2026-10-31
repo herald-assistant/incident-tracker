@@ -19,6 +19,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ReleaseSummarySelectionTest {
+    @Test void chatIsReadOnlyByDefaultAndRequiresExplicitMutationFlag() throws Exception {
+        var jobs=mock(ReleaseSummaryJobService.class);
+        var mvc=MockMvcBuilders.standaloneSetup(new ReleaseSummaryController(mock(ReleaseSummaryCatalog.class),jobs))
+                .setControllerAdvice(new ApiExceptionHandler()).build();
+        mvc.perform(post("/api/release-summary/jobs/crm/chat/messages").contentType("application/json")
+                .content("{\"message\":\"Wyjaśnij kolumnę\"}")).andExpect(status().isAccepted());
+        verify(jobs).chat("crm","Wyjaśnij kolumnę",false);
+        mvc.perform(post("/api/release-summary/jobs/crm/chat/messages").contentType("application/json")
+                .content("{\"message\":\"Popraw opis\",\"updateReport\":true}")).andExpect(status().isAccepted());
+        verify(jobs).chat("crm","Popraw opis",true);
+        mvc.perform(post("/api/release-summary/jobs/crm/chat/messages").contentType("application/json")
+                .content("{\"message\":\" \"}")).andExpect(status().isBadRequest());
+    }
     @Test void typedRefsAreDistinctAndCannotEscape() {
         assertEquals("refs/heads/release/CRM",new GitLabRef(GitLabRef.Kind.BRANCH,"release/CRM").canonical());
         assertEquals("refs/tags/release/CRM",new GitLabRef(GitLabRef.Kind.TAG,"release/CRM").canonical());

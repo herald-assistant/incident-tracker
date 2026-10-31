@@ -14,8 +14,13 @@ public class LocalAnalysisRunOperationGuard {
     private final ConcurrentHashMap<String, Semaphore> permits = new ConcurrentHashMap<>();
 
     public Optional<Lease> tryAcquire(String analysisId) {
-        var permit = permits.computeIfAbsent(analysisId, ignored -> new Semaphore(1));
-        return permit.tryAcquire() ? Optional.of(new Lease(analysisId, permit)) : Optional.empty();
+        var acquired = new java.util.concurrent.atomic.AtomicReference<Lease>();
+        permits.compute(analysisId, (id, existing) -> {
+            var permit = existing != null ? existing : new Semaphore(1);
+            if (permit.tryAcquire()) acquired.set(new Lease(id, permit));
+            return permit;
+        });
+        return Optional.ofNullable(acquired.get());
     }
 
     public final class Lease implements AutoCloseable {
@@ -31,10 +36,11 @@ public class LocalAnalysisRunOperationGuard {
         @Override
         public void close() {
             if (closed.compareAndSet(false, true)) {
-                permit.release();
-                if (permit.availablePermits() == 1 && !permit.hasQueuedThreads()) {
-                    permits.remove(analysisId, permit);
-                }
+                permits.computeIfPresent(analysisId, (id, current) -> {
+                    if (current != permit) return current;
+                    permit.release();
+                    return permit.availablePermits() == 1 ? null : permit;
+                });
             }
         }
     }

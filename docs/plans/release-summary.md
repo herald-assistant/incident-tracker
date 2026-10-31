@@ -609,12 +609,18 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   Testy obejmują coverage/partial/blocked/no changes, typed API, lock wyboru,
   paginację refów bez auto-select oraz otwarcie historii. Shared select ma
   nawigację klawiaturą; zachowano dodatkowe pola wyszukiwania Flow Explorera.
-- [ ] **5. Kontynuacja, edycja i przenoszenie wyniku.** Dodać live/local
+- [x] **5. Kontynuacja, edycja i przenoszenie wyniku.** Dodać live/local
   follow-up z odtworzeniem obu SHA i katalogu, report edit z revision guard,
   import/export V1 i obsługę przerwania po restarcie. Dowód: round-trip,
   read-only import, odmowa nieobsługiwanego trybu/wersji, concurrency,
   niejawne pytanie nie mutuje reportu, korekta nie gubi coverage. Akceptacja:
   spójny report/result/history i brak auth/session secrets w eksporcie.
+  Weryfikacja 2026-10-31: 683 testy frontendu, produkcyjny build oraz 37
+  testów backendu/architektury przeszły. Round-trip zachowuje pełne źródła
+  i payloady; odrzucane są inne wersje/tryby. Testy sprawdzają stałe SHA
+  i katalog po restarcie, brak ponownego wysłania przerwanej odpowiedzi,
+  read-only pytanie, jawne zlecenie korekty, revision guard i niezmienność
+  pól źródłowych. Stress test wspólnej blokady obejmuje 80000 prób przejęcia.
 - [ ] **6. Weryfikacja kompletności i granic.** Przeprowadzić scenariusz
   akceptacyjny CRM z niezależnie spisaną listą tabel, kolumn, indeksów,
   constraints i zmian danych; sprawdzić uzasadnienia na kodzie. Dodać

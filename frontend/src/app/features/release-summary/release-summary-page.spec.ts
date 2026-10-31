@@ -11,21 +11,19 @@ import { AiOptionsApiService } from '../../core/services/ai-options-api.service'
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { AnalysisJobPollingService } from '../../core/services/analysis-job-polling.service';
 
-export function releaseSnapshot(status = 'COMPLETED'): ReleaseSummarySnapshot {
-  return {jobId:'crm-run',status,request:{systemId:'crm',mode:'LIQUIBASE',baselineRef:{kind:'BRANCH',name:'current'},targetRef:{kind:'TAG',name:'next'}},
-    comparison:null,evidence:null,errorCode:null,error:null,createdAt:'2026-10-31T10:00:00Z',updatedAt:'2026-10-31T10:00:00Z',completedAt:null,
-    steps:[],contextSections:[],toolEvidenceSections:[],aiActivityEvents:[],toolFeedback:[],preparedPrompt:'CRM full prompt',report:null,result:null,usage:null,chatMessages:[],
-    chatAvailability:{available:false,code:'UNAVAILABLE',message:'Brak sesji'},exportAvailable:true};
-}
+import { releaseSnapshot } from './release-summary.testing';
+import { parseReleaseSummaryImport, releaseSummaryExport } from './release-summary-import-export';
 describe('ReleaseSummary workspace',()=>{
-  let api: {applications: ReturnType<typeof vi.fn>; refs: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>};
+  let api: {applications: ReturnType<typeof vi.fn>; refs: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>;
+    chat:ReturnType<typeof vi.fn>; edit:ReturnType<typeof vi.fn>; export:ReturnType<typeof vi.fn>};
   const config=signal({releaseSummaryEnabled:true});
   let progress:Subject<ReleaseSummarySnapshot>;
   beforeEach(()=>{
     config.set({releaseSummaryEnabled:true});progress=new Subject();
     api={applications:vi.fn(()=>of([{systemId:'crm',name:'CRM Customers'}])),
       refs:vi.fn(()=>of({branches:[],warnings:[],truncated:false,nextPage:null})),
-      start:vi.fn(()=>of(releaseSnapshot('QUEUED'))),get:vi.fn(()=>of(releaseSnapshot()))};
+      start:vi.fn(()=>of(releaseSnapshot('QUEUED'))),get:vi.fn(()=>of(releaseSnapshot())),
+      chat:vi.fn(()=>of(releaseSnapshot())),edit:vi.fn(()=>of(releaseSnapshot())),export:vi.fn(()=>of({}))};
     TestBed.configureTestingModule({imports:[ReleaseSummaryPageComponent],providers:[
       {provide:ReleaseSummaryApiService,useValue:api},{provide:GitLabSystemBranchesApiService,useValue:{}},
       {provide:AiOptionsApiService,useValue:{getOptions:()=>of({models:[],defaultModel:'',defaultReasoningEffort:'',defaultReasoningEfforts:[]})}},
@@ -41,6 +39,20 @@ describe('ReleaseSummary workspace',()=>{
     expect(api.start).toHaveBeenCalledWith({systemId:'crm',mode:'LIQUIBASE',baselineRef:{kind:'BRANCH',name:'release'},targetRef:{kind:'TAG',name:'release'}});
     page.selectSystem('crm-other');expect(page.systemId()).toBe('crm');
     progress.next(releaseSnapshot());page.selectSystem('crm-other');expect(page.before()).toBe('');expect(page.after()).toBe('');
+  });
+  it('defaults questions to read-only and requires an explicit report update choice',()=>{
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
+    const job=releaseSnapshot();job.chatAvailability={available:true,code:'AVAILABLE',message:''};page.job.set(job);
+    page.sendChat('Wyjaśnij kolumnę');expect(api.chat).toHaveBeenLastCalledWith('crm-run','Wyjaśnij kolumnę',false);
+    page.job.set(job);page.updateReport.set(true);page.sendChat('Popraw opis');
+    expect(api.chat).toHaveBeenLastCalledWith('crm-run','Popraw opis',true);expect(page.updateReport()).toBe(false);
+  });
+  it('keeps imported files read-only even if the exported availability allowed continuation',()=>{
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
+    const job=releaseSnapshot();job.chatAvailability={available:true,code:'AVAILABLE',message:''};
+    page.job.set(parseReleaseSummaryImport(releaseSummaryExport(job)));page.imported.set(true);
+    page.sendChat('Pytanie');page.saveReport({expectedRevisionSha256:'old',markdownSummary:'Zmiana',sections:[]});
+    expect(api.chat).not.toHaveBeenCalled();expect(api.edit).not.toHaveBeenCalled();expect(page.canEdit()).toBe(false);
   });
   it('swaps both values and their ref kinds',()=>{
     const page=TestBed.createComponent(ReleaseSummaryPageComponent).componentInstance;

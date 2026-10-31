@@ -26,5 +26,16 @@ public class ReleaseSummaryController {
         return ResponseEntity.accepted().body(jobs.start(request));
     }
     @GetMapping("/jobs/{jobId}") public ReleaseSummarySnapshot get(@PathVariable String jobId) { return jobs.get(jobId); }
+    public record ChatRequest(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=20000) String message,boolean updateReport) {}
+    @PostMapping("/jobs/{jobId}/chat/messages")
+    public ResponseEntity<ReleaseSummarySnapshot> chat(@PathVariable String jobId,@Valid @RequestBody ChatRequest request) {
+        return ResponseEntity.accepted().body(jobs.chat(jobId,request.message(),request.updateReport()));
+    }
+    @PutMapping("/jobs/{jobId}/report")
+    public ReleaseSummarySnapshot edit(@PathVariable String jobId,@RequestBody pl.mkn.tdw.shared.ai.report.AnalysisReportEditRequest request) {
+        return jobs.edit(jobId,request);
+    }
+    @GetMapping("/jobs/{jobId}/export")
+    public pl.mkn.tdw.features.releasesummary.job.ReleaseSummaryPersistence.Envelope export(@PathVariable String jobId) {return jobs.export(jobId);}
 }
 

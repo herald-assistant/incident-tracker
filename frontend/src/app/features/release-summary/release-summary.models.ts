@@ -44,6 +44,6 @@ export function releaseRef(value: string): ReleaseRef {
   return {kind: 'COMMIT', name: value};
 }
 export function terminalReleaseSummary(job: ReleaseSummarySnapshot): boolean {
-  return !['QUEUED', 'RUNNING'].includes(job.status);
+  return !['QUEUED', 'RUNNING'].includes(job.status) && !job.chatMessages.some(m=>m.status==='IN_PROGRESS');
 }
 

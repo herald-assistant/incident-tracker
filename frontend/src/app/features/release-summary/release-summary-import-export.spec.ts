@@ -1,0 +1,30 @@
+import {parseReleaseSummaryImport,releaseSummaryExport} from './release-summary-import-export';
+import {releaseSnapshot} from './release-summary.testing';
+import {terminalReleaseSummary} from './release-summary.models';
+describe('Release summary file contract',()=>{
+  it('preserves complete pinned sources and full nested entity payloads through JSON round-trip',()=>{
+    const job=releaseSnapshot('PARTIAL');
+    job.comparison={systemId:'crm',systemName:'CRM',group:'CRM',catalogDigest:'digest',
+      entities:[{type:'system',id:'crm',payload:{name:'CRM',custom:{nested:['pełne dane']}}}],
+      repositories:[{repositoryId:'customer',project:'customer',prefixes:['db'],baselineRef:'refs/heads/current',baselineCommit:'a'.repeat(40),targetRef:'refs/tags/next',targetCommit:'b'.repeat(40)}]};
+    job.evidence={scannedFiles:2,sourceComplete:true,units:[],sources:[{sourceRef:'crm-source',repositoryId:'customer',project:'customer',side:'TARGET',
+      commitId:'b'.repeat(40),path:'db/customer.sql',blobId:'c'.repeat(40),content:'alter table customer add label text;\n-- full content',dependencies:[]}],gaps:[],sections:[]};
+    const imported=parseReleaseSummaryImport(JSON.parse(JSON.stringify(releaseSummaryExport(job))));
+    expect(imported.comparison).toEqual(job.comparison);expect(imported.evidence).toEqual(job.evidence);
+    expect(imported.chatAvailability.available).toBe(false);expect(imported.status).toBe('PARTIAL');
+  });
+  it('rejects other schemas, versions, result contracts, modes and broken SHAs',()=>{
+    for(const mutate of [
+      (e:any)=>e.version=2,(e:any)=>e.schema='tdw.other',(e:any)=>e.payload.resultContract='unknown',
+      (e:any)=>e.payload.job.request.mode='API',(e:any)=>e.payload.job.request.baselineRef.kind='OTHER',
+      (e:any)=>e.payload.job.comparison={entities:[],repositories:[{prefixes:[],baselineCommit:'short',targetCommit:'b'.repeat(40)}]}
+    ]) {const envelope=releaseSummaryExport(releaseSnapshot());mutate(envelope);expect(()=>parseReleaseSummaryImport(envelope)).toThrow();}
+  });
+  it('does not export private runtime keys and keeps polling while an answer is pending',()=>{
+    const job=releaseSnapshot();Object.assign(job,{sessionId:'private-session',auth:{token:'private-token'},storeSnapshot:{private:true}});
+    expect(JSON.stringify(releaseSummaryExport(job))).not.toContain('private-');
+    job.chatMessages=[{id:'answer',role:'ASSISTANT',status:'IN_PROGRESS',content:'',createdAt:job.createdAt,updatedAt:job.updatedAt,
+      completedAt:'',errorCode:'',errorMessage:'',toolEvidenceSections:[],aiActivityEvents:[],toolFeedback:[],prompt:'',usage:null}];
+    expect(terminalReleaseSummary(job)).toBe(false);expect(()=>parseReleaseSummaryImport(releaseSummaryExport(job))).toThrow();
+  });
+});

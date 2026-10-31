@@ -4,6 +4,11 @@
       <header><p class="section-eyebrow">Release summary</p><h2>Zmiany bazodanowe we wdrożeniu</h2>
         <p>Wybierz aplikację i kierunek porównania. Raport opisze zmiany Liquibase oraz ich znaczenie funkcjonalne.</p>
       </header>
+      <div class="run-options">
+        <input #importInput type="file" accept="application/json,.json" hidden (change)="importFile($event)" />
+        <button class="secondary-button" type="button" [disabled]="busy() || editing()" (click)="importInput.click()">Import JSON</button>
+        @if(job()?.exportAvailable) {<button class="secondary-button" type="button" [disabled]="busy()" (click)="exportFile()">Export JSON</button>}
+      </div>
       @if (uiConfig.config().releaseSummaryEnabled) {
       <div class="target-grid">
         <app-application-select [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
@@ -50,14 +55,19 @@
 
     @if(job(); as current) {
       <section class="analysis-card">
+        @if(imported()) {<p role="status">Import pliku — wynik tylko do odczytu, bez sesji AI.</p>}
         <p class="status-pill" role="status">{{statusLabel(current.status)}}</p>
         @if(current.error) { <p role="alert">{{current.error}}</p> }
         <app-analysis-result-header title="Raport wdrożeniowy" [context]="current.comparison?.systemName || current.request.systemId"
           [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — sprawdź kompletność i jawne luki.' : ''"
-          [shareDocument]="shareDocument()" />
+          [shareDocument]="shareDocument()" [editable]="canEdit() && !editing()" (editRequested)="editing.set(true)" />
         <app-analysis-result-tabs [tabs]="tabs" [activeTabId]="activeTab()" idPrefix="release-summary" (tabSelected)="activeTab.set($event)" />
         @if(activeTab() === 'report') {
-          @if(current.report) { <app-analysis-report-panel [report]="current.report" /> }
+          @if(current.report) {
+            @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
+              (save)="saveReport($event)" (cancel)="editing.set(false)" />}
+            @else {<app-analysis-report-panel [report]="current.report" />}
+          }
           @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź źródła i przebieg analizy.'}}</p> }
         } @else {
           @if(current.result;as result) {
@@ -85,7 +95,14 @@
         }
       </section>
       <app-analysis-feature-aside [progressActive]="busy()" [aiActive]="busy()" [progressCount]="current.steps.length"
-        [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [showChat]="false" [showFeedback]="false">
+        [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [showChat]="true" [showFeedback]="false">
+        <div chatPanel>
+          @if(canChat()) {<label><input type="checkbox" [checked]="updateReport()" (change)="updateReport.set($any($event.target).checked)" />
+            Zleć AI zmianę raportu</label><p>Bez zaznaczenia AI odpowiada na pytanie i nie zmienia raportu.</p>}
+          @if(!current.chatAvailability.available || imported()) {<p>{{imported() ? 'Import jest tylko do odczytu.' : current.chatAvailability.message}}</p>}
+          <app-analysis-follow-up-chat [messages]="current.chatMessages" [canUseChat]="canChat()" [isSubmitting]="chatSubmitting()"
+            [error]="chatError()" [staticPanel]="true" (sendMessage)="sendChat($event)" (clearError)="chatError.set('')" />
+        </div>
         <div progressPanel><app-analysis-steps-panel [steps]="current.steps" [evidenceSections]="current.contextSections"
           [toolEvidenceSections]="current.toolEvidenceSections" [preparedPrompt]="current.preparedPrompt || ''"
           [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" [finalResultAvailable]="!!current.report" /></div>
