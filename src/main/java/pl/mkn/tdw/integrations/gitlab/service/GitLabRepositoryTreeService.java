@@ -94,7 +94,9 @@ public class GitLabRepositoryTreeService {
                         entity.getHeaders().getFirst("X-Next-Page")
                 );
 
-                page = entity.getHeaders().getFirst("X-Next-Page");
+                if (body == null) throw new IllegalStateException("Missing GitLab tree page body.");
+                var next = nextPage(entity.getHeaders().getFirst("X-Next-Page"), Integer.parseInt(page));
+                page = next != null ? next.toString() : null;
             } catch (RestClientResponseException exception) {
                 throw new GitLabRepositoryTreeException(
                         exception.getStatusCode().value(),
@@ -233,7 +235,7 @@ public class GitLabRepositoryTreeService {
         }
         try {
             var value = Integer.parseInt(raw);
-            if (value <= currentPage || value > MAX_PAGE_NUMBER) {
+            if (value != currentPage + 1 || value > MAX_PAGE_NUMBER) {
                 throw new IllegalArgumentException("Invalid GitLab next-page header.");
             }
             return value;

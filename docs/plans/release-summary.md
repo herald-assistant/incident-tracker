@@ -573,13 +573,18 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   poprawkach selektorów 28 testów celowanych. Odczyt wielu repozytoriów,
   kanoniczne branch/tag, kodowanie URI i brak fallbacku są objęte testami.
   Pełna regresja pakowania pozostaje w kroku 7.
-- [ ] **2. Kompletne deterministic evidence Liquibase.** Dodać neutralny
+- [x] **2. Kompletne deterministic evidence Liquibase.** Dodać neutralny
   snapshot/compare nad wspólnym tree service, discovery obu stron, closure
   include/SQL/data i pełny snapshot wybranych encji Operational Context.
   Udostępnić dane w job steps/evidence. Dowód: fikcyjne fixtures CRM dla
   wszystkich przypadków macierzy poniżej, liczników coverage i pełności
   payloadów. Akceptacja: expected manifest równy otrzymanemu, brak AI przy
   niekompletnych wymaganych źródłach, potwierdzone `NO_CHANGES`.
+  Weryfikacja 2026-10-31: 47 testów zbierania evidence, scope i konsumentów
+  tree; dodatkowo HTTP pagination oraz source resolve. Fixture CRM obejmuje
+  XML/YAML/JSON/formatted SQL, CSV i SQL pod niezmienionym changelogiem,
+  nowe include, includeAll, usunięcia, rollbackSqlFile, cykle, XXE, brak pliku
+  i niezgodny blob. Nieobsługiwane konstrukcje mają jawne ograniczenia.
 - [ ] **3. Report-first AI i widoczny job.** Dodać wariant pinned scope obu
   rewizji, opcjonalny captured katalog w `opctx_*`, feature-owned policy,
   `GOAL_DRIVEN`, prompt, polski skill, scaffold, validator i mapper reportu.

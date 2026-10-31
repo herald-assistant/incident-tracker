@@ -3,6 +3,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.releasesummary.context.ReleaseSummaryCatalog;
+import pl.mkn.tdw.features.releasesummary.context.LiquibaseEvidenceCollector;
 import pl.mkn.tdw.features.releasesummary.contract.*;
 import java.time.Instant;
 import java.util.*;
@@ -12,21 +13,24 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ReleaseSummaryJobService {
     private final ReleaseSummaryCatalog catalog;
+    private final LiquibaseEvidenceCollector collector;
     private final TaskExecutor applicationTaskExecutor;
     private final Map<String,Snapshot> jobs=new ConcurrentHashMap<>();
     public record Snapshot(String jobId,String status,ReleaseSummaryRequest request,ReleaseSummaryScope comparison,
-                           String error, Instant createdAt) {}
+                           ReleaseSummaryEvidence evidence, String error, Instant createdAt) {}
     public Snapshot start(ReleaseSummaryRequest request) {
         var id=UUID.randomUUID().toString();
-        var queued=new Snapshot(id,"QUEUED",request,null,null,Instant.now());
+        var queued=new Snapshot(id,"QUEUED",request,null,null,null,Instant.now());
         jobs.put(id,queued);
         applicationTaskExecutor.execute(() -> {
-            jobs.put(id,new Snapshot(id,"RUNNING",request,null,null,queued.createdAt()));
+            jobs.put(id,new Snapshot(id,"RUNNING",request,null,null,null,queued.createdAt()));
             try {
                 var scope=catalog.pin(request,catalog.capture());
-                jobs.put(id,new Snapshot(id,"COMPLETED",request,scope,null,queued.createdAt()));
+                var evidence=collector.collect(scope);
+                jobs.put(id,new Snapshot(id,!evidence.sourceComplete()?"BLOCKED":evidence.noChanges()?"NO_CHANGES":"COMPLETED",request,scope,evidence,
+                        !evidence.sourceComplete()?"Niekompletny materiał źródłowy; sprawdź coverage.":null,queued.createdAt()));
             } catch(RuntimeException e) {
-                jobs.put(id,new Snapshot(id,"BLOCKED",request,null,e instanceof ReleaseSummaryException?e.getMessage():"Nie udało się przygotować porównania.",queued.createdAt()));
+                jobs.put(id,new Snapshot(id,"BLOCKED",request,null,null,e instanceof ReleaseSummaryException?e.getMessage():"Nie udało się przygotować porównania.",queued.createdAt()));
             }
         });
         return queued;
