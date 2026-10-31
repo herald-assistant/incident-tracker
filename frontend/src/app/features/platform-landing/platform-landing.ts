@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -7,4 +8,7 @@ import { RouterLink } from '@angular/router';
   templateUrl: './platform-landing.html',
   styleUrl: './platform-landing.scss'
 })
-export class PlatformLandingPageComponent {}
+export class PlatformLandingPageComponent {
+  readonly uiConfig = inject(AppUiConfigService);
+  constructor() { this.uiConfig.load(); }
+}

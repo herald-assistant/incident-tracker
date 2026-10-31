@@ -18,6 +18,13 @@ import { buildExportEnvelope } from '../../core/utils/analysis-import-export.uti
 import { AnalysisHistoryPageComponent } from './analysis-history-page';
 
 describe('AnalysisHistoryPageComponent', () => {
+  it('opens a saved Release summary through its feature route', async () => {
+    const {fixture} = await createComponent();
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    fixture.componentInstance.openRun({analysisId:'crm-release',feature:'release-summary',name:'CRM release',status:'PARTIAL',
+      createdAt:'2026-10-31T10:00:00Z',updatedAt:'2026-10-31T10:01:00Z',completedAt:'2026-10-31T10:01:00Z'});
+    expect(open).toHaveBeenCalledWith('/release-summary?localRunId=crm-release','_blank','noopener,noreferrer');
+  });
   afterEach(() => {
     vi.restoreAllMocks();
   });

@@ -6,6 +6,20 @@ import { GitLabSystemBranchesApiService } from '../../core/services/gitlab-syste
 import { GitLabBranchSelectComponent } from './gitlab-branch-select';
 
 describe('GitLabBranchSelectComponent', () => {
+  it('requires a manual ref choice and appends every requested page', () => {
+    const loader = vi.fn((_key: string, _search: string, page?: number) => of({
+      branches: [{name: page ? 'refs/tags/next' : 'refs/tags/current', label: page ? 'next' : 'current', isDefault: false}],
+      truncated: !page, nextPage: page ? null : 2, warnings: []
+    }));
+    const fixture = TestBed.createComponent(GitLabBranchSelectComponent);
+    const selected = vi.fn(); fixture.componentInstance.branchSelected.subscribe(selected);
+    fixture.componentRef.setInput('sourceKey', 'crm:TAG'); fixture.componentRef.setInput('branchLoader', loader);
+    fixture.componentRef.setInput('autoSelect', false); fixture.detectChanges();
+    fixture.componentInstance.loadMore(); fixture.detectChanges();
+    expect(loader).toHaveBeenLastCalledWith('crm:TAG', '', 2); expect(selected).not.toHaveBeenCalled();
+    fixture.nativeElement.querySelector('.branch-select__control').click(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('[role=option]')).toHaveLength(2);
+  });
   const api = {
     getBranches: vi.fn((systemId: string, search = '') => of({
       systemId,

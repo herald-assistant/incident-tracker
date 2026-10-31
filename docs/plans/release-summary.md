@@ -598,12 +598,17 @@ zgodą na utworzenie wszystkich DTO bez działającej ścieżki.
   checkpointu przed wyjątkiem gatewaya, NO_CHANGES/BLOCKED bez AI i odmowy
   final-prose fallbacku. Przeszły guardy, regresja report/usage/opctx oraz
   pełne uruchomienie kontekstu Springa. Pilot live pozostaje w kroku 6.
-- [ ] **4. Pełny ekran Liquibase.** Podłączyć polling, kroki, prompt,
+- [x] **4. Pełny ekran Liquibase.** Podłączyć polling, kroki, prompt,
   evidence/activity/usage, tabelaryczny raport i coverage, Share menu oraz
   routing/landing/history mapping. Dowód: FE testy API i strony, duże tabele,
   keyboard/responsive, empty/blocked/partial/error, bez overlap pollingu.
   Akceptacja: użytkownik przechodzi od trzech selektorów do czytelnego raportu
   w shared UX, bez lokalnej kopii rendererów.
+  Weryfikacja 2026-10-31: 678 testów Angulara i produkcyjny build przeszły;
+  testy UI config i bezpośrednich tras Springa potwierdzają flagę i routing.
+  Testy obejmują coverage/partial/blocked/no changes, typed API, lock wyboru,
+  paginację refów bez auto-select oraz otwarcie historii. Shared select ma
+  nawigację klawiaturą; zachowano dodatkowe pola wyszukiwania Flow Explorera.
 - [ ] **5. Kontynuacja, edycja i przenoszenie wyniku.** Dodać live/local
   follow-up z odtworzeniem obu SHA i katalogu, report edit z revision guard,
   import/export V1 i obsługę przerwania po restarcie. Dowód: round-trip,

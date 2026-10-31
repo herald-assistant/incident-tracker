@@ -62,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Analysis Features',
     items: [
+      { label: 'Release summary', route: '/release-summary', icon: 'difference', reloadOnActiveClick: true },
       {
         label: 'Incident Analysis',
         route: '/incident-analysis',
@@ -163,7 +164,9 @@ export class AppShellComponent {
   private readonly currentUrl = signal('');
   private sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null;
 
-  readonly navGroups = NAV_GROUPS;
+  get navGroups(): NavGroup[] {
+    return NAV_GROUPS.map(group => ({...group, items: group.items.filter(item => item.route !== '/release-summary' || this.uiConfig.config().releaseSummaryEnabled)}));
+  }
   readonly sidebarCollapsed = signal(readSidebarCollapsedPreference());
   readonly sidebarExpanding = signal(false);
   readonly sidebarRailMode = computed(() => this.sidebarCollapsed() || this.sidebarExpanding());

@@ -89,6 +89,14 @@
           </div>
         </a>
 
+        @if (uiConfig.config().releaseSummaryEnabled) {
+        <a class="platform-landing__feature-card platform-landing__feature-card--flow" routerLink="/release-summary">
+          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">difference</span>
+          <div><span class="platform-landing__feature-status">Dostępne</span><h4>Release summary</h4>
+            <p>Przygotujesz szczegółowy raport zmian Liquibase między refami i zrozumiesz ich cel w aplikacji.</p></div>
+        </a>
+        }
+
         <a
           class="platform-landing__feature-card platform-landing__feature-card--ui"
           routerLink="/ui-explorer"

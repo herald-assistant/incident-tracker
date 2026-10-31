@@ -4,6 +4,7 @@ public record UiConfigResponse(
         String title,
         String subtitle,
         String defaultTitle,
-        String defaultBranch
+        String defaultBranch,
+        boolean releaseSummaryEnabled
 ) {
 }

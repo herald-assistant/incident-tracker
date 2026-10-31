@@ -19,6 +19,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class FrontendPageTest {
 
+    @Test void shouldServeReleaseSummaryRoute() throws Exception {
+        mockMvc.perform(get("/release-summary").param("localRunId","crm-run"))
+                .andExpect(status().isOk()).andExpect(forwardedUrl("/index.html"));
+    }
+
     @Autowired
     private MockMvc mockMvc;
 

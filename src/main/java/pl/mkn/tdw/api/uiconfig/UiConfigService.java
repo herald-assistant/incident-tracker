@@ -13,6 +13,8 @@ public class UiConfigService {
 
     private final UiConfigProperties properties;
     private final PlatformSourceCodeProperties platformSourceCodeProperties;
+    @org.springframework.beans.factory.annotation.Value("${release-summary.enabled:true}")
+    private boolean releaseSummaryEnabled = true;
 
     public UiConfigResponse currentConfig() {
         var configuredTitle = normalize(properties.getTitle());
@@ -21,7 +23,7 @@ public class UiConfigService {
                     DEFAULT_TITLE,
                     null,
                     DEFAULT_TITLE,
-                    platformSourceCodeProperties.getDefaultBranch()
+                    platformSourceCodeProperties.getDefaultBranch(), releaseSummaryEnabled
             );
         }
 
@@ -29,7 +31,7 @@ public class UiConfigService {
                 configuredTitle,
                 DEFAULT_TITLE,
                 DEFAULT_TITLE,
-                platformSourceCodeProperties.getDefaultBranch()
+                platformSourceCodeProperties.getDefaultBranch(), releaseSummaryEnabled
         );
     }
 

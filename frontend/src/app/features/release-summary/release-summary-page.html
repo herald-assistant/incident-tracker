@@ -1,0 +1,101 @@
+<div class="page-shell release-summary-page">
+  <main class="release-summary-workspace" aria-label="Release summary">
+    <section class="analysis-card release-summary-composer">
+      <header><p class="section-eyebrow">Release summary</p><h2>Zmiany bazodanowe we wdrożeniu</h2>
+        <p>Wybierz aplikację i kierunek porównania. Raport opisze zmiany Liquibase oraz ich znaczenie funkcjonalne.</p>
+      </header>
+      @if (uiConfig.config().releaseSummaryEnabled) {
+      <div class="target-grid">
+        <app-application-select [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
+          [disabled]="busy()" [error]="error()" (selected)="selectSystem($event)" (retry)="loadApplications()" />
+        <div><label class="form-field">Rodzaj refa bazowego
+          <select [disabled]="busy()" [value]="beforeKind()" (change)="setKind('before',$any($event.target).value)">
+            <option>BRANCH</option><option>TAG</option><option>COMMIT</option>
+          </select></label>
+          <app-gitlab-branch-select label="Stan bazowy" [sourceKey]="systemId() ? systemId()+':'+beforeKind():''"
+            [branchLoader]="beforeLoader" [selectedBranch]="before()" [autoSelect]="false" [disabled]="busy()"
+            (branchSelected)="before.set($event)" />
+        </div>
+        <div><label class="form-field">Rodzaj refa docelowego
+          <select [disabled]="busy()" [value]="afterKind()" (change)="setKind('after',$any($event.target).value)">
+            <option>BRANCH</option><option>TAG</option><option>COMMIT</option>
+          </select></label>
+          <app-gitlab-branch-select label="Stan docelowy" [sourceKey]="systemId() ? systemId()+':'+afterKind():''"
+            [branchLoader]="afterLoader" [selectedBranch]="after()" [autoSelect]="false" [disabled]="busy()"
+            (branchSelected)="after.set($event)" />
+        </div>
+      </div>
+      <div class="run-options">
+        <button type="button" class="secondary-button" [disabled]="busy()" (click)="swap()">Zamień kierunek</button>
+        <label class="form-field">Model AI
+          <select [value]="model()" [disabled]="busy() || modelsLoading()" (change)="selectModel($any($event.target).value)">
+            <option value="">Domyślny model backendu</option>
+            @for(option of modelCatalog().models;track option.id) { <option [value]="option.id">{{option.name}}</option> }
+          </select>
+        </label>
+        <label class="form-field">Reasoning effort
+          <select [value]="reasoning()" [disabled]="busy() || !reasoningOptions().length" (change)="reasoning.set($any($event.target).value)">
+            <option value="">Domyślny</option>
+            @for(option of reasoningOptions();track option) { <option [value]="option">{{option}}</option> }
+          </select>
+        </label>
+        <button class="primary-button" type="button" [disabled]="!systemId() || !before() || !after() || busy()"
+          (click)="start()">Generuj raport</button>
+      </div>
+      } @else { <p>Nowe analizy Release summary są wyłączone. Zapisane wyniki pozostają dostępne.</p> }
+      @if(error()) { <p role="alert">{{error()}}</p>
+        @if(job() && busy()) { <button class="secondary-button" (click)="retryPolling()">Wznów odświeżanie</button> }
+      }
+    </section>
+
+    @if(job(); as current) {
+      <section class="analysis-card">
+        <p class="status-pill" role="status">{{statusLabel(current.status)}}</p>
+        @if(current.error) { <p role="alert">{{current.error}}</p> }
+        <app-analysis-result-header title="Raport wdrożeniowy" [context]="current.comparison?.systemName || current.request.systemId"
+          [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — sprawdź kompletność i jawne luki.' : ''"
+          [shareDocument]="shareDocument()" />
+        <app-analysis-result-tabs [tabs]="tabs" [activeTabId]="activeTab()" idPrefix="release-summary" (tabSelected)="activeTab.set($event)" />
+        @if(activeTab() === 'report') {
+          @if(current.report) { <app-analysis-report-panel [report]="current.report" /> }
+          @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź źródła i przebieg analizy.'}}</p> }
+        } @else {
+          @if(current.result;as result) {
+            <p>Udokumentowane jednostki: <strong>{{result.documentedUnits}} / {{result.expectedUnits}}</strong>.
+              Elementy: <strong>{{result.documentedElements}} / {{result.expectedElements}}</strong>.</p>
+            <p>Odczyt źródeł: {{result.sourceComplete ? 'kompletny' : 'niekompletny'}}.
+              AI_IDENTIFIED oznacza brak deterministycznego potwierdzenia pełności.</p>
+            <ul>@for(limit of result.visibilityLimits;track $index) { <li>{{limit}}</li> }</ul>
+          }
+          @if(current.evidence;as evidence) {
+            <p>Zweryfikowano {{evidence.scannedFiles}} odczytów. Jednostki zmian: {{evidence.units.length}}.</p>
+            <ul>@for(gap of evidence.gaps;track $index) { <li><strong>{{gap.code}}</strong> — {{gap.path}}: {{gap.detail}}</li> }</ul>
+          }
+          <div class="comparison-table">
+            <table><thead><tr><th scope="col">Repozytorium</th><th scope="col">Stan bazowy</th><th scope="col">Stan docelowy</th><th scope="col">Zakres</th></tr></thead>
+              <tbody>@for(repo of current.comparison?.repositories || [];track repo.repositoryId) {
+                <tr><th scope="row">{{repo.repositoryId}}</th><td>{{repo.baselineRef}}<br><code>{{repo.baselineCommit}}</code></td>
+                  <td>{{repo.targetRef}}<br><code>{{repo.targetCommit}}</code></td><td>{{repo.prefixes.join(', ') || 'Całe repozytorium'}}</td></tr>
+              }</tbody>
+            </table>
+          </div>
+          <details><summary>Źródła przypięte do commitów</summary>
+            @for(source of current.evidence?.sources || [];track $index) { <p><code>{{source.sourceRef}}</code></p> }
+          </details>
+        }
+      </section>
+      <app-analysis-feature-aside [progressActive]="busy()" [aiActive]="busy()" [progressCount]="current.steps.length"
+        [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [showChat]="false" [showFeedback]="false">
+        <div progressPanel><app-analysis-steps-panel [steps]="current.steps" [evidenceSections]="current.contextSections"
+          [toolEvidenceSections]="current.toolEvidenceSections" [preparedPrompt]="current.preparedPrompt || ''"
+          [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" [finalResultAvailable]="!!current.report" /></div>
+        <div aiPanel><app-analysis-steps-panel [aiActivityEvents]="current.aiActivityEvents" [toolEvidenceSections]="current.toolEvidenceSections"
+          [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+      </app-analysis-feature-aside>
+    } @else {
+      <section class="analysis-card empty-state"><span class="material-symbols-outlined" aria-hidden="true">difference</span>
+        <h3>Od zmiany w bazie do jej znaczenia w systemie</h3><p>Raport połączy szczegóły migracji z kodem aplikacji i Operational Context.</p></section>
+    }
+  </main>
+</div>
+

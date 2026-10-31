@@ -26,7 +26,7 @@ class UiConfigControllerTest {
                 "CRM Operations Workspace",
                 "Team Delivery Workspace",
                 "Team Delivery Workspace",
-                "crm-release"
+                "crm-release", true
         ));
 
         mockMvc.perform(get("/api/ui/config"))
@@ -34,6 +34,7 @@ class UiConfigControllerTest {
                 .andExpect(jsonPath("$.title").value("CRM Operations Workspace"))
                 .andExpect(jsonPath("$.subtitle").value("Team Delivery Workspace"))
                 .andExpect(jsonPath("$.defaultTitle").value("Team Delivery Workspace"))
-                .andExpect(jsonPath("$.defaultBranch").value("crm-release"));
+                .andExpect(jsonPath("$.defaultBranch").value("crm-release"))
+                .andExpect(jsonPath("$.releaseSummaryEnabled").value(true));
     }
 }

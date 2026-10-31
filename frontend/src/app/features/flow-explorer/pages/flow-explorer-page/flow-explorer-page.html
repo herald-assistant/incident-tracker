@@ -16,7 +16,7 @@
 
       <div class="flow-explorer-collapsible__body">
         <div class="flow-explorer-target-grid">
-          <app-application-select [options]="systems()" [selectedId]="selectedSystemId()"
+          <app-application-select [options]="applicationOptions()" [selectedId]="selectedSystemId()"
             [loading]="catalogState() === 'loading'" [error]="catalogError()"
             (selected)="selectApplication($event)" (retry)="loadSystems()" />
 

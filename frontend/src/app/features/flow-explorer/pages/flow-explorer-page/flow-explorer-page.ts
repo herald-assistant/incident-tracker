@@ -226,6 +226,9 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly catalogState = signal<CatalogState>('empty');
   readonly endpointState = signal<EndpointState>('idle');
   readonly systems = signal<FlowExplorerSystemOption[]>([]);
+  readonly applicationOptions = computed(() => this.systems().map(system => ({...system,
+    searchTerms: [system.shortName, system.kind, system.lifecycleStatus, system.operationalStatus,
+      system.criticality, ...system.ownerTeamIds].filter((value): value is string => !!value)})));
   readonly endpointInventory = signal<FlowExplorerEndpointInventoryResponse | null>(null);
   readonly catalogError = signal('');
   readonly endpointError = signal('');
