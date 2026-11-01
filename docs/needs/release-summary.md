@@ -21,6 +21,10 @@ Raport nie wymaga znajomości parsera Liquibase: bez wewnętrznych hashy, ście�
 AST, JSON ani oddzielnych wierszy dla kontenerów składniowych. Kolumna i jej
 ograniczenia tworzą jeden opis; definicja i znaczenie funkcjonalne są obok siebie.
 Blokada przygotowania nie pokazuje niewypełnionego szablonu jako raportu.
+Formularz startowy powinien być spójny z Explorerami: uporządkowany wybór
+aplikacji, punktu wejścia i stanu docelowego, ustawienia AI oraz jeden wyraźny
+przycisk generowania obok importu. Kierunek porównania wybiera się przez refy,
+bez dodatkowej funkcji ich zamiany.
 
 Pierwszy zakres obejmuje zmiany bazodanowe wynikające z Liquibase. Raport ma
 obejmować wszystkie ustalone zmiany, w tym każdą tabelę, kolumnę, indeks,

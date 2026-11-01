@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
@@ -26,7 +27,7 @@ import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, liste
 
 @Component({
   selector: 'app-release-summary-page',
-  imports: [FormsModule, ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
+  imports: [FormsModule, MatTooltipModule, ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent, AnalysisReportPanelComponent, AnalysisResultHeaderComponent, AnalysisResultTabsComponent,
     AnalysisFollowUpChatComponent, AnalysisReportEditorComponent],
   templateUrl: './release-summary-page.html',
@@ -61,6 +62,14 @@ export class ReleaseSummaryPageComponent {
   readonly canStart = computed(() => !!this.systemId() && !!this.before() && !!this.after() && !!this.effectiveModel()
     && !this.modelsLoading() && !this.busy() && !this.editing() && this.uiConfig.config().releaseSummaryEnabled);
   readonly busy = computed(() => this.starting() || this.saving() || this.chatSubmitting() || !!this.job() && !terminalReleaseSummary(this.job()!));
+  readonly startHint = computed(() => {
+    if (this.busy()) return 'Trwa przetwarzanie analizy.';
+    if (this.editing()) return 'Zakończ edycję raportu, aby rozpocząć nowe porównanie.';
+    if (this.modelsLoading()) return 'Pobieranie modeli AI…';
+    if (!this.effectiveModel()) return 'Wybierz model AI, aby wygenerować raport.';
+    if (!this.systemId() || !this.before() || !this.after()) return 'Wybierz aplikację, punkt wejścia i stan docelowy.';
+    return 'Gotowe do wygenerowania raportu.';
+  });
   readonly shareDocument = computed(() => this.job()?.report ? buildReportShareDocument(this.job()!.report!, 'release-summary.md') : null);
   readonly tabs = [{id: 'report', tabLabel: 'Raport'}, {id: 'coverage', tabLabel: 'Kompletność i źródła'}];
   readonly beforeLoader = (key: string, search: string, page?: number) =>
@@ -89,11 +98,6 @@ export class ReleaseSummaryPageComponent {
   setKind(side: 'before' | 'after', kind: ReleaseRefKind): void {
     if(this.busy()) return;
     if(side === 'before') { this.beforeKind.set(kind); this.before.set(''); } else { this.afterKind.set(kind); this.after.set(''); }
-  }
-  swap(): void {
-    if(this.busy()) return;
-    const value = this.before(), kind = this.beforeKind();
-    this.before.set(this.after()); this.beforeKind.set(this.afterKind()); this.after.set(value); this.afterKind.set(kind);
   }
   selectModel(model: string): void {
     this.model.set(model); this.reasoning.set(defaultReasoningEffortForAiModel(this.modelCatalog(), model));

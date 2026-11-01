@@ -33,10 +33,14 @@ describe('ReleaseSummary workspace',()=>{
       {provide:ActivatedRoute,useValue:{snapshot:{queryParamMap:convertToParamMap({})}}}
     ]});
   });
-  it('sends typed comparison and locks selection until the run finishes',()=>{
+  it('sends the comparison selected in the form and locks selection until the run finishes',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);fixture.detectChanges();
     const page=fixture.componentInstance;page.selectSystem('crm');
-    page.before.set('refs/heads/release');page.after.set('refs/tags/release');page.selectModel('crm-model');page.start();
+    page.before.set('refs/heads/release');fixture.detectChanges();
+    const targetKind=fixture.nativeElement.querySelector('select[aria-label="Typ refa stanu docelowego"]');
+    targetKind.value='TAG';targetKind.dispatchEvent(new Event('change'));
+    page.after.set('refs/tags/release');page.selectModel('crm-model');fixture.detectChanges();
+    fixture.nativeElement.querySelector('.release-summary-actions .primary-button').click();
     expect(api.start).toHaveBeenCalledWith({systemId:'crm',mode:'LIQUIBASE',baselineRef:{kind:'BRANCH',name:'release'},targetRef:{kind:'TAG',name:'release'},model:'crm-model'});
     page.selectSystem('crm-other');expect(page.systemId()).toBe('crm');
     progress.next(releaseSnapshot());page.selectSystem('crm-other');expect(page.before()).toBe('');expect(page.after()).toBe('');
@@ -76,11 +80,6 @@ describe('ReleaseSummary workspace',()=>{
     page.sendChat('Pytanie');page.saveReport({expectedRevisionSha256:'old',markdownSummary:'Zmiana',sections:[]});
     expect(api.chat).not.toHaveBeenCalled();expect(api.edit).not.toHaveBeenCalled();expect(page.canEdit()).toBe(false);
   });
-  it('swaps both values and their ref kinds',()=>{
-    const page=TestBed.createComponent(ReleaseSummaryPageComponent).componentInstance;
-    page.before.set('refs/heads/current');page.after.set('refs/tags/next');page.afterKind.set('TAG');page.swap();
-    expect(page.before()).toBe('refs/tags/next');expect(page.beforeKind()).toBe('TAG');expect(page.afterKind()).toBe('BRANCH');
-  });
   it('renders partial report through the shared renderer and exposes coverage',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);
     const job=releaseSnapshot('PARTIAL');job.report={reportId:'report',header:'CRM release',subHeader:'CRM',
@@ -90,8 +89,8 @@ describe('ReleaseSummary workspace',()=>{
     fixture.componentInstance.job.set(job);fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-analysis-report-panel table')).not.toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('OVERVIEW');
-    expect(fixture.nativeElement.textContent).toContain('Stan obecny');
-    expect(fixture.nativeElement.textContent).toContain('Wdrażana wersja');
+    expect(fixture.nativeElement.textContent).toContain('Punkt wejścia');
+    expect(fixture.nativeElement.textContent).toContain('Stan docelowy');
     expect(fixture.nativeElement.textContent).toContain('Raport częściowy');
     expect(fixture.nativeElement.querySelector('app-analysis-feature-aside')).not.toBeNull();
     fixture.componentInstance.activeTab.set('coverage');fixture.detectChanges();

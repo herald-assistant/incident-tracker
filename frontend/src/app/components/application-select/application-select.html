@@ -1,0 +1,53 @@
+<div class="application-select" (click)="$event.stopPropagation()">
+  <span class="application-select__label">
+    <span class="field-label">Application</span>
+    <span class="application-select__help" tabindex="0" aria-label="Informacje o wyborze aplikacji"
+      matTooltip="Aplikacja z Operational Context. Jej wybór określa repozytoria dostępne w analizie."
+      matTooltipPosition="right">
+      <span class="material-symbols-outlined" aria-hidden="true">info</span>
+    </span>
+  </span>
+  <button type="button" class="application-select__control" aria-haspopup="listbox" aria-label="Application"
+    [attr.aria-expanded]="open()" [attr.aria-busy]="loading()" [disabled]="disabled()" (click)="open.set(!open())">
+    <span class="application-select__value">
+      <strong [title]="selectedLabel()">{{ selectedLabel() }}</strong>
+      <small [title]="selectedDescription()">{{ selectedDescription() }}</small>
+    </span>
+    @if (loading()) {
+      <span class="application-select-loader" role="status" aria-label="Loading applications">…</span>
+    } @else {
+      <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+    }
+  </button>
+  @if (open()) {
+    <div class="application-select__menu">
+      <label class="application-select__search">
+        <span class="field-label">Find application</span>
+        <input type="search" class="text-input" autocomplete="off" [value]="search()"
+          (input)="search.set($any($event.target).value)" (keydown.arrowdown)="focusFirst($event)" />
+      </label>
+      @if (loading()) { <p role="status">Pobieranie aplikacji…</p> }
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+        <button class="secondary-button" type="button" (click)="retry.emit()">Ponów</button>
+      }
+      <div class="application-select__options" role="listbox" aria-label="Application options">
+        @for (option of filtered(); track option.systemId; let index = $index) {
+          <button type="button" role="option" class="application-select__option"
+            [title]="option.summary || option.systemId" [attr.aria-selected]="option.systemId === selectedId()"
+            (keydown)="optionKeydown($event,index)" (click)="selected.emit(option.systemId); open.set(false)">
+            <span class="application-select__value">
+              <strong>{{ option.name || option.systemId }}</strong>
+              @if (option.summary) { <small>{{ option.summary }}</small> }
+            </span>
+            @if (option.systemId === selectedId()) {
+              <span class="material-symbols-outlined" aria-hidden="true">check</span>
+            }
+          </button>
+        } @empty {
+          @if (!loading()) { <p>Brak aplikacji dla aktualnego filtra.</p> }
+        }
+      </div>
+    </div>
+  }
+</div>

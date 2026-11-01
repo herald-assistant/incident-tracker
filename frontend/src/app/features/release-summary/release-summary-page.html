@@ -1,55 +1,104 @@
 <div class="page-shell release-summary-page">
-  <main class="release-summary-workspace" aria-label="Release summary">
-    <section class="analysis-card release-summary-composer">
-      <header><p class="section-eyebrow">Release summary</p><h2>Zmiany bazodanowe we wdrożeniu</h2>
+  <main class="release-summary-workspace" [class.release-summary-workspace--with-result]="!!job()" aria-label="Release summary">
+    <section class="analysis-card release-summary-composer" aria-labelledby="releaseSummaryTitle">
+      <header class="release-summary-heading">
+        <p class="section-eyebrow">Release summary</p>
+        <h2 id="releaseSummaryTitle">Zmiany bazodanowe we wdrożeniu</h2>
         <p>Wybierz aplikację i kierunek porównania. Raport opisze zmiany Liquibase oraz ich znaczenie funkcjonalne.</p>
       </header>
-      <div class="run-options">
-        <input #importInput type="file" accept="application/json,.json" hidden (change)="importFile($event)" />
-        <button class="secondary-button" type="button" [disabled]="busy() || editing()" (click)="importInput.click()">Import JSON</button>
-        @if(job()?.exportAvailable) {<button class="secondary-button" type="button" [disabled]="busy()" (click)="exportFile()">Export JSON</button>}
-      </div>
+      <input #importInput type="file" aria-label="Importuj raport Release summary" accept="application/json,.json" hidden (change)="importFile($event)" />
       @if (uiConfig.config().releaseSummaryEnabled) {
-      <div class="target-grid">
-        <app-application-select [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
-          [disabled]="busy()" [error]="error()" (selected)="selectSystem($event)" (retry)="loadApplications()" />
-        <div><label class="form-field">Rodzaj refa bazowego
-          <select [disabled]="busy()" [value]="beforeKind()" (change)="setKind('before',$any($event.target).value)">
-            <option>BRANCH</option><option>TAG</option><option>COMMIT</option>
-          </select></label>
-          <app-gitlab-branch-select label="Stan obecny — punkt wyjścia" [sourceKey]="systemId() ? systemId()+':'+beforeKind():''"
-            [branchLoader]="beforeLoader" [selectedBranch]="before()" [autoSelect]="false" [disabled]="busy()"
-            (branchSelected)="before.set($event)" />
+        <div class="release-summary-target-grid">
+          <app-application-select [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
+            [disabled]="busy()" [error]="error()" (selected)="selectSystem($event)" (retry)="loadApplications()" />
+          <div class="release-summary-ref" role="group" aria-label="Punkt wejścia">
+            <label class="form-field">
+              <span class="field-label">Typ refa</span>
+              <span class="release-summary-select">
+                <select class="select-input" aria-label="Typ refa punktu wejścia" [disabled]="busy()" [value]="beforeKind()"
+                  (change)="setKind('before',$any($event.target).value)">
+                  <option value="BRANCH">Branch</option><option value="TAG">Tag</option><option value="COMMIT">Commit</option>
+                </select>
+                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              </span>
+            </label>
+            <app-gitlab-branch-select label="Punkt wejścia" emptyLabel="Wybierz ref" filterLabel="Znajdź ref"
+              [sourceKey]="systemId() ? systemId()+':'+beforeKind():''" [branchLoader]="beforeLoader"
+              [selectedBranch]="before()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="before.set($event)" />
+          </div>
+          <div class="release-summary-ref" role="group" aria-label="Stan docelowy">
+            <label class="form-field">
+              <span class="field-label">Typ refa</span>
+              <span class="release-summary-select">
+                <select class="select-input" aria-label="Typ refa stanu docelowego" [disabled]="busy()" [value]="afterKind()"
+                  (change)="setKind('after',$any($event.target).value)">
+                  <option value="BRANCH">Branch</option><option value="TAG">Tag</option><option value="COMMIT">Commit</option>
+                </select>
+                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              </span>
+            </label>
+            <app-gitlab-branch-select label="Stan docelowy" emptyLabel="Wybierz ref" filterLabel="Znajdź ref"
+              [sourceKey]="systemId() ? systemId()+':'+afterKind():''" [branchLoader]="afterLoader"
+              [selectedBranch]="after()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="after.set($event)" />
+          </div>
         </div>
-        <div><label class="form-field">Rodzaj refa docelowego
-          <select [disabled]="busy()" [value]="afterKind()" (change)="setKind('after',$any($event.target).value)">
-            <option>BRANCH</option><option>TAG</option><option>COMMIT</option>
-          </select></label>
-          <app-gitlab-branch-select label="Wdrażana wersja — stan docelowy" [sourceKey]="systemId() ? systemId()+':'+afterKind():''"
-            [branchLoader]="afterLoader" [selectedBranch]="after()" [autoSelect]="false" [disabled]="busy()"
-            (branchSelected)="after.set($event)" />
+        <div class="release-summary-ai-grid">
+          <label class="form-field">
+            <span class="release-summary-field-label">
+              <span class="field-label">Model AI</span>
+              <span class="release-summary-help" tabindex="0" aria-label="Informacje o modelu AI"
+                matTooltip="Model przygotowujący raport zmian bazodanowych." matTooltipPosition="right">
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <span class="release-summary-select">
+              <select class="select-input" aria-label="Model AI" [ngModel]="model()" [disabled]="busy() || modelsLoading()" (ngModelChange)="selectModel($event)">
+                <option value="">{{modelCatalog().defaultModel ? 'Domyślny: '+modelCatalog().defaultModel : 'Wybierz model AI'}}</option>
+                @for(option of modelCatalog().models;track option.id) { <option [value]="option.id">{{option.name}}</option> }
+              </select>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </span>
+          </label>
+          <label class="form-field">
+            <span class="release-summary-field-label">
+              <span class="field-label">Reasoning effort</span>
+              <span class="release-summary-help" tabindex="0" aria-label="Informacje o reasoning effort"
+                matTooltip="Poziom rozumowania dostępny dla wybranego modelu." matTooltipPosition="right">
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              </span>
+            </span>
+            <span class="release-summary-select">
+              <select class="select-input" aria-label="Reasoning effort" [ngModel]="reasoning()" [disabled]="busy() || !reasoningOptions().length" (ngModelChange)="reasoning.set($event)">
+                <option value="">Domyślny</option>
+                @for(option of reasoningOptions();track option) { <option [value]="option">{{option}}</option> }
+              </select>
+              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+            </span>
+          </label>
         </div>
-      </div>
-      <div class="run-options">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="swap()">Zamień kierunek</button>
-        <label class="form-field">Model AI
-          <select aria-label="Model AI" [ngModel]="model()" [disabled]="busy() || modelsLoading()" (ngModelChange)="selectModel($event)">
-            <option value="">{{modelCatalog().defaultModel ? 'Domyślny: '+modelCatalog().defaultModel : 'Wybierz model AI'}}</option>
-            @for(option of modelCatalog().models;track option.id) { <option [value]="option.id">{{option.name}}</option> }
-          </select>
-        </label>
-        <label class="form-field">Reasoning effort
-          <select aria-label="Reasoning effort" [ngModel]="reasoning()" [disabled]="busy() || !reasoningOptions().length" (ngModelChange)="reasoning.set($event)">
-            <option value="">Domyślny</option>
-            @for(option of reasoningOptions();track option) { <option [value]="option">{{option}}</option> }
-          </select>
-        </label>
-        <button class="primary-button" type="button" [disabled]="!canStart()"
-          (click)="start()">Generuj raport</button>
-      </div>
-      @if(modelError()) {<p role="alert">{{modelError()}}</p>}
-      @else if(!modelsLoading() && !effectiveModel()) {<p class="model-hint">Wybierz model AI, aby wygenerować raport.</p>}
+        @if(modelError()) {<p role="alert">{{modelError()}}</p>}
       } @else { <p>Nowe analizy Release summary są wyłączone. Zapisane wyniki pozostają dostępne.</p> }
+      <footer class="release-summary-actions">
+        <div class="release-summary-actions__buttons">
+          @if (uiConfig.config().releaseSummaryEnabled) {
+            <button class="primary-button" type="button" [disabled]="!canStart()" (click)="start()">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              {{starting() ? 'Uruchamianie…' : 'Generuj raport'}}
+            </button>
+          }
+          <button class="secondary-button" type="button" [disabled]="busy() || editing()" (click)="importInput.click()">
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span> Import
+          </button>
+          @if(job()?.exportAvailable) {
+            <button class="secondary-button" type="button" [disabled]="busy()" (click)="exportFile()">
+              <span class="material-symbols-outlined" aria-hidden="true">download</span> Export
+            </button>
+          }
+        </div>
+        @if (uiConfig.config().releaseSummaryEnabled) {
+          <span class="release-summary-start-hint" aria-live="polite">{{startHint()}}</span>
+        }
+      </footer>
       @if(error()) { <p role="alert">{{error()}}</p>
         @if(job() && busy()) { <button class="secondary-button" (click)="retryPolling()">Wznów odświeżanie</button> }
       }
@@ -60,8 +109,8 @@
         @if(imported()) {<p role="status">Import pliku — wynik tylko do odczytu, bez sesji AI.</p>}
         <p class="status-pill" [attr.data-state]="current.status" role="status">{{statusLabel(current.status)}}</p>
         @if(current.error) { <p role="alert">{{current.error}}</p> }
-        <p class="release-direction"><span>Stan obecny <strong>{{current.request.baselineRef.name}}</strong></span>
-          <span aria-hidden="true">→</span><span>Wdrażana wersja <strong>{{current.request.targetRef.name}}</strong></span></p>
+        <p class="release-direction"><span>Punkt wejścia <strong>{{current.request.baselineRef.name}}</strong></span>
+          <span aria-hidden="true">→</span><span>Stan docelowy <strong>{{current.request.targetRef.name}}</strong></span></p>
         <app-analysis-result-header title="Raport wdrożeniowy" [context]="current.comparison?.systemName || current.request.systemId"
           [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — sprawdź kompletność i jawne luki.' : ''"
           [shareDocument]="shareDocument()" [editable]="canEdit() && !editing()" (editRequested)="editing.set(true)" />
@@ -86,7 +135,7 @@
             <ul>@for(gap of evidence.gaps;track $index) { <li><strong>{{gap.code}}</strong> — {{gap.path}}: {{gap.detail}}</li> }</ul>
           }
           <div class="comparison-table">
-            <table><thead><tr><th scope="col">Repozytorium</th><th scope="col">Stan bazowy</th><th scope="col">Stan docelowy</th><th scope="col">Zakres</th></tr></thead>
+            <table><thead><tr><th scope="col">Repozytorium</th><th scope="col">Punkt wejścia</th><th scope="col">Stan docelowy</th><th scope="col">Zakres</th></tr></thead>
               <tbody>@for(repo of current.comparison?.repositories || [];track repo.repositoryId) {
                 <tr><th scope="row">{{repo.repositoryId}}</th><td>{{repo.baselineRef}}<br><code>{{repo.baselineCommit}}</code></td>
                   <td>{{repo.targetRef}}<br><code>{{repo.targetCommit}}</code></td><td>{{repo.prefixes.join(', ') || 'Całe repozytorium'}}</td></tr>
@@ -114,9 +163,6 @@
         <div aiPanel><app-analysis-steps-panel [aiActivityEvents]="current.aiActivityEvents" [toolEvidenceSections]="current.toolEvidenceSections"
           [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
       </app-analysis-feature-aside>
-    } @else {
-      <section class="analysis-card empty-state"><span class="material-symbols-outlined" aria-hidden="true">difference</span>
-        <h3>Od zmiany w bazie do jej znaczenia w systemie</h3><p>Raport połączy szczegóły migracji z kodem aplikacji i Operational Context.</p></section>
     }
   </main>
 </div>

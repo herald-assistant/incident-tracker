@@ -1,0 +1,142 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.application-select {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.application-select__label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 18px;
+}
+
+.field-label {
+  margin: 0;
+  line-height: 1;
+}
+
+.application-select__help {
+  display: inline-flex;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.application-select__help .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.application-select__control,
+.application-select__option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.application-select__control {
+  height: 58px;
+  overflow: hidden;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.application-select__control:hover:not(:disabled),
+.application-select__control:focus-visible,
+.application-select__help:focus-visible {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.application-select__control:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.application-select__control > .material-symbols-outlined,
+.application-select__option > .material-symbols-outlined {
+  color: var(--text-muted);
+  font-size: 21px;
+}
+
+.application-select__value {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.application-select__value strong,
+.application-select__value small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.application-select__value strong {
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.application-select__value small {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.application-select__menu {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 10px;
+  min-width: min(16rem, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.application-select__search {
+  display: grid;
+  gap: 6px;
+}
+
+.application-select__options {
+  max-height: min(280px, 50vh);
+  overflow: auto;
+}
+
+.application-select__option {
+  border-color: transparent;
+}
+
+.application-select__option:hover,
+.application-select__option:focus-visible,
+.application-select__option[aria-selected='true'] {
+  background: var(--primary-soft);
+}
+
+.application-select__option:focus-visible {
+  border-color: var(--primary);
+  outline: none;
+}

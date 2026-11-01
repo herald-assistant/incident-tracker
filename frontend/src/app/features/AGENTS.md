@@ -45,7 +45,9 @@ chatu drugi raz w initial job usage. Fragmenty Markdown raportu nawigują w tym
 samym dokumencie przez shared markdown-content, bez przejścia na bazową trasę.
 Import Release summary pozostaje read-only, a checkbox korekty raportu jest
 domyślnie wyłączony. Wymagaj wybranego modelu lub modelu domyślnego backendu.
-Pokazuj kierunek stan obecny → wdrażana wersja i tylko opublikowane sekcje;
+Formularz ma osobne rzędy źródeł i ustawień AI oraz dolny pasek akcji.
+Używaj etykiet „Punkt wejścia” i „Stan docelowy”; bez akcji zamiany kierunku.
+Pokazuj ten kierunek także nad wynikiem i tylko opublikowane sekcje;
 blokada przygotowania nie jest raportem. W shared report panel wyłącz
 showTechnicalIds; zachowaj kotwice sekcji i źródła. Tabele szczegółów mają
 cztery czytelne kolumny; dane o kompletności pozostają w osobnej zakładce.

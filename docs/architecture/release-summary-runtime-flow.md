@@ -173,7 +173,12 @@ NO_CHANGES ma osobny krótki raport bez pustych tabel i bez sesji AI.
 
 UI reuse'uje polling, report panel, zakładki, evidence/activity/usage, Share,
 manual editor i chat. Wymaga wybranego modelu albo modelu domyślnego backendu.
-Kierunek „Stan obecny → Wdrażana wersja” pozostaje widoczny nad wynikiem.
+Formularz grupuje aplikację i parę refów w jednym rzędzie, a model i reasoning
+effort w dwóch równych polach poniżej. Akcje generowania, importu i eksportu są
+na dole. Wspólny application select przedstawia nazwę i opis aplikacji zgodnie
+z wzorcem Explorerów. Na węższych ekranach pola układają się pionowo.
+Etykiety i kierunek „Punkt wejścia → Stan docelowy” pozostają widoczne również
+nad wynikiem. Formularz nie oferuje automatycznej zamiany kierunku.
 Shared report panel ma `showTechnicalIds=false`, zachowując kotwice sekcji.
 Linki Markdown do sekcji otwierają je w bieżącym dokumencie bez nawigowania
 do bazowego URL aplikacji; Share zachowuje kotwice także w eksporcie.
