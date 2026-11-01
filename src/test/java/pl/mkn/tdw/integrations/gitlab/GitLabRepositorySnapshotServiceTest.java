@@ -20,6 +20,8 @@ class GitLabRepositorySnapshotServiceTest {
         server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(url+"1"))
                 .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess("[{\"path\":\"one.xml\",\"type\":\"blob\",\"mode\":\"100644\",\"id\":\""+sha+"\"}]",org.springframework.http.MediaType.APPLICATION_JSON).header("X-Next-Page","2"));
         server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(url+"2"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withStatus(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(url+"2"))
                 .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess("[{\"path\":\"two.xml\",\"type\":\"blob\",\"mode\":\"100644\",\"id\":\""+sha+"\"}]",org.springframework.http.MediaType.APPLICATION_JSON));
         assertEquals(2,service.snapshot("CRM","customer",sha).blobs().size()); server.verify(); server.reset();
         server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(url+"1"))

@@ -57,10 +57,12 @@ Wszystkie fixture'y i przykłady pozostają fikcyjnym CRM.
   awarii drzewa, pliku, zależności i sanitizacji oraz regresja feature'a.
   75 testów poprawnych, 1 pilot pominięty; log source-step1. Odczyt raw
   zachowuje status HTTP i Retry-After bez treści odpowiedzi serwera. Commit.
-- [ ] Odporność odczytu: ograniczone retry tylko dla błędów przejściowych,
+- [x] Odporność odczytu: ograniczone retry tylko dla błędów przejściowych,
   także przerwanego body; testy MockRestServiceServer dla powodzenia po
   błędzie, wyczerpania prób, Retry-After, trwałych błędów i przerwania.
-  Regresja integracji i konsumentów, kontrola granic. Commit.
+  Regresja integracji i konsumentów, kontrola granic: 456 testów poprawnych,
+  1 pilot pominięty; log source-step2. Także przerwane body jest czytane
+  od początku, a ponowiona strona nie dubluje wpisów drzewa. Commit.
 - [ ] Pełne testy backendu, aktualizacja dokumentacji, uruchomienie nowej
   aplikacji i ponowienie właściwej analizy z preferencjami operatora.
   Weryfikacja zapisanych źródeł, promptu i wyniku. Commit zamykający.

@@ -23,6 +23,7 @@ import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeException;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreePage;
 import pl.mkn.tdw.integrations.gitlab.internal.GitLabRepositoryAnalysisCache;
+import pl.mkn.tdw.integrations.gitlab.internal.GitLabReadRetry;
 import pl.mkn.tdw.integrations.gitlab.service.GitLabRepositoryTreeService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
@@ -374,7 +375,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
             throw new IllegalArgumentException("maxBytes must be between 1 and 1048576.");
         }
         try {
-            var content = restClient().get()
+            var content = GitLabReadRetry.execute("bounded-file", () -> restClient().get()
                     .uri(rawFileUri(group, projectName, revision, filePath))
                     .accept(MediaType.TEXT_PLAIN)
                     .exchange((request, response) -> {
@@ -390,7 +391,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
                             throw new GitLabFileTooLargeException(filePath, maxBytes);
                         }
                         return decodeTextFile(body, filePath);
-                    });
+                    }));
             return new GitLabRepositoryFileContent(group, projectName, revision, filePath, content, false);
         } catch (GitLabFileTooLargeException exception) {
             throw exception;
@@ -405,7 +406,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
             String group, String projectName, String revision, String filePath
     ) {
         try {
-            var content = restClient().get()
+            var content = GitLabReadRetry.execute("complete-file", () -> restClient().get()
                     .uri(rawFileUri(group, projectName, revision, filePath))
                     .accept(MediaType.TEXT_PLAIN)
                     .exchange((request, response) -> {
@@ -414,7 +415,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
                                     response.getStatusCode().value(),response.getStatusText(),response.getHeaders(),null,null);
                         }
                         return decodeTextFile(response.getBody().readAllBytes(), filePath);
-                    });
+                    }));
             return new GitLabRepositoryFileContent(group, projectName, revision, filePath, content, false);
         } catch (RuntimeException exception) {
             throw new IllegalStateException("GitLab complete file read failed for "
@@ -936,10 +937,10 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
             String filePath
     ) {
         try {
-            var entity = restClient().head()
+            var entity = GitLabReadRetry.execute("file-metadata", () -> restClient().head()
                     .uri(fileMetadataUri(group, projectName, branch, filePath))
                     .retrieve()
-                    .toBodilessEntity();
+                    .toBodilessEntity());
 
             return GitLabFileMetadataResponse.fromHeaders(entity.getHeaders(), filePath);
         } catch (RestClientResponseException exception) {
@@ -985,11 +986,11 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
             String commitId
     ) {
         try {
-            return restClient().get()
+            return GitLabReadRetry.execute("commit-metadata", () -> restClient().get()
                     .uri(commitMetadataUri(group, projectName, commitId))
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
-                    .body(GitLabCommitMetadataResponse.class);
+                    .body(GitLabCommitMetadataResponse.class));
         } catch (RestClientResponseException exception) {
             throw new IllegalStateException(
                     "GitLab commit metadata read failed for " + group + "/" + projectName + " :: " + commitId,
@@ -1000,11 +1001,11 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
 
     private String fetchRawFileUncached(String group, String projectName, String branch, String filePath) {
         try {
-            return restClient().get()
+            return GitLabReadRetry.execute("raw-file", () -> restClient().get()
                     .uri(rawFileUri(group, projectName, branch, filePath))
                     .accept(MediaType.TEXT_PLAIN)
                     .retrieve()
-                    .body(String.class);
+                    .body(String.class));
         } catch (RestClientResponseException exception) {
             throw new IllegalStateException(
                     "GitLab file read failed for " + group + "/" + projectName + "@" + branch + " :: " + filePath,

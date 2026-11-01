@@ -1,5 +1,7 @@
 package pl.mkn.tdw.integrations.gitlab.service;
 
+import pl.mkn.tdw.integrations.gitlab.internal.GitLabReadRetry;
+
 import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeException;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryTreeNode;
@@ -77,11 +79,12 @@ public class GitLabRepositoryTreeService {
 
         while (StringUtils.hasText(page)) {
             try {
-                var entity = gitLabRestClientFactory.create()
+                var uri = repositoryTreeUri(gitlabApiBaseUrl, encodedProjectIdOrPath, ref, effectivePathPrefix, page);
+                var entity = GitLabReadRetry.execute("repository-tree-page", () -> gitLabRestClientFactory.create()
                         .get()
-                        .uri(repositoryTreeUri(gitlabApiBaseUrl, encodedProjectIdOrPath, ref, effectivePathPrefix, page))
+                        .uri(uri)
                         .retrieve()
-                        .toEntity(GitLabRepositoryTreeNode[].class);
+                        .toEntity(GitLabRepositoryTreeNode[].class));
 
                 var body = entity.getBody();
                 if (body != null) {
