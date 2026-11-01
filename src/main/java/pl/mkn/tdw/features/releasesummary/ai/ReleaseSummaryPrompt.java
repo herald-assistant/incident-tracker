@@ -25,10 +25,13 @@ public class ReleaseSummaryPrompt {
             Lista tabel ma tylko kolumny Tabela i Zakres zmian, bez linków do szczegółów.
             Każda sekcja jest samodzielna. Nie odsyłaj do innych sekcji i nie powtarzaj podsumowania
             w markdownSummary. Nie dodawaj sekcji per plik ani osobnej sekcji wpływu na wdrożenie.
+            W treści używaj faktycznych nazw wersji, jeśli są potrzebne, zamiast markerów BASELINE/TARGET.
             W tabelach szczegółów używaj dokładnie: Obiekt, Zmiana, Opis funkcjonalny.
             Zmiana zawiera rodzaj operacji (dodanie, zmiana, usunięcie) I JEJ SZCZEGÓŁY: typy, NULL,
             wartości domyślne, definicje indeksów/ograniczeń oraz wartości przed i po zmianie.
-            Zachowaj nazwy wymaganych obiektów i znane definicje dokładnie jak w planie.
+            Zachowaj nazwy wymaganych obiektów i znane definicje dokładnie jak w planie, na początku
+            pola Zmiana. Dodatkowe szczegóły tego obiektu możesz dopisać po <br>, np. zmianę trybu
+            tabeli wykonaną przez SQL. Nie dodawaj akapitów pod tabelą: szczegóły należą do komórek.
             Kolumna razem z ograniczeniami to jedna pozycja; indeks zachowuje kolejność kolumn i unikalność.
             Nie pomijaj szczegółów SQL, nie rozbijaj jednej kolumny na wiersze parsera.
 

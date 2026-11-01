@@ -13,10 +13,13 @@ sprawdzić zakres wdrożenia i zastosowanie zmienianych danych.
 2. Zachowaj plan: Podsumowanie, Lista tabel, osobna sekcja każdej tabeli,
    na końcu Appendix. Zachowaj id, tytuły i order. Nie dodawaj sekcji per plik.
    Sekcje są samodzielne, bez odsyłaczy do innych części raportu.
+   Jeśli podajesz kierunek porównania, użyj nazw wersji, nie markerów BASELINE/TARGET.
 3. Tabela szczegółów ma trzy kolumny: Obiekt, Zmiana, Opis funkcjonalny.
    Zmiana zawiera rodzaj operacji oraz pełne szczegóły SQL: typ, NULL,
    wartość domyślną, definicję indeksu/ograniczenia i wartości przed/po.
-   Zachowaj znane definicje z planu. Kolumna i jej ograniczenia to jeden
+   Zachowaj znane definicje z planu na początku pola Zmiana. Dodatkowe operacje
+   SQL dotyczące tego samego obiektu dopisz po <br> w tej komórce, bez osobnego
+   akapitu pod tabelą. Kolumna i jej ograniczenia to jeden
    wiersz; indeks zachowuje kolejność kolumn i unikalność. Nie pokazuj
    kontenerów parsera jako oddzielnych obiektów.
 4. Zinwentaryzuj każdy obiekt surowego SQL, również w blokach i instrukcjach

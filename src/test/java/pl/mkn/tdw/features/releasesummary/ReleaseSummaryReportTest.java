@@ -88,6 +88,19 @@ class ReleaseSummaryReportTest {
             assertThrows(IllegalArgumentException.class,()->reports.validateSection(section.id(),text,evidence,known),bad);
         }
         assertTrue(section.markdown().contains("typ: varchar(20); NULL dozwolony; wartość domyślna: nie określono"));
+        assertThrows(IllegalArgumentException.class,()->reports.validateSection(section.id(),section.markdown()+"\nDodatkowo ALTER TABLE customer SET UNLOGGED.",evidence,known));
+    }
+    @Test void additionalSqlDetailsBelongInTheChangeCellAndCannotReplaceVerifiedDefinitions() {
+        var evidence=ReleaseSummaryCrmFixture.evidence("db/customer.xml",null,"<databaseChangeLog><changeSet id=\"crm\"><createTable tableName=\"customer\"><column name=\"label\" type=\"text\" defaultValue=\"general\"/></createTable><sql>ALTER TABLE customer SET UNLOGGED;</sql></changeSet></databaseChangeLog>");
+        var section=reports.templates(SCOPE,evidence).stream().filter(s->s.id().startsWith("DB_DETAIL")).findFirst().orElseThrow();
+        var text=section.markdown().replace(ReleaseSummaryReportService.PENDING,"Dane klienta są wykorzystywane do wyszukiwania.");
+        var refs=section.meta().references().stream().map(ref->ref.type().equals("sql-coverage")?new AnalysisReportReference(ref.type(),ref.label(),ref.target(),"Tabela customer"):ref).toList();
+        var meta=new AnalysisReportMeta(refs,null,null,null,null,null);var known=reports.initialSources(SCOPE,evidence);
+        assertThrows(IllegalArgumentException.class,()->reports.validatePublication(section.id(),text,meta,evidence,known));
+        var supplemented=text.replace("Dodanie. Definicja obiektu","Dodanie. Definicja obiektu<br>Zmiana. ALTER TABLE customer SET UNLOGGED");
+        assertDoesNotThrow(()->reports.validatePublication(section.id(),supplemented,meta,evidence,known));
+        assertThrows(IllegalArgumentException.class,()->reports.validatePublication(section.id(),supplemented.replace("typ: text","typ: bigint"),meta,evidence,known));
+        assertThrows(IllegalArgumentException.class,()->reports.validatePublication(section.id(),supplemented.replace("general","other"),meta,evidence,known));
     }
     @Test void sqlIsCoveredByActualObjectsInMetadataWithoutDuplicateScriptRows() {
         var evidence=ReleaseSummaryCrmFixture.evidence("db/customer.sql",null,"--liquibase formatted sql\n--changeset crm:search\nCREATE INDEX ix_customer_label ON customer(label);");

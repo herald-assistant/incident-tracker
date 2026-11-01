@@ -63,3 +63,17 @@ Testy i przykłady wyłącznie fikcyjnego CRM.
 - [ ] Pełna regresja backendu po buildzie UI, aktualizacja dokumentacji,
   porządek lokalnych artefaktów starego kontraktu, restart i wygenerowanie
   raportu. Kontrola czytelności w przeglądarce, historii i eksportu. Commit.
+
+## Korekta wykryta w pilocie
+
+Pierwszy rzeczywisty raport pokrył 23/23 pozycje i zachował kolejność w UI,
+ale dopisał zmianę trybu tabeli pod tabelą, ponieważ dokładna zgodność komórki
+blokowała rozszerzenie definicji o SQL. To korekta w zatwierdzonym zakresie:
+szczegóły SQL mają należeć do kolumny Zmiana. Bieżący format i trzy kolumny
+pozostają bez zmian; backend może wymagać zachowania znanego prefiksu definicji,
+a dodatkową operację dopuścić po <br>. Treść poza tabelą nie zastępuje komórki.
+
+- [x] Zachować znaną definicję, dopuścić szczegóły SQL w tej samej komórce,
+  walidować mapowanie SQL i odrzucać techniczne dopiski pod tabelą. Testy
+  report/policy/continuation: 15 zaliczonych, log `release-summary-sql-cell-tests.log`.
+  Ponowna regresja backendu i korekta raportu należą do końcowej weryfikacji.

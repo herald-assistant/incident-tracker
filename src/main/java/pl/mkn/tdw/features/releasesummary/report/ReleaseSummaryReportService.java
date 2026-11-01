@@ -146,21 +146,26 @@ public class ReleaseSummaryReportService {
                 continue;
             }
             var row=itemRow(item,rows);if(row==null)throw invalid("Brak opisu: "+item.label());
-            if(!item.interpreted()&&!row.get(1).equals(technical(item)))throw invalid("Zachowaj zweryfikowaną definicję: "+item.label());
+            if(!item.interpreted()&&!preservesDefinition(row.get(1),item))throw invalid("Zachowaj zweryfikowaną definicję na początku pola Zmiana; dodatkowe szczegóły dopisz po <br>: "+item.label());
             if(item.interpreted()&&!row.get(1).startsWith(item.change()+"."))throw invalid("Zachowaj kierunek zmiany: "+item.change()+". "+item.label());
         }
         if(group.structurallyVerified()&&rows.size()!=group.items().size())throw invalid("Dodatkowe obiekty wymagają nierozpoznanej operacji w źródłach.");
         for(var row:rows.values()) {
             if(row.get(1).contains(SQL_PENDING)||row.get(2).equals(PENDING))throw invalid("Uzupełnij opis przed opublikowaniem sekcji: "+row.get(0));
             validateNoLinks(row.get(0));
-            boolean verifiedDefinition=group.items().stream().anyMatch(item->!item.interpreted()&&item.label().equals(row.get(0)));
-            if(!verifiedDefinition)validateNoLinks(row.get(1));
+            var verifiedDefinition=group.items().stream().filter(item->!item.interpreted()&&item.label().equals(row.get(0))).findFirst();
+            validateNoLinks(verifiedDefinition.map(item->row.get(1).substring(technical(item).length())).orElse(row.get(1)));
             if(!group.appendix())validateNarrative(row.get(2));else validateNoLinks(row.get(2));
         }
         // Technical definitions may legitimately contain URLs or application-like literals.
         // Check the authored narrative without rejecting those verified SQL values.
         var prose=markdown.lines().filter(line->!line.strip().startsWith("|")).collect(java.util.stream.Collectors.joining("\n"));
-        if(!group.appendix())validateNarrative(prose);else validateNoLinks(prose);
+        if(!group.appendix()&&!prose.isBlank())throw invalid("Szczegóły obiektów umieść w tabeli: SQL w kolumnie Zmiana, zastosowanie w Opis funkcjonalny; źródła i ograniczenia w meta.");
+        validateNoLinks(prose);
+    }
+    private boolean preservesDefinition(String value,ReleaseSummaryReportInventory.Item item) {
+        var required=technical(item);
+        return value.equals(required)||(value.startsWith(required+"<br>")&&!value.substring(required.length()+4).isBlank());
     }
     private void validateNarrative(String text) {
         validateNoLinks(text);
@@ -188,6 +193,9 @@ public class ReleaseSummaryReportService {
             if(mappings.size()!=1)throw invalid("Zapisz jedno mapowanie sql-coverage w meta.references dla: "+item.label());
             var mapped=Objects.toString(mappings.get(0).description(),"").lines().map(String::strip).filter(s->!s.isBlank()).toList();
             if(mapped.isEmpty()||!rows.keySet().containsAll(mapped))throw invalid("Opis sql-coverage musi zawierać dokładne nazwy opisanych obiektów, po jednej w każdej linii: "+item.label());
+            for(var label:mapped)group.get().items().stream().filter(knownItem->!knownItem.interpreted()&&knownItem.label().equals(label)).findFirst().ifPresent(knownItem->{
+                if(rows.get(label).get(1).equals(technical(knownItem)))throw invalid("Dopisz szczegóły operacji SQL w kolumnie Zmiana przy obiekcie: "+label);
+            });
         }
     }
     private ReleaseSummaryTables.Table requiredTable(String markdown,List<String> headers) {
