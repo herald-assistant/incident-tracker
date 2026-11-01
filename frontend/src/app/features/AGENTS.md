@@ -38,6 +38,9 @@ semantycznych akcentow tylko po to, zeby rozroznic feature.
 
 ## Release summary
 
+W Analysis Features i Workspace Overview Release summary występuje bezpośrednio
+po Change Verification, przed Config Drift Viewer; oba miejsca używają ikony
+`deployed_code` i respektują flagę dostępności feature'a.
 Release summary używa wspólnego application select (także Flow Explorer) oraz
 branch select z typowanymi refami i paginacją. Dla pary refów wyłącza auto-select.
 Historia otwiera także QUEUED/RUNNING i wznawia polling bez nowego startu.

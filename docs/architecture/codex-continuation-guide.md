@@ -41,7 +41,10 @@ need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
   i UI Change Verification.
 - `release-summary-runtime-flow.md`
   porównanie Liquibase między przypiętymi refami, pełne encje katalogu,
-  coverage, report-first AI, kontynuacja i eksport V1. Kod jest w
+  historia od startu, osobny podgląd zmian per plik i promptu przed AI,
+  report-first AI oraz trzykolumnowy raport per tabela z meta i appendixem.
+  Opisuje też pojedynczy nagłówek wyniku, nawigację, interpretację pokrycia,
+  kontynuację i eksport V1. Kod jest w
   `features.releasesummary` oraz `frontend/src/app/features/release-summary`.
 - `package-dependencies.md`
   dozwolony graf zaleznosci backendu i frontendu.

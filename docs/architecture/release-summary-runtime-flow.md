@@ -134,12 +134,20 @@ i przygotowanie promptu są pomijane.
 | AI nie zapisze raportu przez tools | `FAILED` z `REPORT_NOT_WRITTEN`; finalna proza nie zastępuje raportu. |
 | Błąd/timeout po zaakceptowanej mutacji raportu | `PARTIAL`; checkpoint zachowuje zapisane sekcje. |
 
-`expectedElements` / `documentedElements` liczą obiekty i operacje w inwentarzu
-raportu, a `expectedUnits` / `documentedUnits` zakresy plików. Nie są liczbami
-węzłów parsera ani jego paczek evidence. Obecność pełnego wiersza nie oznacza
-pewności funkcjonalnej. Status, pokrycie strukturalne i `visibilityLimits` muszą być
-odczytywane razem. `AnalysisReport` jest źródłem treści; wynik V1 jest jego
-deterministyczną projekcją względem manifestu evidence.
+`expectedUnits` / `documentedUnits` liczą grupy tabel wyodrębnione po repozytorium
+i kwalifikowanej nazwie oraz opcjonalną grupę pozycji appendixu. Nie liczą
+plików, węzłów parsera ani jego paczek evidence. `expectedElements` to suma
+obowiązkowych pozycji inwentarza, a `documentedElements` obejmuje pozycje
+z poprawnie zwalidowanych sekcji. Dodatkowe wiersze opisane przez AI nie
+zwiększają tych liczników; mapowanie skryptu na wiersze nie jest niezależnym
+potwierdzeniem liczby wszystkich obiektów semantycznych SQL.
+
+Pełne pokrycie wymaganych pozycji może nadal dawać `PARTIAL`, gdy pozostają
+niezweryfikowane operacje SQL, brak zastosowania funkcjonalnego lub inne luki.
+Nie oznacza to braku wygenerowanego raportu. Status, pokrycie strukturalne
+i `visibilityLimits` należy odczytywać razem. `AnalysisReport` jest źródłem
+treści; wynik V1 jest jego deterministyczną projekcją względem inwentarza
+zbudowanego z evidence.
 
 ## Sesja AI i narzędzia
 
@@ -231,9 +239,7 @@ checkpointów. Reuse'uje section-content i zwijane meta pod sekcją. Feature
 wskazuje opcjonalną sekcję appendixu; jej treść i metadane całego raportu są
 zwinięte na samym dole. Share używa tej samej kolejności: Markdown obejmuje
 główny raport, a Markdown + Meta także źródła i appendix. Edytor ręczny
-zachowuje walidację definicji, źródeł i mapowania SQL. Pokrycie liczy zakresy
-tabel i appendixu oraz obowiązkowe pozycje; nie jest liczbą plików ani
-niezależnie potwierdzoną liczbą wszystkich obiektów semantycznych SQL.
+zachowuje walidację definicji, źródeł i mapowania SQL.
 
 Mutacja jest walidowana przed zapisem. `report_patch_section` dodatkowo
 zachowuje wspólny digest guard i unikalność zastępowanego fragmentu.
@@ -253,15 +259,17 @@ występuje bezpośrednio po Change Verification i używa ikony `deployed_code`.
 Analysis History udostępnia run również w stanach `QUEUED` i `RUNNING`.
 Otwarcie wpisu prowadzi do `/release-summary?localRunId=...`; ekran odczytuje
 bieżący snapshot i wznawia polling tego samego joba, bez ponownego startu.
-Formularz grupuje aplikację i parę refów w jednym rzędzie, a model i reasoning
-effort w dwóch równych polach poniżej. Akcje generowania, importu i eksportu są
-na dole. Wspólny application select przedstawia nazwę i opis aplikacji zgodnie
-z wzorcem Explorerów. Na węższych ekranach pola układają się pionowo.
+Formularz grupuje aplikację i parę refów oznaczonych „Punkt wejścia” i „Stan
+docelowy” w jednym rzędzie, a model i reasoning effort w dwóch równych polach
+poniżej. Akcje generowania, importu i eksportu są na dole. Wspólny application
+select przedstawia nazwę i opis aplikacji zgodnie z wzorcem Explorerów.
+Na węższych ekranach pola układają się pionowo.
 Formularz nie oferuje automatycznej zamiany kierunku.
-Wynik zaczyna się od jednego wspólnego nagłówka „Zmiany bazodanowe między
-<punkt wejścia> a <stan docelowy>”, bez poprzedzających go pasków statusu
-i kierunku ani zakładek. Tytuł pochodzi z requestu zapisanego joba, także
-w historii i imporcie; zmiana formularza kolejnego porównania go nie zmienia.
+Wynik zaczyna się od jednego wspólnego nagłówka
+`Zmiany bazodanowe między {punkt wejścia} a {stan docelowy}`, bez poprzedzających
+go pasków statusu i kierunku ani zakładek. Tytuł pochodzi z requestu zapisanego
+joba, także w historii i imporcie; zmiana formularza kolejnego porównania
+go nie zmienia.
 Share używa tego samego tytułu. Shared report panel z `embedded=true` renderuje
 samą treść bez drugiego nagłówka i zewnętrznej zwijanej karty; domyślny wariant
 pozostałych konsumentów zachowuje nagłówek. `showTechnicalIds=false` ukrywa
@@ -276,8 +284,10 @@ a usage wiadomości kolejnych tur; wspólny aside agreguje je bez podwójnego li
 Publiczny export ma `schema: tdw.release-summary-export`, `version: 1`,
 `payload.type: release-summary-analysis` i
 `payload.resultContract: release-summary-analyst-report-v1`. Zawiera pełne źródła,
-raport, wynik i wiadomości; nie zawiera tokenów, sesji ani prywatnego kontekstu
-kontynuacji. Import pliku jest lokalny w UI, wyłącznie do odczytu, bez
+kroki przebiegu, przygotowany prompt, raport, wynik, wiadomości i statystyki
+usage, w tym liczbę tokenów. Nie zawiera danych uwierzytelniających, identyfikatora
+sesji Copilota ani prywatnego kontekstu kontynuacji.
+Import pliku jest lokalny w UI, wyłącznie do odczytu, bez
 odtwarzania uprawnień lub sesji AI. Inne wersje, tryby i poprzedni układ sekcji
 raportu są odrzucane. Bieżący format pozostaje w wersji 1, bez migratora.
 Przy zmianie formatu lokalne raporty poprzedniego układu usuwa się przez API

@@ -31,13 +31,18 @@ grupuje zmiany po repozytorium i kwalifikowanej tabeli, niezależnie od plików:
 kolumna razem z constraints, indeks z uporządkowanymi kolumnami. Pełne evidence
 pozostaje bez zmian. Kolejność: OVERVIEW, TABLE_LIST, DB_DETAIL_* per tabela,
 APPENDIX. Tabela ma Obiekt, Zmiana i Opis funkcjonalny. Zmiana zachowuje pełne
-typy, NULL, defaults, definicje i wartości przed/po; funkcja jest krótka,
+typy, NULL, defaults, definicje i wartości przed/po. Zweryfikowana definicja
+jest niezmiennym początkiem komórki; dodatkowe szczegóły SQL tego obiektu
+dopisuj po `<br>`, nie w akapicie poza tabelą. Funkcja jest krótka,
 niezależna, bez żargonu kodu i prefiksów Potwierdzone/Wniosek. Źródła są URL-ami
 w meta pod sekcją, nigdy linkami w treści. SQL rozwija się na obiekty bez
 powtarzającego wiersza skryptu; sql-coverage w meta mapuje skrypt na nazwy
 opisanych wierszy i nie dowodzi kompletności semantycznej. Nieprzypisane
 operacje i ustawienia migracji trafiają do appendixu. Wszystkie wymagane
 pozycje i znane definicje są walidowane także przy patchu i ręcznej edycji.
+Liczniki pokrycia dotyczą grup tabel i appendixu oraz wymaganych pozycji
+inwentarza, nie plików ani dodatkowych wierszy AI. Pełne liczniki nie usuwają
+ograniczeń SQL/custom change ani statusu PARTIAL wynikającego z tych ograniczeń.
 Nie pokazuj hashy, AST, JSON ani placeholderów w raporcie. Scaffold jest prywatny;
 dopiero zaakceptowana sekcja może opublikować raport. Model jest wymagany.
 Report patches podlegają tej samej walidacji co pełny zapis sekcji. Bieżący

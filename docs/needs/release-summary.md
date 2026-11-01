@@ -13,7 +13,7 @@ wykonania.
 
 ## Oczekiwany rezultat
 
-Użytkownik wybiera aplikację oraz dwa branche/refy: stan bazowy i stan
+Użytkownik wybiera aplikację oraz dwa branche/refy: punkt wejścia i stan
 docelowy. Otrzymuje sekcyjny, tabelaryczny raport zmian wdrożeniowych,
 zrozumiały dla analityka systemowego na poziomie mid. Ma szybko rozpoznać zakres
 wdrożenia, następnie sprawdzić każdy zmieniany obiekt i jego zastosowanie.
@@ -33,6 +33,8 @@ Formularz startowy powinien być spójny z Explorerami: uporządkowany wybór
 aplikacji, punktu wejścia i stanu docelowego, ustawienia AI oraz jeden wyraźny
 przycisk generowania obok importu. Kierunek porównania wybiera się przez refy,
 bez dodatkowej funkcji ich zamiany.
+W Analysis Features i na kaflach Workspace Overview Release summary znajduje
+się bezpośrednio po Change Verification.
 
 Pierwszy zakres obejmuje zmiany bazodanowe wynikające z Liquibase. Raport ma
 obejmować wszystkie ustalone zmiany, w tym każdą tabelę, kolumnę, indeks,
@@ -74,9 +76,10 @@ obecnie nie analizujemy. Nie jest częścią bieżącego wdrożenia.
 - Awaria zbierania materiału wskazuje plik lub drzewo repozytorium, stronę
   porównania i zrozumiałą przyczynę. Przejściowe problemy połączenia nie
   powinny wymagać od operatora powtarzania całego poprawnego przygotowania.
-- Można zapisać wynik w historii, udostępnić raport oraz dopytać o jego treść
-  w znanym wzorcu pracy innych analiz.
-- Historia zawiera wpis od przyjęcia analizy i pozwala wrócić do jej postępu.
+- Można udostępnić raport oraz dopytać o jego treść w znanym wzorcu pracy
+  innych analiz.
+- Historia automatycznie zawiera wpis od przyjęcia analizy i pozwala wrócić
+  do jej postępu.
   Przebieg pokazuje osobno zebrane zmiany Liquibase per plik oraz pełny
   początkowy prompt, dostępny przed wywołaniem modelu i także po błędzie AI.
 - Testowy, w całości fikcyjny scenariusz CRM potwierdza pokrycie wszystkich
@@ -96,7 +99,7 @@ obecnie projektowania trybu API, wszystkich możliwych rozszerzeń Liquibase
 ani arbitralnie dużego materiału przekraczającego okno dostępnego modelu.
 Ograniczenie techniczne ma być jawne; nie wolno po cichu obcinać materiału.
 
-## Założenia do oceny wraz z planem
+## Ustalone granice zakresu
 
 - Aplikacja oznacza kanoniczny system z Operational Context. W systemie
   wielorepozytoryjnym zakres porównania musi być jawny, z pokryciem per repo;
