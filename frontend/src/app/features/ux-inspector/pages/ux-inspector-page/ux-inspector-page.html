@@ -429,8 +429,8 @@
         [chatActive]="chatActive()"
         [chatCount]="chatCount()"
       >
-        <div progressPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
-        <div aiPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+        <div progressPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" preparedPromptStepCode="AI_PREPARATION" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+        <div aiPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" preparedPromptStepCode="AI_PREPARATION" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
         <div chatPanel>
           <app-analysis-follow-up-chat
             [messages]="facade.chatMessages()"
@@ -454,7 +454,7 @@
             (connectAuth)="connectChatAuth()"
           />
         </div>
-        <div feedbackPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showAiWorkflow]="false" [staticPanels]="true" /></div>
+        <div feedbackPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" preparedPromptStepCode="AI_PREPARATION" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showAiWorkflow]="false" [staticPanels]="true" /></div>
       </app-analysis-feature-aside>
     }
   </main>

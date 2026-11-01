@@ -193,7 +193,7 @@
           <app-analysis-steps-panel
             [steps]="currentJob.steps || []"
             [aiActivityEvents]="currentJob.aiActivityEvents || []"
-            [preparedPrompt]="currentJob.preparedPrompt || ''"
+            preparedPromptStepCode="PREPARE_AI" [preparedPrompt]="currentJob.preparedPrompt || ''"
             [showAiWorkflow]="false"
             [showToolFeedback]="false"
             [staticPanels]="true"

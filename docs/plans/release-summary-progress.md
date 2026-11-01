@@ -56,10 +56,12 @@ regresja promptów pozostałych ekranów. Pełne dane nie są przycinane.
   aktywnego runu z historii i pollingu UI. Testy FE 39/39; celowane testy
   ReleaseSummary* i LiquibaseEvidenceCollector zakończone poprawnie
   (pilot live pominięty). Logi: tdw-data/logs/release-summary-progress-step1-*.
-- [ ] Podgląd plików i promptu: evidence per plik, osobny ukończony krok
+- [x] Podgląd plików i promptu: evidence per plik, osobny ukończony krok
   promptu przed AI, neutralny renderer i aktualizacja jego konsumentów.
   Testy zmian/dodania/usunięcia/zależności/wielu repo, błędów AI, dokładnej
-  zgodności promptu i widoku; regresja shared panelu i chatu. Commit.
+  zgodności promptu i widoku; regresja shared panelu i chatu. FE: 55/55,
+  BE: 51/51 (pilot live pominięty). Pełne źródła są projektowane osobno
+  do contextSections, bez duplikowania ich w wejściu AI. Logi step2-*.
 - [ ] Weryfikacja całości: pełne testy Angulara, build UI, Maven backend-dev
   clean package, przegląd manualny historii/przebiegu, aktualizacja
   kanonicznej dokumentacji i uruchomienie aktualnej aplikacji. Commit.

@@ -9,6 +9,48 @@ import {
 import { AnalysisStepsPanelComponent } from './analysis-steps-panel';
 
 describe('AnalysisStepsPanelComponent', () => {
+  it('opens per-file source changes and the exact prompt while AI is still running', async () => {
+    const fixture=TestBed.createComponent(AnalysisStepsPanelComponent);
+    const link={provider:'GitLab',category:'Zmiany Liquibase per plik'};
+    const step=(code:string,status:string):AnalysisJobStepResponse=>({code,label:code,phase:'CONTEXT',status,
+      message:'CRM preparation',itemCount:1,startedAt:'',completedAt:'',consumesEvidence:[],producesEvidence:[]});
+    fixture.componentRef.setInput('steps',[
+      {...step('COLLECT_LIQUIBASE','COMPLETED'),producesEvidence:[link]},
+      step('PREPARE_PROMPT','COMPLETED'),step('AI_REPORT','RUNNING')
+    ]);
+    fixture.componentRef.setInput('evidenceSections',[{...link,items:[
+      {title:'customer / db/customer.xml',attributes:[
+        {name:'beforeContent',value:'<databaseChangeLog>\n<column name="label" type="varchar(40)"/>\n</databaseChangeLog>'},
+        {name:'afterContent',value:'<databaseChangeLog>\n<column name="label" type="varchar(80)"/>\n</databaseChangeLog>'}
+      ]},
+      {title:'customer / db/tags.sql',attributes:[{name:'beforeContent',value:''},{name:'afterContent',value:'CREATE INDEX ix_tag ON customer(label);'}]}
+    ]}]);
+    fixture.componentRef.setInput('preparedPromptStepCode','PREPARE_PROMPT');
+    fixture.componentRef.setInput('preparedPrompt','Pełny prompt CRM\n<evidence>Źródła</evidence>');
+    fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    const root=fixture.nativeElement as HTMLElement;
+    const headers=Array.from(root.querySelectorAll<HTMLElement>('.mat-step-header'));
+    headers[0].click();fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    expect(root.querySelectorAll('.evidence-item')).toHaveLength(2);
+    expect(root.querySelector('.source-diff .is-removed')?.textContent).toContain('varchar(40)');
+    expect(root.querySelector('.source-diff .is-added')?.textContent).toContain('varchar(80)');
+    expect(root.querySelector('.source-diff .is-added column')).toBeNull();
+    expect(root.querySelectorAll('.stepper-detail')[0].querySelector('.prepared-prompt__textarea')).toBeNull();
+    headers[1].click();fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    expect((root.querySelector('.prepared-prompt__textarea') as HTMLTextAreaElement).value)
+      .toBe('Pełny prompt CRM\n<evidence>Źródła</evidence>');
+    expect(root.textContent).toContain('Kopiuj prompt');
+    headers[2].click();fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    expect((fixture.componentInstance as unknown as {selectedIndex():number}).selectedIndex()).toBe(1);
+  });
+
+  it('does not infer a prompt step from another feature code',async()=>{
+    const fixture=TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps',[buildOperationalContextStep()]);
+    fixture.componentRef.setInput('preparedPrompt','CRM prompt');
+    fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.prepared-prompt__textarea')).toBeNull();
+  });
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AnalysisStepsPanelComponent],
@@ -187,6 +229,7 @@ describe('AnalysisStepsPanelComponent', () => {
 
   it('should expose the prepared AI prompt in a copyable textarea for the operational context step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('preparedPromptStepCode', 'OPERATIONAL_CONTEXT');
     fixture.componentRef.setInput('steps', [buildOperationalContextStep()]);
     fixture.componentRef.setInput('preparedPrompt', buildAiPrompt());
 
@@ -199,9 +242,9 @@ describe('AnalysisStepsPanelComponent', () => {
       '.prepared-prompt__textarea'
     ) as HTMLTextAreaElement | null;
 
-    expect(compiled.textContent).toContain('Prompt po dopasowaniu kontekstu operacyjnego');
+    expect(compiled.textContent).toContain('Inicjalny prompt AI');
     expect(compiled.textContent).toContain(
-      'To jest finalny prompt złożony z evidence i lokalnego kontekstu operacyjnego jeszcze przed wywołaniem AI.'
+      'Pełna treść przygotowana przed wywołaniem modelu.'
     );
     expect(promptTextarea).not.toBeNull();
     expect(promptTextarea?.value).toContain('correlationId: timeout-123');
@@ -215,19 +258,21 @@ describe('AnalysisStepsPanelComponent', () => {
       status: 'COMPLETED', message: 'Prompt gotowy.', itemCount: 1,
       startedAt: '2026-09-13T10:00:00Z', completedAt: '2026-09-13T10:00:01Z'
     }]);
+    fixture.componentRef.setInput('preparedPromptStepCode', 'PREPARE_AI');
     fixture.componentRef.setInput('preparedPrompt', 'Sanitizowany prompt asysty');
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Inicjalny prompt asysty Operational Context');
+    expect(compiled.textContent).toContain('Inicjalny prompt AI');
     expect((compiled.querySelector('.prepared-prompt__textarea') as HTMLTextAreaElement)?.value)
       .toBe('Sanitizowany prompt asysty');
   });
 
   it('should expose the initial Change Verification prompt on the source context step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('preparedPromptStepCode', 'INITIAL_SOURCE_SNAPSHOT');
     fixture.componentRef.setInput('steps', [buildChangeVerificationSourceContextStep()]);
     fixture.componentRef.setInput('preparedPrompt', '# Change Verification canonical prompt');
 
@@ -240,14 +285,15 @@ describe('AnalysisStepsPanelComponent', () => {
       '.prepared-prompt__textarea'
     ) as HTMLTextAreaElement | null;
 
-    expect(compiled.textContent).toContain('Initial prompt wysłany do AI');
-    expect(compiled.textContent).toContain('Ten tekst trafia do pierwszego kroku AI.');
+    expect(compiled.textContent).toContain('Inicjalny prompt AI');
+    expect(compiled.textContent).toContain('Ten sam tekst jest przekazywany do AI');
     expect(promptTextarea).not.toBeNull();
     expect(promptTextarea?.value).toContain('Change Verification canonical prompt');
   });
 
   it('should expose UI Explorer artifacts and the exact prompt on the AI preparation step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('preparedPromptStepCode', 'AI_PREPARATION');
     fixture.componentRef.setInput('steps', [buildUiExplorerPreparationStep()]);
     fixture.componentRef.setInput('evidenceSections', [buildUiExplorerArtifactsSection()]);
     fixture.componentRef.setInput('preparedPrompt', '# Synthetic CRM canonical UI Explorer prompt');
@@ -261,7 +307,7 @@ describe('AnalysisStepsPanelComponent', () => {
       '.prepared-prompt__textarea'
     ) as HTMLTextAreaElement | null;
 
-    expect(compiled.textContent).toContain('Inicjalny prompt UI Explorera wysłany do AI');
+    expect(compiled.textContent).toContain('Inicjalny prompt AI');
     expect(compiled.textContent).toContain('Artefakty AI');
     expect(compiled.textContent).toContain('ui-explorer/synthetic-crm-context.json');
     expect(compiled.textContent).toContain('Publikuje: UI Explorer · Artefakty AI');
@@ -282,6 +328,7 @@ describe('AnalysisStepsPanelComponent', () => {
       consumesEvidence: [],
       producesEvidence: []
     } satisfies AnalysisJobStepResponse]);
+    fixture.componentRef.setInput('preparedPromptStepCode', 'AI_INPUT_PREPARATION');
     fixture.componentRef.setInput('preparedPrompts', [
       {
         key: 'DU-CRM-1',
@@ -304,7 +351,7 @@ describe('AnalysisStepsPanelComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const prompts = Array.from(compiled.querySelectorAll('.prepared-prompts__item'));
 
-    expect(compiled.textContent).toContain('One-shot prompts wysłane do AI');
+    expect(compiled.textContent).toContain('Prompty AI');
     expect(compiled.textContent).toContain('CRM-1 · DU-CRM-1');
     expect(compiled.textContent).toContain('CRM-2 · DU-CRM-2');
     expect(prompts).toHaveLength(2);
@@ -333,6 +380,7 @@ describe('AnalysisStepsPanelComponent', () => {
       completedAt: ''
     } satisfies AnalysisJobStepResponse;
 
+    fixture.componentRef.setInput('preparedPromptStepCode', 'AI_PREPARATION');
     fixture.componentRef.setInput('steps', [sourceContext, pendingPreparation]);
     fixture.detectChanges();
     await fixture.whenStable();

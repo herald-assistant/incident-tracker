@@ -20,6 +20,48 @@ import static org.mockito.Mockito.*;
 class ReleaseSummaryProgressTest {
     @TempDir Path directory;
 
+    @Test void filesAndExactPromptArePersistedBeforeAiAndSurviveItsFailure() {
+        var f=new ReleaseSummaryContinuationTest.Fixture();
+        var evidence=ReleaseSummaryReportTest.evidence(true);
+        var expected=new ReleaseSummaryPrompt(f.mapper,f.reports).render(ReleaseSummaryReportTest.SCOPE,evidence);
+        doAnswer(invocation->{
+            pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest request=invocation.getArgument(0);
+            var saved=f.persistence.read(f.records.values().iterator().next());
+            assertEquals(expected,request.prompt());
+            assertEquals(request.prompt(),saved.preparedPrompt());
+            assertEquals(List.of("COMPLETED","COMPLETED","COMPLETED","RUNNING"),saved.steps().stream().map(s->s.status()).toList());
+            assertTrue(saved.steps().get(2).completedAt().compareTo(saved.steps().get(3).startedAt())<=0);
+            assertEquals(List.of(ReleaseSummaryProgressEvidence.FILES),saved.steps().get(1).producesEvidence());
+            assertEquals(evidence.sources().get(0).content(),saved.contextSections().get(0).items().get(0).attributes().stream()
+                    .filter(a->a.name().equals("afterContent")).findFirst().orElseThrow().value());
+            assertEquals(saved,f.service.get(saved.jobId()));
+            throw new IllegalStateException("CRM gateway failed");
+        }).when(f.ai).execute(any());
+        var accepted=f.service.start(f.request);f.next();
+        var failed=f.service.get(accepted.jobId());
+        assertEquals("FAILED",failed.status());
+        assertEquals(expected,failed.preparedPrompt());
+        assertEquals("COMPLETED",failed.steps().get(2).status());
+        f.service=f.service();
+        var restored=f.service.get(accepted.jobId());
+        assertEquals(failed.contextSections(),restored.contextSections());
+        assertEquals(failed.steps(),restored.steps());
+        assertEquals(expected,restored.preparedPrompt());
+    }
+
+    @Test void collectionGapsAreAvailableWithoutPreparingOrSendingPrompt() {
+        var f=new ReleaseSummaryContinuationTest.Fixture();
+        var gap=new ReleaseSummaryEvidence.Gap("SOURCE_UNAVAILABLE","customer","TARGET","db/customer.xml","Nie można odczytać pliku CRM.",true);
+        when(f.collector.collect(any())).thenReturn(new ReleaseSummaryEvidence(List.of(),List.of(),List.of(gap),List.of(),0,false));
+        var accepted=f.service.start(f.request);f.next();
+        var blocked=f.persistence.read(f.records.get(accepted.jobId()));
+        assertEquals("BLOCKED",blocked.status());assertNull(blocked.preparedPrompt());
+        assertEquals(List.of(ReleaseSummaryProgressEvidence.FILES,ReleaseSummaryProgressEvidence.GAPS),blocked.steps().get(1).producesEvidence());
+        assertEquals("SKIPPED",blocked.steps().get(2).status());
+        assertEquals(1,blocked.contextSections().get(1).items().size());
+        verifyNoInteractions(f.ai);
+    }
+
     @Test void historyIsDurableAndReadableBeforeTheExecutorStartsWork() {
         var f=new ReleaseSummaryContinuationTest.Fixture();
         var mapper=new ObjectMapper().findAndRegisterModules();

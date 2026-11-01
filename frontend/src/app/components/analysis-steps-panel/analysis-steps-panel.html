@@ -1464,6 +1464,17 @@
                                     <pre class="attribute-block">{{ attribute.value }}</pre>
                                   </div>
                                 }
+                                @if (item.diffLines; as lines) {
+                                  <p class="source-diff__legend">− Punkt wejścia · + Stan docelowy · pozostałe wiersze bez zmian</p>
+                                  <div class="source-diff" role="region" tabindex="0" [attr.aria-label]="'Zmiany w pliku ' + item.title">
+                                    @for (line of lines; track $index) {
+                                      <div class="source-diff__line" [class.is-added]="line.kind === 'added'" [class.is-removed]="line.kind === 'removed'">
+                                        <span class="source-diff__marker">{{line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ' '}}</span>
+                                        <span>{{line.text || ' '}}</span>
+                                      </div>
+                                    } @empty { <p>Brak treści po obu stronach porównania.</p> }
+                                  </div>
+                                }
                               </div>
                             </details>
                           }

@@ -56,13 +56,17 @@ public class ReleaseSummaryJobService {
                 var scope=catalog.pin(state.request,captured);
                 synchronized(state) {
                     state.scope=scope;state.step("RESOLVE_REFS","Przypięcie rewizji","COMPLETED","Oba refy zostały przypięte do commitów.",scope.repositories().size());
-                    state.step("COLLECT_LIQUIBASE","Zmiany Liquibase","RUNNING","Weryfikacja drzew i domknięcia zależności.",0);persist(state);
+                    state.step("COLLECT_LIQUIBASE","Zmiany Liquibase per plik","RUNNING","Weryfikacja drzew i domknięcia zależności.",0);persist(state);
                 }
                 var evidence=collector.collect(scope);
                 synchronized(state) {
                     state.evidence=evidence;
-                    state.step("COLLECT_LIQUIBASE","Zmiany Liquibase",evidence.sourceComplete()?"COMPLETED":"BLOCKED",
-                            evidence.sourceComplete()?"Materiał został zweryfikowany.":"Niekompletny materiał źródłowy.",evidence.units().size());
+                    state.contextSections=ReleaseSummaryProgressEvidence.sections(scope,evidence);
+                    state.step("COLLECT_LIQUIBASE","Zmiany Liquibase per plik",evidence.sourceComplete()?"COMPLETED":"BLOCKED",
+                            evidence.sourceComplete()?"Zweryfikowano źródła. Otwórz krok, aby porównać treść każdego pliku.":"Niekompletny materiał źródłowy. Otwórz krok, aby sprawdzić zebrane pliki i luki.",
+                            state.contextSections.get(0).items().size(),List.of(),state.contextSections.stream()
+                                    .map(section->new pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference(section.provider(),section.category())).toList());
+                    persist(state);
                     if(!evidence.sourceComplete()){state.finish("BLOCKED","SOURCE_INCOMPLETE","Sprawdź luki w materiale źródłowym.");persist(state);return;}
                 }
                 var initial=reports.scaffold("release-summary-report-"+state.id,scope,evidence);
@@ -73,7 +77,10 @@ public class ReleaseSummaryJobService {
                         state.finish("NO_CHANGES",null,null);persist(state);return;
                     }
                 }
-                ai.requireModel(state.request);
+                synchronized(state) {
+                    state.step("PREPARE_PROMPT","Inicjalny prompt AI","RUNNING","Przygotowanie instrukcji i pełnego materiału dla modelu.",0);
+                    persist(state);
+                }
                 var revisions=new ArrayList<GitLabRepositoryToolScope.PinnedRevision>();
                 for(var repo:scope.repositories()) {
                     revisions.add(new GitLabRepositoryToolScope.PinnedRevision(repo.project(),repo.baselineRef(),repo.baselineCommit()));
@@ -86,16 +93,22 @@ public class ReleaseSummaryJobService {
                 synchronized(state) {
                     state.context=context;state.prompt=prompt;
                     state.result=reports.project(initial,evidence,context.sources());
-                    state.step("AI_REPORT","Raport AI","RUNNING","Analiza funkcjonalna i zapis tabel.",evidence.units().size());
+                    state.step("PREPARE_PROMPT","Inicjalny prompt AI","COMPLETED","Pełny prompt zapisany przed wywołaniem modelu. Możesz go otworzyć i skopiować.",1,
+                            List.of(ReleaseSummaryProgressEvidence.FILES),List.of());
                     persist(state);persistence.saveRuntime(state.id,context);
                 }
+                ai.requireModel(state.request);
                 var usage=new CopilotUsageAccumulator();
                 var run=ai.assemble(state.id,state.request,prompt,state.auth,context,initial,null,
                         section->{synchronized(state){state.toolEvidence.removeIf(s->Objects.equals(s.provider(),section.provider())&&Objects.equals(s.category(),section.category()));
                             state.toolEvidence.add(section);state.updatedAt=Instant.now();persist(state);}},
                         event->{synchronized(state){if(state.activities.stream().noneMatch(e->Objects.equals(e.eventId(),event.eventId()))){
                             state.activities.add(event);usage.recordActivity(event);state.usage=usage.snapshot();state.updatedAt=Instant.now();persist(state);}}});
-                synchronized(state){state.sessionId=run.sessionConfigRequest().sessionId();}
+                synchronized(state){
+                    state.sessionId=run.sessionConfigRequest().sessionId();
+                    state.step("AI_REPORT","Raport AI","RUNNING","Analiza funkcjonalna i zapis tabel.",evidence.units().size());
+                    persist(state);
+                }
                 var execution=ai.execute(run);
                 synchronized(state) {
                     state.usage=execution.usage()!=null?execution.usage():state.usage;

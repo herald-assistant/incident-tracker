@@ -130,8 +130,8 @@
         [showChat]="false"
         [showFeedback]="false"
       >
-        <div progressPanel><app-analysis-steps-panel [steps]="currentJob.steps" [evidenceSections]="currentJob.contextSections" [toolEvidenceSections]="currentJob.toolEvidenceSections" [aiActivityEvents]="currentJob.aiActivityEvents" [preparedPrompt]="currentJob.preparedPrompt" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true"></app-analysis-steps-panel></div>
-        <div aiPanel><app-analysis-steps-panel [steps]="currentJob.steps" [evidenceSections]="currentJob.contextSections" [toolEvidenceSections]="currentJob.toolEvidenceSections" [aiActivityEvents]="currentJob.aiActivityEvents" [preparedPrompt]="currentJob.preparedPrompt" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true"></app-analysis-steps-panel></div>
+        <div progressPanel><app-analysis-steps-panel [steps]="currentJob.steps" [evidenceSections]="currentJob.contextSections" [toolEvidenceSections]="currentJob.toolEvidenceSections" [aiActivityEvents]="currentJob.aiActivityEvents" preparedPromptStepCode="INITIAL_SOURCE_SNAPSHOT" [preparedPrompt]="currentJob.preparedPrompt" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true"></app-analysis-steps-panel></div>
+        <div aiPanel><app-analysis-steps-panel [steps]="currentJob.steps" [evidenceSections]="currentJob.contextSections" [toolEvidenceSections]="currentJob.toolEvidenceSections" [aiActivityEvents]="currentJob.aiActivityEvents" preparedPromptStepCode="INITIAL_SOURCE_SNAPSHOT" [preparedPrompt]="currentJob.preparedPrompt" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true"></app-analysis-steps-panel></div>
       </app-analysis-feature-aside>
     } @else {
       <section class="change-verification-empty-state analysis-card analysis-empty-state">

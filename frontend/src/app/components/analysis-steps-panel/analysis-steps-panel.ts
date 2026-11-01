@@ -32,6 +32,7 @@ import {
   hasMeaningfulValue,
   isLargeAttribute
 } from '../../core/utils/analysis-display.utils';
+import { textDiff, TextDiffLine } from '../../core/utils/text-diff.utils';
 import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
@@ -47,6 +48,7 @@ interface StepEvidenceItemView {
   key: string;
   title: string;
   attributeCount: number;
+  diffLines: TextDiffLine[] | null;
   compactAttributes: AnalysisEvidenceAttribute[];
   blockAttributes: AnalysisEvidenceAttribute[];
 }
@@ -544,6 +546,7 @@ export class AnalysisStepsPanelComponent {
   readonly aiActivityEvents = input<AnalysisAiActivityEvent[]>([]);
   readonly toolFeedback = input<AnalysisAiToolFeedback[]>([]);
   readonly preparedPrompt = input<string>('');
+  readonly preparedPromptStepCode = input<string>('');
   readonly preparedPrompts = input<AnalysisPreparedPrompt[]>([]);
   readonly result = input<AnalysisResultResponse | null>(null);
   readonly finalResultAvailable = input(false);
@@ -586,12 +589,9 @@ export class AnalysisStepsPanelComponent {
         this.evidenceSections()
       );
       const showResultPreview = step.code === 'AI_ANALYSIS' && this.result() !== null;
-      const stepPreparedPrompt = resolvePreparedPrompt(
-        step.code,
-        this.preparedPrompt(),
-        this.result()?.prompt ?? ''
-      );
-      const stepPreparedPrompts = resolvePreparedPrompts(step.code, this.preparedPrompts());
+      const isPromptStep = Boolean(this.preparedPromptStepCode()) && step.code === this.preparedPromptStepCode();
+      const stepPreparedPrompt = isPromptStep ? firstDefinedText(this.preparedPrompt(), this.result()?.prompt ?? '') || '' : '';
+      const stepPreparedPrompts = isPromptStep ? this.preparedPrompts().filter(prompt => Boolean(prompt.prompt)) : [];
       const showPreparedPromptView = Boolean(stepPreparedPrompt) || stepPreparedPrompts.length > 0;
       const key = buildStepKey(step, index);
 
@@ -612,8 +612,8 @@ export class AnalysisStepsPanelComponent {
         showPreparedPromptView,
         preparedPrompt: stepPreparedPrompt,
         preparedPrompts: stepPreparedPrompts,
-        promptPanelTitle: buildPreparedPromptTitle(step.code),
-        promptPanelDescription: buildPreparedPromptDescription(step.code),
+        promptPanelTitle: stepPreparedPrompts.length ? 'Prompty AI' : 'Inicjalny prompt AI',
+        promptPanelDescription: 'Pełna treść przygotowana przed wywołaniem modelu. Ten sam tekst jest przekazywany do AI i pozostaje dostępny także po błędzie analizy.',
         emptyStateMessage: buildEmptyStateMessage(
           step,
           detailSections.length,
@@ -984,87 +984,9 @@ function inferStepEvidenceLinks(stepCode: string | null | undefined): StepEviden
   return [];
 }
 
-function resolvePreparedPrompt(
-  stepCode: string | null | undefined,
-  preparedPrompt: string,
-  resultPrompt: string
-): string {
-  if (!shouldShowPreparedPrompt(stepCode)) {
-    return '';
-  }
-
-  const normalizedPreparedPrompt = firstDefinedText(preparedPrompt, resultPrompt);
-  return normalizedPreparedPrompt || '';
-}
-
-function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean {
-  const normalizedStepCode = String(stepCode || '').toUpperCase();
-  return normalizedStepCode === 'OPERATIONAL_CONTEXT'
-    || normalizedStepCode === 'DETERMINISTIC_CONTEXT'
-    || normalizedStepCode === 'INITIAL_SOURCE_SNAPSHOT'
-    || normalizedStepCode === 'AI_PREPARATION'
-    || normalizedStepCode === 'PREPARE_AI';
-}
-
 interface SkillContentView {
   markdown: string;
   truncated: boolean;
-}
-
-function resolvePreparedPrompts(
-  stepCode: string | null | undefined,
-  preparedPrompts: AnalysisPreparedPrompt[]
-): AnalysisPreparedPrompt[] {
-  if (String(stepCode || '').toUpperCase() !== 'AI_INPUT_PREPARATION') {
-    return [];
-  }
-  return preparedPrompts.filter((preparedPrompt) => Boolean(preparedPrompt.prompt));
-}
-
-function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
-  if (String(stepCode || '').toUpperCase() === 'PREPARE_AI') {
-    return 'Inicjalny prompt asysty Operational Context';
-  }
-  if (String(stepCode || '').toUpperCase() === 'AI_INPUT_PREPARATION') {
-    return 'One-shot prompts wysłane do AI';
-  }
-  if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
-    return 'Inicjalny prompt UI Explorera wysłany do AI';
-  }
-  if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
-    return 'Initial prompt wysłany do AI';
-  }
-  if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
-    return 'Prompt po dopasowaniu kontekstu operacyjnego';
-  }
-  if (String(stepCode || '').toUpperCase() === 'DETERMINISTIC_CONTEXT') {
-    return 'Prompt po przygotowaniu deterministic context';
-  }
-
-  return 'Prompt przygotowany do wysłania do Copilota';
-}
-
-function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
-  if (String(stepCode || '').toUpperCase() === 'PREPARE_AI') {
-    return 'To jest dokładny sanitizowany prompt przygotowany przed wywołaniem Copilota: instrukcje, reguły maintenance i aktualny katalog.';
-  }
-  if (String(stepCode || '').toUpperCase() === 'AI_INPUT_PREPARATION') {
-    return 'Każda pozycja zawiera dokładną inicjalną wiadomość zapisaną przed wysłaniem: instrukcję, effective skill, Jira evidence i kod Merge Requestu.';
-  }
-  if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
-    return 'To jest dokładny prompt złożony z route chain, grafu BFS komponentów, osiągalnych slice’ów, aktywnych sekcji i kontraktu odpowiedzi bezpośrednio przed uruchomieniem sesji AI.';
-  }
-  if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
-    return 'To jest prompt złożony po pobraniu Jira, MR-ek, instrukcji repozytorium i kontekstu code search scope. Ten tekst trafia do pierwszego kroku AI.';
-  }
-  if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
-    return 'To jest finalny prompt złożony z evidence i lokalnego kontekstu operacyjnego jeszcze przed wywołaniem AI. Jeśli Copilot nie odpowie, możesz skopiować go stąd i uruchomić we własnym narzędziu.';
-  }
-  if (String(stepCode || '').toUpperCase() === 'DETERMINISTIC_CONTEXT') {
-    return 'To jest finalny prompt Flow Explorera po zbudowaniu endpoint contextu i snippet cards. Mozesz go skopiowac do diagnostyki runu albo recznej weryfikacji.';
-  }
-
-  return 'To jest dokładny input, który zasila końcową analizę AI. Gdy sesja Copilota nie zadziała, ten prompt zostaje dostępny do ręcznego użycia poza aplikacją.';
 }
 
 function canOpenStep(status: string | null | undefined): boolean {
@@ -2920,13 +2842,18 @@ function prepareDefaultEvidenceItem(
         !TOOL_TIMELINE_INTERNAL_ATTRIBUTES.has(attribute.name)
     )
     .map((attribute) => normalizeDefaultEvidenceAttribute(section, attribute));
-  const compactAttributes = normalizedAttributes.filter((attribute) => !isLargeAttribute(attribute));
-  const blockAttributes = normalizedAttributes.filter(isLargeAttribute);
+  const beforeContent = normalizedAttributes.find(attribute => attribute.name === 'beforeContent');
+  const afterContent = normalizedAttributes.find(attribute => attribute.name === 'afterContent');
+  const diffLines = beforeContent && afterContent ? textDiff(beforeContent.value || '', afterContent.value || '') : null;
+  const displayAttributes = diffLines ? normalizedAttributes.filter(attribute => !['beforeContent', 'afterContent'].includes(attribute.name)) : normalizedAttributes;
+  const compactAttributes = displayAttributes.filter((attribute) => !isLargeAttribute(attribute));
+  const blockAttributes = displayAttributes.filter(isLargeAttribute);
 
   return {
     key: itemKey,
     title: item.title || 'Untitled item',
     attributeCount: (item.attributes || []).length,
+    diffLines,
     compactAttributes,
     blockAttributes
   };

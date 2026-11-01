@@ -12,12 +12,12 @@ import {
 import { copyElementToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
-import { reportChangeDiff } from './report-change-diff.utils';
-import type { ReportChangeDiffLine } from './report-change-diff.utils';
+import { textDiff } from '../../core/utils/text-diff.utils';
+import type { TextDiffLine } from '../../core/utils/text-diff.utils';
 
 interface ReportChangeGroup {
   title: string;
-  parts: { title: string | null; lines: ReportChangeDiffLine[] }[];
+  parts: { title: string | null; lines: TextDiffLine[] }[];
 }
 
 @Component({
@@ -166,7 +166,7 @@ export class AnalysisFollowUpChatComponent {
       if (!groups.has(title)) {
         groups.set(title, { title, parts: [] });
       }
-      groups.get(title)!.parts.push({ title: partTitle, lines: reportChangeDiff(before, after) });
+      groups.get(title)!.parts.push({ title: partTitle, lines: textDiff(before, after) });
     }
     if (groups.size === 0) {
       return;

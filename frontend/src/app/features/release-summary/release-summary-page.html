@@ -158,7 +158,7 @@
             [error]="chatError()" [staticPanel]="true" (sendMessage)="sendChat($event)" (clearError)="chatError.set('')" />
         </div>
         <div progressPanel><app-analysis-steps-panel [steps]="current.steps" [evidenceSections]="current.contextSections"
-          [toolEvidenceSections]="current.toolEvidenceSections" [preparedPrompt]="current.preparedPrompt || ''"
+          [toolEvidenceSections]="current.toolEvidenceSections" preparedPromptStepCode="PREPARE_PROMPT" [preparedPrompt]="current.preparedPrompt || ''"
           [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" [finalResultAvailable]="!!current.report" /></div>
         <div aiPanel><app-analysis-steps-panel [aiActivityEvents]="current.aiActivityEvents" [toolEvidenceSections]="current.toolEvidenceSections"
           [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>

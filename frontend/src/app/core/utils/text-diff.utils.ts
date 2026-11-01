@@ -1,10 +1,10 @@
-export interface ReportChangeDiffLine {
+export interface TextDiffLine {
   kind: 'context' | 'added' | 'removed';
   text: string;
 }
 
-/** Line-based unified diff of raw Markdown. Large changes fall back to complete blocks. */
-export function reportChangeDiff(before: string, after: string): ReportChangeDiffLine[] {
+/** Line-based unified diff of text. Large changes fall back to complete blocks. */
+export function textDiff(before: string, after: string): TextDiffLine[] {
   const oldLines = before ? before.split(/\r?\n/) : [];
   const newLines = after ? after.split(/\r?\n/) : [];
   let prefix = 0;
@@ -17,12 +17,12 @@ export function reportChangeDiff(before: string, after: string): ReportChangeDif
     suffix++;
   }
 
-  const lines: ReportChangeDiffLine[] = oldLines.slice(0, prefix).map((text) => ({ kind: 'context', text }));
+  const lines: TextDiffLine[] = oldLines.slice(0, prefix).map((text) => ({ kind: 'context', text }));
   const removed = oldLines.slice(prefix, oldLines.length - suffix);
   const added = newLines.slice(prefix, newLines.length - suffix);
   if (removed.length * added.length > 200_000) {
-    lines.push(...removed.map((text): ReportChangeDiffLine => ({ kind: 'removed', text })));
-    lines.push(...added.map((text): ReportChangeDiffLine => ({ kind: 'added', text })));
+    removed.forEach(text => lines.push({ kind: 'removed', text }));
+    added.forEach(text => lines.push({ kind: 'added', text }));
   } else {
     const width = added.length + 1;
     const lengths = new Uint32Array((removed.length + 1) * width);
@@ -48,6 +48,6 @@ export function reportChangeDiff(before: string, after: string): ReportChangeDif
       }
     }
   }
-  lines.push(...oldLines.slice(oldLines.length - suffix).map((text): ReportChangeDiffLine => ({ kind: 'context', text })));
+  oldLines.slice(oldLines.length - suffix).forEach(text => lines.push({ kind: 'context', text }));
   return lines;
 }
