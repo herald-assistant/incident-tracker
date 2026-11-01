@@ -1,12 +1,14 @@
 import { Component, input } from '@angular/core';
 
 import { AnalysisReportMeta, AnalysisReportReference } from '../../core/models/analysis.models';
+import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
 type AnalysisReportMetaVariant = 'section' | 'appendix';
 type AnalysisReportMetaAlign = 'start' | 'end';
 
 @Component({
   selector: 'app-analysis-report-meta',
+  imports: [MarkdownContentComponent],
   templateUrl: './analysis-report-meta.html',
   styleUrl: './analysis-report-meta.scss'
 })
@@ -16,6 +18,7 @@ export class AnalysisReportMetaComponent {
   readonly align = input<AnalysisReportMetaAlign>('end');
   readonly appendixEyebrow = input('Appendix');
   readonly appendixTitle = input('Limits, questions and references');
+  readonly markdown = input('');
 
   protected hasMeta(meta: AnalysisReportMeta | null | undefined = this.meta()): boolean {
     return Boolean(
@@ -38,10 +41,15 @@ export class AnalysisReportMetaComponent {
 
   protected referenceDetails(reference: AnalysisReportReference): string {
     const label = this.referenceLabel(reference);
-    return [reference.type, reference.target, reference.description]
+    return [reference.type, this.referenceUrl(reference) ? '' : reference.target, reference.description]
       .map((value) => this.cleanText(value))
       .filter((value) => this.hasText(value) && value !== label)
       .join(' | ');
+  }
+
+  protected referenceUrl(reference: AnalysisReportReference): string | null {
+    const target = this.cleanText(reference.target);
+    return /^(https?:\/\/|\/(?!\/))/.test(target) ? target : null;
   }
 
   protected metaCount(meta: AnalysisReportMeta | null | undefined = this.meta()): number {

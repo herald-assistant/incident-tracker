@@ -49,6 +49,16 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
   result.request={systemId:request['systemId'],mode:'LIQUIBASE',baselineRef:request['baselineRef'],targetRef:request['targetRef'],
     model:request['model'],reasoningEffort:request['reasoningEffort']};
   result.report=job['report']?normalizeAnalysisReport(job['report']):null;
+  if(result.report) {
+    for(const section of result.report.sections) {
+      if(!['OVERVIEW','TABLE_LIST','APPENDIX'].includes(section.id)&&!section.id.startsWith('DB_DETAIL_'))
+        throw new Error('Raport nie odpowiada aktualnemu układowi sekcji Release summary.');
+      if(section.order==null||!Number.isInteger(section.order)||section.order<1)
+        throw new Error('Niepoprawna kolejność sekcji raportu.');
+      if(section.id.startsWith('DB_DETAIL_')&&!/(?:^|\n)\s*\|\s*Obiekt\s*\|\s*Zmiana\s*\|\s*Opis funkcjonalny\s*\|\s*(?:\n|$)/.test(section.markdown))
+        throw new Error('Szczegóły tabeli wymagają kolumn: Obiekt, Zmiana, Opis funkcjonalny.');
+    }
+  }
   result.chatAvailability={available:false,code:'IMPORTED_READ_ONLY',message:'Import pliku jest tylko do odczytu i nie odtwarza sesji AI.'};
   result.exportAvailable=true;
   return result;

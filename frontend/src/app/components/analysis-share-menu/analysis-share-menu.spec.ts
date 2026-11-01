@@ -49,7 +49,7 @@ describe('AnalysisShareMenuComponent', () => {
       fileName: 'crm.md', markdown: '# CRM', markdownWithMeta: '# CRM\n\n## Meta'
     });
     fixture.detectChanges();
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:crm');
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:crm').mockClear();
     const fileNames: string[] = [];
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
       fileNames.push(this.download);

@@ -32,99 +32,9 @@
           </section>
         }
 
-        @if (hasMeta(currentReport.meta)) {
-          <section class="analysis-report-panel__block" aria-label="Meta raportu">
-            <div class="analysis-report-panel__block-heading">
-              <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-              <div>
-                <span class="field-label">Meta</span>
-                <h4>Raport</h4>
-              </div>
-              <span class="panel-chip">{{ metaCount(currentReport.meta) }}</span>
-            </div>
-            <div class="analysis-report-panel__meta-grid">
-              @if (hasItems(currentReport.meta.references)) {
-                <details class="analysis-report-panel__meta-detail">
-                  <summary>
-                    <span class="material-symbols-outlined" aria-hidden="true">notes</span>
-                    <span>References</span>
-                    <small>{{ currentReport.meta.references.length }}</small>
-                  </summary>
-                  <ul class="analysis-report-panel__reference-list">
-                    @for (reference of currentReport.meta.references; track $index) {
-                      <li>
-                        <strong>{{ referenceLabel(reference, $index) }}</strong>
-                        @if (referenceDetails(reference)) {
-                          <small>{{ referenceDetails(reference) }}</small>
-                        }
-                      </li>
-                    }
-                  </ul>
-                </details>
-              }
-              @if (hasItems(currentReport.meta.visibilityLimits)) {
-                <details class="analysis-report-panel__meta-detail">
-                  <summary>
-                    <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
-                    <span>Visibility limits</span>
-                    <small>{{ currentReport.meta.visibilityLimits.length }}</small>
-                  </summary>
-                  <ul>
-                    @for (limit of currentReport.meta.visibilityLimits; track $index) {
-                      <li>{{ limit }}</li>
-                    }
-                  </ul>
-                </details>
-              }
-              @if (hasItems(currentReport.meta.openQuestions)) {
-                <details class="analysis-report-panel__meta-detail">
-                  <summary>
-                    <span class="material-symbols-outlined" aria-hidden="true">help</span>
-                    <span>Open questions</span>
-                    <small>{{ currentReport.meta.openQuestions.length }}</small>
-                  </summary>
-                  <ul>
-                    @for (question of currentReport.meta.openQuestions; track $index) {
-                      <li>{{ question }}</li>
-                    }
-                  </ul>
-                </details>
-              }
-              @if (hasItems(currentReport.meta.gaps)) {
-                <details class="analysis-report-panel__meta-detail">
-                  <summary>
-                    <span class="material-symbols-outlined" aria-hidden="true">rule</span>
-                    <span>Gaps</span>
-                    <small>{{ currentReport.meta.gaps.length }}</small>
-                  </summary>
-                  <ul>
-                    @for (gap of currentReport.meta.gaps; track $index) {
-                      <li>{{ gap }}</li>
-                    }
-                  </ul>
-                </details>
-              }
-              @if (hasItems(currentReport.meta.warnings)) {
-                <details class="analysis-report-panel__meta-detail">
-                  <summary>
-                    <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-                    <span>Warnings</span>
-                    <small>{{ currentReport.meta.warnings.length }}</small>
-                  </summary>
-                  <ul>
-                    @for (warning of currentReport.meta.warnings; track $index) {
-                      <li>{{ warning }}</li>
-                    }
-                  </ul>
-                </details>
-              }
-            </div>
-          </section>
-        }
-
-        @if (currentReport.sections.length > 0) {
+        @if (sections().length > 0) {
           <div class="analysis-report-panel__sections">
-            @for (section of currentReport.sections; track section.id || $index) {
+            @for (section of sections(); track section.id || $index) {
               <details class="analysis-report-panel__section" [id]="'report-section-' + section.id" open>
                 <summary class="analysis-report-panel__section-summary">
                   <span class="analysis-report-panel__section-number">
@@ -142,97 +52,19 @@
                 </summary>
 
                 <div class="analysis-report-panel__section-body">
-                  @if (hasText(section.markdown)) {
-                    <app-markdown-content
-                      class="analysis-report-panel__markdown"
-                      [content]="section.markdown"
-                    ></app-markdown-content>
-                  }
-
-                  @if (hasMeta(section.meta)) {
-                    <div class="analysis-report-panel__meta-grid">
-                      @if (hasItems(section.meta.references)) {
-                        <details class="analysis-report-panel__meta-detail">
-                          <summary>
-                            <span class="material-symbols-outlined" aria-hidden="true">notes</span>
-                            <span>References</span>
-                            <small>{{ section.meta.references.length }}</small>
-                          </summary>
-                          <ul class="analysis-report-panel__reference-list">
-                            @for (reference of section.meta.references; track $index) {
-                              <li>
-                                <strong>{{ referenceLabel(reference, $index) }}</strong>
-                                @if (referenceDetails(reference)) {
-                                  <small>{{ referenceDetails(reference) }}</small>
-                                }
-                              </li>
-                            }
-                          </ul>
-                        </details>
-                      }
-                      @if (hasItems(section.meta.visibilityLimits)) {
-                        <details class="analysis-report-panel__meta-detail">
-                          <summary>
-                            <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
-                            <span>Visibility limits</span>
-                            <small>{{ section.meta.visibilityLimits.length }}</small>
-                          </summary>
-                          <ul>
-                            @for (limit of section.meta.visibilityLimits; track $index) {
-                              <li>{{ limit }}</li>
-                            }
-                          </ul>
-                        </details>
-                      }
-                      @if (hasItems(section.meta.openQuestions)) {
-                        <details class="analysis-report-panel__meta-detail">
-                          <summary>
-                            <span class="material-symbols-outlined" aria-hidden="true">help</span>
-                            <span>Open questions</span>
-                            <small>{{ section.meta.openQuestions.length }}</small>
-                          </summary>
-                          <ul>
-                            @for (question of section.meta.openQuestions; track $index) {
-                              <li>{{ question }}</li>
-                            }
-                          </ul>
-                        </details>
-                      }
-                      @if (hasItems(section.meta.gaps)) {
-                        <details class="analysis-report-panel__meta-detail">
-                          <summary>
-                            <span class="material-symbols-outlined" aria-hidden="true">rule</span>
-                            <span>Gaps</span>
-                            <small>{{ section.meta.gaps.length }}</small>
-                          </summary>
-                          <ul>
-                            @for (gap of section.meta.gaps; track $index) {
-                              <li>{{ gap }}</li>
-                            }
-                          </ul>
-                        </details>
-                      }
-                      @if (hasItems(section.meta.warnings)) {
-                        <details class="analysis-report-panel__meta-detail">
-                          <summary>
-                            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-                            <span>Warnings</span>
-                            <small>{{ section.meta.warnings.length }}</small>
-                          </summary>
-                          <ul>
-                            @for (warning of section.meta.warnings; track $index) {
-                              <li>{{ warning }}</li>
-                            }
-                          </ul>
-                        </details>
-                      }
-                    </div>
-                  }
+                  <app-analysis-report-section-content
+                    [markdown]="section.markdown" [meta]="section.meta" emptyText=""
+                  />
                 </div>
               </details>
             }
           </div>
         }
+        <app-analysis-report-meta
+          [id]="appendix() ? 'report-section-' + appendix()!.id : null"
+          variant="appendix" [meta]="appendixMeta()" [markdown]="appendix()?.markdown ?? ''"
+          [appendixTitle]="appendixTitle()"
+        />
       </div>
     </details>
   </section>

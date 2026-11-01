@@ -3,6 +3,7 @@ import {
   AnalysisReportMeta,
   AnalysisReportReference
 } from '../models/analysis.models';
+import { orderedReportSections } from './analysis-report.utils';
 
 export interface AnalysisShareDocument {
   fileName: string;
@@ -26,11 +27,11 @@ export function buildAnalysisShareDocument(
 
 export function buildReportShareDocument(
   report: AnalysisReport,
-  fileName: string
+  fileName: string,
+  appendixSectionId = ''
 ): AnalysisShareDocument {
-  const sections = [...(report.sections ?? [])].sort(
-    (left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER)
-  );
+  const sections = orderedReportSections(report, appendixSectionId);
+  const mainSections = sections.filter(section => !appendixSectionId || section.id !== appendixSectionId);
   const heading = `# ${report.header?.trim() || 'Wynik analizy'}`;
   const intro = [
     heading,
@@ -39,7 +40,7 @@ export function buildReportShareDocument(
   ].filter(Boolean);
   const content = [
     ...intro,
-    ...sections.map((section) => [
+    ...mainSections.map((section) => [
       reportSectionAnchor(section.id),
       `## ${section.title?.trim() || section.id || 'Sekcja'}`,
       section.markdown?.trim() || ''
@@ -54,7 +55,7 @@ export function buildReportShareDocument(
       section.markdown?.trim() || '',
       renderAnalysisShareMeta(section.meta, 'Meta sekcji')
     ].filter(Boolean).join('\n\n')),
-    renderAnalysisShareMeta(report.meta, 'Meta raportu')
+    renderAnalysisShareMeta(report.meta, appendixSectionId ? 'Ograniczenia i źródła raportu' : 'Meta raportu')
   ].filter(Boolean).join('\n\n');
   return { fileName, markdown: content, markdownWithMeta: withMeta };
 }

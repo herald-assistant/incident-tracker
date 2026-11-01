@@ -1,5 +1,5 @@
 import {parseReleaseSummaryImport,releaseSummaryExport} from './release-summary-import-export';
-import {releaseSnapshot} from './release-summary.testing';
+import {releaseReport,releaseSnapshot} from './release-summary.testing';
 import {terminalReleaseSummary} from './release-summary.models';
 describe('Release summary file contract',()=>{
   it('preserves complete pinned sources and full nested entity payloads through JSON round-trip',()=>{
@@ -26,5 +26,16 @@ describe('Release summary file contract',()=>{
     job.chatMessages=[{id:'answer',role:'ASSISTANT',status:'IN_PROGRESS',content:'',createdAt:job.createdAt,updatedAt:job.updatedAt,
       completedAt:'',errorCode:'',errorMessage:'',toolEvidenceSections:[],aiActivityEvents:[],toolFeedback:[],prompt:'',usage:null}];
     expect(terminalReleaseSummary(job)).toBe(false);expect(()=>parseReleaseSummaryImport(releaseSummaryExport(job))).toThrow();
+  });
+  it('round-trips table details and metadata and rejects obsolete report layouts',()=>{
+    const job=releaseSnapshot();job.report=releaseReport();
+    const imported=parseReleaseSummaryImport(JSON.parse(JSON.stringify(releaseSummaryExport(job))));
+    expect(imported.report).toMatchObject(job.report!);
+    expect(imported.report?.sections[0].markdown).toContain('typ: varchar(40); NOT NULL; wartość domyślna: general');
+    for(const mutate of [
+      (report:any)=>report.sections[0].id='CHANGE_INDEX',
+      (report:any)=>report.sections[0].markdown='| Obiekt | Zmiana techniczna | Znaczenie funkcjonalne | Źródła |\n| --- | --- | --- | --- |\n| label | Dodanie | Etykieta | Plik |',
+      (report:any)=>report.sections[0].order=0
+    ]) {job.report=releaseReport();mutate(job.report);expect(()=>parseReleaseSummaryImport(releaseSummaryExport(job))).toThrow();}
   });
 });

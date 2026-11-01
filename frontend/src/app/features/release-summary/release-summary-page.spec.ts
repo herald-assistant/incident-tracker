@@ -12,7 +12,7 @@ import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { AnalysisJobPollingService } from '../../core/services/analysis-job-polling.service';
 import { AnalysisAiModelOptionsResponse } from '../../core/models/analysis.models';
 
-import { releaseSnapshot } from './release-summary.testing';
+import { releaseReport, releaseSnapshot } from './release-summary.testing';
 import { parseReleaseSummaryImport, releaseSummaryExport } from './release-summary-import-export';
 describe('ReleaseSummary workspace',()=>{
   let api: {applications: ReturnType<typeof vi.fn>; refs: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>;
@@ -93,12 +93,17 @@ describe('ReleaseSummary workspace',()=>{
   });
   it('renders partial report through the shared renderer and exposes coverage',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);
-    const job=releaseSnapshot('PARTIAL');job.report={reportId:'report',header:'CRM release',subHeader:'CRM',
-      markdownSummary:'Zmiany',meta:{references:[],visibilityLimits:[],openQuestions:[],gaps:[],confidence:"",warnings:[]},
-      sections:[{id:'OVERVIEW',title:'CRM',order:0,markdown:'| Kolumna | Cel |\n| --- | --- |\n| label | Wyszukiwanie klienta |',
-        meta:{references:[],visibilityLimits:[],openQuestions:[],gaps:[],confidence:"",warnings:[]}}]};
+    const job=releaseSnapshot('PARTIAL');job.report=releaseReport();
     fixture.componentInstance.job.set(job);fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-analysis-report-panel table')).not.toBeNull();
+    expect([...fixture.nativeElement.querySelectorAll('.analysis-report-panel__section h4')].map((node:any)=>node.textContent.trim()))
+      .toEqual(['Podsumowanie','Lista tabel','customer']);
+    expect([...fixture.nativeElement.querySelectorAll('#report-section-DB_DETAIL_customer th')].map((node:any)=>node.textContent.trim()))
+      .toEqual(['Obiekt','Zmiana','Opis funkcjonalny']);
+    expect(fixture.nativeElement.textContent).toContain('typ: varchar(40); NOT NULL; wartość domyślna: general');
+    expect(fixture.nativeElement.querySelector('.analysis-report-appendix').open).toBe(false);
+    expect(fixture.componentInstance.shareDocument()?.markdown).not.toContain('https://');
+    expect(fixture.componentInstance.shareDocument()?.markdownWithMeta).toContain('https://gitlab.example.com');
     expect(fixture.nativeElement.textContent).not.toContain('OVERVIEW');
     expect(fixture.nativeElement.textContent).toContain('Punkt wejścia');
     expect(fixture.nativeElement.textContent).toContain('Stan docelowy');

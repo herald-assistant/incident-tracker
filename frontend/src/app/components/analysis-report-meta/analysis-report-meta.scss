@@ -280,3 +280,20 @@
   min-width: 0;
   gap: 6px;
 }
+
+.analysis-report-appendix__markdown {
+  display: block;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.flow-explorer-reference-chip a {
+  color: var(--primary-dark);
+  font-weight: 700;
+  text-underline-offset: 2px;
+}
+
+.flow-explorer-reference-chip a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

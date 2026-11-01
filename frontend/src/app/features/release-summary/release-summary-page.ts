@@ -70,7 +70,7 @@ export class ReleaseSummaryPageComponent {
     if (!this.systemId() || !this.before() || !this.after()) return 'Wybierz aplikację, punkt wejścia i stan docelowy.';
     return 'Gotowe do wygenerowania raportu.';
   });
-  readonly shareDocument = computed(() => this.job()?.report ? buildReportShareDocument(this.job()!.report!, 'release-summary.md') : null);
+  readonly shareDocument = computed(() => this.job()?.report ? buildReportShareDocument(this.job()!.report!, 'release-summary.md', 'APPENDIX') : null);
   readonly tabs = [{id: 'report', tabLabel: 'Raport'}, {id: 'coverage', tabLabel: 'Kompletność i źródła'}];
   readonly beforeLoader = (key: string, search: string, page?: number) =>
     this.api.refs(key.slice(0, key.lastIndexOf(':')), key.slice(key.lastIndexOf(':') + 1) as ReleaseRefKind, search, page);

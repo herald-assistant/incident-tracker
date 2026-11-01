@@ -55,8 +55,11 @@ Testy i przykłady wyłącznie fikcyjnego CRM.
   tabel, NULL/default/przed-po, SQL coverage, źródeł i braku żargonu. Dowód:
   60 testów zaliczonych, 1 pilot opt-in pominięty; log
   `tdw-data/logs/release-summary-readability-step1.log`. `git diff --check` poprawny.
-- [ ] Prezentacja: stabilne sortowanie, shared meta pod sekcjami, końcowy
-  zwijany appendix, spójny Share/import. Testy całego frontendu i build. Commit.
+- [x] Prezentacja: stabilne sortowanie, shared meta pod sekcjami, końcowy
+  zwijany appendix, spójny Share/import. 699 testów frontendu zaliczonych
+  (4 procesy Vitest, bez zmiany timeoutu); produkcyjny build i diff-check poprawne.
+  Logi: `release-summary-readability-frontend-tests.log` i
+  `release-summary-readability-frontend-build.log` w `tdw-data/logs`.
 - [ ] Pełna regresja backendu po buildzie UI, aktualizacja dokumentacji,
   porządek lokalnych artefaktów starego kontraktu, restart i wygenerowanie
   raportu. Kontrola czytelności w przeglądarce, historii i eksportu. Commit.

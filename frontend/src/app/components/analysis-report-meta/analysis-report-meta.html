@@ -1,4 +1,4 @@
-@if (hasMeta(meta())) {
+@if (hasMeta(meta()) || (variant() === 'appendix' && hasText(markdown()))) {
   @if (variant() === 'appendix') {
     <details class="flow-explorer-result-appendix analysis-report-appendix">
       <summary>
@@ -27,6 +27,9 @@
       </summary>
 
       <div class="flow-explorer-result-appendix__body">
+        @if (hasText(markdown())) {
+          <app-markdown-content class="analysis-report-appendix__markdown" [content]="markdown()" />
+        }
         @if (hasItems(meta()?.visibilityLimits)) {
           <div class="flow-explorer-result-appendix__group">
             <h4>Visibility limits</h4>
@@ -73,7 +76,11 @@
             <div class="flow-explorer-chip-list">
               @for (reference of meta()?.references; track $index) {
                 <span class="panel-chip flow-explorer-reference-chip">
-                  <strong>{{ referenceLabel(reference) }}</strong>
+                  @if (referenceUrl(reference); as url) {
+                    <a [href]="url" target="_blank" rel="noopener noreferrer">{{ referenceLabel(reference) }}</a>
+                  } @else {
+                    <strong>{{ referenceLabel(reference) }}</strong>
+                  }
                   @if (hasText(referenceDetails(reference))) {
                     <small>{{ referenceDetails(reference) }}</small>
                   }
@@ -99,7 +106,11 @@
           <div class="flow-explorer-chip-list">
             @for (reference of meta()?.references; track $index) {
               <span class="panel-chip flow-explorer-reference-chip">
-                <strong>{{ referenceLabel(reference) }}</strong>
+                @if (referenceUrl(reference); as url) {
+                    <a [href]="url" target="_blank" rel="noopener noreferrer">{{ referenceLabel(reference) }}</a>
+                  } @else {
+                    <strong>{{ referenceLabel(reference) }}</strong>
+                  }
                 @if (hasText(referenceDetails(reference))) {
                   <small>{{ referenceDetails(reference) }}</small>
                 }

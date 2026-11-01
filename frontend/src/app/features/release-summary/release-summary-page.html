@@ -119,7 +119,8 @@
           @if(current.report) {
             @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
               (save)="saveReport($event)" (cancel)="editing.set(false)" />}
-            @else {<app-analysis-report-panel [report]="current.report" [showTechnicalIds]="false" />}
+            @else {<app-analysis-report-panel [report]="current.report" [showTechnicalIds]="false"
+              appendixSectionId="APPENDIX" appendixTitle="Informacje wdrożeniowe, ograniczenia i źródła" />}
           }
           @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź źródła i przebieg analizy.'}}</p> }
         } @else {

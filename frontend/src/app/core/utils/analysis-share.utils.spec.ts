@@ -34,4 +34,17 @@ describe('buildReportShareDocument', () => {
     expect(document.markdownWithMeta).toContain('https://jira.example.com/CRM-2');
     expect(document.markdownWithMeta).toContain('Wynik częściowy.');
   });
+
+  it('places the optional appendix at the end of the extended share only', () => {
+    const meta={references:[],visibilityLimits:[],openQuestions:[],gaps:[],warnings:[],confidence:''};
+    const report:AnalysisReport={reportId:'crm-report',header:'CRM',subHeader:'',markdownSummary:'',meta,
+      sections:[{id:'APPENDIX',title:'Appendix',order:1,markdown:'Sprawdzić kopię danych.',meta},
+        {id:'TABLE',title:'Tabela customer',order:3,markdown:'Dodanie pola etykiety.',meta},
+        {id:'SUMMARY',title:'Podsumowanie',order:2,markdown:'Etykiety klientów.',meta}]};
+    const share=buildReportShareDocument(report,'crm.md','APPENDIX');
+    expect(share.markdown).not.toContain('Appendix');
+    expect(share.markdownWithMeta.indexOf('## Podsumowanie')).toBeLessThan(share.markdownWithMeta.indexOf('## Tabela customer'));
+    expect(share.markdownWithMeta.indexOf('## Tabela customer')).toBeLessThan(share.markdownWithMeta.indexOf('## Appendix'));
+    expect(share.markdownWithMeta).toContain('Sprawdzić kopię danych.');
+  });
 });
