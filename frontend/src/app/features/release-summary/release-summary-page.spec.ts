@@ -87,14 +87,28 @@ describe('ReleaseSummary workspace',()=>{
   it('keeps imported files read-only even if the exported availability allowed continuation',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
     const job=releaseSnapshot();job.chatAvailability={available:true,code:'AVAILABLE',message:''};
-    page.job.set(parseReleaseSummaryImport(releaseSummaryExport(job)));page.imported.set(true);
+    job.report=releaseReport();
+    page.job.set(parseReleaseSummaryImport(releaseSummaryExport(job)));page.imported.set(true);fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-analysis-result-header h3').textContent).toBe('Zmiany bazodanowe między current a next');
+    expect(fixture.nativeElement.querySelector('.release-summary-result').firstElementChild.tagName).toBe('APP-ANALYSIS-RESULT-HEADER');
     page.sendChat('Pytanie');page.saveReport({expectedRevisionSha256:'old',markdownSummary:'Zmiana',sections:[]});
     expect(api.chat).not.toHaveBeenCalled();expect(api.edit).not.toHaveBeenCalled();expect(page.canEdit()).toBe(false);
   });
-  it('renders partial report through the shared renderer and exposes coverage',()=>{
+  it('renders a partial report directly under one header using the saved comparison',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);
     const job=releaseSnapshot('PARTIAL');job.report=releaseReport();
     fixture.componentInstance.job.set(job);fixture.detectChanges();
+    const result=fixture.nativeElement.querySelector('.release-summary-result');
+    expect(result.firstElementChild.tagName).toBe('APP-ANALYSIS-RESULT-HEADER');
+    expect(result.querySelectorAll('h3')).toHaveLength(1);
+    expect(result.querySelector('h3').textContent).toBe('Zmiany bazodanowe między current a next');
+    expect(result.querySelector('app-analysis-result-tabs')).toBeNull();
+    expect(result.querySelector('[role="tablist"]')).toBeNull();
+    expect(result.querySelector('.analysis-report-panel__details')).toBeNull();
+    expect(result.querySelector('.status-pill')).toBeNull();
+    expect(result.querySelector('.release-direction')).toBeNull();
+    expect(result.textContent).not.toContain('Kompletność i źródła');
+    expect(result.textContent).not.toContain('Źródła przypięte');
     expect(fixture.nativeElement.querySelector('app-analysis-report-panel table')).not.toBeNull();
     expect([...fixture.nativeElement.querySelectorAll('.analysis-report-panel__section h4')].map((node:any)=>node.textContent.trim()))
       .toEqual(['Podsumowanie','Lista tabel','customer']);
@@ -107,17 +121,18 @@ describe('ReleaseSummary workspace',()=>{
     expect(fixture.nativeElement.textContent).not.toContain('OVERVIEW');
     expect(fixture.nativeElement.textContent).toContain('Punkt wejścia');
     expect(fixture.nativeElement.textContent).toContain('Stan docelowy');
-    expect(fixture.nativeElement.textContent).toContain('Raport częściowy');
+    expect(result.querySelector('[role="img"]').getAttribute('aria-label')).toContain('Raport częściowy');
     expect(fixture.nativeElement.querySelector('app-analysis-feature-aside')).not.toBeNull();
-    fixture.componentInstance.activeTab.set('coverage');fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Źródła przypięte');
+    fixture.componentInstance.before.set('refs/heads/other-current');fixture.componentInstance.after.set('refs/heads/other-next');fixture.detectChanges();
+    expect(result.querySelector('h3').textContent).toBe('Zmiany bazodanowe między current a next');
+    expect(fixture.componentInstance.shareDocument()?.markdown).toMatch(/^# Zmiany bazodanowe między current a next\n/);
+    expect(job.report.header).toBe('Zmiany bazodanowe we wdrożeniu');
   });
   it('shows a blocked result without claiming an empty release',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);
     const job=releaseSnapshot('BLOCKED');job.error='Brak refa w repozytorium CRM';
     fixture.componentInstance.job.set(job);fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Przygotowanie zablokowane');
-    expect(fixture.nativeElement.textContent).toContain('Brak refa');
+    expect(fixture.nativeElement.querySelector('.release-summary-result [role="alert"]').textContent).toContain('Brak refa');
     expect(fixture.nativeElement.textContent).not.toContain('Brak zmian Liquibase');
     expect(fixture.nativeElement.querySelector('app-analysis-report-panel')).toBeNull();
     expect(fixture.componentInstance.shareDocument()).toBeNull();
@@ -125,9 +140,11 @@ describe('ReleaseSummary workspace',()=>{
   it('respects disabled starts while keeping saved results visible',()=>{
     config.set({releaseSummaryEnabled:false});
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);
-    fixture.componentInstance.job.set(releaseSnapshot('NO_CHANGES'));fixture.detectChanges();
+    const job=releaseSnapshot('NO_CHANGES');job.report=releaseReport();
+    job.report.sections=[{...job.report.sections.find(section=>section.id==='OVERVIEW')!,markdown:'Brak zmian bazodanowych.'}];
+    fixture.componentInstance.job.set(job);fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Nowe analizy Release summary są wyłączone');
-    expect(fixture.nativeElement.textContent).toContain('Brak zmian Liquibase');
+    expect(fixture.nativeElement.textContent).toContain('Brak zmian bazodanowych.');
     expect(fixture.nativeElement.querySelector('app-application-select')).toBeNull();
     fixture.componentInstance.start();expect(api.start).not.toHaveBeenCalled();
   });

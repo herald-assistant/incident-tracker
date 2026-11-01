@@ -15,7 +15,6 @@ import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisReportPanelComponent } from '../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisResultHeaderComponent } from '../../components/analysis-result-header/analysis-result-header';
-import { AnalysisResultTabsComponent } from '../../components/analysis-result-tabs/analysis-result-tabs';
 import { ReleaseSummaryApiService } from './release-summary-api.service';
 import { ReleaseRefKind, ReleaseSummarySnapshot, releaseRef, terminalReleaseSummary } from './release-summary.models';
 import { AnalysisJobPollingService } from '../../core/services/analysis-job-polling.service';
@@ -28,7 +27,7 @@ import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, liste
 @Component({
   selector: 'app-release-summary-page',
   imports: [FormsModule, MatTooltipModule, ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
-    AnalysisStepsPanelComponent, AnalysisReportPanelComponent, AnalysisResultHeaderComponent, AnalysisResultTabsComponent,
+    AnalysisStepsPanelComponent, AnalysisReportPanelComponent, AnalysisResultHeaderComponent,
     AnalysisFollowUpChatComponent, AnalysisReportEditorComponent],
   templateUrl: './release-summary-page.html',
   styleUrl: './release-summary-page.scss'
@@ -47,7 +46,6 @@ export class ReleaseSummaryPageComponent {
   readonly beforeKind = signal<ReleaseRefKind>('BRANCH'); readonly afterKind = signal<ReleaseRefKind>('BRANCH');
   readonly loading = signal(false); readonly starting = signal(false); readonly error = signal('');
   readonly job = signal<ReleaseSummarySnapshot | null>(null);
-  readonly activeTab = signal('report');
   readonly imported = signal(false); readonly editing = signal(false); readonly saving = signal(false);
   readonly chatSubmitting = signal(false); readonly chatError = signal(''); readonly updateReport = signal(false);
   readonly canChat = computed(()=>!this.imported() && !this.busy() && !this.editing() && this.uiConfig.config().releaseSummaryEnabled && !!this.job()?.chatAvailability.available);
@@ -70,8 +68,14 @@ export class ReleaseSummaryPageComponent {
     if (!this.systemId() || !this.before() || !this.after()) return 'Wybierz aplikację, punkt wejścia i stan docelowy.';
     return 'Gotowe do wygenerowania raportu.';
   });
-  readonly shareDocument = computed(() => this.job()?.report ? buildReportShareDocument(this.job()!.report!, 'release-summary.md', 'APPENDIX') : null);
-  readonly tabs = [{id: 'report', tabLabel: 'Raport'}, {id: 'coverage', tabLabel: 'Kompletność i źródła'}];
+  readonly resultTitle = computed(() => {
+    const request = this.job()?.request;
+    return request ? `Zmiany bazodanowe między ${request.baselineRef.name} a ${request.targetRef.name}` : 'Zmiany bazodanowe';
+  });
+  readonly shareDocument = computed(() => {
+    const report = this.job()?.report;
+    return report ? buildReportShareDocument({...report, header: this.resultTitle()}, 'release-summary.md', 'APPENDIX') : null;
+  });
   readonly beforeLoader = (key: string, search: string, page?: number) =>
     this.api.refs(key.slice(0, key.lastIndexOf(':')), key.slice(key.lastIndexOf(':') + 1) as ReleaseRefKind, search, page);
   readonly afterLoader = this.beforeLoader;
@@ -108,7 +112,7 @@ export class ReleaseSummaryPageComponent {
     this.api.start({systemId: this.systemId(), mode: 'LIQUIBASE', baselineRef: releaseRef(this.before()), targetRef: releaseRef(this.after()),
       ...(this.model() ? {model: this.model()} : {}), ...(this.reasoning() ? {reasoningEffort: this.reasoning()} : {})})
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: job => { this.job.set(job); this.starting.set(false); this.activeTab.set('report'); if(!terminalReleaseSummary(job)) this.poll(job.jobId); },
+        next: job => { this.job.set(job); this.starting.set(false); if(!terminalReleaseSummary(job)) this.poll(job.jobId); },
         error: err => { this.starting.set(false); this.error.set(err?.error?.message || 'Nie udało się uruchomić porównania.'); }
       });
   }
@@ -144,7 +148,7 @@ export class ReleaseSummaryPageComponent {
   async importFile(event:Event):Promise<void> {
     const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file||this.busy())return;
     try {const imported=parseReleaseSummaryImport(JSON.parse(await file.text()));this.pollSubscription?.unsubscribe();
-      this.job.set(imported);this.imported.set(true);this.editing.set(false);this.activeTab.set('report');this.error.set('');}
+      this.job.set(imported);this.imported.set(true);this.editing.set(false);this.error.set('');}
     catch(e){this.error.set(e instanceof Error?e.message:'Nie można odczytać pliku.');}finally{input.value='';}
   }
   exportFile():void {
@@ -152,10 +156,6 @@ export class ReleaseSummaryPageComponent {
     if(this.imported()){downloadJsonFile('release-summary.json',releaseSummaryExport(job));return;}
     this.api.export(job.jobId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:payload=>downloadJsonFile('release-summary.json',payload),error:()=>this.error.set('Nie udało się wyeksportować analizy.')});
-  }
-  statusLabel(status: string): string {
-    return ({QUEUED: 'W kolejce', RUNNING: 'Analiza w toku', COMPLETED: 'Raport gotowy', PARTIAL: 'Raport częściowy',
-      BLOCKED: 'Przygotowanie zablokowane', FAILED: 'Analiza przerwana', NO_CHANGES: 'Brak zmian Liquibase', INTERRUPTED: 'Przerwano przy restarcie'} as Record<string,string>)[status] || status;
   }
   private canonical(ref: {kind: ReleaseRefKind; name: string}): string {
     return ref.kind === 'BRANCH' ? 'refs/heads/' + ref.name : ref.kind === 'TAG' ? 'refs/tags/' + ref.name : ref.name;

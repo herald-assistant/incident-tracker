@@ -9,6 +9,8 @@ describe('AnalysisReportPanelComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain('DOWNSTREAM_TIMEOUT');
+    expect(compiled.querySelector('.analysis-report-panel__summary h3')?.textContent).toBe('DOWNSTREAM_TIMEOUT');
+    expect((compiled.querySelector('.analysis-report-panel__details') as HTMLDetailsElement).open).toBe(true);
     expect(compiled.textContent).toContain('incident-report-1');
     expect(compiled.textContent).toContain('TECHNICAL_HANDOFF');
     expect(compiled.querySelector('#report-section-TECHNICAL_HANDOFF')).not.toBeNull();
@@ -16,6 +18,18 @@ describe('AnalysisReportPanelComponent', () => {
     expect(compiled.textContent).toContain('Brak logow downstream.');
     expect(compiled.textContent).toContain('Potwierdzic timeout w systemie zewnetrznym.');
     expect(compiled.querySelector('.analysis-report-panel__markdown strong')?.textContent).toBe('Timeout');
+  });
+
+  it('embeds the report body without a second header or collapsible outer card', async () => {
+    const fixture=await renderReport(report());fixture.componentRef.setInput('embedded',true);fixture.detectChanges();
+    const element=fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.analysis-report-panel__summary')).toBeNull();
+    expect(element.querySelector('.analysis-report-panel__details')).toBeNull();
+    expect(element.textContent).not.toContain('DOWNSTREAM_TIMEOUT');
+    expect(element.querySelector('.analysis-report-panel__markdown strong')?.textContent).toBe('Timeout');
+    expect(element.querySelector('#report-section-TECHNICAL_HANDOFF')).not.toBeNull();
+    expect(element.querySelector('.analysis-report-section-meta')).not.toBeNull();
+    expect(element.querySelector('.analysis-report-appendix')).not.toBeNull();
   });
 
   it('can hide technical identifiers while preserving section navigation and content', async () => {

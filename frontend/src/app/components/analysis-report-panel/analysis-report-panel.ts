@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 
 import { AnalysisReport, AnalysisReportSection } from '../../core/models/analysis.models';
 import { mergeReportMeta, orderedReportSections } from '../../core/utils/analysis-report.utils';
@@ -8,12 +9,13 @@ import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
 @Component({
   selector: 'app-analysis-report-panel',
-  imports: [MarkdownContentComponent, AnalysisReportMetaComponent, AnalysisReportSectionContentComponent],
+  imports: [NgTemplateOutlet, MarkdownContentComponent, AnalysisReportMetaComponent, AnalysisReportSectionContentComponent],
   templateUrl: './analysis-report-panel.html',
   styleUrl: './analysis-report-panel.scss'
 })
 export class AnalysisReportPanelComponent {
   readonly report = input<AnalysisReport | null>(null);
+  readonly embedded = input(false);
   readonly showTechnicalIds = input(true);
   readonly appendixSectionId = input('');
   readonly appendixTitle = input('Ograniczenia, pytania i źródła');

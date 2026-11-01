@@ -166,60 +166,13 @@
   min-width: 0;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-th,
-td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-
-.comparison-table {
-  overflow: auto;
-}
-
-code {
-  overflow-wrap: anywhere;
-  font-size: 0.8rem;
-}
-
-details {
-  margin: 20px 0;
+.release-summary-result {
+  display: grid;
+  gap: 16px;
 }
 
 [role='alert'] {
   color: var(--danger-text);
-}
-
-.release-direction {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 12px 0;
-  color: var(--text-muted);
-}
-
-.release-direction strong {
-  display: block;
-  color: var(--text-main);
-}
-
-.status-pill[data-state='BLOCKED'],
-.status-pill[data-state='FAILED'],
-.status-pill[data-state='INTERRUPTED'] {
-  background: var(--danger-surface, #fff1f1);
-  color: var(--danger-text);
-}
-
-.status-pill[data-state='PARTIAL'] {
-  background: var(--warning-surface, #fff8e7);
-  color: var(--warning-color, #805600);
 }
 
 @media (max-width: 1100px) {

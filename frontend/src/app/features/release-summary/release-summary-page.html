@@ -105,48 +105,19 @@
     </section>
 
     @if(job(); as current) {
-      <section class="analysis-card">
-        @if(imported()) {<p role="status">Import pliku — wynik tylko do odczytu, bez sesji AI.</p>}
-        <p class="status-pill" [attr.data-state]="current.status" role="status">{{statusLabel(current.status)}}</p>
-        @if(current.error) { <p role="alert">{{current.error}}</p> }
-        <p class="release-direction"><span>Punkt wejścia <strong>{{current.request.baselineRef.name}}</strong></span>
-          <span aria-hidden="true">→</span><span>Stan docelowy <strong>{{current.request.targetRef.name}}</strong></span></p>
-        <app-analysis-result-header title="Raport wdrożeniowy" [context]="current.comparison?.systemName || current.request.systemId"
-          [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — sprawdź kompletność i jawne luki.' : ''"
+      <section class="analysis-card release-summary-result" aria-label="Wynik Release summary">
+        <app-analysis-result-header [title]="resultTitle()" [context]="current.comparison?.systemName || current.request.systemId"
+          [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — ograniczenia są opisane w metadanych sekcji i appendixie.' : ''"
           [shareDocument]="shareDocument()" [editable]="canEdit() && !editing()" (editRequested)="editing.set(true)" />
-        <app-analysis-result-tabs [tabs]="tabs" [activeTabId]="activeTab()" idPrefix="release-summary" (tabSelected)="activeTab.set($event)" />
-        @if(activeTab() === 'report') {
-          @if(current.report) {
-            @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
-              (save)="saveReport($event)" (cancel)="editing.set(false)" />}
-            @else {<app-analysis-report-panel [report]="current.report" [showTechnicalIds]="false"
-              appendixSectionId="APPENDIX" appendixTitle="Informacje wdrożeniowe, ograniczenia i źródła" />}
-          }
-          @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź źródła i przebieg analizy.'}}</p> }
-        } @else {
-          @if(current.result;as result) {
-            <p>Opisane zakresy zmian: <strong>{{result.documentedUnits}} / {{result.expectedUnits}}</strong>.
-              Obiekty i operacje: <strong>{{result.documentedElements}} / {{result.expectedElements}}</strong>.</p>
-            <p>Odczyt źródeł: {{result.sourceComplete ? 'kompletny' : 'niekompletny'}}.
-              Operacje SQL i niestandardowe migracje mogą wymagać dodatkowej weryfikacji analityka.</p>
-            <ul>@for(limit of result.visibilityLimits;track $index) { <li>{{limit}}</li> }</ul>
-          }
-          @if(current.evidence;as evidence) {
-            <p>Zweryfikowano {{evidence.scannedFiles}} odczytów. Jednostki zmian: {{evidence.units.length}}.</p>
-            <ul>@for(gap of evidence.gaps;track $index) { <li><strong>{{gap.code}}</strong> — {{gap.path}}: {{gap.detail}}</li> }</ul>
-          }
-          <div class="comparison-table">
-            <table><thead><tr><th scope="col">Repozytorium</th><th scope="col">Punkt wejścia</th><th scope="col">Stan docelowy</th><th scope="col">Zakres</th></tr></thead>
-              <tbody>@for(repo of current.comparison?.repositories || [];track repo.repositoryId) {
-                <tr><th scope="row">{{repo.repositoryId}}</th><td>{{repo.baselineRef}}<br><code>{{repo.baselineCommit}}</code></td>
-                  <td>{{repo.targetRef}}<br><code>{{repo.targetCommit}}</code></td><td>{{repo.prefixes.join(', ') || 'Całe repozytorium'}}</td></tr>
-              }</tbody>
-            </table>
-          </div>
-          <details><summary>Źródła przypięte do commitów</summary>
-            @for(source of current.evidence?.sources || [];track $index) { <p><code>{{source.sourceRef}}</code></p> }
-          </details>
+        @if(imported()) {<p role="status">Import pliku — wynik tylko do odczytu, bez sesji AI.</p>}
+        @if(current.error) { <p role="alert">{{current.error}}</p> }
+        @if(current.report) {
+          @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
+            (save)="saveReport($event)" (cancel)="editing.set(false)" />}
+          @else {<app-analysis-report-panel [report]="current.report" [embedded]="true" [showTechnicalIds]="false"
+            appendixSectionId="APPENDIX" appendixTitle="Informacje wdrożeniowe, ograniczenia i źródła" />}
         }
+        @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź przebieg analizy.'}}</p> }
       </section>
       <app-analysis-feature-aside [progressActive]="busy()" [aiActive]="busy()" [progressCount]="current.steps.length"
         [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [chatMessages]="current.chatMessages"

@@ -98,6 +98,10 @@
   padding: 0 16px 16px;
 }
 
+.analysis-report-panel--embedded .analysis-report-panel__body {
+  padding: 0;
+}
+
 .analysis-report-panel__block,
 .analysis-report-panel__section {
   border: 1px solid var(--border-subtle, var(--border));

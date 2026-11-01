@@ -1,27 +1,33 @@
 @if (report(); as currentReport) {
-  <section class="analysis-report-panel" aria-label="Raport analizy">
-    <details class="analysis-report-panel__details" open>
-      <summary class="analysis-report-panel__summary">
-        <span class="material-symbols-outlined analysis-report-panel__summary-icon" aria-hidden="true">
-          fact_check
-        </span>
-        <div class="analysis-report-panel__summary-text">
-          <p class="section-eyebrow">Raport</p>
-          <h3>{{ reportTitle(currentReport) }}</h3>
-          @if (hasText(currentReport.subHeader)) {
-            <p>{{ currentReport.subHeader }}</p>
-          }
-        </div>
-        <div class="analysis-report-panel__badges">
-          @if (hasText(currentReport.meta.confidence)) {
-            <span class="panel-chip">{{ currentReport.meta.confidence }}</span>
-          }
-          @if (showTechnicalIds() && hasText(currentReport.reportId)) {
-            <code class="analysis-report-panel__report-id">{{ currentReport.reportId }}</code>
-          }
-        </div>
-      </summary>
-
+  <section class="analysis-report-panel" [class.analysis-report-panel--embedded]="embedded()" aria-label="Raport analizy">
+    @if (embedded()) {
+      <ng-container [ngTemplateOutlet]="reportBody" />
+    } @else {
+      <details class="analysis-report-panel__details" open>
+        <summary class="analysis-report-panel__summary">
+          <span class="material-symbols-outlined analysis-report-panel__summary-icon" aria-hidden="true">
+            fact_check
+          </span>
+          <div class="analysis-report-panel__summary-text">
+            <p class="section-eyebrow">Raport</p>
+            <h3>{{ reportTitle(currentReport) }}</h3>
+            @if (hasText(currentReport.subHeader)) {
+              <p>{{ currentReport.subHeader }}</p>
+            }
+          </div>
+          <div class="analysis-report-panel__badges">
+            @if (hasText(currentReport.meta.confidence)) {
+              <span class="panel-chip">{{ currentReport.meta.confidence }}</span>
+            }
+            @if (showTechnicalIds() && hasText(currentReport.reportId)) {
+              <code class="analysis-report-panel__report-id">{{ currentReport.reportId }}</code>
+            }
+          </div>
+        </summary>
+        <ng-container [ngTemplateOutlet]="reportBody" />
+      </details>
+    }
+    <ng-template #reportBody>
       <div class="analysis-report-panel__body">
         @if (hasText(currentReport.markdownSummary)) {
           <section class="analysis-report-panel__block" aria-label="Podsumowanie raportu">
@@ -66,6 +72,6 @@
           [appendixTitle]="appendixTitle()"
         />
       </div>
-    </details>
+    </ng-template>
   </section>
 }
