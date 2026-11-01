@@ -63,12 +63,13 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- [Release summary](needs/release-summary.md) oraz
-  [plan poprawy raportu dla analityka](plans/release-summary-readable-report.md) opisują porównanie
+- [Release summary](needs/release-summary.md) opisuje porównanie
   dwóch refów aplikacji, pełny kontekst katalogowy i szczegółowy raport
   wdrożeniowy. Bieżący kontrakt jest w
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
-  Raport przedstawia obiekty bazy, ich definicje i znaczenie funkcjonalne.
+  Raport przedstawia podsumowanie, listę tabel i szczegóły każdej tabeli:
+  obiekt, zmianę z definicją SQL i krótki opis funkcjonalny. Źródła są w meta,
+  a informacje wdrożeniowe w końcowym appendixie.
   Pełne źródła oraz kompletność analizy pozostają dostępne osobno.
   Zapowiedziany tryb zmian kontraktów API pozostaje poza bieżącą implementacją.
 

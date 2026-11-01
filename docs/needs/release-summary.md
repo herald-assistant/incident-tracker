@@ -17,9 +17,14 @@ Użytkownik wybiera aplikację oraz dwa branche/refy: stan bazowy i stan
 docelowy. Otrzymuje sekcyjny, tabelaryczny raport zmian wdrożeniowych,
 zrozumiały dla analityka systemowego na poziomie mid. Ma szybko rozpoznać zakres
 wdrożenia, następnie sprawdzić każdy zmieniany obiekt i jego zastosowanie.
-Raport nie wymaga znajomości parsera Liquibase: bez wewnętrznych hashy, ścieżek
-AST, JSON ani oddzielnych wierszy dla kontenerów składniowych. Kolumna i jej
-ograniczenia tworzą jeden opis; definicja i znaczenie funkcjonalne są obok siebie.
+Odbiorca zna SQL, ale nie kod aplikacji ani Liquibase. Kolejność raportu to
+podsumowanie, lista tabel, osobna sekcja każdej tabeli i końcowy appendix.
+Sekcje są niezależne, bez odsyłaczy do innych części. Tabele szczegółów mają
+Obiekt, Zmiana i Opis funkcjonalny. Zmiana zawiera typy, NULL, wartości domyślne,
+definicje i wartości przed/po; funkcja jest opisana zwięźle, bez żargonu kodu
+ani prefiksów „Potwierdzone”. Źródła i niepewność są w opcjonalnych metadanych
+pod sekcjami. Raport nie pokazuje hashy, ścieżek parsera ani JSON. Kolumna i jej
+ograniczenia tworzą jeden opis; skrypt i jego obiekt nie dublują tej samej zmiany.
 Blokada przygotowania nie pokazuje niewypełnionego szablonu jako raportu.
 Formularz startowy powinien być spójny z Explorerami: uporządkowany wybór
 aplikacji, punktu wejścia i stanu docelowego, ustawienia AI oraz jeden wyraźny
@@ -100,4 +105,3 @@ Ograniczenie techniczne ma być jawne; nie wolno po cichu obcinać materiału.
   widocznymi stanami wykonania.
 
 Wynikowy kontrakt: [runtime Release summary](../architecture/release-summary-runtime-flow.md).
-Checklista poprawy czytelności: [plan raportu dla analityka](../plans/release-summary-readable-report.md).

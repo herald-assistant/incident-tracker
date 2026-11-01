@@ -1277,9 +1277,14 @@ SQL i custom changes nie zyskują deklaracji deterministycznej pełności tylko
 dlatego, że model opisał ich treść.
 
 `AnalysisReport` jest jedynym źródłem wyniku. Inwentarz dla analityka scala
-kolumny z constraints i indeksy z ich uporządkowanymi kolumnami; pełny manifest
-parsera pozostaje w evidence. Czterokolumnowa tabela łączy obiekt, definicję,
-znaczenie funkcjonalne i krótkie linki do źródeł. Walidator wymaga każdej pozycji,
+kolumny z constraints i indeksy z ich uporządkowanymi kolumnami oraz grupuje
+zmiany według repozytorium i tabeli; pełny manifest parsera pozostaje w evidence.
+Raport ma podsumowanie, listę tabel i niezależne sekcje tabel w stałej kolejności.
+Trzy kolumny to Obiekt, Zmiana (z pełnymi szczegółami SQL) i Opis funkcjonalny,
+zrozumiały bez znajomości kodu. Źródła są w meta pod sekcjami, a informacje
+wdrożeniowe w końcowym zwijanym appendixie. SQL ma mapowanie na opisane obiekty
+w meta bez dublowania skryptu i obiektu; nadal nie dowodzi to jego semantycznej
+pełności. Walidator wymaga każdej pozycji,
 niezmienionych rozpoznanych właściwości i odczytanych źródeł. Scaffold nie jest
 wynikiem: dopiero poprawna sekcja przez `report_*` publikuje checkpoint.
 Brak uzasadnienia lub niezweryfikowana konstrukcja pozostaje

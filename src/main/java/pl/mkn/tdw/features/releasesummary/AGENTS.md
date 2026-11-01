@@ -27,11 +27,17 @@ lub brak zawartości LFS nie może zwrócić NO_CHANGES. SQL/custom change pozos
 AI_IDENTIFIED; nie twórz pozornego dowodu kompletności semantycznej.
 
 AnalysisReport jest źródłem wyniku dla analityka systemowego. Inwentarz raportu
-scala techniczne paczki evidence w zakresy plików: kolumna razem z constraints,
-indeks razem z uporządkowanymi kolumnami. Pełne evidence pozostaje bez zmian.
-Tabela szczegółów ma Obiekt, Zmiana techniczna, Znaczenie funkcjonalne i Źródła.
-Wszystkie rozpoznane pozycje i ich deterministyczne definicje są obowiązkowe;
-SQL wymaga interpretacji. Źródła są krótkimi linkami do odczytanych materiałów.
+grupuje zmiany po repozytorium i kwalifikowanej tabeli, niezależnie od plików:
+kolumna razem z constraints, indeks z uporządkowanymi kolumnami. Pełne evidence
+pozostaje bez zmian. Kolejność: OVERVIEW, TABLE_LIST, DB_DETAIL_* per tabela,
+APPENDIX. Tabela ma Obiekt, Zmiana i Opis funkcjonalny. Zmiana zachowuje pełne
+typy, NULL, defaults, definicje i wartości przed/po; funkcja jest krótka,
+niezależna, bez żargonu kodu i prefiksów Potwierdzone/Wniosek. Źródła są URL-ami
+w meta pod sekcją, nigdy linkami w treści. SQL rozwija się na obiekty bez
+powtarzającego wiersza skryptu; sql-coverage w meta mapuje skrypt na nazwy
+opisanych wierszy i nie dowodzi kompletności semantycznej. Nieprzypisane
+operacje i ustawienia migracji trafiają do appendixu. Wszystkie wymagane
+pozycje i znane definicje są walidowane także przy patchu i ręcznej edycji.
 Nie pokazuj hashy, AST, JSON ani placeholderów w raporcie. Scaffold jest prywatny;
 dopiero zaakceptowana sekcja może opublikować raport. Model jest wymagany.
 Report patches podlegają tej samej walidacji co pełny zapis sekcji. Bieżący

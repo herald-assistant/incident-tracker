@@ -179,38 +179,61 @@ samodzielnie tieru ani nie przełącza go na inny model. Brak modelu daje
 
 ## Raport i walidacja
 
-Odbiorcą jest analityk systemowy na poziomie mid, który sprawdza zakres
-wdrożenia. `ReleaseSummaryReportInventory` scala techniczne paczki jednego
-pliku w jeden zakres raportu. Kolumna wraz z ograniczeniami jest jedną pozycją,
-a indeks obejmuje uporządkowane kolumny i unikalność. Niezmienione właściwości
-rodzica są odtwarzane z pełnego pliku, także przy zmianie samego NULL/NOT NULL
-lub kolejności kolumn indeksu. Puste kontenery składniowe nie są pozycjami.
+Odbiorcą jest analityk systemowy na poziomie mid, który zna SQL, ale nie kod
+aplikacji ani Liquibase. `ReleaseSummaryReportInventory` grupuje obiekty według
+repozytorium i kwalifikowanej nazwy tabeli, niezależnie od plików i paczek
+parsera. Tabele z różnych repozytoriów lub schematów pozostają oddzielne.
+Kolumna wraz z ograniczeniami jest jedną pozycją, a indeks obejmuje uporządkowane
+kolumny i unikalność. Niezmienione właściwości rodzica są odtwarzane z pełnego
+pliku, także przy zmianie samego NULL/NOT NULL lub kolejności kolumn indeksu.
 Pełne źródła, manifest parsera i wszystkie właściwości pozostają w evidence.
 
 | Sekcja | Treść |
 | --- | --- |
-| `OVERVIEW` | 2–4 zdania: co wchodzi na wdrożenie, po co i jaki jest kierunek porównania. |
-| `CHANGE_INDEX` | Obszar, krótki opis zmiany i link do szczegółów każdego zakresu. |
-| `DB_DETAIL_<groupId>` | Jedna tabela: Obiekt, Zmiana techniczna, Znaczenie funkcjonalne, Źródła. |
-| `DEPLOYMENT_IMPACT` | Kolejność, zgodność, warunki, checksumy, rollback, ryzyka i weryfikacja. |
+| `OVERVIEW` | Podsumowanie: 2–3 krótkie zdania o zmianach danych i ich celu. |
+| `TABLE_LIST` | Lista tabel: Tabela, Zakres zmian; bez odsyłaczy do innych sekcji. |
+| `DB_DETAIL_<groupId>` | Jedna sekcja tabeli: Obiekt, Zmiana, Opis funkcjonalny. |
+| `APPENDIX` | Nieprzypisane operacje, ustawienia migracji, wycofanie oraz istotne warunki wdrożenia. |
 
-Wiersz szczegółów łączy definicję obiektu z opisem danych, sposobu użycia i
-funkcjonalnego efektu zmiany, zwykle w 1–2 krótkich zdaniach. Nie powtarza typu,
-NULL ani wspólnych ograniczeń badania. Liczby kolumn i indeksów obejmują także
-obiekty z SQL. Opis zaczyna się od `Potwierdzone:`, `Wniosek:`
-lub `Do wyjaśnienia:` i zawiera konkretne uzasadnienie. Model bada kod i katalog;
-sama nazwa obiektu nie wystarcza. Dla SQL opisuje wszystkie rozpoznane obiekty
-i zachowuje jawne ograniczenie pewności. Usunięcie pliku albo include opisuje
-jako zmianę changelogu, bez sugerowania wykonania DROP na działającej bazie.
+Kolumna **Zmiana** zachowuje rodzaj operacji i szczegóły SQL: typ, dopuszczalność
+NULL, wartość domyślną, definicję indeksu lub ograniczenia oraz wartości przed/po.
+Znana definicja jest niezmiennym początkiem komórki; dodatkowe szczegóły tego
+obiektu można dopisać po `<br>`. Dzięki temu operacja SQL zmieniająca tryb tabeli
+pozostaje przy tej tabeli w kolumnie Zmiana. Akapity pod tabelą nie zastępują
+definicji w komórkach, a mapowanie SQL na znaną pozycję wymaga takiego uzupełnienia.
+Opis funkcjonalny wyjaśnia zastosowanie danych zwykle jednym, najwyżej dwoma
+krótkimi zdaniami. Nie zawiera nazw klas, metod, DAO, changelogów ani prefiksów
+„Potwierdzone”, „Wniosek” i „Do wyjaśnienia”. Każda sekcja jest samodzielna.
+Kod pozostaje materiałem badania, a źródła pojawiają się wyłącznie w meta.
+Gdy nie ustalono funkcji, opis mówi o tym wprost, np. „Nie ustalono zastosowania
+pola.”; zakres badania i brakujące dowody trafiają do `meta.gaps`.
 
-Walidator wymaga wszystkich pozycji, niezmienionych definicji rozpoznanych
-obiektów, właściwego kierunku zmian, kompletnych komórek oraz źródeł faktycznie
-odczytanych przez tę sesję. SQL i zależności wymagają opisu AI. Może ono dopisać
-czytelny tytuł po nazwie operacji SQL i dodać rozpoznane obiekty, ale nie usunąć
-pozycji inwentarza. Linki mają krótkie etykiety i wskazują pliki na przypiętym SHA;
-linki Operational Context otwierają bieżącą encję, podczas gdy podstawą analizy
-pozostaje captured snapshot. Hashy elementów, ścieżek AST, surowego JSON i
-technicznych identyfikatorów sekcji nie pokazujemy w raporcie.
+Surowy SQL otrzymuje jedynie wskazówki przypisania do tabeli. Nieznane operacje
+pozostają w appendixie, a AI nadal odpowiada za pełną inwentaryzację SQL.
+W głównej tabeli opisuje rzeczywiste obiekty bez powtarzającego je wiersza
+skryptu. Dla każdego tak rozwiniętego skryptu metadane zawierają referencję
+`type: sql-coverage`, etykietę z planu, URL źródła oraz dokładne nazwy opisanych
+wierszy w `description`, po jednej w linii. Walidator sprawdza istnienie wierszy
+i odczytanego źródła. Mapowanie nie jest dowodem semantycznej pełności SQL:
+`structurallyVerified` pozostaje false, a raport nie zyskuje przez nie COMPLETED.
+Usunięcie definicji z repozytorium nie oznacza wykonania DROP w działającej bazie.
+
+Walidator wymaga wszystkich pozycji, znanych definicji, właściwego kierunku
+zmiany, kompletnych komórek, kolejności sekcji i źródeł faktycznie odczytanych
+przez sesję. `meta.references.target` jest zweryfikowanym URL z mapy źródeł,
+nie surowym sourceRef. Krótkie etykiety linków otwierają pliki na przypiętym SHA;
+linki Operational Context otwierają bieżącą encję, lecz podstawą analizy pozostaje
+captured snapshot. Nie pokazujemy identyfikatorów parsera ani technicznych ID
+sekcji w treści raportu.
+
+Wspólny renderer sortuje sekcje według `order`, niezależnie od kolejności
+checkpointów. Reuse'uje section-content i zwijane meta pod sekcją. Feature
+wskazuje opcjonalną sekcję appendixu; jej treść i metadane całego raportu są
+zwinięte na samym dole. Share używa tej samej kolejności: Markdown obejmuje
+główny raport, a Markdown + Meta także źródła i appendix. Edytor ręczny
+zachowuje walidację definicji, źródeł i mapowania SQL. Pokrycie liczy zakresy
+tabel i appendixu oraz obowiązkowe pozycje; nie jest liczbą plików ani
+niezależnie potwierdzoną liczbą wszystkich obiektów semantycznych SQL.
 
 Mutacja jest walidowana przed zapisem. `report_patch_section` dodatkowo
 zachowuje wspólny digest guard i unikalność zastępowanego fragmentu.
@@ -235,8 +258,6 @@ z wzorcem Explorerów. Na węższych ekranach pola układają się pionowo.
 Etykiety i kierunek „Punkt wejścia → Stan docelowy” pozostają widoczne również
 nad wynikiem. Formularz nie oferuje automatycznej zamiany kierunku.
 Shared report panel ma `showTechnicalIds=false`, zachowując kotwice sekcji.
-Linki Markdown do sekcji otwierają je w bieżącym dokumencie bez nawigowania
-do bazowego URL aplikacji; Share zachowuje kotwice także w eksporcie.
 Kompletność źródeł i interpretacji ma osobną zakładkę, poza treścią raportu.
 Usage runu dotyczy initial analysis,
 a usage wiadomości kolejnych tur; wspólny aside agreguje je bez podwójnego liczenia.
@@ -246,7 +267,10 @@ Publiczny export ma `schema: tdw.release-summary-export`, `version: 1`,
 `payload.resultContract: release-summary-analyst-report-v1`. Zawiera pełne źródła,
 raport, wynik i wiadomości; nie zawiera tokenów, sesji ani prywatnego kontekstu
 kontynuacji. Import pliku jest lokalny w UI, wyłącznie do odczytu, bez
-odtwarzania uprawnień lub sesji AI. Inne wersje i tryby są odrzucane.
+odtwarzania uprawnień lub sesji AI. Inne wersje, tryby i poprzedni układ sekcji
+raportu są odrzucane. Bieżący format pozostaje w wersji 1, bez migratora.
+Przy zmianie formatu lokalne raporty poprzedniego układu usuwa się przez API
+historii, które sprząta również powiązaną sesję Copilota.
 
 Prywatny local run zapisuje captured katalog, przypięte rewizje, znane źródła
 oraz referencję auth i sesji. Restart odtwarza je bez ponownego przypinania
