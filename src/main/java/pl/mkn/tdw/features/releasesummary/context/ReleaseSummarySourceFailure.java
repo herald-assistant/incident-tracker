@@ -29,10 +29,10 @@ final class ReleaseSummarySourceFailure extends RuntimeException {
         var causes = causes();
         for (var cause : causes) {
             if (cause instanceof RestClientResponseException response) {
-                return operation + ": GitLab zwrócił HTTP " + response.getStatusCode().value() + ".";
+                return httpDetail(response.getStatusCode().value());
             }
             if (cause instanceof GitLabRepositoryTreeException tree) {
-                return operation + ": GitLab zwrócił HTTP " + tree.statusCode() + ".";
+                return httpDetail(tree.statusCode());
             }
         }
         if (causes.stream().anyMatch(c -> c instanceof SocketTimeoutException || c instanceof HttpTimeoutException)) {
@@ -49,6 +49,12 @@ final class ReleaseSummarySourceFailure extends RuntimeException {
 
     String causeTypes() {
         return String.join(" -> ", causes().stream().map(c -> c.getClass().getSimpleName()).toList());
+    }
+
+    private String httpDetail(int status) {
+        return status == 429
+                ? operation + ": GitLab ograniczył liczbę odczytów (HTTP 429). Ponów analizę po odnowieniu limitu."
+                : operation + ": GitLab zwrócił HTTP " + status + ".";
     }
 
     private List<Throwable> causes() {

@@ -32,6 +32,34 @@ class LiquibaseEvidenceCollectorTest {
         assertEquals(120,columns.size());assertEquals(120,columns.stream().map(e->e.after().get("name")).distinct().count());
         assertEquals(evidence.units(),collect(Map.of(),input).units());
     }
+    @Test void unchangedBlobsReuseVerifiedBytesButChangedInclusionStillProducesBothSources() {
+        var change=xml("<changeSet id=\"customer\" author=\"crm\"><createTable tableName=\"customer\"/></changeSet>");
+        var fixture=fixture(Map.of(ROOT,xml(""),CHANGE,change),Map.of(ROOT,xml(include("customer.xml")),CHANGE,change));
+        var evidence=fixture.collector.collect(scope());
+        assertTrue(evidence.sourceComplete());
+        assertTrue(evidence.units().stream().anyMatch(u->u.path().equals(CHANGE)&&u.changeType().equals("INCLUSION_CHANGED")));
+        assertEquals(Set.of(BEFORE,AFTER),new HashSet<>(evidence.sources().stream().filter(s->s.path().equals(CHANGE)).map(ReleaseSummaryEvidence.Source::commitId).toList()));
+        verify(fixture.files).readComplete(any(),eq("CRM"),eq("customer"),eq(BEFORE),eq(CHANGE));
+        verify(fixture.files,never()).readComplete(any(),eq("CRM"),eq("customer"),eq(AFTER),eq(CHANGE));
+        verify(fixture.files).readComplete(any(),eq("CRM"),eq("customer"),eq(BEFORE),eq(ROOT));
+        verify(fixture.files).readComplete(any(),eq("CRM"),eq("customer"),eq(AFTER),eq(ROOT));
+        verifyNoMoreInteractions(fixture.files);
+    }
+    @Test void newlyIncludedDependencyIsFetchedEvenWhenItsBlobWasAlreadyInTheBaselineTree() {
+        var csv="src/main/resources/db/customers.csv";
+        var text="id,name\n1,example\n";
+        var fixture=fixture(Map.of(ROOT,xml(""),csv,text),Map.of(ROOT,xml("<changeSet id=\"customers\" author=\"crm\"><loadData tableName=\"customer\" file=\"customers.csv\" relativeToChangelogFile=\"true\"/></changeSet>"),csv,text));
+        var evidence=fixture.collector.collect(scope());
+        assertTrue(evidence.sourceComplete());
+        verify(fixture.files,never()).readComplete(any(),eq("CRM"),eq("customer"),eq(BEFORE),eq(csv));
+        verify(fixture.files).readComplete(any(),eq("CRM"),eq("customer"),eq(AFTER),eq(csv));
+    }
+    @Test void differentPathsWithTheSameBlobAreVerifiedIndependently() {
+        var fixture=fixture(Map.of(ROOT,xml("")),Map.of(CHANGE,xml("")));
+        assertTrue(fixture.collector.collect(scope()).sourceComplete());
+        verify(fixture.files).readComplete(any(),eq("CRM"),eq("customer"),eq(BEFORE),eq(ROOT));
+        verify(fixture.files).readComplete(any(),eq("CRM"),eq("customer"),eq(AFTER),eq(CHANGE));
+    }
     @Test void changedGitlinksAndLfsSourcesCannotDisappearFromCoverage() {
         var snapshots=mock(GitLabRepositorySnapshotPort.class);
         when(snapshots.snapshot("CRM","customer",BEFORE)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",BEFORE,Map.of(),Map.of("db/module",BEFORE),Map.of()));

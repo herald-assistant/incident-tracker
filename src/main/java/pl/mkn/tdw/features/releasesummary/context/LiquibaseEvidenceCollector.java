@@ -31,9 +31,9 @@ public class LiquibaseEvidenceCollector {
         int scanned=0;
         for(var repository:scope.repositories()) {
             try {
-                var before=scan(scope,repository,"BASELINE",repository.baselineCommit(),gaps);
+                var before=scan(scope,repository,"BASELINE",repository.baselineCommit(),null,gaps);
                 var after=repository.baselineCommit().equals(repository.targetCommit())?before:
-                        scan(scope,repository,"TARGET",repository.targetCommit(),gaps);
+                        scan(scope,repository,"TARGET",repository.targetCommit(),before,gaps);
                 var modules=new TreeSet<String>();modules.addAll(before.tree.gitlinks().keySet());modules.addAll(after.tree.gitlinks().keySet());
                 for(var module:modules)if(!Objects.equals(before.tree.gitlinks().get(module),after.tree.gitlinks().get(module))
                         &&repository.prefixes().stream().anyMatch(p->p.isEmpty()||module.equals(p)||module.startsWith(p+"/")||p.startsWith(module+"/")))
@@ -81,8 +81,8 @@ public class LiquibaseEvidenceCollector {
         return new ReleaseSummaryEvidence(sources,units,gaps,
                 List.of(new AnalysisEvidenceSection("GitLab","Liquibase changes",items)),scanned,gaps.stream().noneMatch(Gap::blocking));
     }
-    private Side scan(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,String side,String sha,List<Gap> gaps) {
-        var state=openSide(scope,repo,side,sha);
+    private Side scan(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,String side,String sha,Side previous,List<Gap> gaps) {
+        var state=openSide(scope,repo,side,sha,previous);
         var tree=state.tree;
         for(var link:tree.symlinks().keySet())if(repo.prefixes().stream().anyMatch(p->p.isEmpty()||link.equals(p)||link.startsWith(p+"/")||p.startsWith(link+"/")))
             gaps.add(gap(repo,side,link,"SYMLINK_UNRESOLVED","Zakres zawiera dowiązanie symboliczne; pełność jego plików nie jest potwierdzona.",true));
@@ -158,12 +158,12 @@ public class LiquibaseEvidenceCollector {
         detectCycles(state,repo,side,gaps);
         return state;
     }
-    private Side openSide(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,String side,String sha) {
+    private Side openSide(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,String side,String sha,Side previous) {
         try {
             var tree=snapshotPort.snapshot(scope.group(),repo.project(),sha);
             if(tree==null || !scope.group().equals(tree.group()) || !repo.project().equals(tree.project()) || !sha.equals(tree.commitId()))
                 throw new IllegalStateException("Snapshot scope mismatch");
-            return new Side(tree,side);
+            return new Side(tree,side,previous);
         } catch(RuntimeException e) {
             throw new ReleaseSummarySourceFailure(side,"","Odczyt drzewa repozytorium",e);
         }
@@ -180,12 +180,17 @@ public class LiquibaseEvidenceCollector {
     private String read(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,Side state,String path) {
         try {return state.reads.computeIfAbsent(path,p->{
             if(state.tree.symlinks().containsKey(p))throw new IllegalStateException("Symbolic source is unresolved.");
+            var expected=state.tree.blobs().get(p);
+            if(expected==null) throw new IllegalStateException("File not in complete tree");
+            // Pinned trees prove identical bytes. Parsing and dependency resolution remain per side.
+            if(state.previous!=null && expected.equals(state.previous.tree.blobs().get(p))) {
+                var verified=state.previous.reads.get(p);
+                if(verified!=null) return verified;
+            }
             var file=verifiedPort.readComplete(readPort,scope.group(),repo.project(),state.tree.commitId(),p);
             if(file==null||!p.equals(file.path())) throw new IllegalStateException("Missing verified file");
             if(file.content().startsWith("version https://git-lfs.github.com/spec/v1"))throw new IllegalArgumentException("Git LFS source is unavailable.");
             var bytes=file.content().getBytes(StandardCharsets.UTF_8);
-            var expected=state.tree.blobs().get(p);
-            if(expected==null) throw new IllegalStateException("File not in complete tree");
             try {
                 var digest=MessageDigest.getInstance(expected.length()==40?"SHA-1":"SHA-256");
                 digest.update(("blob "+bytes.length+"\0").getBytes(StandardCharsets.UTF_8)); digest.update(bytes);
@@ -299,9 +304,10 @@ public class LiquibaseEvidenceCollector {
     private static final class Side {
         final GitLabRepositorySnapshot tree;
         final String name;
+        final Side previous;
         final Map<String,String> reads=new TreeMap<>();
         final Map<String,Document> documents=new TreeMap<>();
-        Side(GitLabRepositorySnapshot tree,String name) {this.tree=tree;this.name=name;}
+        Side(GitLabRepositorySnapshot tree,String name,Side previous) {this.tree=tree;this.name=name;this.previous=previous;}
     }
 }
 

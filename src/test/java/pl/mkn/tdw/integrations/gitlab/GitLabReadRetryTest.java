@@ -102,7 +102,7 @@ class GitLabReadRetryTest {
     }
 
     @Test void doesNotRetryEarlierThanAnExcessiveRetryAfter() {
-        for (var value : List.of("120", "99999999999999999999999999",
+        for (var value : List.of("121", "99999999999999999999999999",
                 ZonedDateTime.now(java.time.ZoneOffset.UTC).plusMinutes(5).format(DateTimeFormatter.RFC_1123_DATE_TIME))) {
             var fixture = fixture();
             fixture.server.expect(requestTo(RAW_URL))
@@ -144,7 +144,9 @@ class GitLabReadRetryTest {
         var failure = new AtomicReference<Throwable>();
         fixture.server.expect(requestTo(RAW_URL)).andRespond(request -> {
             firstRequest.countDown();
-            return new MockClientHttpResponse(new byte[0], HttpStatus.SERVICE_UNAVAILABLE);
+            var response = new MockClientHttpResponse(new byte[0], HttpStatus.TOO_MANY_REQUESTS);
+            response.getHeaders().set("Retry-After", "60");
+            return response;
         });
         var worker = new Thread(() -> {
             try {fixture.adapter.readFileComplete("CRM", "customer", SHA, FILE);}

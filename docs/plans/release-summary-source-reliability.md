@@ -40,7 +40,12 @@ Zastane zmiany formatowania trzech klas Release summary nie należą do naprawy.
   UI i historia wyświetlają istniejące pola bez zmian.
 - Ręczne ponawianie całego runu pozostawia losowe awarie i powtarza poprawne
   odczyty. Nieograniczone ponawianie mogłoby zablokować analizę. Nie wprowadzamy
-  osobnego klienta HTTP, cache ani kopii paginacji w feature.
+  osobnego klienta HTTP, trwałego cache ani kopii paginacji w feature.
+- Weryfikacja na żywym GitLabie ujawniła HTTP 429 podczas odczytu metadanych
+  i wymagane oczekiwanie dłuższe niż pierwsze 30 s. Ograniczone retry musi
+  obsługiwać Retry-After do 120 s. W jednym porównaniu identyczna ścieżka
+  i blob ID w obu pełnych drzewach pozwalają reuse'ować już zweryfikowaną
+  treść. Discovery, parsing oraz zależności nadal rozpatrujemy osobno per SHA.
 
 ## Zakres, ryzyka i kryteria
 
@@ -63,6 +68,12 @@ Wszystkie fixture'y i przykłady pozostają fikcyjnym CRM.
   Regresja integracji i konsumentów, kontrola granic: 456 testów poprawnych,
   1 pilot pominięty; log source-step2. Także przerwane body jest czytane
   od początku, a ponowiona strona nie dubluje wpisów drzewa. Commit.
+- [x] Ograniczenie powtórnych odczytów: reuse verified treści dla tej samej
+  ścieżki i blob ID w obrębie porównania; zmienione, nowe i niezweryfikowane
+  pliki nadal wymagają odczytu. Testy zmiany include i zależności oraz liczby
+  odczytów. Obsługa Retry-After do 120 s, czytelny opis HTTP 429, test granicy
+  czasu bez rzeczywistego długiego oczekiwania i test przerwania. Regresja:
+  461 testów poprawnych, 1 pilot pominięty; log source-step3. Commit.
 - [ ] Pełne testy backendu, aktualizacja dokumentacji, uruchomienie nowej
   aplikacji i ponowienie właściwej analizy z preferencjami operatora.
   Weryfikacja zapisanych źródeł, promptu i wyniku. Commit zamykający.

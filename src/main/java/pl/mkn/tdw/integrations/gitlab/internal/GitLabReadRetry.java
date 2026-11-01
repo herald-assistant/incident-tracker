@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 @Slf4j
 public final class GitLabReadRetry {
     private static final int MAX_ATTEMPTS = 3;
-    private static final long MAX_RETRY_DELAY_MS = 30_000;
+    private static final long MAX_RETRY_DELAY_MS = 120_000;
     private static final Set<Integer> TRANSIENT_HTTP = Set.of(408, 429, 500, 502, 503, 504);
 
     private GitLabReadRetry() {}
@@ -34,8 +34,7 @@ public final class GitLabReadRetry {
                 return read.get();
             } catch (RuntimeException failure) {
                 long delay = retryDelay(failure, attempt);
-                if (attempt >= MAX_ATTEMPTS || delay < 0 || delay > MAX_RETRY_DELAY_MS
-                        || Thread.currentThread().isInterrupted()) {
+                if (delay < 0 || Thread.currentThread().isInterrupted()) {
                     throw failure;
                 }
                 log.warn("Retrying GitLab read operation={} nextAttempt={} delayMs={} failureType={}",
@@ -50,7 +49,8 @@ public final class GitLabReadRetry {
         }
     }
 
-    private static long retryDelay(RuntimeException failure, int attempt) {
+    static long retryDelay(RuntimeException failure, int attempt) {
+        if (attempt >= MAX_ATTEMPTS) return -1;
         long backoff = 500L * attempt;
         boolean ioFailure = false;
         var seen = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
@@ -58,7 +58,8 @@ public final class GitLabReadRetry {
             if (cause instanceof RestClientResponseException response) {
                 if (!TRANSIENT_HTTP.contains(response.getStatusCode().value())) return -1;
                 var headers = response.getResponseHeaders();
-                return Math.max(backoff, retryAfter(headers == null ? null : headers.getFirst("Retry-After")));
+                long delay = Math.max(backoff, retryAfter(headers == null ? null : headers.getFirst("Retry-After")));
+                return delay <= MAX_RETRY_DELAY_MS ? delay : -1;
             }
             if (cause instanceof SSLException || cause instanceof CharacterCodingException
                     || cause instanceof JsonProcessingException || cause instanceof InterruptedException

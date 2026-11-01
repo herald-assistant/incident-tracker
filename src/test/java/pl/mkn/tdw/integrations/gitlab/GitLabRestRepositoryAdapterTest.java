@@ -703,13 +703,13 @@ class GitLabRestRepositoryAdapterTest {
         var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
                 new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(builder)));
         server.expect(requestTo("https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcustomer-api/repository/files/db%2Fcustomer.yml/raw?ref=release"))
-                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After","120")
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After","300")
                         .body("fictional-crm-private-response"));
         var failure=assertThrows(IllegalStateException.class,()->adapter.readFileComplete(
                 "CRM/runtime","customer-api","release","db/customer.yml"));
         var response=(org.springframework.web.client.RestClientResponseException)failure.getCause();
         assertEquals(429,response.getStatusCode().value());
-        assertEquals("120",response.getResponseHeaders().getFirst("Retry-After"));
+        assertEquals("300",response.getResponseHeaders().getFirst("Retry-After"));
         assertEquals("",response.getResponseBodyAsString());
         assertFalse(response.getMessage().contains("fictional-crm-private-response"));
         server.verify();
