@@ -9,6 +9,11 @@ AI używa report tools i GOAL_DRIVEN; source coverage nie oznacza pewności funk
 Wszystkie testy i przykłady są fikcyjnym CRM.
 
 Kanoniczny runtime: `docs/architecture/release-summary-runtime-flow.md`.
+QUEUED z planem kroków zapisuj przed dispatch. COLLECT_LIQUIBASE publikuje
+contextSections per repo/plik z pełnym beforeContent/afterContent i lukami.
+Projekcja UI nie dubluje źródeł w prompcie. PREPARE_PROMPT utrwala dokładny
+tekst jako COMPLETED przed sprawdzeniem modelu i wykonaniem AI; zachowuj
+ukończone kroki i evidence po błędzie oraz przy odtworzeniu historii.
 Zbieraj pełne snapshoty i verified pliki, domykaj include/SQL/data i zachowuj
 kolejność oraz wszystkie atrybuty. Niepełny odczyt, symlink, zmieniony submodule
 lub brak zawartości LFS nie może zwrócić NO_CHANGES. SQL/custom change pozostaje

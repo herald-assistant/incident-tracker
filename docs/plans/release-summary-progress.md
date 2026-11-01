@@ -1,6 +1,6 @@
 # Release summary — historia i podgląd przygotowania
 
-Status: in-progress
+Status: done
 
 Source need: [Release summary](../needs/release-summary.md)
 
@@ -39,8 +39,9 @@ zakresem commitów tej pracy.
   wywołaniem modelu. Błąd AI nie usuwa ukończonych kroków ani ich materiałów.
 - Panel kroków dostaje jawny kod kroku promptu od konsumenta; usuwamy
   hardcoded wybór kodów promptu i opisy feature'ów ze wspólnego komponentu.
-  Konsumenci: Incident, Flow/UI Explorer, Change Verification, Config Drift,
-  oba Delivery assessmenty, Operational Context assistance, Release summary.
+  Konsumenci: Incident, Flow/UI Explorer, UX Inspector, Change Verification,
+  Config Drift, oba Delivery assessmenty, Operational Context assistance,
+  Release summary.
 - Reuse diffu liniowego z follow-up po przeniesieniu do core/utils; shared
   panel pokazuje dodania/usunięcia z pełnego beforeContent/afterContent.
   Chat zachowuje dotychczasową prezentację. Bez nowej biblioteki diff.
@@ -62,6 +63,15 @@ regresja promptów pozostałych ekranów. Pełne dane nie są przycinane.
   zgodności promptu i widoku; regresja shared panelu i chatu. FE: 55/55,
   BE: 51/51 (pilot live pominięty). Pełne źródła są projektowane osobno
   do contextSections, bez duplikowania ich w wejściu AI. Logi step2-*.
-- [ ] Weryfikacja całości: pełne testy Angulara, build UI, Maven backend-dev
-  clean package, przegląd manualny historii/przebiegu, aktualizacja
-  kanonicznej dokumentacji i uruchomienie aktualnej aplikacji. Commit.
+- [x] Weryfikacja całości: Angular 694/694, build UI poprawny, Maven
+  backend-dev clean package: 2032 testy poprawne, 3 pominięte, 0 błędów.
+  Przegląd manualny potwierdził wpis RUNNING w historii od startu i otwarcie
+  tego samego przebiegu, 3 pliki w osobnym kroku z pełnym diffem oraz
+  osobny prompt o długości 141032 znaków. Próba bez wybranego modelu
+  zakończyła się MODEL_REQUIRED po zapisaniu promptu, z 0 zdarzeń AI;
+  materiały pozostały dostępne po otwarciu z historii. Powtórzenie próby
+  po przejściowym SOURCE_UNAVAILABLE zakończyło zbieranie źródeł poprawnie.
+  Zaktualizowano dokumentację runtime, playbook i lokalne AGENTS, sprawdzono
+  linki i anonimizację zmienionych testów. Aktualna aplikacja działa lokalnie
+  z nowym bundlem. Logi full-fe, build, package i manual-proof w
+  tdw-data/logs/release-summary-progress-*. Commit zamyka weryfikację.

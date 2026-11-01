@@ -35,7 +35,7 @@ describe('ContextAssistancePanelComponent', () => {
     expect(compiled.querySelector('.assistance-run__aside-usage')).toBeNull();
     expect(compiled.querySelector('app-analysis-feature-aside [aria-label="Koszt AI"]')).not.toBeNull();
     expect(compiled.querySelector('app-analysis-feature-aside')?.textContent)
-      .toContain('Inicjalny prompt asysty Operational Context');
+      .toContain('Inicjalny prompt AI');
     expect(compiled.querySelector<HTMLTextAreaElement>('.prepared-prompt__textarea')?.value)
       .toBe('Opis CRM: apiToken=fictional-example');
   });

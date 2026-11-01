@@ -38,6 +38,10 @@ statycznego opisu capability, dodaj go do route data jako `capabilityInfo`.
 - Shared components powinny byc parametryzowane tekstem i stanami, ale miec
   jeden znany model interakcji. Nie tworz wariantu tylko po to, zeby feature
   mial inna etykiete albo inny pusty komunikat.
+- Panel krokow otrzymuje `preparedPromptStepCode` od feature'a; nie dodawaj
+  hardcoded kodow promptu. Para `beforeContent` / `afterContent` w evidence
+  pokazuje pelny diff przez neutralny `core/utils/text-diff.utils`, wspolny
+  z podgladem zmian raportu w chacie. Brak odczytu nie jest pustym plikiem.
 - `app-gitlab-branch-select` zachowuje systemowy lookup dla Flow/UI Explorer;
   inny feature moze podac `sourceKey` i `branchLoader`, aby uzyc tej samej
   interakcji dla jednego projektu bez zaleznosci shared UI od API feature'a.

@@ -40,6 +40,9 @@ semantycznych akcentow tylko po to, zeby rozroznic feature.
 
 Release summary używa wspólnego application select (także Flow Explorer) oraz
 branch select z typowanymi refami i paginacją. Dla pary refów wyłącza auto-select.
+Historia otwiera także QUEUED/RUNNING i wznawia polling bez nowego startu.
+Przebieg pokazuje źródła per plik i pełny prompt na osobnym PREPARE_PROMPT;
+przekazuj ten kod przez preparedPromptStepCode wspólnego panelu kroków.
 Polling, raport, editor, chat, aside i Share pozostają shared. Nie sumuj usage
 chatu drugi raz w initial job usage. Fragmenty Markdown raportu nawigują w tym
 samym dokumencie przez shared markdown-content, bez przejścia na bazową trasę.

@@ -1435,12 +1435,16 @@ job/export state. Polling trwa do zakonczenia assistant `IN_PROGRESS`.
 - usage i koszt pokazuj tylko we wspolnym tabie `Koszt AI` komponentu
   `analysis-feature-aside`, zasilanym przez backendowy `AnalysisAiUsage`,
 - nie przeliczaj sam kosztu z tokenow ani nie utrzymuj cennika modeli,
-- przygotowany prompt pokazuj jako faktycznie wykonany prompt.
+- przygotowany prompt pokazuj w dokladnej postaci przeznaczonej dla modelu;
+  samo przygotowanie nie oznacza, ze wywolanie AI juz nastapilo.
 
-`analysis-steps-panel` ma obecnie incidentowe hardcode'y decydujace, dla
-ktorych step codes pokazac prepared prompt. Nie nadawaj nowemu krokowi
-falszywego kodu tylko dla UI. Dodaj neutralne metadata/extension point z testem
-drugiego konsumenta albo osobny shared prompt panel.
+`analysis-steps-panel` otrzymuje od feature'a `preparedPromptStepCode`,
+ktory wskazuje krok podgladu `preparedPrompt` albo listy `preparedPrompts`.
+Nie rozpoznaje kodow promptu konkretnych feature'ow i nie zgaduje kroku.
+Feature utrwala dokladny tekst przed wywolaniem modelu. `consumesEvidence`
+i `producesEvidence` wiaza kroki z sekcjami materialu. Para atrybutow
+`beforeContent` / `afterContent` w pozycji evidence uruchamia wspolny diff
+tekstowy; nie uzywaj pustego tekstu jako substytutu nieudanego odczytu.
 
 ### Rejestracja w shellu
 

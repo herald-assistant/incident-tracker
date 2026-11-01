@@ -16,7 +16,7 @@ importowania innych feature'ów. Parser Liquibase nie jest częścią platformy 
 
 Ekran `/release-summary` używa wspólnego `ApplicationSelectComponent` oraz dwóch
 `GitLabBranchSelectComponent` z wyłączonym automatycznym wyborem pierwszej opcji.
-Każda strona ma rodzaj `BRANCH`, `TAG` albo `COMMIT`; można zamienić kierunek.
+Każda strona ma rodzaj `BRANCH`, `TAG` albo `COMMIT`.
 Ten sam zestaw nazw refów obowiązuje wszystkie repozytoria systemu.
 
 | Endpoint | Kontrakt |
@@ -36,6 +36,9 @@ Nie ma zastępowania niedostępnego refa domyślną gałęzią ani pomijania rep
 ## Przygotowanie materiału
 
 1. Job utrwala `QUEUED` w Analysis History przed przekazaniem pracy executorowi.
+   Wpis od początku identyfikuje aplikację i kierunek porównania, ma datę
+   rozpoczęcia i cztery planowane kroki. Błąd zapisu blokuje dispatch;
+   odmowa executora pozostawia wpis `FAILED` z `SCHEDULING_FAILED`.
 2. Katalog jest przechwytywany przez `OperationalContextPort.capture()`.
    System i jego jawne `codeSearchScopes` wyznaczają wszystkie repozytoria
    oraz sumę prefixów. Powtórzenia repo są scalane bez utraty zakresów.
@@ -67,6 +70,33 @@ Początkowy prompt zawiera kompletne `payload` wybranego systemu, repozytoriów
 i zakresów kodu oraz pełny zebrany materiał źródłowy. Nie sprowadza encji do
 kart wyszukiwania i nie wycina danych do top-N. Pozostałe encje są dostępne
 przez `opctx_*` na tym samym zamrożonym katalogu.
+
+## Podgląd przebiegu przed AI
+
+Przebieg ma stałą kolejność: `RESOLVE_REFS` (przypięcie rewizji),
+`COLLECT_LIQUIBASE` (zmiany per plik), `PREPARE_PROMPT` (inicjalny prompt)
+i `AI_REPORT`. Krok, który nie został uruchomiony przed zakończeniem runu,
+ma status `SKIPPED`. Ukończone kroki pozostają dostępne po błędzie kolejnego.
+
+Po zbieraniu `ReleaseSummaryProgressEvidence` tworzy operatorową projekcję
+do `contextSections`: jedną pozycję na repozytorium i ścieżkę, niezależnie
+od liczby jednostek manifestu. Pozycja zawiera typ zmiany, refy i SHA obu
+stron, stan odczytu oraz pełne `beforeContent` / `afterContent`.
+Wspólny panel pokazuje diff liniowy z oznaczeniami dodania/usunięcia.
+Nie przycina treści; duży diff zachowuje całe bloki, ograniczając koszt
+wyliczania dopasowania. Zmiana dołączenia lub zależności bez zmiany treści
+ma jawny opis. Brak pliku w zakresie, zweryfikowany pusty plik i brak
+zweryfikowanego odczytu są różnymi stanami. Luki zbierania mają osobną sekcję.
+`producesEvidence` kroku wskazuje te sekcje, także przy blokadzie przygotowania.
+Projekcja nie jest dopisywana do materiału AI; pełne źródła już są w evidence.
+
+`PREPARE_PROMPT` zapisuje pełny `preparedPrompt` i status `COMPLETED` przed
+sprawdzeniem modelu, assemble i wykonaniem AI. Jest to ten sam tekst, który
+otrzymuje `CopilotRunRequest`, bez osobnej wersji wyświetlanej. Panel otrzymuje
+jawne `preparedPromptStepCode="PREPARE_PROMPT"` i oferuje podgląd/kopiowanie.
+Nie wymaga odpowiedzi ani raportu AI; prompt pozostaje w historii i eksporcie
+także po błędzie modelu. Przy niepełnych źródłach albo `NO_CHANGES` sesja AI
+i przygotowanie promptu są pomijane.
 
 ## Pełność źródeł i wynik
 
@@ -173,6 +203,9 @@ NO_CHANGES ma osobny krótki raport bez pustych tabel i bez sesji AI.
 
 UI reuse'uje polling, report panel, zakładki, evidence/activity/usage, Share,
 manual editor i chat. Wymaga wybranego modelu albo modelu domyślnego backendu.
+Analysis History udostępnia run również w stanach `QUEUED` i `RUNNING`.
+Otwarcie wpisu prowadzi do `/release-summary?localRunId=...`; ekran odczytuje
+bieżący snapshot i wznawia polling tego samego joba, bez ponownego startu.
 Formularz grupuje aplikację i parę refów w jednym rzędzie, a model i reasoning
 effort w dwóch równych polach poniżej. Akcje generowania, importu i eksportu są
 na dole. Wspólny application select przedstawia nazwę i opis aplikacji zgodnie
