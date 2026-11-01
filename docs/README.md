@@ -70,7 +70,8 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   Raport przedstawia podsumowanie, listę tabel i szczegóły każdej tabeli:
   obiekt, zmianę z definicją SQL i krótki opis funkcjonalny. Źródła są w meta,
   a informacje wdrożeniowe w końcowym appendixie.
-  Pełne źródła oraz kompletność analizy pozostają dostępne osobno.
+  Wynik ma jeden nagłówek z porównywanymi refami i treść bez zakładek.
+  Pełne źródła pozostają dostępne w przebiegu analizy.
   Zapowiedziany tryb zmian kontraktów API pozostaje poza bieżącą implementacją.
 
 - Użycie Operational Context przez UI Explorer i UX Inspector opisują ich

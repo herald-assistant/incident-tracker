@@ -44,16 +44,20 @@ Historia otwiera także QUEUED/RUNNING i wznawia polling bez nowego startu.
 Przebieg pokazuje źródła per plik i pełny prompt na osobnym PREPARE_PROMPT;
 przekazuj ten kod przez preparedPromptStepCode wspólnego panelu kroków.
 Polling, raport, editor, chat, aside i Share pozostają shared. Nie sumuj usage
-chatu drugi raz w initial job usage. Fragmenty Markdown raportu nawigują w tym
-samym dokumencie przez shared markdown-content, bez przejścia na bazową trasę.
+chatu drugi raz w initial job usage.
 Import Release summary pozostaje read-only, a checkbox korekty raportu jest
 domyślnie wyłączony. Wymagaj wybranego modelu lub modelu domyślnego backendu.
 Formularz ma osobne rzędy źródeł i ustawień AI oraz dolny pasek akcji.
 Używaj etykiet „Punkt wejścia” i „Stan docelowy”; bez akcji zamiany kierunku.
-Pokazuj ten kierunek także nad wynikiem i tylko opublikowane sekcje;
-blokada przygotowania nie jest raportem. W shared report panel wyłącz
-showTechnicalIds; zachowaj kotwice sekcji i źródła. Tabele szczegółów mają
-cztery czytelne kolumny; dane o kompletności pozostają w osobnej zakładce.
+Wynik zaczyna się od AnalysisResultHeader z tytułem „Zmiany bazodanowe między
+… a …” wyprowadzonym z requestu zapisanego joba, nie z edytowanego formularza.
+Share używa tego samego tytułu. Nie renderuj zakładek, osobnego widoku
+kompletności, statusu i kierunku przed nagłówkiem ani drugiego nagłówka raportu.
+Shared report panel używa embedded=true i showTechnicalIds=false; zachowaj
+kotwice sekcji, meta, appendix i źródła. Tabele mają trzy kolumny: Obiekt,
+Zmiana (ze szczegółami SQL), Opis funkcjonalny. Pokazuj tylko opublikowane
+sekcje; blokada przygotowania nie jest raportem. Błędy i informacja o imporcie
+pozostają pod nagłówkiem, a pełne źródła w przebiegu analizy.
 Kontrakt opisuje
 `docs/architecture/release-summary-runtime-flow.md`.
 

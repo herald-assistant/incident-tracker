@@ -25,6 +25,9 @@ definicje i wartości przed/po; funkcja jest opisana zwięźle, bez żargonu kod
 ani prefiksów „Potwierdzone”. Źródła i niepewność są w opcjonalnych metadanych
 pod sekcjami. Raport nie pokazuje hashy, ścieżek parsera ani JSON. Kolumna i jej
 ograniczenia tworzą jeden opis; skrypt i jego obiekt nie dublują tej samej zmiany.
+Wynik jest jednym raportem bez zakładek i powielonych nagłówków. Zaczyna się od
+„Zmiany bazodanowe między … a …” z refami zapisanej analizy; treść jest
+dostępna od razu pod nagłówkiem.
 Blokada przygotowania nie pokazuje niewypełnionego szablonu jako raportu.
 Formularz startowy powinien być spójny z Explorerami: uporządkowany wybór
 aplikacji, punktu wejścia i stanu docelowego, ustawienia AI oraz jeden wyraźny

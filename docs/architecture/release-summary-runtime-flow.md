@@ -246,7 +246,7 @@ NO_CHANGES ma osobny krótki raport bez pustych tabel i bez sesji AI.
 
 ## Historia, chat, edycja i przenoszenie
 
-UI reuse'uje polling, report panel, zakładki, evidence/activity/usage, Share,
+UI reuse'uje polling, report panel, evidence/activity/usage, Share,
 manual editor i chat. Wymaga wybranego modelu albo modelu domyślnego backendu.
 Analysis History udostępnia run również w stanach `QUEUED` i `RUNNING`.
 Otwarcie wpisu prowadzi do `/release-summary?localRunId=...`; ekran odczytuje
@@ -255,10 +255,19 @@ Formularz grupuje aplikację i parę refów w jednym rzędzie, a model i reasoni
 effort w dwóch równych polach poniżej. Akcje generowania, importu i eksportu są
 na dole. Wspólny application select przedstawia nazwę i opis aplikacji zgodnie
 z wzorcem Explorerów. Na węższych ekranach pola układają się pionowo.
-Etykiety i kierunek „Punkt wejścia → Stan docelowy” pozostają widoczne również
-nad wynikiem. Formularz nie oferuje automatycznej zamiany kierunku.
-Shared report panel ma `showTechnicalIds=false`, zachowując kotwice sekcji.
-Kompletność źródeł i interpretacji ma osobną zakładkę, poza treścią raportu.
+Formularz nie oferuje automatycznej zamiany kierunku.
+Wynik zaczyna się od jednego wspólnego nagłówka „Zmiany bazodanowe między
+<punkt wejścia> a <stan docelowy>”, bez poprzedzających go pasków statusu
+i kierunku ani zakładek. Tytuł pochodzi z requestu zapisanego joba, także
+w historii i imporcie; zmiana formularza kolejnego porównania go nie zmienia.
+Share używa tego samego tytułu. Shared report panel z `embedded=true` renderuje
+samą treść bez drugiego nagłówka i zewnętrznej zwijanej karty; domyślny wariant
+pozostałych konsumentów zachowuje nagłówek. `showTechnicalIds=false` ukrywa
+techniczne ID, zachowując kotwice sekcji.
+Nie generujemy osobnego widoku kompletności i źródeł. Źródła i ograniczenia
+raportu są w meta i appendixie, a pełny zebrany materiał w przebiegu analizy.
+Błędy oraz informacja o imporcie pojawiają się pod nagłówkiem. Wyliczanie
+kompletności i statusu nadal należy do backendowej walidacji raportu.
 Usage runu dotyczy initial analysis,
 a usage wiadomości kolejnych tur; wspólny aside agreguje je bez podwójnego liczenia.
 
