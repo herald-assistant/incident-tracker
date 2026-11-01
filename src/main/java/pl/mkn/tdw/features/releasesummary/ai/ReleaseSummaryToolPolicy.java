@@ -35,8 +35,11 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
             if(MUTATIONS.contains(request.toolName())&&!context.reportWritable) throw new IllegalArgumentException("Ta wiadomość nie zezwala na zmianę raportu.");
             var args=mapper.readTree(request.rawArguments());
             if(args==null||!args.isObject()) throw new IllegalArgumentException("Wymagane argumenty JSON.");
-            if(request.toolName().equals("report_upsert_section"))
-                reports.validateSection(args.path("id").asText(),args.path("markdown").asText(),context.evidence,context.sources());
+            if(request.toolName().equals("report_upsert_section")) {
+                reports.validateOrder(args.path("id").asText(),args.path("order").asInt(),context.evidence);
+                reports.validatePublication(args.path("id").asText(),args.path("markdown").asText(),
+                        args.hasNonNull("meta")?mapper.treeToValue(args.get("meta"),AnalysisReportMeta.class):AnalysisReportMeta.empty(),context.evidence,context.sources());
+            }
             if(request.toolName().equals("report_patch_section")) {
                 var reportId=(String)request.sessionContext().hiddenContext().get(AgentToolContextKeys.REPORT_ID);
                 var sectionId=args.path("sectionId").asText();
@@ -45,7 +48,7 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
                 int at=section.markdown().indexOf(old);
                 if(old.isEmpty()||at<0||section.markdown().indexOf(old,at+old.length())>=0)throw new IllegalArgumentException("Fragment musi występować dokładnie raz.");
                 var candidate=section.markdown().substring(0,at)+replacement+section.markdown().substring(at+old.length());
-                reports.validateSection(sectionId,candidate,context.evidence,context.sources());
+                reports.validatePublication(sectionId,candidate,section.meta(),context.evidence,context.sources());
             }
             if(args.hasNonNull("meta")) reports.validateMeta(mapper.treeToValue(args.get("meta"),AnalysisReportMeta.class),context.sources());
         } catch(Exception e) {

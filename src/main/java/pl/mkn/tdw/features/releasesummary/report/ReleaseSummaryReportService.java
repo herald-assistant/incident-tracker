@@ -17,11 +17,11 @@ public class ReleaseSummaryReportService {
     public static final String CONTRACT="release-summary-analyst-report-v1";
     public static final String PENDING="Uzupełnij opis funkcjonalny.";
     public static final String SQL_PENDING="Wyjaśnij operację na podstawie pełnego źródła.";
-    public static final List<String> DETAIL=List.of("Obiekt","Zmiana techniczna","Znaczenie funkcjonalne","Źródła");
+    public static final List<String> DETAIL=List.of("Obiekt","Zmiana","Opis funkcjonalny");
     public static final Map<String,List<String>> HEADERS=Map.of(
-            "CHANGE_INDEX",List.of("Obszar","Co się zmienia","Szczegóły"),
-            "DEPLOYMENT_IMPACT",List.of("Obszar","Wpływ i ryzyko","Co sprawdzić","Źródła"));
+            "TABLE_LIST",List.of("Tabela","Zakres zmian"));
     private static final Pattern LINK=Pattern.compile("\\[([^\\]]+)]\\(([^)]+)\\)");
+    private static final Pattern DEVELOPER_LANGUAGE=Pattern.compile("(?iu)\\b(?:DAO|DTO|changelog\\w*|changeset\\w*|Liquibase|relativeToChangelogFile|logicalFilePath|deserializ\\w*)\\b|(?:src/|\\.(?:java|ya?ml|xml|kt|tsx?)\\b)|\\b(?:Potwierdzone|Wniosek|Do wyjaśnienia):");
     private final ObjectMapper mapper;
     private final ReleaseSummaryReportInventory inventory;
     private final GitLabSettingsPort settings;
@@ -30,35 +30,52 @@ public class ReleaseSummaryReportService {
                          int documentedElements,boolean sourceComplete,List<Coverage> coverage,List<String> visibilityLimits) {}
 
     public List<String> sectionIds(ReleaseSummaryEvidence evidence) {
-        var ids=new ArrayList<>(List.of("OVERVIEW","CHANGE_INDEX","DEPLOYMENT_IMPACT"));
-        inventory.groups(evidence).forEach(g->ids.add(detailId(g)));return List.copyOf(ids);
+        var ids=new ArrayList<>(List.of("OVERVIEW","TABLE_LIST"));
+        inventory.groups(evidence).stream().filter(g->!g.appendix()).forEach(g->ids.add(detailId(g)));
+        ids.add("APPENDIX");return List.copyOf(ids);
+    }
+    public void validateOrder(String id,int order,ReleaseSummaryEvidence evidence) {
+        int expected=sectionIds(evidence).indexOf(id)+1;
+        if(expected==0||order!=expected)throw invalid("Zachowaj id i order sekcji z planu raportu; oczekiwane order: "+expected);
     }
     public AnalysisReport scaffold(String id,ReleaseSummaryScope scope,ReleaseSummaryEvidence evidence) {
         // This private seed is not a report result. No placeholder tables are published on checkpoints.
         return new AnalysisReport(id,"Zmiany bazodanowe we wdrożeniu",scope.systemName(),
-                "Porównanie definicji migracji. Raport nie potwierdza wykonania zmian w konkretnej bazie.",
-                List.of(),AnalysisReportMeta.empty());
+                "",List.of(),new AnalysisReportMeta(List.of(),List.of(),List.of(),List.of(),null,List.of("Porównanie opisuje planowane zmiany. Nie sprawdzono stanu działającej bazy ani historii wykonania migracji.")));
     }
     public AnalysisReport noChanges(String id,ReleaseSummaryScope scope) {
         return new AnalysisReport(id,"Brak zmian bazodanowych",scope.systemName(),
-                "Nie znaleziono zmian Liquibase w porównywanych rewizjach.",
+                "Nie znaleziono zmian definicji bazy danych w porównywanych wersjach.",
                 List.of(section("OVERVIEW","Zakres porównania",1,comparison(scope)+
                         "\n\nZweryfikowano pełne drzewa i wymagane pliki źródłowe. Analiza AI nie była potrzebna.")),AnalysisReportMeta.empty());
     }
     public List<AnalysisReportSection> templates(ReleaseSummaryScope scope,ReleaseSummaryEvidence evidence) {
         var groups=inventory.groups(evidence);var result=new ArrayList<AnalysisReportSection>();
-        result.add(section("OVERVIEW","W skrócie",1,comparison(scope)+"\n\nNapisz 2–4 zdania: najważniejsze zmiany danych, ich cel i główny wpływ na wdrożenie."));
-        result.add(section("CHANGE_INDEX","Lista zmian",2,ReleaseSummaryTables.table(HEADERS.get("CHANGE_INDEX"),groups.stream()
-                .map(g->List.of(g.title(),"Opisz krótko zakres zmian.",detailLink(g))).toList())));
+        result.add(section("OVERVIEW","Podsumowanie",1,"Napisz 2–3 krótkie zdania o zmianach danych i ich celu."));
+        var tables=groups.stream().filter(g->!g.appendix()).toList();
+        result.add(section("TABLE_LIST","Lista tabel",2,tables.isEmpty()?"Brak zmian przypisanych do tabel.":ReleaseSummaryTables.table(HEADERS.get("TABLE_LIST"),tables.stream()
+                .map(g->List.of(g.title(),"Opisz krótko zakres zmian.")).toList())));
         int order=3;
-        for(var group:groups)result.add(section(detailId(group),group.title(),order++,detailTemplate(group)));
-        result.add(section("DEPLOYMENT_IMPACT","Wpływ na wdrożenie i weryfikacja",order,
-                ReleaseSummaryTables.table(HEADERS.get("DEPLOYMENT_IMPACT"),List.of(List.of("Migracje","Opisz wpływ i ryzyko.","Podaj konkretne sprawdzenia.","Nie dotyczy")))));
+        for(var group:tables)result.add(new AnalysisReportSection(detailId(group),group.title(),order++,detailTemplate(group),groupMeta(group)));
+        var appendix=groups.stream().filter(ReleaseSummaryReportInventory.Group::appendix).findFirst();
+        result.add(new AnalysisReportSection("APPENDIX","Appendix",order,appendix.map(this::detailTemplate).orElse("Opisz krótko istotne warunki wdrożenia i ograniczenia."),
+                appendix.map(this::groupMeta).orElse(AnalysisReportMeta.empty())));
         return List.copyOf(result);
     }
     public String detailTemplate(ReleaseSummaryReportInventory.Group group) {
-        return ReleaseSummaryTables.table(DETAIL,group.items().stream().map(item->List.of(item.label(),
-                technical(item),PENDING,citations(item.sources()))).toList());
+        return ReleaseSummaryTables.table(DETAIL,group.items().stream().filter(item->!expandedSql(group,item)).map(item->List.of(item.label(),
+                technical(item),PENDING)).toList());
+    }
+    private boolean expandedSql(ReleaseSummaryReportInventory.Group group,ReleaseSummaryReportInventory.Item item) {
+        return !group.appendix()&&item.kind().equals("sql");
+    }
+    private AnalysisReportMeta groupMeta(ReleaseSummaryReportInventory.Group group) {
+        var refs=new ArrayList<AnalysisReportReference>();
+        group.items().stream().flatMap(i->i.sources().stream()).distinct().forEach(ref->refs.add(
+                new AnalysisReportReference("source",ref.substring(ref.lastIndexOf(':')+1),sourceLink(ref),"Źródło definicji zmian.")));
+        group.items().stream().filter(i->expandedSql(group,i)).forEach(i->refs.add(new AnalysisReportReference(
+                "sql-coverage",i.label(),sourceLink(i.sources().get(i.sources().size()-1)),"Wpisz nazwy opisanych obiektów, każdą w osobnej linii.")));
+        return new AnalysisReportMeta(refs,List.of(),List.of(),List.of(),null,List.of());
     }
     public String technical(ReleaseSummaryReportInventory.Item item) {
         return item.change()+". "+(item.interpreted()?SQL_PENDING:item.definition());
@@ -72,8 +89,7 @@ public class ReleaseSummaryReportService {
                 .collect(java.util.stream.Collectors.joining("\n\n"));
     }
     private String shortRef(String ref){return ref.replaceFirst("^refs/(heads|tags)/","");}
-    private String detailId(ReleaseSummaryReportInventory.Group group){return "DB_DETAIL_"+group.id();}
-    private String detailLink(ReleaseSummaryReportInventory.Group group){return "[Zobacz szczegóły](#report-section-"+detailId(group)+")";}
+    private String detailId(ReleaseSummaryReportInventory.Group group){return group.appendix()?"APPENDIX":"DB_DETAIL_"+group.id();}
     public String json(Object value) {
         try{return mapper.writeValueAsString(value);}catch(Exception e){throw new IllegalArgumentException("Nie można przygotować kontraktu raportu.",e);}
     }
@@ -87,10 +103,6 @@ public class ReleaseSummaryReportService {
     }
     public Map<String,String> sourceLinks(Set<String> refs) {
         var links=new TreeMap<String,String>();refs.forEach(ref->links.put(ref,sourceLink(ref)));return links;
-    }
-    public String citations(Collection<String> refs) {
-        int i=0;var links=new ArrayList<String>();for(var ref:refs)links.add("["+(++i)+"]("+sourceLink(ref)+")");
-        return links.isEmpty()?"Nie dotyczy":String.join(" ",links);
     }
     private String sourceLink(String ref) {
         if(ref.startsWith("opctx:")) {
@@ -109,24 +121,30 @@ public class ReleaseSummaryReportService {
 
     public void validateSection(String id,String markdown,ReleaseSummaryEvidence evidence,Set<String> knownSources) {
         if(markdown==null||markdown.isBlank())throw invalid("Sekcja wymaga treści dla analityka.");
-        if(List.of("Napisz 2–4 zdania:","Opisz krótko zakres zmian.","Opisz wpływ i ryzyko.","Podaj konkretne sprawdzenia.")
+        if(List.of("Napisz 2–3 krótkie zdania", "Opisz krótko zakres zmian.","Opisz krótko istotne warunki wdrożenia i ograniczenia.")
                 .stream().anyMatch(markdown::contains))throw invalid("Zastąp instrukcje konkretną treścią raportu.");
         if(markdown.contains("/databaseChangeLog:")||markdown.contains("DO_UZUPELNIENIA_")||markdown.contains("| elementId |")||markdown.contains("| unitId |"))
             throw invalid("Raport ma opisywać obiekty bazy danych, bez identyfikatorów i ścieżek parsera.");
-        if(id.equals("OVERVIEW")){validateLinks(markdown,knownSources);return;}
+        if(id.equals("OVERVIEW")){validateNarrative(markdown);return;}
         var groups=inventory.groups(evidence);
         if(HEADERS.containsKey(id)) {
+            var tables=groups.stream().filter(g->!g.appendix()).toList();
+            if(tables.isEmpty()&&markdown.equals("Brak zmian przypisanych do tabel."))return;
             var table=requiredTable(markdown,HEADERS.get(id));
-            if(id.equals("CHANGE_INDEX")) {
-                var links=new HashSet<String>();
-                for(var row:table.rows())if(!links.add(row.get(2)))throw invalid("Powtórzony zakres w liście zmian.");
-                if(!links.equals(new HashSet<>(groups.stream().map(this::detailLink).toList())))throw invalid("Lista zmian musi odsyłać do każdego wymaganego zakresu.");
-            } else validateLinks(markdown,knownSources);
+            var rows=uniqueRows(table);
+            if(!rows.keySet().equals(new HashSet<>(tables.stream().map(ReleaseSummaryReportInventory.Group::title).toList())))
+                throw invalid("Lista tabel musi zawierać każdą zmienianą tabelę, bez odnośników do innych sekcji.");
+            validateNarrative(markdown);
             return;
         }
+        if(id.equals("APPENDIX")&&groups.stream().noneMatch(ReleaseSummaryReportInventory.Group::appendix)){validateNoLinks(markdown);return;}
         var group=groups.stream().filter(g->detailId(g).equals(id)).findFirst().orElseThrow(()->invalid("Nieznana sekcja raportu."));
         var rows=uniqueRows(requiredTable(markdown,DETAIL));
         for(var item:group.items()) {
+            if(expandedSql(group,item)) {
+                if(itemRow(item,rows)!=null)throw invalid("Opisz obiekty skryptu SQL bez dodatkowego wiersza powtarzającego skrypt. Mapowanie zapisz w meta.references typu sql-coverage.");
+                continue;
+            }
             var row=itemRow(item,rows);if(row==null)throw invalid("Brak opisu: "+item.label());
             if(!item.interpreted()&&!row.get(1).equals(technical(item)))throw invalid("Zachowaj zweryfikowaną definicję: "+item.label());
             if(item.interpreted()&&!row.get(1).startsWith(item.change()+"."))throw invalid("Zachowaj kierunek zmiany: "+item.change()+". "+item.label());
@@ -134,18 +152,43 @@ public class ReleaseSummaryReportService {
         if(group.structurallyVerified()&&rows.size()!=group.items().size())throw invalid("Dodatkowe obiekty wymagają nierozpoznanej operacji w źródłach.");
         for(var row:rows.values()) {
             if(row.get(1).contains(SQL_PENDING)||row.get(2).equals(PENDING))throw invalid("Uzupełnij opis przed opublikowaniem sekcji: "+row.get(0));
-            if(!row.get(2).matches("(?s)^(Potwierdzone|Wniosek|Do wyjaśnienia):\\s+\\S.*"))throw invalid("Znaczenie funkcjonalne zaczynaj od Potwierdzone:, Wniosek: albo Do wyjaśnienia:, a następnie podaj opis.");
-            if(!LINK.matcher(row.get(3)).find())throw invalid("Każdy obiekt wymaga krótkiego linku do odczytanego źródła.");
-            validateLinks(row.get(3),knownSources);
+            validateNoLinks(row.get(0));
+            boolean verifiedDefinition=group.items().stream().anyMatch(item->!item.interpreted()&&item.label().equals(row.get(0)));
+            if(!verifiedDefinition)validateNoLinks(row.get(1));
+            if(!group.appendix())validateNarrative(row.get(2));else validateNoLinks(row.get(2));
         }
-        validateLinks(markdown,knownSources);
+        // Technical definitions may legitimately contain URLs or application-like literals.
+        // Check the authored narrative without rejecting those verified SQL values.
+        var prose=markdown.lines().filter(line->!line.strip().startsWith("|")).collect(java.util.stream.Collectors.joining("\n"));
+        if(!group.appendix())validateNarrative(prose);else validateNoLinks(prose);
     }
-    private void validateLinks(String text,Set<String> known) {
-        var allowed=new HashSet<>(sourceLinks(known).values());var matcher=LINK.matcher(text);
-        while(matcher.find())if(!allowed.contains(matcher.group(2)))throw invalid("Odnośnik nie prowadzi do odczytanego źródła: "+matcher.group(1));
+    private void validateNarrative(String text) {
+        validateNoLinks(text);
+        if(DEVELOPER_LANGUAGE.matcher(text).find())throw invalid("Opis ma być zrozumiały bez znajomości kodu i Liquibase. Usuń żargon i prefiksy Potwierdzone/Wniosek; szczegóły źródeł przenieś do meta.");
+    }
+    private void validateNoLinks(String text) {
+        if(LINK.matcher(text).find()||text.contains("https://")||text.contains("http://")||text.contains("#report-section-"))
+            throw invalid("Odnośniki do źródeł umieść wyłącznie w meta.references; sekcje mają być samodzielne.");
     }
     public void validateMeta(AnalysisReportMeta meta,Set<String> known) {
-        if(meta!=null)for(var ref:meta.references())if(ref==null||!known.contains(ref.target()))throw invalid("Metadane mogą cytować tylko odczytane źródła.");
+        var allowed=new HashSet<>(sourceLinks(known).values());
+        if(meta!=null)for(var ref:meta.references())if(ref==null||!allowed.contains(ref.target()))throw invalid("Metadane mogą cytować tylko URL odczytanego źródła.");
+    }
+    public void validatePublication(String id,String markdown,AnalysisReportMeta meta,ReleaseSummaryEvidence evidence,Set<String> known) {
+        validateSection(id,markdown,evidence,known);validateMeta(meta,known);
+        var group=inventory.groups(evidence).stream().filter(g->detailId(g).equals(id)).findFirst();
+        if(group.isEmpty())return;
+        var rows=uniqueRows(requiredTable(markdown,DETAIL));
+        var refs=meta==null?List.<AnalysisReportReference>of():meta.references();
+        for(var item:group.get().items()) {
+            var urls=item.sources().stream().map(this::sourceLink).collect(java.util.stream.Collectors.toSet());
+            if(refs.stream().noneMatch(ref->urls.contains(ref.target())))throw invalid("Dodaj źródło definicji w meta.references: "+item.label());
+            if(!expandedSql(group.get(),item))continue;
+            var mappings=refs.stream().filter(ref->"sql-coverage".equals(ref.type())&&item.label().equals(ref.label())&&urls.contains(ref.target())).toList();
+            if(mappings.size()!=1)throw invalid("Zapisz jedno mapowanie sql-coverage w meta.references dla: "+item.label());
+            var mapped=Objects.toString(mappings.get(0).description(),"").lines().map(String::strip).filter(s->!s.isBlank()).toList();
+            if(mapped.isEmpty()||!rows.keySet().containsAll(mapped))throw invalid("Opis sql-coverage musi zawierać dokładne nazwy opisanych obiektów, po jednej w każdej linii: "+item.label());
+        }
     }
     private ReleaseSummaryTables.Table requiredTable(String markdown,List<String> headers) {
         var tables=ReleaseSummaryTables.parse(markdown);
@@ -174,7 +217,7 @@ public class ReleaseSummaryReportService {
         for(var id:required) {
             var section=sections.get(id);
             if(section==null){limits.add("Nie zapisano jeszcze wszystkich wymaganych części raportu.");continue;}
-            try{validateSection(id,section.markdown(),evidence,known);validateMeta(section.meta(),known);}
+            try{validatePublication(id,section.markdown(),section.meta(),evidence,known);}
             catch(IllegalArgumentException e){limits.add(section.title()+": "+e.getMessage());}
             limits.addAll(section.meta().gaps());limits.addAll(section.meta().visibilityLimits());
         }
@@ -183,9 +226,9 @@ public class ReleaseSummaryReportService {
             var gaps=new ArrayList<String>();int documented=0;var section=sections.get(detailId(group));
             if(section==null)gaps.add("Nie zapisano szczegółów zmian.");
             else try {
-                validateSection(section.id(),section.markdown(),evidence,known);
+                validatePublication(section.id(),section.markdown(),section.meta(),evidence,known);
                 var rows=uniqueRows(requiredTable(section.markdown(),DETAIL));documented=group.items().size();
-                for(var item:group.items())if(itemRow(item,rows).get(2).startsWith("Do wyjaśnienia:"))gaps.add(item.label()+": "+itemRow(item,rows).get(2).substring(15).strip());
+                for(var row:rows.values())if(row.get(2).startsWith("Nie ustalono"))gaps.add(row.get(0)+": "+row.get(2));
             }catch(IllegalArgumentException e){gaps.add(e.getMessage());}
             if(!group.structurallyVerified())gaps.add("Pełność operacji SQL lub niestandardowych zmian wymaga weryfikacji analityka.");
             coverage.add(new Coverage(group.id(),group.items().size(),documented,group.structurallyVerified(),List.copyOf(gaps)));

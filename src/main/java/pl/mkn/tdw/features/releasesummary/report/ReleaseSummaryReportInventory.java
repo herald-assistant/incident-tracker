@@ -21,14 +21,17 @@ public class ReleaseSummaryReportInventory {
             "insert","update","delete","loadData","loadUpdateData","customChange","createProcedure","createView","preConditions","preconditions");
     private static final Set<String> INTERPRETED=Set.of("sql","sqlFile","data","dependency","ordering","rollback",
             "customChange","createProcedure","createView","modifySql","executeCommand");
-    public record Item(String label,String change,String definition,boolean interpreted,List<String> elementIds,
+    public record Item(String label,String change,String definition,boolean interpreted,String kind,List<String> elementIds,
                        List<String> sources) {}
-    public record Group(String id,String title,String repositoryId,String path,List<Item> items,boolean structurallyVerified) {}
+    public record Group(String id,String title,String repositoryId,String table,List<Item> items,boolean structurallyVerified) {
+        public boolean appendix() {return table.isEmpty();}
+    }
 
     public List<Group> groups(ReleaseSummaryEvidence evidence) {
         var files=new TreeMap<String,List<ReleaseSummaryEvidence.Unit>>();
         evidence.units().forEach(u->files.computeIfAbsent(u.repositoryId()+"/"+u.path(),ignored->new ArrayList<>()).add(u));
-        var result=new ArrayList<Group>();
+        var grouped=new TreeMap<String,List<Item>>();var identities=new HashMap<String,List<String>>();
+        var verified=new HashMap<String,Boolean>();
         for(var entry:files.entrySet()) {
             var units=entry.getValue();var first=units.get(0);
             var before=nodes(evidence,first,"BASELINE");var after=nodes(evidence,first,"TARGET");
@@ -48,28 +51,53 @@ public class ReleaseSummaryReportInventory {
             if(owners.isEmpty()) owners.put("configuration",new ArrayList<>(elements.values()));
             var refs=new LinkedHashSet<String>();
             units.forEach(u->{if(u.baselineSource()!=null)refs.add(u.baselineSource());if(u.targetSource()!=null)refs.add(u.targetSource());});
-            var items=new ArrayList<Item>();var labels=new HashMap<String,Integer>();var tables=new LinkedHashSet<String>();
+            int ordinal=0;
             for(var owned:owners.entrySet()) {
                 var path=owned.getKey();var b=before.get(path);var a=after.get(path);var node=a!=null?a:b;
                 var kind=node!=null?node.kind():owned.getValue().get(0).kind();
                 var attributes=node!=null?node.attributes():Map.<String,Object>of();
-                var table=tableName(path,all);if(!table.isBlank())tables.add(table);
+                var table=tableName(path,all);
                 boolean rollback=path.contains("/rollback:");
-                var label=(rollback?"Wycofanie: ":"")+label(kind,attributes,table,items.size()+1);
-                int duplicate=labels.merge(label,1,Integer::sum);if(duplicate>1)label+=" (operacja "+duplicate+")";
+                var label=(rollback?"Wycofanie: ":"")+label(kind,attributes,table,++ordinal);
                 boolean interpreted=INTERPRETED.contains(kind)||node==null;
-                String change=first.changeType().equals("REMOVED")?"Usunięcie z changelogu":
-                        b==null?"Dodanie":a==null?"Usunięcie definicji":"Zmiana";
+                String change=first.changeType().equals("REMOVED")?"Usunięcie z definicji wdrożenia":
+                        a==null?"Usunięcie definicji":kind.startsWith("drop")||kind.equals("delete")?"Usunięcie":
+                        kind.startsWith("rename")||kind.startsWith("modify")||kind.startsWith("alter")||kind.equals("update")?"Zmiana":
+                        b==null?"Dodanie":"Zmiana";
                 var definition=interpreted?"":definition(b,a,kind);
-                items.add(new Item(label,change,definition,interpreted,
-                        owned.getValue().stream().map(ReleaseSummaryEvidence.Element::elementId).toList(),List.copyOf(refs)));
+                var targets=table.isBlank()&&kind.equals("sql")?sqlTables(attributes):table.isBlank()?Set.<String>of():Set.of(table);
+                if(rollback||targets.isEmpty())targets=Set.of("");
+                for(var target:targets) {
+                    var key=target.isEmpty()?"~appendix":first.repositoryId()+"/"+target;
+                    identities.putIfAbsent(key,List.of(first.repositoryId(),target));
+                    var items=grouped.computeIfAbsent(key,ignored->new ArrayList<>());
+                    var baseLabel=label;
+                    long duplicate=items.stream().filter(i->i.label().equals(baseLabel)||i.label().startsWith(baseLabel+" (zmiana ")).count();
+                    var uniqueLabel=duplicate==0?label:label+" (zmiana "+(duplicate+1)+")";
+                    items.add(new Item(uniqueLabel,change,definition,interpreted,kind,
+                            owned.getValue().stream().map(ReleaseSummaryEvidence.Element::elementId).toList(),List.copyOf(refs)));
+                    verified.merge(key,units.stream().allMatch(ReleaseSummaryEvidence.Unit::structurallyVerified),Boolean::logicalAnd);
+                }
             }
-            String title=tables.isEmpty()?"Reguły i operacje migracji":tables.size()==1?"Tabela "+tables.iterator().next():"Tabele "+String.join(", ",tables);
-            // A human filename disambiguates migrations of the same table, without parser paths or hashes.
-            title+=" · "+first.path().substring(first.path().lastIndexOf('/')+1);
-            result.add(new Group(id(entry.getKey()),title,first.repositoryId(),first.path(),List.copyOf(items),units.stream().allMatch(ReleaseSummaryEvidence.Unit::structurallyVerified)));
         }
-        return List.copyOf(result);
+        return grouped.entrySet().stream().map(entry->{
+            var identity=identities.get(entry.getKey());var table=identity.get(1);
+            long sameName=identities.values().stream().filter(i->i.get(1).equals(table)).count();
+            var title=table.isEmpty()?"Appendix":table+(sameName>1?" ("+identity.get(0)+")":"");
+            return new Group(table.isEmpty()?"APPENDIX":id(entry.getKey()),title,identity.get(0),table,List.copyOf(entry.getValue()),verified.get(entry.getKey()));
+        }).toList();
+    }
+
+    // Ownership hints only, never a proof of SQL completeness. Unresolved scripts stay in the appendix.
+    private Set<String> sqlTables(Map<String,Object> attributes) {
+        var text=Objects.toString(attributes.getOrDefault("sql",attributes.getOrDefault("text","")),"");
+        text=text.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("(?m)--[^\\r\\n]*", " ")
+                .replaceAll("'(?:''|[^'])*'", "''");
+        var identifier="(?:\"[^\"]+\"|[A-Za-z_][A-Za-z0-9_$]*)(?:\\.(?:\"[^\"]+\"|[A-Za-z_][A-Za-z0-9_$]*))?";
+        var pattern=java.util.regex.Pattern.compile("(?is)(?:^|;)\\s*(?:(?:CREATE\\s+(?:UNLOGGED\\s+)?TABLE|ALTER\\s+TABLE|DROP\\s+TABLE)\\s+(?:IF\\s+(?:NOT\\s+)?EXISTS\\s+)?|CREATE\\s+(?:UNIQUE\\s+)?INDEX\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?"+identifier+"\\s+ON\\s+|INSERT\\s+INTO\\s+|UPDATE\\s+|DELETE\\s+FROM\\s+)("+identifier+")");
+        var targets=new TreeSet<String>();var match=pattern.matcher(text);
+        while(match.find())targets.add(match.group(1));
+        return targets;
     }
 
     private Map<String,Node> nodes(ReleaseSummaryEvidence evidence,ReleaseSummaryEvidence.Unit unit,String side) {
@@ -111,8 +139,9 @@ public class ReleaseSummaryReportInventory {
         for(var ancestor:ancestors(path)) {
             var node=nodes.get(ancestor);if(node==null)continue;
             for(var key:List.of("tableName","baseTableName","oldTableName"))if(node.attributes().get(key)!=null) {
-                var schema=node.attributes().get("schemaName");
-                return (schema!=null?schema+".":"")+node.attributes().get(key);
+                var schema=node.attributes().get(key.equals("baseTableName")?"baseTableSchemaName":"schemaName");
+                var catalog=node.attributes().get(key.equals("baseTableName")?"baseTableCatalogName":"catalogName");
+                return (catalog!=null?catalog+".":"")+(schema!=null?schema+".":"")+node.attributes().get(key);
             }
         }
         return "";
@@ -133,7 +162,7 @@ public class ReleaseSummaryReportInventory {
             case "preConditions","preconditions" -> "Warunki uruchomienia migracji";
             case "dependency" -> "Zależności migracji";
             case "databaseChangeLog","changeSet","changes","columns" -> "Ustawienia migracji";
-            case "sql","sqlFile" -> "Operacja SQL "+ordinal;
+            case "sql","sqlFile" -> "Skrypt SQL "+ordinal;
             case "insert","update","delete","loadData","loadUpdateData" -> "Dane w tabeli "+table+" ("+kind+")";
             default -> kind+" "+(qualified.isBlank()?Integer.toString(ordinal):qualified);
         };
@@ -166,7 +195,7 @@ public class ReleaseSummaryReportInventory {
         } else if(COMPOUND.contains(kind)) {
             node.children().forEach(child->parts.add(nested(child)));
         }
-        return parts.isEmpty()?"Definicja obiektu w migracji":String.join("; ",parts);
+        return parts.isEmpty()?"Definicja obiektu":String.join("; ",parts);
     }
     private String nested(Node node) {
         var values=new ArrayList<String>();node.attributes().forEach((k,v)->values.add(property(k,v)));

@@ -264,7 +264,7 @@ public class ReleaseSummaryJobService {
             requireMutation(state,false);
             var updated=pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor.apply(state.report,request);
             var sources=state.context!=null?state.context.sources():reports.initialSources(state.scope,state.evidence);
-            try {for(var section:updated.sections())reports.validateSection(section.id(),section.markdown(),state.evidence,sources);}
+            try {for(var section:updated.sections())reports.validatePublication(section.id(),section.markdown(),section.meta(),state.evidence,sources);}
             catch(IllegalArgumentException e){throw new ReleaseSummaryException("INVALID_REPORT_EDIT",e.getMessage());}
             state.report=updated;state.result=reports.project(updated,state.evidence,sources);
             state.finish(state.result.status(),null,null);persist(state);return state.snapshot();

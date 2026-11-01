@@ -43,14 +43,14 @@ class ReleaseSummaryAcceptanceTest {
         var reports=ReleaseSummaryReportTest.reports(new ObjectMapper());
         var base=ReleaseSummaryReportTest.evidence(true);
         var elements=List.of("first","second").stream().map(id->new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence.Element(
-                id,"column","/changeSet/column:"+id,null,Map.<String,Object>of("name",id,"defaultValue","DO_UZUPELNIENIA","remarks","CRM ".repeat(50000)))).toList();
+                id,"column","/changeSet/column:"+id,null,Map.<String,Object>of("name",id,"tableName","customer","defaultValue","DO_UZUPELNIENIA","remarks","CRM ".repeat(50000)))).toList();
         var evidence=new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence(base.sources(),List.of(
                 new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence.Unit("unit1","customer","db/customer.xml","ADDED",null,
                         ReleaseSummaryReportTest.SOURCE,elements,true)),List.of(),List.of(),1,true);
         var scaffold=reports.scaffold("crm-report",ReleaseSummaryReportTest.SCOPE,evidence);
         var sections=new ArrayList<>(reports.templates(ReleaseSummaryReportTest.SCOPE,evidence));
         var detail=sections.stream().filter(s->s.id().startsWith("DB_DETAIL")).findFirst().orElseThrow();
-        var text=detail.markdown().replace(ReleaseSummaryReportService.PENDING,"Do wyjaśnienia: Brak kodu wyjaśniającego wykorzystanie pola.");
+        var text=detail.markdown().replace(ReleaseSummaryReportService.PENDING,"Nie ustalono zastosowania pola.");
         assertTrue(text.contains("DO_UZUPELNIENIA"));assertFalse(text.contains("CRM ".repeat(50000)));
         assertEquals("CRM ".repeat(50000),evidence.units().get(0).elements().get(0).after().get("remarks"));
         var known=reports.initialSources(ReleaseSummaryReportTest.SCOPE,evidence);

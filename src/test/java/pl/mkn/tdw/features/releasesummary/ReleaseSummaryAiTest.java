@@ -81,7 +81,7 @@ class ReleaseSummaryAiTest {
         var policy=new ReleaseSummaryToolPolicy(mapper,reports,store);
         var session=new CopilotToolSessionContext("run","session",Map.of(ReleaseSummaryAiContext.KEY,context,AgentToolContextKeys.REPORT_ID,"report"));
         var detail=ReleaseSummaryReportTest.detail(report);
-        var valid=mapper.writeValueAsString(Map.of("id",detail.id(),"markdown",detail.markdown()));
+        var valid=mapper.writeValueAsString(Map.of("id",detail.id(),"order",detail.order(),"markdown",detail.markdown(),"meta",detail.meta()));
         assertDoesNotThrow(()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","call","report_upsert_section",valid)));
         assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","call","report_upsert_section",
                 valid.replace("gitlab.example.com/CRM/customer/","gitlab.example.com/CRM/unknown/"))));
