@@ -14,6 +14,13 @@ contextSections per repo/plik z pełnym beforeContent/afterContent i lukami.
 Projekcja UI nie dubluje źródeł w prompcie. PREPARE_PROMPT utrwala dokładny
 tekst jako COMPLETED przed sprawdzeniem modelu i wykonaniem AI; zachowuj
 ukończone kroki i evidence po błędzie oraz przy odtworzeniu historii.
+Błąd źródła zachowuje stronę porównania, ścieżkę i etap odczytu oraz bezpieczny
+opis HTTP/transportu/weryfikacji. Nie ukrywaj go pod samym BOTH i pustą ścieżką
+ani nie ujawniaj surowej wiadomości wyjątku. Ponowienia transportu należą
+do integracji GitLab; po ich wyczerpaniu niepełne źródła nadal blokują AI.
+W jednym porównaniu wolno reuse'ować zweryfikowane bajty tej samej ścieżki
+o identycznym blob ID w obu pełnych drzewach. Parsing i zależności pozostają
+osobne dla każdego SHA; sama obecność blob ID bez verified treści nie wystarcza.
 Zbieraj pełne snapshoty i verified pliki, domykaj include/SQL/data i zachowuj
 kolejność oraz wszystkie atrybuty. Niepełny odczyt, symlink, zmieniony submodule
 lub brak zawartości LFS nie może zwrócić NO_CHANGES. SQL/custom change pozostaje

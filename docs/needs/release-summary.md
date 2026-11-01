@@ -63,6 +63,9 @@ obecnie nie analizujemy. Nie jest częścią bieżącego wdrożenia.
   warunków wykonania są rozróżnione.
 - Niepełny odczyt, nierozpoznana konstrukcja i brak potwierdzenia funkcjonalnego
   pozostają widoczne; nie są prezentowane jako „brak zmian”.
+- Awaria zbierania materiału wskazuje plik lub drzewo repozytorium, stronę
+  porównania i zrozumiałą przyczynę. Przejściowe problemy połączenia nie
+  powinny wymagać od operatora powtarzania całego poprawnego przygotowania.
 - Można zapisać wynik w historii, udostępnić raport oraz dopytać o jego treść
   w znanym wzorcu pracy innych analiz.
 - Historia zawiera wpis od przyjęcia analizy i pozwala wrócić do jej postępu.

@@ -71,6 +71,12 @@ oraz interpretacja nieobsługiwanych źródeł należą do konsumenta.
 - Integracja HTTP korzysta z `RestClient` przez `GitLabRestClientFactory`.
 - Izoluj nietypowe zachowania GitLaba lokalnie dla tej integracji; nie dodawaj
   globalnych zmian SSL ani globalnych klientow HTTP.
+- `internal.GitLabReadRetry` ponawia wybrane idempotentne odczyty plikow,
+  metadanych i stron pelnego drzewa, obejmujac konsumpcje body. Maksymalnie
+  trzy proby, Retry-After do 120 s (dluzszy konczy odczyt bez ponowienia),
+  przerwanie zachowuje interrupt flag. Nie ponawiaj walidacji, bledow TLS,
+  kodowania ani trwalych statusow HTTP; nie podpinaj tu mutacji. Diagnostyka
+  nie loguje naglowkow, body ani surowych wiadomosci wyjatkow.
 - Modele request/result trzymaj jako male, niemutowalne `record`, gdy to
   wystarcza.
 - Dla nowej operacji GitLab API dodaj test adaptera z `MockRestServiceServer`,

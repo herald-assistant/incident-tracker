@@ -58,6 +58,11 @@ Nie ma zastępowania niedostępnego refa domyślną gałęzią ani pomijania rep
    pod niezmienionym changelogiem, nowe dołączenie istniejącego pliku, usunięcie,
    zmiana atrybutu lub kolejności pozostaje widoczna. Komentarz XML bez zmiany
    deklaracji nie jest zmianą schematu.
+   Gdy ta sama ścieżka ma identyczny blob ID w obu pełnych drzewach, collector
+   korzysta z już zweryfikowanych bajtów strony bazowej. Nie powtarza wtedy
+   odczytu HTTP, ale ponownie parsuje plik i rozwiązuje zależności dla strony
+   docelowej. Nowy, zmieniony lub wcześniej nieodczytany plik wymaga własnego
+   verified read. Reuse jest lokalny dla repozytorium w jednym porównaniu.
 7. Manifest zawiera stabilne `unitId`, `elementId`, lokalizację, pełne mapy
    właściwości `before`/`after`, źródła i luki. Duże pliki są dzielone według
    changesetów/grup operacji na jednostki do 32 elementów, bez limitu łącznej
@@ -65,6 +70,23 @@ Nie ma zastępowania niedostępnego refa domyślną gałęzią ani pomijania rep
 
 XML nie rozwiązuje zewnętrznych encji. YAML jest odczytywany bez wykonywania
 konstruktorów. Parser nie wykonuje SQL, pluginów ani kodu custom changes.
+
+Przejściowe awarie odczytu GitLab są ponawiane w neutralnej integracji,
+na poziomie jednej strony drzewa albo jednego odczytu pliku/metadanych,
+z zachowaniem tego samego refa i ścieżki. Maksymalnie trzy próby obejmują
+HTTP 408, 429, 500, 502, 503, 504 oraz błędy transportu, także podczas czytania
+body. Backoff wynosi 500 ms i 1000 ms. `Retry-After` określa minimalną przerwę;
+jeżeli przekracza 120 s, odczyt kończy się błędem bez przedwczesnego ponowienia.
+Przerwanie wątku zatrzymuje retry. Błędy TLS, kodowania, parsowania i walidacji
+oraz HTTP 401/403/404 nie są ponawiane. Nie dotyczy to mutacji ani sesji AI.
+
+Po nieudanym odczycie luka `SOURCE_UNAVAILABLE` zawiera stronę porównania,
+ścieżkę pliku lub zależności i etap: drzewo, odczyt/weryfikacja lub parser.
+Opis rozróżnia status HTTP, timeout, TLS, błąd I/O i brak potwierdzenia
+poprawności źródła; HTTP 429 jawnie wskazuje ograniczenie liczby odczytów.
+Nie ujawnia surowej wiadomości wyjątku ani body błędu.
+Diagnostyka serwera zapisuje lokalizację i typy przyczyn. Niepełny materiał
+nadal blokuje AI; ponowienia nie osłabiają kontroli SHA, blobów i pełności.
 
 Początkowy prompt zawiera kompletne `payload` wybranego systemu, repozytoriów
 i zakresów kodu oraz pełny zebrany materiał źródłowy. Nie sprowadza encji do
