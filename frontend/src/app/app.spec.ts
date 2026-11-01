@@ -44,7 +44,7 @@ describe('App', () => {
 
     await router.navigateByUrl('/');
     fixture.detectChanges();
-    flushUiConfig(http);
+    flushUiConfig(http, 'Team Delivery Workspace', true);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -59,6 +59,15 @@ describe('App', () => {
     );
     expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+    for (const selector of [
+      'a.app-shell__nav-item[aria-label="Release summary"]',
+      '.platform-landing__feature-grid a[href="/release-summary"]'
+    ]) {
+      const releaseSummary = compiled.querySelector(selector);
+      expect(releaseSummary?.previousElementSibling?.getAttribute('href')).toBe('/change-verification');
+      expect(releaseSummary?.nextElementSibling?.getAttribute('href')).toBe('/config-drift-viewer');
+      expect(releaseSummary?.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('deployed_code');
+    }
   });
 
   it('should render Delivery Trends from the Analysis Features navigation', async () => {
@@ -940,8 +949,9 @@ describe('App', () => {
   });
 });
 
-function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Workspace'): void {
+function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Workspace', releaseSummaryEnabled = false): void {
   http.expectOne('/api/ui/config').flush({
+    releaseSummaryEnabled,
     title,
     subtitle: title === 'Team Delivery Workspace' ? null : 'Team Delivery Workspace',
     defaultTitle: 'Team Delivery Workspace',

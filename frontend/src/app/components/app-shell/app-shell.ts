@@ -62,7 +62,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Analysis Features',
     items: [
-      { label: 'Release summary', route: '/release-summary', icon: 'difference', reloadOnActiveClick: true },
       {
         label: 'Incident Analysis',
         route: '/incident-analysis',
@@ -91,6 +90,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Change Verification',
         route: '/change-verification',
         icon: 'fact_check',
+        reloadOnActiveClick: true
+      },
+      {
+        label: 'Release summary',
+        route: '/release-summary',
+        icon: 'deployed_code',
         reloadOnActiveClick: true
       },
       {

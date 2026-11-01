@@ -248,6 +248,8 @@ NO_CHANGES ma osobny krótki raport bez pustych tabel i bez sesji AI.
 
 UI reuse'uje polling, report panel, evidence/activity/usage, Share,
 manual editor i chat. Wymaga wybranego modelu albo modelu domyślnego backendu.
+W nawigacji Analysis Features i siatce Workspace Overview Release summary
+występuje bezpośrednio po Change Verification i używa ikony `deployed_code`.
 Analysis History udostępnia run również w stanach `QUEUED` i `RUNNING`.
 Otwarcie wpisu prowadzi do `/release-summary?localRunId=...`; ekran odczytuje
 bieżący snapshot i wznawia polling tego samego joba, bez ponownego startu.
