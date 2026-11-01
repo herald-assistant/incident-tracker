@@ -696,6 +696,26 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldPreserveRawReadHttpStatusAndRetryAfterWithoutRemoteBody() {
+        var properties = gitLabProperties("CRM/runtime");
+        var builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
+                new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(builder)));
+        server.expect(requestTo("https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcustomer-api/repository/files/db%2Fcustomer.yml/raw?ref=release"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After","120")
+                        .body("fictional-crm-private-response"));
+        var failure=assertThrows(IllegalStateException.class,()->adapter.readFileComplete(
+                "CRM/runtime","customer-api","release","db/customer.yml"));
+        var response=(org.springframework.web.client.RestClientResponseException)failure.getCause();
+        assertEquals(429,response.getStatusCode().value());
+        assertEquals("120",response.getResponseHeaders().getFirst("Retry-After"));
+        assertEquals("",response.getResponseBodyAsString());
+        assertFalse(response.getMessage().contains("fictional-crm-private-response"));
+        server.verify();
+    }
+
+    @Test
     void shouldRejectRawFileWhenBodyExceedsLimitEvenWithoutDeclaredLength() {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();

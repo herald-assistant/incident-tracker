@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.releasesummary.context;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence;
 import pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryScope;
@@ -18,6 +19,7 @@ import static pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LiquibaseEvidenceCollector {
     private final GitLabRepositorySnapshotPort snapshotPort;
     private final GitLabRepositoryReadPort readPort;
@@ -65,8 +67,9 @@ public class LiquibaseEvidenceCollector {
                     for(var path:include) { var doc=side.documents.get(path); if(doc!=null) sources.add(doc.source); }
                 }
             } catch(RuntimeException e) {
-                gaps.add(new Gap("SOURCE_UNAVAILABLE",repository.repositoryId(),"BOTH","",
-                        "Nie można zweryfikować pełnego drzewa lub treści repozytorium.",true));
+                var failure=e instanceof ReleaseSummarySourceFailure located ? located :
+                        new ReleaseSummarySourceFailure("BOTH","","Porównanie źródeł",e);
+                gaps.add(sourceGap(repository,failure));
             }
         }
         var items=units.stream().map(u->new AnalysisEvidenceItem(u.path(),List.of(
@@ -79,15 +82,13 @@ public class LiquibaseEvidenceCollector {
                 List.of(new AnalysisEvidenceSection("GitLab","Liquibase changes",items)),scanned,gaps.stream().noneMatch(Gap::blocking));
     }
     private Side scan(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,String side,String sha,List<Gap> gaps) {
-        var tree=snapshotPort.snapshot(scope.group(),repo.project(),sha);
-        if(!scope.group().equals(tree.group()) || !repo.project().equals(tree.project()) || !sha.equals(tree.commitId()))
-            throw new IllegalStateException("Snapshot scope mismatch");
-        var state=new Side(tree);
+        var state=openSide(scope,repo,side,sha);
+        var tree=state.tree;
         for(var link:tree.symlinks().keySet())if(repo.prefixes().stream().anyMatch(p->p.isEmpty()||link.equals(p)||link.startsWith(p+"/")||p.startsWith(link+"/")))
             gaps.add(gap(repo,side,link,"SYMLINK_UNRESOLVED","Zakres zawiera dowiązanie symboliczne; pełność jego plików nie jest potwierdzona.",true));
         for(var path:tree.blobs().keySet()) if(candidate(path) && repo.prefixes().stream().anyMatch(p->p.isEmpty()||path.equals(p)||path.startsWith(p+"/"))) {
             var content=read(scope,repo,state,path);
-            var parsed=parser.parse(path,content);
+            var parsed=parse(state,path,content);
             if(parsed.changelog()) state.documents.put(path,new Document(source(repo,side,sha,path,tree,content,List.of()),parsed));
         }
         var pending=new ArrayDeque<>(state.documents.keySet()); var expanded=new HashSet<String>();
@@ -133,7 +134,7 @@ public class LiquibaseEvidenceCollector {
                         dependencies.add(dependency);
                         if(!state.documents.containsKey(dependency)) {
                             var content=read(scope,repo,state,dependency);
-                            var parsed=parser.parse(dependency,content);
+                            var parsed=parse(state,dependency,content);
                             if(node.kind().startsWith("include")&&!parsed.changelog()&&!dependency.toLowerCase(Locale.ROOT).endsWith(".sql"))
                                 throw new IllegalArgumentException("Unsupported included changelog");
                             if(!parsed.changelog()) parsed=rawDocument(content,dependency);
@@ -141,6 +142,8 @@ public class LiquibaseEvidenceCollector {
                         }
                         pending.add(dependency);
                     }
+                } catch(ReleaseSummarySourceFailure e) {
+                    gaps.add(sourceGap(repo,e));
                 } catch(RuntimeException e) {
                     gaps.add(gap(repo,side,path,"UNRESOLVED_REFERENCE","Nie można jednoznacznie odczytać "+node.kind()+": "+raw,true));
                 }
@@ -155,8 +158,27 @@ public class LiquibaseEvidenceCollector {
         detectCycles(state,repo,side,gaps);
         return state;
     }
+    private Side openSide(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,String side,String sha) {
+        try {
+            var tree=snapshotPort.snapshot(scope.group(),repo.project(),sha);
+            if(tree==null || !scope.group().equals(tree.group()) || !repo.project().equals(tree.project()) || !sha.equals(tree.commitId()))
+                throw new IllegalStateException("Snapshot scope mismatch");
+            return new Side(tree,side);
+        } catch(RuntimeException e) {
+            throw new ReleaseSummarySourceFailure(side,"","Odczyt drzewa repozytorium",e);
+        }
+    }
+    private LiquibaseDocumentParser.Parsed parse(Side state,String path,String content) {
+        try {return parser.parse(path,content);}
+        catch(RuntimeException e) {throw new ReleaseSummarySourceFailure(state.name,path,"Rozpoznanie pliku Liquibase",e);}
+    }
+    private Gap sourceGap(ReleaseSummaryScope.Repository repo,ReleaseSummarySourceFailure failure) {
+        log.warn("Release summary source unavailable repository={} side={} path={} reason={} causes={}",
+                repo.repositoryId(),failure.side,failure.path,failure.detail(),failure.causeTypes());
+        return gap(repo,failure.side,failure.path,"SOURCE_UNAVAILABLE",failure.detail(),true);
+    }
     private String read(ReleaseSummaryScope scope,ReleaseSummaryScope.Repository repo,Side state,String path) {
-        return state.reads.computeIfAbsent(path,p->{
+        try {return state.reads.computeIfAbsent(path,p->{
             if(state.tree.symlinks().containsKey(p))throw new IllegalStateException("Symbolic source is unresolved.");
             var file=verifiedPort.readComplete(readPort,scope.group(),repo.project(),state.tree.commitId(),p);
             if(file==null||!p.equals(file.path())) throw new IllegalStateException("Missing verified file");
@@ -170,7 +192,9 @@ public class LiquibaseEvidenceCollector {
                 if(!HexFormat.of().formatHex(digest.digest()).equalsIgnoreCase(expected)) throw new IllegalStateException("Blob hash differs from tree");
             } catch(java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
             return file.content();
-        });
+        });} catch(RuntimeException e) {
+            throw new ReleaseSummarySourceFailure(state.name,path,"Odczyt i weryfikacja pliku",e);
+        }
     }
     private Source source(ReleaseSummaryScope.Repository repo,String side,String sha,String path,GitLabRepositorySnapshot tree,String text,List<String> deps) {
         return new Source("gitlab:"+tree.group()+"/"+repo.project()+"@"+sha+":"+path,repo.repositoryId(),repo.project(),side,sha,path,tree.blobs().get(path),text,deps);
@@ -274,9 +298,10 @@ public class LiquibaseEvidenceCollector {
     private record Document(Source source,LiquibaseDocumentParser.Parsed parsed) {}
     private static final class Side {
         final GitLabRepositorySnapshot tree;
+        final String name;
         final Map<String,String> reads=new TreeMap<>();
         final Map<String,Document> documents=new TreeMap<>();
-        Side(GitLabRepositorySnapshot tree) {this.tree=tree;}
+        Side(GitLabRepositorySnapshot tree,String name) {this.tree=tree;this.name=name;}
     }
 }
 

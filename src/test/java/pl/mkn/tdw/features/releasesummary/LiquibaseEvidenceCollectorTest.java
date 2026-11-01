@@ -56,7 +56,32 @@ class LiquibaseEvidenceCollectorTest {
             when(fixture.files.readComplete(any(),anyString(),anyString(),anyString(),anyString())).thenThrow(
                     new org.springframework.web.client.RestClientResponseException("CRM failure",status,"fixture",null,null,null));
             var evidence=fixture.collector.collect(scope());assertFalse(evidence.sourceComplete());assertFalse(evidence.noChanges());
+            var gap=evidence.gaps().get(0);
+            assertEquals("TARGET",gap.side());assertEquals(ROOT,gap.path());
+            assertTrue(gap.detail().contains("HTTP "+status));
         }
+    }
+    @Test void treeFailureKeepsTheFailedSideAndSanitizedHttpReason() {
+        var fixture=fixture(Map.of(ROOT,xml("")),Map.of(ROOT,xml("")));
+        when(fixture.snapshots.snapshot("CRM","customer",BEFORE)).thenThrow(
+                new GitLabRepositoryTreeException(503,"fictional-token=crm-private",null));
+        var gap=fixture.collector.collect(scope()).gaps().get(0);
+        assertEquals("BASELINE",gap.side());assertEquals("",gap.path());
+        assertEquals("Odczyt drzewa repozytorium: GitLab zwrócił HTTP 503.",gap.detail());
+        assertFalse(gap.detail().contains("crm-private"));
+    }
+    @Test void dependencyReadFailureShowsDependencyPathAndTimeoutWithoutExceptionContent() {
+        var csv="src/main/resources/db/customers.csv";
+        var fixture=fixture(Map.of(),Map.of(ROOT,xml("<changeSet id=\"customers\" author=\"crm\"><loadData tableName=\"customer\" file=\"customers.csv\" relativeToChangelogFile=\"true\"/></changeSet>"),csv,"id,name\n1,example"));
+        when(fixture.files.readComplete(any(),eq("CRM"),eq("customer"),eq(AFTER),eq(csv))).thenThrow(
+                new IllegalStateException("credential=fictional-crm-value",new java.net.SocketTimeoutException("private CRM body")));
+        var evidence=fixture.collector.collect(scope());
+        assertFalse(evidence.sourceComplete());assertFalse(evidence.noChanges());
+        var gap=evidence.gaps().stream().filter(g->g.code().equals("SOURCE_UNAVAILABLE")).findFirst().orElseThrow();
+        assertEquals("TARGET",gap.side());assertEquals(csv,gap.path());
+        assertEquals("Odczyt i weryfikacja pliku: przekroczono czas oczekiwania na GitLab.",gap.detail());
+        assertFalse(gap.detail().contains("fictional-crm-value"));
+        assertFalse(gap.detail().contains("private CRM body"));
     }
     static final String BEFORE="a".repeat(40), AFTER="b".repeat(40);
     private static final String ROOT="src/main/resources/db/root.xml";
@@ -129,7 +154,11 @@ class LiquibaseEvidenceCollectorTest {
         var fixture=fixture(Map.of(),Map.of(ROOT,xml("")));
         when(fixture.files.readComplete(any(),anyString(),anyString(),anyString(),anyString()))
                 .thenReturn(new GitLabVerifiedFile(ROOT,xml("changed"),42));
-        assertFalse(fixture.collector.collect(scope()).sourceComplete());
+        var evidence=fixture.collector.collect(scope());
+        assertFalse(evidence.sourceComplete());
+        assertEquals(ROOT,evidence.gaps().get(0).path());
+        assertEquals("TARGET",evidence.gaps().get(0).side());
+        assertTrue(evidence.gaps().get(0).detail().contains("poprawności i kompletności"));
     }
     @Test void symbolicDirectoryCannotBecomeNoChanges() {
         var snapshots=mock(GitLabRepositorySnapshotPort.class);
@@ -140,7 +169,7 @@ class LiquibaseEvidenceCollectorTest {
         assertTrue(result.gaps().stream().anyMatch(g->g.code().equals("SYMLINK_UNRESOLVED")));
     }
     private ReleaseSummaryEvidence collect(Map<String,String> before,Map<String,String> after) {return fixture(before,after).collector.collect(scope());}
-    private record Fixture(LiquibaseEvidenceCollector collector,GitLabVerifiedRepositoryFilePort files) {}
+    private record Fixture(LiquibaseEvidenceCollector collector,GitLabVerifiedRepositoryFilePort files,GitLabRepositorySnapshotPort snapshots) {}
     private Fixture fixture(Map<String,String> before,Map<String,String> after) {
         var snapshots=mock(GitLabRepositorySnapshotPort.class); var files=mock(GitLabVerifiedRepositoryFilePort.class);
         when(snapshots.snapshot("CRM","customer",BEFORE)).thenReturn(snapshot(before,BEFORE));
@@ -150,7 +179,7 @@ class LiquibaseEvidenceCollectorTest {
             if(text==null) throw new IllegalStateException("Missing CRM fixture");
             return new GitLabVerifiedFile(path,text,text.getBytes(StandardCharsets.UTF_8).length);
         });
-        return new Fixture(new LiquibaseEvidenceCollector(snapshots,mock(GitLabRepositoryReadPort.class),files,new LiquibaseDocumentParser()),files);
+        return new Fixture(new LiquibaseEvidenceCollector(snapshots,mock(GitLabRepositoryReadPort.class),files,new LiquibaseDocumentParser()),files,snapshots);
     }
     private GitLabRepositorySnapshot snapshot(Map<String,String> files,String sha) {
         var blobs=new HashMap<String,String>(); files.forEach((path,text)->blobs.put(path,blob(text)));

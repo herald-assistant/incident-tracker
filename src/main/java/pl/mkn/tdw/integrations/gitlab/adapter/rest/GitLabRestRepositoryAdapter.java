@@ -379,8 +379,8 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
                     .accept(MediaType.TEXT_PLAIN)
                     .exchange((request, response) -> {
                         if (!response.getStatusCode().is2xxSuccessful()) {
-                            throw new IllegalStateException("GitLab bounded file read returned HTTP "
-                                    + response.getStatusCode().value() + ".");
+                            throw new RestClientResponseException("GitLab bounded file read failed.",
+                                    response.getStatusCode().value(),response.getStatusText(),response.getHeaders(),null,null);
                         }
                         if (response.getHeaders().getContentLength() > maxBytes) {
                             throw new GitLabFileTooLargeException(filePath, maxBytes);
@@ -410,8 +410,8 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
                     .accept(MediaType.TEXT_PLAIN)
                     .exchange((request, response) -> {
                         if (!response.getStatusCode().is2xxSuccessful()) {
-                            throw new IllegalStateException("GitLab complete file read returned HTTP "
-                                    + response.getStatusCode().value() + ".");
+                            throw new RestClientResponseException("GitLab complete file read failed.",
+                                    response.getStatusCode().value(),response.getStatusText(),response.getHeaders(),null,null);
                         }
                         return decodeTextFile(response.getBody().readAllBytes(), filePath);
                     });
