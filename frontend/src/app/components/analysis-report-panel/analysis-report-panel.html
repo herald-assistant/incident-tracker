@@ -16,7 +16,7 @@
           @if (hasText(currentReport.meta.confidence)) {
             <span class="panel-chip">{{ currentReport.meta.confidence }}</span>
           }
-          @if (hasText(currentReport.reportId)) {
+          @if (showTechnicalIds() && hasText(currentReport.reportId)) {
             <code class="analysis-report-panel__report-id">{{ currentReport.reportId }}</code>
           }
         </div>
@@ -131,7 +131,7 @@
                     {{ sectionOrdinal(section, $index) }}
                   </span>
                   <div>
-                    @if (hasText(section.id)) {
+                    @if (showTechnicalIds() && hasText(section.id)) {
                       <span class="field-label">{{ section.id }}</span>
                     }
                     <h4>{{ sectionTitle(section, $index) }}</h4>

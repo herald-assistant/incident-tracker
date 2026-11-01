@@ -71,7 +71,7 @@ class ReleaseSummaryJobTest {
     private static class Fixture {
         final ReleaseSummaryAiRunner ai=mock(ReleaseSummaryAiRunner.class);
         final ReleaseSummaryPersistence persistence=mock(ReleaseSummaryPersistence.class);
-        final ReleaseSummaryReportService reports=new ReleaseSummaryReportService(new ObjectMapper());
+        final ReleaseSummaryReportService reports=ReleaseSummaryReportTest.reports(new ObjectMapper());
         final List<Runnable> tasks=new ArrayList<>();
         final ReleaseSummaryJobService service;
         Fixture(ReleaseSummaryEvidence evidence) {

@@ -92,7 +92,7 @@ class ReleaseSummaryContinuationTest {
         final LocalAnalysisRunStore store=mock(LocalAnalysisRunStore.class);
         final Map<String,LocalAnalysisRunRecord> records=new HashMap<>();
         final ReleaseSummaryPersistence persistence=new ReleaseSummaryPersistence(mapper,store);
-        final ReleaseSummaryReportService reports=new ReleaseSummaryReportService(mapper);
+        final ReleaseSummaryReportService reports=ReleaseSummaryReportTest.reports(mapper);
         final List<Runnable> tasks=new ArrayList<>();
         final AtomicReference<ReleaseSummaryAiContext> context=new AtomicReference<>();
         final ReleaseSummaryRequest request=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,

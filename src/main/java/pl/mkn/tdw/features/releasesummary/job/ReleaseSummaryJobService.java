@@ -67,12 +67,8 @@ public class ReleaseSummaryJobService {
                 }
                 var initial=reports.scaffold("release-summary-report-"+state.id,scope,evidence);
                 if(evidence.noChanges()) {
-                    var sections=initial.sections().stream().map(s->s.id().equals("DEPLOYMENT_IMPACT")?
-                            new pl.mkn.tdw.shared.ai.report.AnalysisReportSection(s.id(),s.title(),s.order(),
-                                    pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryTables.table(ReleaseSummaryReportService.HEADERS.get(s.id()),
-                                            List.of(List.of("Migracje","Brak zmian Liquibase.","Zweryfikowano pełne drzewa obu rewizji.","[]"))),s.meta()):s).toList();
                     synchronized(state) {
-                        state.report=new AnalysisReport(initial.reportId(),initial.header(),initial.subHeader(),"Nie znaleziono zmian Liquibase w zadanym zakresie.",sections,initial.meta());
+                        state.report=reports.noChanges(initial.reportId(),scope);
                         state.result=reports.project(state.report,evidence,reports.initialSources(scope,evidence));
                         state.finish("NO_CHANGES",null,null);persist(state);return;
                     }

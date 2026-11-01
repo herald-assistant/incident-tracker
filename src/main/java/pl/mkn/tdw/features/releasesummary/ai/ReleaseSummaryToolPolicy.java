@@ -63,7 +63,8 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
             context.privateCheckpoint.run();
             if(MUTATIONS.contains(event.toolName())&&result!=null&&result.path("status").asText().equals("ok")) {
                 var id=event.sessionContext().hiddenContext().get(AgentToolContextKeys.REPORT_ID);
-                reportStore.current((String)id).ifPresent(report->{context.reportMutated=true;context.checkpoint.accept(report);});
+                reportStore.current((String)id).filter(report->!report.sections().isEmpty())
+                        .ifPresent(report->{context.reportMutated=true;context.checkpoint.accept(report);});
             }
         } catch(com.fasterxml.jackson.core.JsonProcessingException e) {
             // Failed/unstructured output cannot register a citation or report checkpoint.

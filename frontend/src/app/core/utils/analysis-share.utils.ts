@@ -40,6 +40,7 @@ export function buildReportShareDocument(
   const content = [
     ...intro,
     ...sections.map((section) => [
+      reportSectionAnchor(section.id),
       `## ${section.title?.trim() || section.id || 'Sekcja'}`,
       section.markdown?.trim() || ''
     ].filter(Boolean).join('\n\n'))
@@ -48,6 +49,7 @@ export function buildReportShareDocument(
   const withMeta = [
     ...intro,
     ...sections.map((section) => [
+      reportSectionAnchor(section.id),
       `## ${section.title?.trim() || section.id || 'Sekcja'}`,
       section.markdown?.trim() || '',
       renderAnalysisShareMeta(section.meta, 'Meta sekcji')
@@ -55,6 +57,12 @@ export function buildReportShareDocument(
     renderAnalysisShareMeta(report.meta, 'Meta raportu')
   ].filter(Boolean).join('\n\n');
   return { fileName, markdown: content, markdownWithMeta: withMeta };
+}
+
+function reportSectionAnchor(id: string): string {
+  const safeId = String(id || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return safeId ? `<a id="report-section-${safeId}"></a>` : '';
 }
 
 export function renderAnalysisShareMeta(

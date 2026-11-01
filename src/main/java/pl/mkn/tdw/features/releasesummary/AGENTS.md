@@ -14,10 +14,16 @@ kolejność oraz wszystkie atrybuty. Niepełny odczyt, symlink, zmieniony submod
 lub brak zawartości LFS nie może zwrócić NO_CHANGES. SQL/custom change pozostaje
 AI_IDENTIFIED; nie twórz pozornego dowodu kompletności semantycznej.
 
-AnalysisReport jest źródłem wyniku. Wymagane elementId występują w obu tabelach,
-Przed/Po są niezmienne, a źródła muszą być odczytane. Sprawdzaj też zgodność
-indeksu z coverage. Duże pliki dziel bez utraty elementów; aktualny próg grupy
-to 32. Report patches podlegają tej samej walidacji co pełny zapis sekcji.
+AnalysisReport jest źródłem wyniku dla analityka systemowego. Inwentarz raportu
+scala techniczne paczki evidence w zakresy plików: kolumna razem z constraints,
+indeks razem z uporządkowanymi kolumnami. Pełne evidence pozostaje bez zmian.
+Tabela szczegółów ma Obiekt, Zmiana techniczna, Znaczenie funkcjonalne i Źródła.
+Wszystkie rozpoznane pozycje i ich deterministyczne definicje są obowiązkowe;
+SQL wymaga interpretacji. Źródła są krótkimi linkami do odczytanych materiałów.
+Nie pokazuj hashy, AST, JSON ani placeholderów w raporcie. Scaffold jest prywatny;
+dopiero zaakceptowana sekcja może opublikować raport. Model jest wymagany.
+Report patches podlegają tej samej walidacji co pełny zapis sekcji. Bieżący
+resultContract to release-summary-analyst-report-v1, format zapisu ma wersję 1.
 
 Checkpoint utrwala poprawne sekcje. Kontynuacja zachowuje SHA, captured katalog
 i istniejącą sesję. Zwykły follow-up jest read-only; mutacje wymagają jawnego

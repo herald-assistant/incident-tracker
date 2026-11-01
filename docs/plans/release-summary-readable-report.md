@@ -36,6 +36,8 @@ Zmianie podlegają feature-owned report/inventory/prompt/skill/policy, projekcja
 wyniku, UI i walidacja bieżącego eksportu. Shared renderer otrzymuje neutralną
 opcję ukrycia technicznych identyfikatorów; pozostali konsumenci zachowują
 dotychczasowe zachowanie. Brak nowych zależności między feature'ami.
+Shared Share zachowuje kotwice sekcji, aby odnośniki z listy zmian działały
+również w wyeksportowanym dokumencie; obejmuje go regresja wszystkich konsumentów.
 
 Konsumenci: Release summary job, AI, edycja i kontynuacja, local history,
 import/export, Share, frontend strony oraz wspólny renderer raportu.
@@ -65,5 +67,5 @@ zostaną usunięte tylko dla Release summary; inne feature'y pozostają bez zmia
 ## Kroki
 
 - [x] 1. Naprawić wybór modelu i publikację wyniku po blokadzie/błędzie. Dowód: testy Report/Job/AI/Continuation przeszły przed zmianą i po niej; 13 testów Angulara Release summary przeszło. MODEL_REQUIRED nie publikuje scaffolda; brak zapisów AI nie daje raportu; poprawny checkpoint pozostaje dostępny. Sandbox zablokował cache Vitest przed startem testów; ponowienie poza nim przeszło.
-- [ ] 2. Wprowadzić inwentarz obiektów, czytelny kontrakt tabel, prompt/skill, walidację kompletności, bieżący eksport i prezentację. Dowód: fikcyjny CRM z kolumnami, indeksami, constraints, SQL, zmianą kierunku i dużym plikiem; testy report/continuation/import/Share oraz wizualna kontrola; commit.
+- [x] 2. Wprowadzić inwentarz obiektów, czytelny kontrakt tabel, prompt/skill, walidację kompletności, bieżący eksport i prezentację. Dowód: 44 testy Release summary przeszły (1 osobny pilot opt-in pominięty), także guardy granic pakietów; 686 testów Angulara przeszło. Fikcyjny CRM obejmuje 120 kolumn, YAML, samą zmianę NULL/NOT NULL, kolejność kolumn indeksu, SQL, rollback i usunięcie changelogu. Kontrola wizualna na aktualnym JAR-ze należy do kroku 3.
 - [ ] 3. Wykonać regresję Angular, build UI i backend-dev clean package; uaktualnić kanoniczną dokumentację i effective skill, uruchomić aktualną aplikację i zweryfikować rzeczywisty raport. Dowód: wyniki testów, przegląd renderowania i aktualny JAR; commit.

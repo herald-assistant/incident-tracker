@@ -20,14 +20,14 @@ public class ReleaseSummaryPersistence {
     private final LocalAnalysisRunStore store;
     public record Envelope(String schema,int version,Instant exportedAt,Payload payload) {
         public boolean supported() {return "tdw.release-summary-export".equals(schema)&&version==1&&payload!=null
-                &&"release-summary-analysis".equals(payload.type())&&"release-summary-result-v1".equals(payload.resultContract())&&payload.job()!=null
+                &&"release-summary-analysis".equals(payload.type())&&pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.CONTRACT.equals(payload.resultContract())&&payload.job()!=null
                 &&payload.job().request()!=null&&payload.job().request().mode()==pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryRequest.Mode.LIQUIBASE
-                &&(payload.job().result()==null||"release-summary-result-v1".equals(payload.job().result().resultContract()));}
+                &&(payload.job().result()==null||pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.CONTRACT.equals(payload.job().result().resultContract()));}
     }
     public record Payload(String type,String resultContract,ReleaseSummarySnapshot job) {}
     public record RuntimeState(int version,OperationalContextSnapshot catalog,List<GitLabRepositoryToolScope.PinnedRevision> revisions,Set<String> knownSources) {}
     public Envelope envelope(ReleaseSummarySnapshot job) {
-        return new Envelope("tdw.release-summary-export",1,job.updatedAt(),new Payload("release-summary-analysis","release-summary-result-v1",job));
+        return new Envelope("tdw.release-summary-export",1,job.updatedAt(),new Payload("release-summary-analysis",pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.CONTRACT,job));
     }
     public void save(ReleaseSummarySnapshot job,AnalysisAiAuthRef auth,String sessionId) {
         var enabled=Set.of("COMPLETED","PARTIAL").contains(job.status())&&job.report()!=null&&sessionId!=null;

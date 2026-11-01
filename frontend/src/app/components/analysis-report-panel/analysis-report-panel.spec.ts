@@ -18,6 +18,15 @@ describe('AnalysisReportPanelComponent', () => {
     expect(compiled.querySelector('.analysis-report-panel__markdown strong')?.textContent).toBe('Timeout');
   });
 
+  it('can hide technical identifiers while preserving section navigation and content', async () => {
+    const fixture=await renderReport(report());fixture.componentRef.setInput('showTechnicalIds',false);fixture.detectChanges();
+    const element=fixture.nativeElement as HTMLElement;
+    expect(element.textContent).not.toContain('incident-report-1');
+    expect(element.textContent).not.toContain('TECHNICAL_HANDOFF');
+    expect(element.textContent).toContain('Technical handoff');
+    expect(element.querySelector('#report-section-TECHNICAL_HANDOFF')).not.toBeNull();
+  });
+
   async function renderReport(
     value: AnalysisReport
   ): Promise<ComponentFixture<AnalysisReportPanelComponent>> {

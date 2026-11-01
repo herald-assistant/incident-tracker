@@ -57,12 +57,15 @@ final class ReleaseSummaryCrmFixture {
                         "summary","Etykiety klienta wspierają wyszukiwanie i filtry operatora.","implementation","customer: "+CODE_PATH))));
     }
     static ReleaseSummaryEvidence evidence() {
+        return evidence(PATH,"<databaseChangeLog/>",XML);
+    }
+    static ReleaseSummaryEvidence evidence(String path,String before,String after) {
         var snapshots=mock(GitLabRepositorySnapshotPort.class);var files=mock(GitLabVerifiedRepositoryFilePort.class);
-        when(snapshots.snapshot("CRM","customer",BEFORE)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",BEFORE,Map.of(PATH,LiquibaseEvidenceCollectorTest.blob("<databaseChangeLog/>")),Map.of(),Map.of()));
-        when(snapshots.snapshot("CRM","customer",AFTER)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",AFTER,Map.of(PATH,LiquibaseEvidenceCollectorTest.blob(XML)),Map.of(),Map.of()));
+        when(snapshots.snapshot("CRM","customer",BEFORE)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",BEFORE,Map.of(path,LiquibaseEvidenceCollectorTest.blob(before)),Map.of(),Map.of()));
+        when(snapshots.snapshot("CRM","customer",AFTER)).thenReturn(new GitLabRepositorySnapshot("CRM","customer",AFTER,Map.of(path,LiquibaseEvidenceCollectorTest.blob(after)),Map.of(),Map.of()));
         when(files.readComplete(any(),anyString(),anyString(),anyString(),anyString())).thenAnswer(i->{
-            var text=BEFORE.equals(i.getArgument(3))?"<databaseChangeLog/>":XML;
-            return new GitLabVerifiedFile(PATH,text,text.getBytes(StandardCharsets.UTF_8).length);
+            var text=BEFORE.equals(i.getArgument(3))?before:after;
+            return new GitLabVerifiedFile(path,text,text.getBytes(StandardCharsets.UTF_8).length);
         });
         return new LiquibaseEvidenceCollector(snapshots,mock(GitLabRepositoryReadPort.class),files,new LiquibaseDocumentParser()).collect(scope());
     }

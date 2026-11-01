@@ -16,6 +16,7 @@ import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 })
 export class AnalysisReportPanelComponent {
   readonly report = input<AnalysisReport | null>(null);
+  readonly showTechnicalIds = input(true);
 
   protected hasText(value: string | null | undefined): boolean {
     return typeof value === 'string' && value.trim().length > 0;

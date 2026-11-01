@@ -25,6 +25,8 @@ describe('buildReportShareDocument', () => {
     expect(document.fileName).toBe('crm.md');
     expect(document.markdown.indexOf('## Krok pierwszy')).toBeLessThan(document.markdown.indexOf('## Krok drugi'));
     expect(document.markdown).toContain('Walidacja kontaktu.');
+    expect(document.markdown).toContain('<a id="report-section-FIRST"></a>');
+    expect(document.markdownWithMeta).toContain('<a id="report-section-SECOND"></a>');
     expect(document.markdown).not.toContain('Brak śladu runtime.');
     expect(document.markdownWithMeta).toContain('Brak śladu runtime.');
     expect(document.markdownWithMeta).toContain('Kto potwierdza kontakt?');

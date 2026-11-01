@@ -17,7 +17,7 @@
           <select [disabled]="busy()" [value]="beforeKind()" (change)="setKind('before',$any($event.target).value)">
             <option>BRANCH</option><option>TAG</option><option>COMMIT</option>
           </select></label>
-          <app-gitlab-branch-select label="Stan bazowy" [sourceKey]="systemId() ? systemId()+':'+beforeKind():''"
+          <app-gitlab-branch-select label="Stan obecny — punkt wyjścia" [sourceKey]="systemId() ? systemId()+':'+beforeKind():''"
             [branchLoader]="beforeLoader" [selectedBranch]="before()" [autoSelect]="false" [disabled]="busy()"
             (branchSelected)="before.set($event)" />
         </div>
@@ -25,7 +25,7 @@
           <select [disabled]="busy()" [value]="afterKind()" (change)="setKind('after',$any($event.target).value)">
             <option>BRANCH</option><option>TAG</option><option>COMMIT</option>
           </select></label>
-          <app-gitlab-branch-select label="Stan docelowy" [sourceKey]="systemId() ? systemId()+':'+afterKind():''"
+          <app-gitlab-branch-select label="Wdrażana wersja — stan docelowy" [sourceKey]="systemId() ? systemId()+':'+afterKind():''"
             [branchLoader]="afterLoader" [selectedBranch]="after()" [autoSelect]="false" [disabled]="busy()"
             (branchSelected)="after.set($event)" />
         </div>
@@ -58,8 +58,10 @@
     @if(job(); as current) {
       <section class="analysis-card">
         @if(imported()) {<p role="status">Import pliku — wynik tylko do odczytu, bez sesji AI.</p>}
-        <p class="status-pill" role="status">{{statusLabel(current.status)}}</p>
+        <p class="status-pill" [attr.data-state]="current.status" role="status">{{statusLabel(current.status)}}</p>
         @if(current.error) { <p role="alert">{{current.error}}</p> }
+        <p class="release-direction"><span>Stan obecny <strong>{{current.request.baselineRef.name}}</strong></span>
+          <span aria-hidden="true">→</span><span>Wdrażana wersja <strong>{{current.request.targetRef.name}}</strong></span></p>
         <app-analysis-result-header title="Raport wdrożeniowy" [context]="current.comparison?.systemName || current.request.systemId"
           [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — sprawdź kompletność i jawne luki.' : ''"
           [shareDocument]="shareDocument()" [editable]="canEdit() && !editing()" (editRequested)="editing.set(true)" />
@@ -68,15 +70,15 @@
           @if(current.report) {
             @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
               (save)="saveReport($event)" (cancel)="editing.set(false)" />}
-            @else {<app-analysis-report-panel [report]="current.report" />}
+            @else {<app-analysis-report-panel [report]="current.report" [showTechnicalIds]="false" />}
           }
           @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź źródła i przebieg analizy.'}}</p> }
         } @else {
           @if(current.result;as result) {
-            <p>Udokumentowane jednostki: <strong>{{result.documentedUnits}} / {{result.expectedUnits}}</strong>.
-              Elementy: <strong>{{result.documentedElements}} / {{result.expectedElements}}</strong>.</p>
+            <p>Opisane zakresy zmian: <strong>{{result.documentedUnits}} / {{result.expectedUnits}}</strong>.
+              Obiekty i operacje: <strong>{{result.documentedElements}} / {{result.expectedElements}}</strong>.</p>
             <p>Odczyt źródeł: {{result.sourceComplete ? 'kompletny' : 'niekompletny'}}.
-              AI_IDENTIFIED oznacza brak deterministycznego potwierdzenia pełności.</p>
+              Operacje SQL i niestandardowe migracje mogą wymagać dodatkowej weryfikacji analityka.</p>
             <ul>@for(limit of result.visibilityLimits;track $index) { <li>{{limit}}</li> }</ul>
           }
           @if(current.evidence;as evidence) {

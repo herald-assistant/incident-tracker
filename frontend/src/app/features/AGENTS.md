@@ -44,7 +44,12 @@ Polling, raport, editor, chat, aside i Share pozostają shared. Nie sumuj usage
 chatu drugi raz w initial job usage. Fragmenty Markdown raportu nawigują w tym
 samym dokumencie przez shared markdown-content, bez przejścia na bazową trasę.
 Import Release summary pozostaje read-only, a checkbox korekty raportu jest
-domyślnie wyłączony. Kontrakt opisuje
+domyślnie wyłączony. Wymagaj wybranego modelu lub modelu domyślnego backendu.
+Pokazuj kierunek stan obecny → wdrażana wersja i tylko opublikowane sekcje;
+blokada przygotowania nie jest raportem. W shared report panel wyłącz
+showTechnicalIds; zachowaj kotwice sekcji i źródła. Tabele szczegółów mają
+cztery czytelne kolumny; dane o kompletności pozostają w osobnej zakładce.
+Kontrakt opisuje
 `docs/architecture/release-summary-runtime-flow.md`.
 
 ## Incident Analysis

@@ -5,5 +5,10 @@ select{border:1px solid var(--border-color,#d4deea);border-radius:9px;padding:10
 .analysis-card{min-width:0}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:12px;border-bottom:1px solid var(--border-color,#d4deea);vertical-align:top}
 .comparison-table{overflow:auto}code{overflow-wrap:anywhere;font-size:.8rem}details{margin:20px 0}.empty-state{text-align:center;padding:48px}
 .empty-state>.material-symbols-outlined{font-size:44px;color:var(--accent-color,#146ec0)}[role=alert]{color:var(--error-color,#a32424)}
+.release-direction{display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:12px 0;color:var(--text-secondary,#52627a)}
+.release-direction strong{display:block;color:var(--text-primary,#152b49)}
+.status-pill[data-state=BLOCKED],.status-pill[data-state=FAILED],.status-pill[data-state=INTERRUPTED]{background:var(--danger-surface,#fff1f1);color:var(--error-color,#a32424)}
+.status-pill[data-state=PARTIAL]{background:var(--warning-surface,#fff8e7);color:var(--warning-color,#805600)}
+.model-hint{font-size:.9rem;color:var(--text-secondary,#52627a)}
 @media(max-width:900px){.target-grid{grid-template-columns:1fr}.release-summary-workspace{margin-right:42px}.run-options>*{flex:1 1 180px}}
 

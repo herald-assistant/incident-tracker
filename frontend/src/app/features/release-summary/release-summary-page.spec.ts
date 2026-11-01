@@ -75,6 +75,9 @@ describe('ReleaseSummary workspace',()=>{
         meta:{references:[],visibilityLimits:[],openQuestions:[],gaps:[],confidence:"",warnings:[]}}]};
     fixture.componentInstance.job.set(job);fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-analysis-report-panel table')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('OVERVIEW');
+    expect(fixture.nativeElement.textContent).toContain('Stan obecny');
+    expect(fixture.nativeElement.textContent).toContain('Wdrażana wersja');
     expect(fixture.nativeElement.textContent).toContain('Raport częściowy');
     expect(fixture.nativeElement.querySelector('app-analysis-feature-aside')).not.toBeNull();
     fixture.componentInstance.activeTab.set('coverage');fixture.detectChanges();
@@ -87,6 +90,8 @@ describe('ReleaseSummary workspace',()=>{
     expect(fixture.nativeElement.textContent).toContain('Przygotowanie zablokowane');
     expect(fixture.nativeElement.textContent).toContain('Brak refa');
     expect(fixture.nativeElement.textContent).not.toContain('Brak zmian Liquibase');
+    expect(fixture.nativeElement.querySelector('app-analysis-report-panel')).toBeNull();
+    expect(fixture.componentInstance.shareDocument()).toBeNull();
   });
   it('respects disabled starts while keeping saved results visible',()=>{
     config.set({releaseSummaryEnabled:false});

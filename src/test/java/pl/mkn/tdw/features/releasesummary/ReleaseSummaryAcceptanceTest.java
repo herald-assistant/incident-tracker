@@ -34,13 +34,13 @@ class ReleaseSummaryAcceptanceTest {
         for(int i=0;i<2000;i++)rows.add(List.of("crm-"+i,"Opis etykiety | "+i));
         var markdown=ReleaseSummaryTables.table(List.of("id","opis"),rows);
         assertEquals(rows,ReleaseSummaryTables.parse(markdown).get(0).rows());
-        var reports=new ReleaseSummaryReportService(new ObjectMapper());var complete=ReleaseSummaryReportTest.completed(reports,true);
+        var reports=ReleaseSummaryReportTest.reports(new ObjectMapper());var complete=ReleaseSummaryReportTest.completed(reports,true);
         var meta=new AnalysisReportMeta(List.of(),List.of(),List.of(),List.of("Nie potwierdzono celu funkcjonalnego."),null,List.of());
         var report=new AnalysisReport(complete.reportId(),complete.header(),complete.subHeader(),complete.markdownSummary(),complete.sections(),meta);
         assertEquals("PARTIAL",reports.project(report,ReleaseSummaryReportTest.evidence(true),reports.initialSources(ReleaseSummaryReportTest.SCOPE,ReleaseSummaryReportTest.evidence(true))).status());
     }
-    @Test void longSourceCellsHaveUniquePatchTargetsAndLiteralSourceValuesAreNotPlaceholders() {
-        var reports=new ReleaseSummaryReportService(new ObjectMapper());
+    @Test void longSourceCommentsStayInEvidenceAndLiteralDefaultsRemainInReadableDefinitions() {
+        var reports=ReleaseSummaryReportTest.reports(new ObjectMapper());
         var base=ReleaseSummaryReportTest.evidence(true);
         var elements=List.of("first","second").stream().map(id->new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence.Element(
                 id,"column","/changeSet/column:"+id,null,Map.<String,Object>of("name",id,"defaultValue","DO_UZUPELNIENIA","remarks","CRM ".repeat(50000)))).toList();
@@ -48,16 +48,14 @@ class ReleaseSummaryAcceptanceTest {
                 new pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryEvidence.Unit("unit1","customer","db/customer.xml","ADDED",null,
                         ReleaseSummaryReportTest.SOURCE,elements,true)),List.of(),List.of(),1,true);
         var scaffold=reports.scaffold("crm-report",ReleaseSummaryReportTest.SCOPE,evidence);
-        var sections=new ArrayList<>(scaffold.sections());var detail=sections.get(4);var text=detail.markdown();
-        for(var element:elements) {
-            var marker="DO_UZUPELNIENIA_"+element.elementId()+"_TECH";
-            assertEquals(text.indexOf(marker),text.lastIndexOf(marker));assertTrue(text.contains(marker));
-            text=text.replace(marker,"Wartość domyślna opisuje stan etykiety klienta.")
-                    .replace("DO_UZUPELNIENIA_"+element.elementId()+"_FUNCTION","Brak kodu wyjaśniającego cel pola.");
-        }
+        var sections=new ArrayList<>(reports.templates(ReleaseSummaryReportTest.SCOPE,evidence));
+        var detail=sections.stream().filter(s->s.id().startsWith("DB_DETAIL")).findFirst().orElseThrow();
+        var text=detail.markdown().replace(ReleaseSummaryReportService.PENDING,"Do wyjaśnienia: Brak kodu wyjaśniającego wykorzystanie pola.");
+        assertTrue(text.contains("DO_UZUPELNIENIA"));assertFalse(text.contains("CRM ".repeat(50000)));
+        assertEquals("CRM ".repeat(50000),evidence.units().get(0).elements().get(0).after().get("remarks"));
         var known=reports.initialSources(ReleaseSummaryReportTest.SCOPE,evidence);
         reports.validateSection(detail.id(),text,evidence,known);
-        sections.set(4,new AnalysisReportSection(detail.id(),detail.title(),detail.order(),text,detail.meta()));
+        sections.set(sections.indexOf(detail),new AnalysisReportSection(detail.id(),detail.title(),detail.order(),text,detail.meta()));
         var report=new AnalysisReport(scaffold.reportId(),scaffold.header(),scaffold.subHeader(),scaffold.markdownSummary(),sections,scaffold.meta());
         assertEquals(2,reports.project(report,evidence,known).documentedElements());
     }

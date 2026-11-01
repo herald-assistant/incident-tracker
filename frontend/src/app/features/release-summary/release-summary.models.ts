@@ -20,7 +20,7 @@ export interface ReleaseSummaryEvidence {
   sections: AnalysisEvidenceSection[];
 }
 export interface ReleaseSummaryResult {
-  resultContract: 'release-summary-result-v1'; status: string; sourceComplete: boolean;
+  resultContract: 'release-summary-analyst-report-v1'; status: string; sourceComplete: boolean;
   expectedUnits: number; documentedUnits: number; expectedElements: number; documentedElements: number;
   coverage: {unitId: string; expectedElements: number; documentedElements: number; structurallyVerified: boolean; gaps: string[]}[];
   visibilityLimits: string[];

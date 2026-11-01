@@ -1,7 +1,7 @@
 import { ReleaseSummarySnapshot } from './release-summary.models';
 import { normalizeAnalysisReport } from '../../core/utils/analysis-import-export.utils';
 const schema='tdw.release-summary-export';
-const contract='release-summary-result-v1';
+const contract='release-summary-analyst-report-v1';
 const keys=['jobId','status','request','comparison','evidence','errorCode','error','createdAt','updatedAt','completedAt','steps',
   'contextSections','toolEvidenceSections','aiActivityEvents','toolFeedback','preparedPrompt','report','result','usage','chatMessages','chatAvailability','exportAvailable'];
 function object(value:unknown):Record<string,any> {
