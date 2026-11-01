@@ -33,21 +33,29 @@ final class ReleaseSummaryRunState {
     }
     private ReleaseSummaryRunState(String id,ReleaseSummaryRequest request,AnalysisAiAuthRef auth,Instant createdAt) {
         this.id=id;this.request=request;this.auth=auth;this.createdAt=createdAt;updatedAt=createdAt;
+        pendingStep("RESOLVE_REFS", "Przypięcie rewizji", "CONTEXT");
+        pendingStep("COLLECT_LIQUIBASE", "Zmiany Liquibase per plik", "CONTEXT");
+        pendingStep("PREPARE_PROMPT", "Inicjalny prompt AI", "CONTEXT");
+        pendingStep("AI_REPORT", "Raport AI", "AI");
+    }
+    private void pendingStep(String code, String label, String phase) {
+        steps.add(new AnalysisJobStepResponse(code,label,phase,"PENDING","Oczekuje na rozpoczęcie.",0,
+                null,null,List.of(),List.of(),null));
     }
     static ReleaseSummaryRunState restore(ReleaseSummarySnapshot saved,AnalysisAiAuthRef auth,String session) {
         var state=new ReleaseSummaryRunState(saved.jobId(),saved.request(),auth,saved.createdAt());
         state.status=saved.status();state.updatedAt=saved.updatedAt();state.completedAt=saved.completedAt();
         state.scope=saved.comparison();state.evidence=saved.evidence();state.report=saved.report();state.result=saved.result();
         state.error=saved.error();state.errorCode=saved.errorCode();state.prompt=saved.preparedPrompt();state.usage=saved.usage();
-        state.sessionId=session;state.steps.addAll(saved.steps());state.toolEvidence.addAll(saved.toolEvidenceSections());
+        state.sessionId=session;state.steps.clear();state.steps.addAll(saved.steps());state.toolEvidence.addAll(saved.toolEvidenceSections());
         state.activities.addAll(saved.aiActivityEvents());state.messages.addAll(saved.chatMessages());return state;
     }
     void step(String code,String label,String state,String message,int count) {
         var previous=steps.stream().filter(s->s.code().equals(code)).findFirst().orElse(null);
-        steps.removeIf(s->s.code().equals(code));
         updatedAt=Instant.now();
-        steps.add(new AnalysisJobStepResponse(code,label,code.equals("AI_REPORT")?"AI":"CONTEXT",state,message,count,
-                previous!=null?previous.startedAt():updatedAt,state.equals("RUNNING")?null:updatedAt,List.of(),List.of(),usage));
+        var next=new AnalysisJobStepResponse(code,label,code.equals("AI_REPORT")?"AI":"CONTEXT",state,message,count,
+                previous!=null&&previous.startedAt()!=null?previous.startedAt():updatedAt,state.equals("RUNNING")?null:updatedAt,List.of(),List.of(),usage);
+        if(previous==null) steps.add(next); else steps.set(steps.indexOf(previous),next);
     }
     void finish(String status,String code,String message) {
         this.status=status;this.errorCode=code;this.error=message;updatedAt=Instant.now();completedAt=updatedAt;

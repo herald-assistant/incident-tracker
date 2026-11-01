@@ -65,6 +65,9 @@ obecnie nie analizujemy. Nie jest częścią bieżącego wdrożenia.
   pozostają widoczne; nie są prezentowane jako „brak zmian”.
 - Można zapisać wynik w historii, udostępnić raport oraz dopytać o jego treść
   w znanym wzorcu pracy innych analiz.
+- Historia zawiera wpis od przyjęcia analizy i pozwala wrócić do jej postępu.
+  Przebieg pokazuje osobno zebrane zmiany Liquibase per plik oraz pełny
+  początkowy prompt, dostępny przed wywołaniem modelu i także po błędzie AI.
 - Testowy, w całości fikcyjny scenariusz CRM potwierdza pokrycie wszystkich
   oczekiwanych tabel, kolumn, indeksów, zmian danych i ograniczeń widoczności.
 

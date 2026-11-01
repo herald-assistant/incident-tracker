@@ -53,6 +53,17 @@ describe('ReleaseSummary workspace',()=>{
     page.modelCatalog.set({models:[],defaultModel:'crm-default',defaultReasoningEffort:'',defaultReasoningEfforts:[]});
     expect(page.canStart()).toBe(true);
   });
+  it.each(['QUEUED','RUNNING'])('resumes live progress from a %s history entry without starting another run',(status)=>{
+    TestBed.overrideProvider(ActivatedRoute,{useValue:{snapshot:{queryParamMap:convertToParamMap({localRunId:'crm-run'})}}});
+    api.get.mockReturnValue(of(releaseSnapshot(status)));
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);fixture.detectChanges();
+    expect(api.get).toHaveBeenCalledWith('crm-run');
+    expect(fixture.componentInstance.busy()).toBe(true);
+    const completed=releaseSnapshot('NO_CHANGES');progress.next(completed);fixture.detectChanges();
+    expect(fixture.componentInstance.job()).toEqual(completed);
+    expect(fixture.componentInstance.busy()).toBe(false);
+    expect(api.start).not.toHaveBeenCalled();
+  });
   it('defaults questions to read-only and requires an explicit report update choice',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
     const job=releaseSnapshot();job.chatAvailability={available:true,code:'AVAILABLE',message:''};page.job.set(job);

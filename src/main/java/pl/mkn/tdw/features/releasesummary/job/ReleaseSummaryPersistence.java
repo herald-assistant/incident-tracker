@@ -36,7 +36,9 @@ public class ReleaseSummaryPersistence {
                 LocalAnalysisRunContinuation.COPILOT_RUNTIME_GITHUB_COPILOT_SDK,LocalAnalysisRunContinuation.CONTINUATION_MODE_COPILOT_SESSION);
         LocalAnalysisRunSnapshotWriter.save(store,mapper.valueToTree(envelope(job)),continuation,
                 new LocalAnalysisRunSnapshotWriter.Metadata(job.jobId(),FEATURE,
-                        job.comparison()!=null?job.comparison().systemName():"Release summary",job.status(),job.createdAt(),job.updatedAt(),job.completedAt()));
+                        (job.comparison()!=null?job.comparison().systemName():job.request().systemId())+" · "+
+                                job.request().baselineRef().name()+" → "+job.request().targetRef().name(),
+                        job.status(),job.createdAt(),job.updatedAt(),job.completedAt()));
     }
     public void saveRuntime(String id,ReleaseSummaryAiContext context) {
         var revisions=context.repositoryScope.pinnedRevisions().entrySet().stream().map(e->{
