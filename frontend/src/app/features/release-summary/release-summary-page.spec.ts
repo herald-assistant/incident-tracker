@@ -10,6 +10,7 @@ import { GitLabSystemBranchesApiService } from '../../core/services/gitlab-syste
 import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { AnalysisJobPollingService } from '../../core/services/analysis-job-polling.service';
+import { AnalysisAiModelOptionsResponse } from '../../core/models/analysis.models';
 
 import { releaseSnapshot } from './release-summary.testing';
 import { parseReleaseSummaryImport, releaseSummaryExport } from './release-summary-import-export';
@@ -54,6 +55,19 @@ describe('ReleaseSummary workspace',()=>{
     page.sendChat('Wyjaśnij kolumnę');expect(api.chat).toHaveBeenLastCalledWith('crm-run','Wyjaśnij kolumnę',false);
     page.job.set(job);page.updateReport.set(true);page.sendChat('Popraw opis');
     expect(api.chat).toHaveBeenLastCalledWith('crm-run','Popraw opis',true);expect(page.updateReport()).toBe(false);
+  });
+  it('displays the restored model and reasoning when the catalog arrives later',async()=>{
+    const catalog=new Subject<AnalysisAiModelOptionsResponse>();
+    TestBed.overrideProvider(AiOptionsApiService,{useValue:{getOptions:()=>catalog.asObservable()}});
+    TestBed.overrideProvider(ActivatedRoute,{useValue:{snapshot:{queryParamMap:convertToParamMap({localRunId:'crm-run'})}}});
+    const restored=releaseSnapshot();restored.request.model='crm-model';restored.request.reasoningEffort='high';
+    api.get.mockReturnValue(of(restored));
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);fixture.detectChanges();
+    catalog.next({defaultModel:'',defaultReasoningEffort:'',defaultReasoningEfforts:[],models:[
+      {id:'crm-model',name:'CRM model',supportsReasoningEffort:true,reasoningEfforts:['low','high'],defaultReasoningEffort:'low'}]});
+    fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('select[aria-label="Model AI"]').value).toBe('crm-model');
+    expect(fixture.nativeElement.querySelector('select[aria-label="Reasoning effort"]').value).toBe('high');
   });
   it('keeps imported files read-only even if the exported availability allowed continuation',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;

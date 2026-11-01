@@ -31,6 +31,23 @@ class GitLabRepositoryToolScopeTest {
     private static final String COMMIT = "1234567890abcdef1234567890abcdef12345678";
 
     @Test
+    void comparisonAllowsItsOwnCommitIdsWithoutResolvingNewRevisions() {
+        var port = mock(GitLabRepositoryRevisionPort.class);
+        var selected = java.util.List.of(
+                new GitLabRepositoryToolScope.PinnedRevision("customer", "refs/heads/current", "a".repeat(40)),
+                new GitLabRepositoryToolScope.PinnedRevision("customer", "refs/heads/next", "b".repeat(40)),
+                new GitLabRepositoryToolScope.PinnedRevision("catalog", "refs/heads/next", "c".repeat(40)));
+        var scope = GitLabRepositoryToolScope.forRevisions("CRM", selected);
+        scope.restoreResearchRevisions(selected);
+        assertThat(scope.resolve("customer", "a".repeat(40), port).readRef()).isEqualTo("a".repeat(40));
+        assertThat(scope.resolve("CRM/customer", "B".repeat(40), port).readRef()).isEqualTo("b".repeat(40));
+        assertThatThrownBy(() -> scope.resolve("customer", "c".repeat(40), port)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> scope.resolve("customer", "d".repeat(40), port)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(scope.pinnedRevisions()).hasSize(3);
+        verifyNoInteractions(port);
+    }
+
+    @Test
     void branchScopeReadsOnlyTheSelectedProjectWithoutResolvingACommit() {
         var revisions = mock(GitLabRepositoryRevisionPort.class);
         var scope = GitLabRepositoryToolScope.forBranch("CRM", "portal", "main");

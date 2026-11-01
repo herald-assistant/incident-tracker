@@ -82,8 +82,10 @@ przez `opctx_*` na tym samym zamrożonym katalogu.
 | AI nie zapisze raportu przez tools | `FAILED` z `REPORT_NOT_WRITTEN`; finalna proza nie zastępuje raportu. |
 | Błąd/timeout po zaakceptowanej mutacji raportu | `PARTIAL`; checkpoint zachowuje zapisane sekcje. |
 
-`documentedElements` oznacza obecność pełnych wymaganych wierszy, a nie pewność
-funkcjonalną. Status, pokrycie strukturalne i `visibilityLimits` muszą być
+`expectedElements` / `documentedElements` liczą obiekty i operacje w inwentarzu
+raportu, a `expectedUnits` / `documentedUnits` zakresy plików. Nie są liczbami
+węzłów parsera ani jego paczek evidence. Obecność pełnego wiersza nie oznacza
+pewności funkcjonalnej. Status, pokrycie strukturalne i `visibilityLimits` muszą być
 odczytywane razem. `AnalysisReport` jest źródłem treści; wynik V1 jest jego
 deterministyczną projekcją względem manifestu evidence.
 
@@ -106,6 +108,8 @@ oraz sześć narzędzi raportu (`report_get_current`, `report_read_section_chunk
 Hidden `GitLabRepositoryToolScope.forRevisions` dopuszcza obie przypięte rewizje
 repozytoriów porównania, odrzuca trzeci ref tych repo i osobno przypina
 dodatkowe projekty skonfigurowanej grupy. Odczyty rejestrują `sourceRef`.
+Odczyt może podać nazwę wybranego refa albo jego pełny SHA; znany SHA jest
+akceptowany tylko dla projektu, do którego został przypięty, bez nowego resolve.
 Hidden `OPERATIONAL_CONTEXT_READ_SESSION` zamraża katalog. Nie zmienia to
 domyślnego zachowania innych feature'ów.
 
@@ -123,45 +127,63 @@ samodzielnie tieru ani nie przełącza go na inny model. Brak modelu daje
 
 ## Raport i walidacja
 
+Odbiorcą jest analityk systemowy na poziomie mid, który sprawdza zakres
+wdrożenia. `ReleaseSummaryReportInventory` scala techniczne paczki jednego
+pliku w jeden zakres raportu. Kolumna wraz z ograniczeniami jest jedną pozycją,
+a indeks obejmuje uporządkowane kolumny i unikalność. Niezmienione właściwości
+rodzica są odtwarzane z pełnego pliku, także przy zmianie samego NULL/NOT NULL
+lub kolejności kolumn indeksu. Puste kontenery składniowe nie są pozycjami.
+Pełne źródła, manifest parsera i wszystkie właściwości pozostają w evidence.
+
 | Sekcja | Treść |
 | --- | --- |
-| `OVERVIEW` | Zakres i opis zmiany ze źródłami. |
-| `CHANGE_INDEX` | Repo, plik, rodzaj, zakres, link do szczegółów i status każdej jednostki. |
-| `DB_DETAIL_<unitId>` | Tabela techniczna oraz funkcjonalna dla tych samych elementów. |
+| `OVERVIEW` | 2–4 zdania: co wchodzi na wdrożenie, po co i jaki jest kierunek porównania. |
+| `CHANGE_INDEX` | Obszar, krótki opis zmiany i link do szczegółów każdego zakresu. |
+| `DB_DETAIL_<groupId>` | Jedna tabela: Obiekt, Zmiana techniczna, Znaczenie funkcjonalne, Źródła. |
 | `DEPLOYMENT_IMPACT` | Kolejność, zgodność, warunki, checksumy, rollback, ryzyka i weryfikacja. |
-| `COVERAGE` | Wszystkie jednostki oraz status i ograniczenia. |
 
-Tabela techniczna ma kolumny `elementId`, `Obiekt`, `Zmiana`, `Przed`, `Po`,
-`Opis techniczny`, `Źródła`. Tabela funkcjonalna zawiera `elementId`,
-`Cel funkcjonalny`, `Działanie`, `Wpływ`, `Podstawa`, `Źródła`, `Luka`.
-`Podstawa` przyjmuje jedną wartość `FAKT`, `WNIOSEK` lub `BRAK_DANYCH`.
-Pola bez zastosowania używają `NIE_DOTYCZY`. Wnioski nie mogą być uzasadniane
-wyłącznie nazwą tabeli; model ma prześledzić kod i katalog.
+Wiersz szczegółów łączy definicję obiektu z opisem danych, sposobu użycia i
+funkcjonalnego efektu zmiany, zwykle w 1–2 krótkich zdaniach. Nie powtarza typu,
+NULL ani wspólnych ograniczeń badania. Liczby kolumn i indeksów obejmują także
+obiekty z SQL. Opis zaczyna się od `Potwierdzone:`, `Wniosek:`
+lub `Do wyjaśnienia:` i zawiera konkretne uzasadnienie. Model bada kod i katalog;
+sama nazwa obiektu nie wystarcza. Dla SQL opisuje wszystkie rozpoznane obiekty
+i zachowuje jawne ograniczenie pewności. Usunięcie pliku albo include opisuje
+jako zmianę changelogu, bez sugerowania wykonania DROP na działającej bazie.
 
-Walidator sprawdza nagłówki, niepuste komórki, wszystkie ID, dokładne JSON
-`Przed`/`Po`, zgodność obu tabel i znane odczytane źródła. Dodatkowe obiekty
-rozpoznane z SQL mają `AI_<unitId>_<numer>`. Statusy jednostki to `EXPECTED`,
-`DOCUMENTED`, `AI_IDENTIFIED` i `OPEN_GAP`; indeks i coverage muszą być zgodne.
-Nie wolno oznaczyć surowego SQL jako deterministycznie `DOCUMENTED`.
+Walidator wymaga wszystkich pozycji, niezmienionych definicji rozpoznanych
+obiektów, właściwego kierunku zmian, kompletnych komórek oraz źródeł faktycznie
+odczytanych przez tę sesję. SQL i zależności wymagają opisu AI. Może ono dopisać
+czytelny tytuł po nazwie operacji SQL i dodać rozpoznane obiekty, ale nie usunąć
+pozycji inwentarza. Linki mają krótkie etykiety i wskazują pliki na przypiętym SHA;
+linki Operational Context otwierają bieżącą encję, podczas gdy podstawą analizy
+pozostaje captured snapshot. Hashy elementów, ścieżek AST, surowego JSON i
+technicznych identyfikatorów sekcji nie pokazujemy w raporcie.
 
 Mutacja jest walidowana przed zapisem. `report_patch_section` dodatkowo
 zachowuje wspólny digest guard i unikalność zastępowanego fragmentu.
-Znaczniki scaffolda są unikalne per element i komórka, więc korekta opisu nie
-wymaga przepisywania dużego JSON/SQL. Literalne wartości źródłowe nie są
-traktowane jak nieuzupełniony opis. Akceptowane
-mutacje utrwalają raport i projekcję w historii. Nie ma odczytu rezultatu
-z JSON ani prozy ostatniej wiadomości modelu.
+Scaffold i instrukcje uzupełniania są prywatnym materiałem AI. Samo przygotowanie
+kontekstu, blokada modelu lub zmiana nagłówka nie publikuje ich jako wyniku.
+Dopiero zaakceptowana sekcja daje checkpoint raportu. Placeholdery są odrzucane;
+literalne wartości źródłowe nie są traktowane jak instrukcje do uzupełnienia.
+Nie ma odczytu rezultatu z JSON ani prozy ostatniej wiadomości modelu.
+NO_CHANGES ma osobny krótki raport bez pustych tabel i bez sesji AI.
 
 ## Historia, chat, edycja i przenoszenie
 
 UI reuse'uje polling, report panel, zakładki, evidence/activity/usage, Share,
-manual editor i chat. Linki Markdown do sekcji otwierają je w bieżącym dokumencie
-bez nawigowania do bazowego URL aplikacji. Usage runu dotyczy initial analysis,
+manual editor i chat. Wymaga wybranego modelu albo modelu domyślnego backendu.
+Kierunek „Stan obecny → Wdrażana wersja” pozostaje widoczny nad wynikiem.
+Shared report panel ma `showTechnicalIds=false`, zachowując kotwice sekcji.
+Linki Markdown do sekcji otwierają je w bieżącym dokumencie bez nawigowania
+do bazowego URL aplikacji; Share zachowuje kotwice także w eksporcie.
+Kompletność źródeł i interpretacji ma osobną zakładkę, poza treścią raportu.
+Usage runu dotyczy initial analysis,
 a usage wiadomości kolejnych tur; wspólny aside agreguje je bez podwójnego liczenia.
 
 Publiczny export ma `schema: tdw.release-summary-export`, `version: 1`,
 `payload.type: release-summary-analysis` i
-`payload.resultContract: release-summary-result-v1`. Zawiera pełne źródła,
+`payload.resultContract: release-summary-analyst-report-v1`. Zawiera pełne źródła,
 raport, wynik i wiadomości; nie zawiera tokenów, sesji ani prywatnego kontekstu
 kontynuacji. Import pliku jest lokalny w UI, wyłącznie do odczytu, bez
 odtwarzania uprawnień lub sesji AI. Inne wersje i tryby są odrzucane.

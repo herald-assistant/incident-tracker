@@ -1,6 +1,6 @@
 # Release summary: raport dla analityka systemowego
 
-Status: in-progress
+Status: done
 
 Source need: [Release summary](../needs/release-summary.md)
 
@@ -39,6 +39,13 @@ dotychczasowe zachowanie. Brak nowych zależności między feature'ami.
 Shared Share zachowuje kotwice sekcji, aby odnośniki z listy zmian działały
 również w wyeksportowanym dokumencie; obejmuje go regresja wszystkich konsumentów.
 
+Test rzeczywisty wykrył odrzucanie odczytów kodu po pełnym SHA wybranego commita.
+Korekta neutralnego `forRevisions` akceptuje nazwę wybranego refa albo jego znany
+SHA wyłącznie w tym samym projekcie, bez nowego resolve i bez rozszerzenia zakresu.
+Tryby pojedynczego przypięcia i ruchomego brancha pozostają bez zmian.
+Weryfikacja: oba SHA, obcy SHA/projekt, brak wywołania adaptera, restore i pełna
+regresja backendu. Formularz jest dodatkowo sprawdzany z opóźnionym katalogiem AI.
+
 Konsumenci: Release summary job, AI, edycja i kontynuacja, local history,
 import/export, Share, frontend strony oraz wspólny renderer raportu.
 
@@ -68,4 +75,4 @@ zostaną usunięte tylko dla Release summary; inne feature'y pozostają bez zmia
 
 - [x] 1. Naprawić wybór modelu i publikację wyniku po blokadzie/błędzie. Dowód: testy Report/Job/AI/Continuation przeszły przed zmianą i po niej; 13 testów Angulara Release summary przeszło. MODEL_REQUIRED nie publikuje scaffolda; brak zapisów AI nie daje raportu; poprawny checkpoint pozostaje dostępny. Sandbox zablokował cache Vitest przed startem testów; ponowienie poza nim przeszło.
 - [x] 2. Wprowadzić inwentarz obiektów, czytelny kontrakt tabel, prompt/skill, walidację kompletności, bieżący eksport i prezentację. Dowód: 44 testy Release summary przeszły (1 osobny pilot opt-in pominięty), także guardy granic pakietów; 686 testów Angulara przeszło. Fikcyjny CRM obejmuje 120 kolumn, YAML, samą zmianę NULL/NOT NULL, kolejność kolumn indeksu, SQL, rollback i usunięcie changelogu. Kontrola wizualna na aktualnym JAR-ze należy do kroku 3.
-- [ ] 3. Wykonać regresję Angular, build UI i backend-dev clean package; uaktualnić kanoniczną dokumentację i effective skill, uruchomić aktualną aplikację i zweryfikować rzeczywisty raport. Dowód: wyniki testów, przegląd renderowania i aktualny JAR; commit.
+- [x] 3. Wykonać regresję Angular, build UI i backend-dev clean package; uaktualnić kanoniczną dokumentację i effective skill, uruchomić aktualną aplikację i zweryfikować rzeczywisty raport. Dowód: 687 testów Angulara, build UI oraz `mvn -q -Pbackend-dev clean package` przeszły; backend: 2025 zaliczonych, 3 opt-in pominięte, zero błędów. Aktualny JAR działa lokalnie. Test rzeczywisty potwierdził odczyt kodu po obu przypiętych SHA, zapis i korektę raportu, wszystkie 23/23 oczekiwane pozycje w trzech zakresach, sześć sekcji, krótkie podsumowanie i poprawne odtworzenie modelu oraz reasoning effort. Przegląd w przeglądarce potwierdził czytelne cztery kolumny, krótkie źródła i działające przejścia do szczegółów. SQL i rzeczywisty brak uzasadnienia jednego pola pozostają jawnymi ograniczeniami; pełne pokrycie pozycji nie podnosi automatycznie statusu do COMPLETED. Uaktualniono dokumentację runtime, decyzje, potrzebę i effective skill; usunięto zastąpiony plan. Końcowy przegląd diffu i odnośników nie wykazał błędów.

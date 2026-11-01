@@ -42,15 +42,15 @@ public class ReleaseSummaryReportService {
     public AnalysisReport noChanges(String id,ReleaseSummaryScope scope) {
         return new AnalysisReport(id,"Brak zmian bazodanowych",scope.systemName(),
                 "Nie znaleziono zmian Liquibase w porównywanych rewizjach.",
-                List.of(section("OVERVIEW","Zakres porównania",0,comparison(scope)+
+                List.of(section("OVERVIEW","Zakres porównania",1,comparison(scope)+
                         "\n\nZweryfikowano pełne drzewa i wymagane pliki źródłowe. Analiza AI nie była potrzebna.")),AnalysisReportMeta.empty());
     }
     public List<AnalysisReportSection> templates(ReleaseSummaryScope scope,ReleaseSummaryEvidence evidence) {
         var groups=inventory.groups(evidence);var result=new ArrayList<AnalysisReportSection>();
-        result.add(section("OVERVIEW","W skrócie",0,comparison(scope)+"\n\nNapisz 2–4 zdania: najważniejsze zmiany danych, ich cel i główny wpływ na wdrożenie."));
-        result.add(section("CHANGE_INDEX","Lista zmian",1,ReleaseSummaryTables.table(HEADERS.get("CHANGE_INDEX"),groups.stream()
+        result.add(section("OVERVIEW","W skrócie",1,comparison(scope)+"\n\nNapisz 2–4 zdania: najważniejsze zmiany danych, ich cel i główny wpływ na wdrożenie."));
+        result.add(section("CHANGE_INDEX","Lista zmian",2,ReleaseSummaryTables.table(HEADERS.get("CHANGE_INDEX"),groups.stream()
                 .map(g->List.of(g.title(),"Opisz krótko zakres zmian.",detailLink(g))).toList())));
-        int order=2;
+        int order=3;
         for(var group:groups)result.add(section(detailId(group),group.title(),order++,detailTemplate(group)));
         result.add(section("DEPLOYMENT_IMPACT","Wpływ na wdrożenie i weryfikacja",order,
                 ReleaseSummaryTables.table(HEADERS.get("DEPLOYMENT_IMPACT"),List.of(List.of("Migracje","Opisz wpływ i ryzyko.","Podaj konkretne sprawdzenia.","Nie dotyczy")))));

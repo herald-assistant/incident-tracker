@@ -15,7 +15,12 @@ wykonania.
 
 Użytkownik wybiera aplikację oraz dwa branche/refy: stan bazowy i stan
 docelowy. Otrzymuje sekcyjny, tabelaryczny raport zmian wdrożeniowych,
-zrozumiały dla analityka i wystarczająco szczegółowy dla developera.
+zrozumiały dla analityka systemowego na poziomie mid. Ma szybko rozpoznać zakres
+wdrożenia, następnie sprawdzić każdy zmieniany obiekt i jego zastosowanie.
+Raport nie wymaga znajomości parsera Liquibase: bez wewnętrznych hashy, ścieżek
+AST, JSON ani oddzielnych wierszy dla kontenerów składniowych. Kolumna i jej
+ograniczenia tworzą jeden opis; definicja i znaczenie funkcjonalne są obok siebie.
+Blokada przygotowania nie pokazuje niewypełnionego szablonu jako raportu.
 
 Pierwszy zakres obejmuje zmiany bazodanowe wynikające z Liquibase. Raport ma
 obejmować wszystkie ustalone zmiany, w tym każdą tabelę, kolumnę, indeks,
@@ -85,4 +90,4 @@ Ograniczenie techniczne ma być jawne; nie wolno po cichu obcinać materiału.
   widocznymi stanami wykonania.
 
 Wynikowy kontrakt: [runtime Release summary](../architecture/release-summary-runtime-flow.md).
-Checklista dostarczenia: [plan Release summary](../plans/release-summary.md).
+Checklista poprawy czytelności: [plan raportu dla analityka](../plans/release-summary-readable-report.md).

@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
@@ -25,7 +26,7 @@ import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, liste
 
 @Component({
   selector: 'app-release-summary-page',
-  imports: [ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
+  imports: [FormsModule, ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent, AnalysisReportPanelComponent, AnalysisResultHeaderComponent, AnalysisResultTabsComponent,
     AnalysisFollowUpChatComponent, AnalysisReportEditorComponent],
   templateUrl: './release-summary-page.html',

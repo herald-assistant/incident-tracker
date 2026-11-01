@@ -64,12 +64,12 @@ trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
 - [Release summary](needs/release-summary.md) oraz
-  [plan raportu zmian Liquibase](plans/release-summary.md) opisują porównanie
+  [plan poprawy raportu dla analityka](plans/release-summary-readable-report.md) opisują porównanie
   dwóch refów aplikacji, pełny kontekst katalogowy i szczegółowy raport
   wdrożeniowy. Bieżący kontrakt jest w
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
-  Plan Liquibase jest zakończony; zachowana checklista dokumentuje weryfikację
-  siedmiu inkrementów przekazywanego rozwiązania.
+  Raport przedstawia obiekty bazy, ich definicje i znaczenie funkcjonalne.
+  Pełne źródła oraz kompletność analizy pozostają dostępne osobno.
   Zapowiedziany tryb zmian kontraktów API pozostaje poza bieżącą implementacją.
 
 - Użycie Operational Context przez UI Explorer i UX Inspector opisują ich

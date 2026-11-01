@@ -116,8 +116,15 @@ public final class GitLabRepositoryToolScope {
     public Target resolve(String projectName, String branchRef, GitLabRepositoryRevisionPort port) {
         var project = relativeProject(projectName);
         var branch = checkedBranch(branchRef);
-        if (comparedProjects.contains(project) && !revisions.containsKey(project+"@"+branch)) {
-            throw new IllegalArgumentException("Only the selected comparison revisions are available for this project.");
+        if (comparedProjects.contains(project)) {
+            var commit = revisions.get(project + "@" + branch);
+            if (commit == null && COMMIT_ID.matcher(branch).matches()) {
+                commit = revisions.entrySet().stream()
+                        .filter(entry -> entry.getKey().startsWith(project + "@") && entry.getValue().equalsIgnoreCase(branch))
+                        .map(Map.Entry::getValue).findFirst().orElse(null);
+            }
+            if (commit == null) throw new IllegalArgumentException("Only the selected comparison revisions are available for this project.");
+            return new Target(group, project, branch, commit);
         }
         if (comparedProjects.isEmpty() && selectedProject.equals(project) && !selectedBranch.equals(branch)) {
             throw new IllegalArgumentException("The selected GitLab project is pinned to the operator's branch.");

@@ -35,12 +35,16 @@ public class ReleaseSummaryPrompt {
             Pełne właściwości, SQL i pliki pozostają w evidence. Nie trzeba ich przepisywać do tabel.
 
             Każde Znaczenie funkcjonalne zaczynaj od Potwierdzone:, Wniosek: albo Do wyjaśnienia:.
+            Zwykle wystarczą 1–2 krótkie zdania, maksymalnie 3. Nie powtarzaj typu, NULL ani listy sąsiednich
+            kolumn z definicji technicznej. Wspólne ograniczenia badania opisz raz we wpływie wdrożenia
+            lub metadanych sekcji; przy obiekcie wskaż tylko niepewność dotyczącą właśnie jego zastosowania.
             Następnie wyjaśnij konkretnie jakie dane przechowuje obiekt, przy jakiej czynności są zapisywane
             i odczytywane oraz co zmieniają dla użytkownika lub działania systemu. Sam typ lub nazwa nie
             wystarcza jako wyjaśnienie celu. Nie powtarzaj ogólnika o przechowywaniu danych w każdym wierszu.
             Uzasadnienie sprawdzaj w kodzie encji, zapytań, usług i ich wywołań oraz w Operational Context.
             Przy braku dowodów podaj konkretny brak i sprawdzony zakres; nie zgaduj intencji biznesowej.
             Zachowaj neutralne nazwy obiektów DB, a objaśnienia pisz zwięzłymi zdaniami po polsku.
+            Liczbę kolumn i indeksów sprawdź w pełnych źródłach. Uwzględniaj indeksy tworzone również w SQL.
 
             Masz nieograniczoną liczbę wywołań GitLab i opctx do osiągnięcia tego celu.
             Czytaj kod obu przypiętych rewizji, podając projectName i branchRef z manifestu.

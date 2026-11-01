@@ -1276,10 +1276,13 @@ promptu, scope i timeout pozostają platformowe. Niepełny materiał blokuje AI.
 SQL i custom changes nie zyskują deklaracji deterministycznej pełności tylko
 dlatego, że model opisał ich treść.
 
-`AnalysisReport` jest jedynym źródłem wyniku. Walidator feature'a wymaga
-każdego elementu w tabelach technicznej i funkcjonalnej, niezmienionych
-właściwości przed/po i odczytanych źródeł. Mutacje przez `report_*` mają
-checkpoint, a brak uzasadnienia lub niezweryfikowana konstrukcja pozostaje
+`AnalysisReport` jest jedynym źródłem wyniku. Inwentarz dla analityka scala
+kolumny z constraints i indeksy z ich uporządkowanymi kolumnami; pełny manifest
+parsera pozostaje w evidence. Czterokolumnowa tabela łączy obiekt, definicję,
+znaczenie funkcjonalne i krótkie linki do źródeł. Walidator wymaga każdej pozycji,
+niezmienionych rozpoznanych właściwości i odczytanych źródeł. Scaffold nie jest
+wynikiem: dopiero poprawna sekcja przez `report_*` publikuje checkpoint.
+Brak uzasadnienia lub niezweryfikowana konstrukcja pozostaje
 `PARTIAL`. Odpowiedź tekstowa nie zastępuje raportu. Follow-up domyślnie tylko
 odpowiada; korekta wymaga jawnego `updateReport`. Publiczny import V1 nie
 odtwarza sesji. Szczegóły: [runtime](release-summary-runtime-flow.md).

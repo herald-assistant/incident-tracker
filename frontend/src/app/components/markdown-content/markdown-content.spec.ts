@@ -9,7 +9,7 @@ describe('MarkdownContentComponent fragment navigation', () => {
     const target = document.createElement('details');
     target.id = 'report-section-crm';
     const scroll = vi.fn();
-    target.scrollIntoView = scroll;
+    Object.defineProperty(target, 'scrollIntoView', { value: scroll, configurable: true });
     document.body.append(target);
     try {
       const click = new MouseEvent('click', { bubbles: true, cancelable: true });

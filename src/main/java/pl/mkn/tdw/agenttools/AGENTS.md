@@ -80,6 +80,8 @@ Nie obejmuje:
   przypiętych rewizji na projekt; trzecia rewizja takiego projektu jest
   odrzucana, a dodatkowe projekty są przypinane osobno. Snapshot rewizji można
   zachować i odtworzyć bez powtórnego rozwiązywania branchy.
+  Nazwa wybranego refa i pełny SHA przypięty do tego samego projektu wskazują
+  ten sam dozwolony odczyt. SHA innego projektu nie rozszerza zakresu porównania.
   Tryb branchowy UX Inspectora ogranicza
   projekt i branch bez przypinania SHA. Tree/list/search
   zwracaja sciezki, nie `sourceRef`; pelny odczyt i odczyt fragmentu z

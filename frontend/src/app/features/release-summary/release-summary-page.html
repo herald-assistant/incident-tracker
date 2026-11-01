@@ -33,13 +33,13 @@
       <div class="run-options">
         <button type="button" class="secondary-button" [disabled]="busy()" (click)="swap()">Zamień kierunek</button>
         <label class="form-field">Model AI
-          <select [value]="model()" [disabled]="busy() || modelsLoading()" (change)="selectModel($any($event.target).value)">
+          <select aria-label="Model AI" [ngModel]="model()" [disabled]="busy() || modelsLoading()" (ngModelChange)="selectModel($event)">
             <option value="">{{modelCatalog().defaultModel ? 'Domyślny: '+modelCatalog().defaultModel : 'Wybierz model AI'}}</option>
             @for(option of modelCatalog().models;track option.id) { <option [value]="option.id">{{option.name}}</option> }
           </select>
         </label>
         <label class="form-field">Reasoning effort
-          <select [value]="reasoning()" [disabled]="busy() || !reasoningOptions().length" (change)="reasoning.set($any($event.target).value)">
+          <select aria-label="Reasoning effort" [ngModel]="reasoning()" [disabled]="busy() || !reasoningOptions().length" (ngModelChange)="reasoning.set($event)">
             <option value="">Domyślny</option>
             @for(option of reasoningOptions();track option) { <option [value]="option">{{option}}</option> }
           </select>

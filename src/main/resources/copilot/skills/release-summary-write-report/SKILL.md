@@ -31,6 +31,9 @@ Nie potrzebuje znajomości parsera Liquibase ani wewnętrznych identyfikatorów.
    zapisywane i odczytywane oraz jaki efekt ma zmiana. Rozpocznij opis od
    Potwierdzone:, Wniosek: albo Do wyjaśnienia:. Nie wymyślaj uzasadnienia
    z samej nazwy. Luka wskazuje czego nie udało się ustalić i gdzie szukano.
+   Użyj zwykle 1–2 krótkich zdań, najwyżej 3. Nie powtarzaj definicji technicznej
+   ani list sąsiednich kolumn. Wspólne ograniczenia badania opisz raz, poza
+   wierszami obiektów. Liczby kolumn i indeksów sprawdź także w operacjach SQL.
 7. Podawaj krótkie linki do odczytanych źródeł, np. Migracja, Zapis danych,
    Odczyt danych. Pełny URL pozostaje w adresie linku. Nie wklejaj JSON,
    sourceRef, hashy elementów, ścieżek parsera ani placeholderów do raportu.
