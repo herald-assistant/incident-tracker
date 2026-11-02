@@ -79,17 +79,23 @@ class ReleaseSummaryAiTest {
         var saved=new ArrayList<AnalysisReport>();var context=context(saved::add,true);
         var store=new CopilotReportSessionStore();var report=ReleaseSummaryReportTest.completed(reports,true);store.register(report);
         var policy=new ReleaseSummaryToolPolicy(mapper,reports,store);
-        var session=new CopilotToolSessionContext("run","session",Map.of(ReleaseSummaryAiContext.KEY,context,AgentToolContextKeys.REPORT_ID,"report"));
+        var session=new CopilotToolSessionContext("run","session",Map.of(ReleaseSummaryAiContext.KEY,context,AgentToolContextKeys.REPORT_ID,"report",
+                AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,context.sectionIds));
         var detail=ReleaseSummaryReportTest.detail(report);
         var valid=mapper.writeValueAsString(Map.of("id",detail.id(),"order",detail.order(),"markdown",detail.markdown(),"meta",detail.meta()));
         assertDoesNotThrow(()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","call","report_upsert_section",valid)));
+        assertTrue(context.sectionIds.contains(detail.id()));
+        assertSame(context.sectionIds,session.hiddenContext().get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS));
+        var invalid=valid.replace(detail.id(),"DB_DETAIL_../customer");
+        assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","call","report_upsert_section",invalid)));
+        assertFalse(context.sectionIds.contains("DB_DETAIL_../customer"));
         assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","call","report_upsert_section",
                 valid.replace("gitlab.example.com/CRM/customer/","gitlab.example.com/CRM/unknown/"))));
         policy.completed(new CopilotToolInvocationFinishedEvent(session,"session","call","report_upsert_section",valid,CopilotToolInvocationOutcome.COMPLETED,"{\"status\":\"ok\"}",1,null));
         assertEquals(List.of(report),saved);assertTrue(context.reportMutated);
         var patch=mapper.writeValueAsString(Map.of("sectionId",detail.id(),"oldText","Oznaczenie klienta","newText","Etykieta widoczna operatorowi"));
         assertDoesNotThrow(()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","patch","report_patch_section",patch)));
-        var damaged=mapper.writeValueAsString(Map.of("sectionId",detail.id(),"oldText","varchar(20)","newText","varchar(999)"));
+        var damaged=mapper.writeValueAsString(Map.of("sectionId",detail.id(),"oldText","varchar(20)","newText","varchar(999) | dodatkowa komorka"));
         assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(session,"session","patch","report_patch_section",damaged)));
         var readOnly=new CopilotToolSessionContext("run","session",Map.of(ReleaseSummaryAiContext.KEY,context(r->{},false)));
         assertThrows(CopilotToolInvocationRejectedException.class,()->policy.beforeInvocation(new CopilotToolInvocationPolicyRequest(readOnly,"session","call","report_update_header","{}")));

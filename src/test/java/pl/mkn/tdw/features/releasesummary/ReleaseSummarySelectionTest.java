@@ -42,7 +42,8 @@ class ReleaseSummarySelectionTest {
     @Test void startReturnsAcceptedSnapshotBeforeAsyncResolution() throws Exception {
         var catalog=mock(ReleaseSummaryCatalog.class);
         var tasks=new ArrayList<Runnable>();
-        var service=new ReleaseSummaryJobService(catalog,mock(pl.mkn.tdw.features.releasesummary.context.LiquibaseEvidenceCollector.class),
+        var service=new ReleaseSummaryJobService(catalog,mock(pl.mkn.tdw.features.releasesummary.context.ReleaseSummaryDiffCollector.class),
+                mock(pl.mkn.tdw.features.releasesummary.context.ReleaseSummaryPreparation.class),
                 mock(pl.mkn.tdw.features.releasesummary.ai.ReleaseSummaryPrompt.class),mock(pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.class),
                 mock(pl.mkn.tdw.features.releasesummary.ai.ReleaseSummaryAiRunner.class),mock(pl.mkn.tdw.features.releasesummary.job.ReleaseSummaryPersistence.class),
                 ()->pl.mkn.tdw.shared.ai.AnalysisAiAuthRef.localToken("CRM"),new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard(),tasks::add);

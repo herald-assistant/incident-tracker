@@ -10,6 +10,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import pl.mkn.tdw.features.releasesummary.ai.*;
 import pl.mkn.tdw.features.releasesummary.contract.*;
+import pl.mkn.tdw.features.releasesummary.context.ReleaseSummaryPreparation;
 import pl.mkn.tdw.features.releasesummary.report.*;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
@@ -39,7 +40,7 @@ class ReleaseSummaryRuntimeTest {
     @Autowired ObjectMapper mapper;
     @Test void realSpringToolRegistryContainsEntireReleaseSummaryCapability() {
         var context=context(new AtomicReference<>());
-        var run=runner.assemble("crm-wiring",request("crm-model",null),prompts.render(context.scope,context.evidence),
+        var run=runner.assemble("crm-wiring",request("crm-model",null),prompts.render(context.scope,new ReleaseSummaryPreparation.Prepared(context.evidence,Set.of(),List.of())),
                 AnalysisAiAuthRef.localToken("CRM"),context,reports.scaffold("crm-report",context.scope,context.evidence),null,e->{},e->{});
         assertEquals(ReleaseSummaryToolPolicy.ALLOWED,new HashSet<>(run.sessionConfigRequest().availableToolNames()));
         assertTrue(run.artifactContents().isEmpty());
@@ -52,7 +53,7 @@ class ReleaseSummaryRuntimeTest {
         var effort=selected.reasoningEfforts().contains("high")?"high":null;
         var saved=new AtomicReference<AnalysisReport>();var context=context(saved);
         var id="crm-pilot-"+UUID.randomUUID();var initial=reports.scaffold(id,context.scope,context.evidence);
-        var run=runner.assemble(id,request(selected.id(),effort),prompts.render(context.scope,context.evidence),AnalysisAiAuthRef.localToken("CRM pilot"),
+        var run=runner.assemble(id,request(selected.id(),effort),prompts.render(context.scope,new ReleaseSummaryPreparation.Prepared(context.evidence,Set.of(),List.of())),AnalysisAiAuthRef.localToken("CRM pilot"),
                 context,initial,null,e->{},e->{});
         var result=runner.execute(run);
         assertTrue(context.reportMutated,"The real model must write report tools.");
@@ -61,11 +62,12 @@ class ReleaseSummaryRuntimeTest {
         Files.createDirectories(Path.of("target/release-summary-pilot"));
         mapper.writerWithDefaultPrettyPrinter().writeValue(Path.of("target/release-summary-pilot/result.json").toFile(),
                 Map.of("model",selected.id(),"report",result.report(),"result",projection,"sources",context.sources()));
-        assertEquals(projection.expectedElements(),projection.documentedElements(),projection.visibilityLimits().toString());
+        assertTrue(projection.documentedTables()>0,projection.visibilityLimits().toString());
+        assertEquals("AI_ASSESSED",projection.semanticCoverage());
         assertTrue(context.sources().stream().anyMatch(ref->ref.endsWith(ReleaseSummaryCrmFixture.CODE_PATH)),"Functional reasoning must be grounded in read code.");
         assertFalse(result.report().sections().stream().anyMatch(section->section.markdown().contains("DO_UZUPELNIENIA")));
-        System.out.printf("Release summary CRM live pilot: model=%s, status=%s, elements=%d/%d, checkpoints persisted, source code read.%n",
-                selected.id(),projection.status(),projection.documentedElements(),projection.expectedElements());
+        System.out.printf("Release summary CRM live pilot: model=%s, status=%s, tables=%d, checkpoints persisted, source code read.%n",
+                selected.id(),projection.status(),projection.documentedTables());
     }
     private ReleaseSummaryRequest request(String model,String effort) {return new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,
             new GitLabRef(GitLabRef.Kind.BRANCH,"current"),new GitLabRef(GitLabRef.Kind.TAG,"next"),model,effort);}

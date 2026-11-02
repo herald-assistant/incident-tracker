@@ -45,6 +45,14 @@ zawierac semantyki incident analysis, Copilota ani MCP runtime.
   `contract.GitLabRepositoryTreeException`, a mapowanie na kontrakt danej capability
   wykonuj w serwisie wywolujacym.
 
+`GitLabRepositoryComparisonPort` porownuje bezposrednio przypiete SHA.
+Kompletna lista zmian wynika z path/id/mode obu pelnych drzew, nie z liczby
+patchy API compare. straight=true zapobiega uzyciu merge base. Timeout,
+collapsed/too_large, brak patcha i blad compare nie usuwaja pozycji manifestu.
+Niepelne drzewo jest bledem, a nie pustym diffem. Port nie interpretuje Liquibase.
+Nie pobiera blobow, archiwow ani klonow. Sciezki i tryby zachowuja symlinki
+i gitlinks; ich obecnosc nie dowodzi odczytu docelowej zawartosci.
+
 Pełny `GitLabRepositorySnapshotPort` reuse'uje `fetchRepositoryNodes`, zachowuje
 blob ID, gitlinks i symlinki oraz waliduje tryb obiektu Git. Istniejące bounded
 odczyty i `fetchRepositoryBlobs` zachowują własne kontrakty. Nie filtruj

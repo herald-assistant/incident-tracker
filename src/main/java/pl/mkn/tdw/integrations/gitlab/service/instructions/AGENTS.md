@@ -7,6 +7,13 @@ repozytoryjnych instrukcji dla code source. Odnajduje globalne i lokalne
 `AGENTS.md`, `.github/copilot-instructions.md` oraz repozytoryjne pliki
 referencjonowane z instrukcji.
 
+Jawne `discoverApplicable` jest osobna operacja dla `.github/**/*.instructions.md`
+na przypietym SHA. Dobiera `applyTo` do zadanych sciezek: obsluguje rozdzielone
+przecinkiem globy z `*`, `**` i `?`; brak applyTo oznacza zakres repozytorium.
+Nieobslugiwane wzorce (m.in. grupy klamrowe, klasy znakow i negacja), bledny YAML,
+obciecie i limit discovery sa jawne. Nie zmieniaj przez te operacje zachowania
+dotychczasowego `discover` ani nie dociagaj referencji i modulow poza zakresem.
+
 ## Zasady
 
 - Nie importuj `analysis.*`, `agenttools.*`, `features.*`, `api.*` ani

@@ -4,6 +4,8 @@ import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileReader;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -67,6 +69,24 @@ class GitLabVerifiedRepositoryFileReaderTest {
                 port, "CRM", "lib", COMMIT, "README.md").content()).isEqualTo(content);
         assertThatThrownBy(() -> GitLabVerifiedRepositoryFileReader.read(
                 port, "CRM", "lib", COMMIT, "README.md", GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"size", "hash", "truncated"})
+    void rejectsIncompleteOrMismatchedCompleteRead(String failure) {
+        var content = "CRM customer list";
+        var size = content.length() + (failure.equals("size") ? 1L : 0L);
+        var hash = failure.equals("hash") ? "0".repeat(64) : null;
+        when(port.readFileMetadata("CRM", "lib", COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "lib", COMMIT, "README.md",
+                        null, COMMIT, null, null, hash, size));
+        when(port.readFileComplete("CRM", "lib", COMMIT, "README.md"))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "lib", COMMIT, "README.md",
+                        content, failure.equals("truncated")));
+
+        assertThatThrownBy(() -> GitLabVerifiedRepositoryFileReader.readComplete(
+                port, "CRM", "lib", COMMIT, "README.md"))
                 .isInstanceOf(IllegalStateException.class);
     }
 

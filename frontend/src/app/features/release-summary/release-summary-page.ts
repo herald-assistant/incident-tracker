@@ -60,6 +60,11 @@ export class ReleaseSummaryPageComponent {
   readonly canStart = computed(() => !!this.systemId() && !!this.before() && !!this.after() && !!this.effectiveModel()
     && !this.modelsLoading() && !this.busy() && !this.editing() && this.uiConfig.config().releaseSummaryEnabled);
   readonly busy = computed(() => this.starting() || this.saving() || this.chatSubmitting() || !!this.job() && !terminalReleaseSummary(this.job()!));
+  readonly aiWorkflowIsRunning = computed(() => Boolean(this.job()?.steps.some(step =>
+    step.phase === 'AI' && (step.status === 'RUNNING' || step.status === 'IN_PROGRESS')
+  )));
+  readonly chatIsWaiting = computed(() => this.chatSubmitting()
+    || Boolean(this.job()?.chatMessages.some(message => message.status === 'IN_PROGRESS')));
   readonly startHint = computed(() => {
     if (this.busy()) return 'Trwa przetwarzanie analizy.';
     if (this.editing()) return 'Zakończ edycję raportu, aby rozpocząć nowe porównanie.';
@@ -73,8 +78,13 @@ export class ReleaseSummaryPageComponent {
     return request ? `Zmiany bazodanowe między ${request.baselineRef.name} a ${request.targetRef.name}` : 'Zmiany bazodanowe';
   });
   readonly shareDocument = computed(() => {
-    const report = this.job()?.report;
+    const report = this.visibleReport();
     return report ? buildReportShareDocument({...report, header: this.resultTitle()}, 'release-summary.md', 'APPENDIX') : null;
+  });
+  readonly visibleReport = computed(() => {
+    const job = this.job(), report = job?.report;
+    return report ? {...report, meta: {...report.meta,
+      visibilityLimits: [...new Set([...(report.meta?.visibilityLimits ?? []), ...(job.result?.visibilityLimits ?? [])])]}} : null;
   });
   readonly beforeLoader = (key: string, search: string, page?: number) =>
     this.api.refs(key.slice(0, key.lastIndexOf(':')), key.slice(key.lastIndexOf(':') + 1) as ReleaseRefKind, search, page);

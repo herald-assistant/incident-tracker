@@ -22,7 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ReleaseSummaryJobService {
     private final ReleaseSummaryCatalog catalog;
-    private final LiquibaseEvidenceCollector collector;
+    private final ReleaseSummaryDiffCollector collector;
+    private final ReleaseSummaryPreparation preparation;
     private final ReleaseSummaryPrompt prompts;
     private final ReleaseSummaryReportService reports;
     private final ReleaseSummaryAiRunner ai;
@@ -56,18 +57,24 @@ public class ReleaseSummaryJobService {
                 var scope=catalog.pin(state.request,captured);
                 synchronized(state) {
                     state.scope=scope;state.step("RESOLVE_REFS","Przypięcie rewizji","COMPLETED","Oba refy zostały przypięte do commitów.",scope.repositories().size());
-                    state.step("COLLECT_LIQUIBASE","Zmiany Liquibase per plik","RUNNING","Weryfikacja drzew i domknięcia zależności.",0);persist(state);
+                    state.step("COLLECT_DIFF","Porownanie rewizji","RUNNING","Przygotowanie kompletnej listy zmian i dostepnych patchy.",0);persist(state);
                 }
-                var evidence=collector.collect(scope);
+                var collected=collector.collect(scope);
+                synchronized(state) {
+                    state.evidence=collected;state.contextSections=ReleaseSummaryProgressEvidence.sections(scope,collected);persist(state);
+                }
+                var prepared=collected.changeListComplete()?preparation.prepare(scope,collected):
+                        new ReleaseSummaryPreparation.Prepared(collected,Set.of(),List.of());
+                var evidence=prepared.evidence();
                 synchronized(state) {
                     state.evidence=evidence;
                     state.contextSections=ReleaseSummaryProgressEvidence.sections(scope,evidence);
-                    state.step("COLLECT_LIQUIBASE","Zmiany Liquibase per plik",evidence.sourceComplete()?"COMPLETED":"BLOCKED",
-                            evidence.sourceComplete()?"Zweryfikowano źródła. Otwórz krok, aby porównać treść każdego pliku.":"Niekompletny materiał źródłowy. Otwórz krok, aby sprawdzić zebrane pliki i luki.",
+                        state.step("COLLECT_DIFF","Porownanie rewizji",evidence.changeListComplete()?"COMPLETED":"BLOCKED",
+                            evidence.changeListComplete()?"Potwierdzono liste zmian i przygotowano wybrane roznice oraz instrukcje.":"Nie potwierdzono kompletnej listy zmian.",
                             state.contextSections.get(0).items().size(),List.of(),state.contextSections.stream()
                                     .map(section->new pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference(section.provider(),section.category())).toList());
                     persist(state);
-                    if(!evidence.sourceComplete()){state.finish("BLOCKED","SOURCE_INCOMPLETE","Sprawdź luki w materiale źródłowym.");persist(state);return;}
+                    if(!evidence.changeListComplete()){state.finish("BLOCKED","CHANGE_LIST_INCOMPLETE","Sprawdz ograniczenia porownania.");persist(state);return;}
                 }
                 var initial=reports.scaffold("release-summary-report-"+state.id,scope,evidence);
                 if(evidence.noChanges()) {
@@ -87,9 +94,10 @@ public class ReleaseSummaryJobService {
                     revisions.add(new GitLabRepositoryToolScope.PinnedRevision(repo.project(),repo.targetRef(),repo.targetCommit()));
                 }
                 var repositoryScope=GitLabRepositoryToolScope.forRevisions(scope.group(),revisions);
-                var context=new ReleaseSummaryAiContext(scope,evidence,captured,repositoryScope,reports.initialSources(scope,evidence),
+                var initialSources=new HashSet<>(reports.initialSources(scope,evidence));initialSources.addAll(prepared.sources());
+                var context=new ReleaseSummaryAiContext(scope,evidence,captured,repositoryScope,initialSources,
                         report->checkpoint(state,report),()->persistence.saveRuntime(state.id,state.context),true);
-                var prompt=prompts.render(scope,evidence);
+                var prompt=prompts.render(scope,prepared);
                 synchronized(state) {
                     state.context=context;state.prompt=prompt;
                     state.result=reports.project(initial,evidence,context.sources());
@@ -106,7 +114,7 @@ public class ReleaseSummaryJobService {
                             state.activities.add(event);usage.recordActivity(event);state.usage=usage.snapshot();state.updatedAt=Instant.now();persist(state);}}});
                 synchronized(state){
                     state.sessionId=run.sessionConfigRequest().sessionId();
-                    state.step("AI_REPORT","Raport AI","RUNNING","Analiza funkcjonalna i zapis tabel.",evidence.units().size());
+                    state.step("AI_REPORT","Raport AI","RUNNING","Analiza diffu, doczytywanie zrodel i zapis tabel.",evidence.changes().size());
                     persist(state);
                 }
                 var execution=ai.execute(run);
@@ -177,7 +185,7 @@ public class ReleaseSummaryJobService {
                 }
             }
             if(Set.of("QUEUED","RUNNING").contains(restored.status))
-                restored.finish(restored.result!=null&&restored.result.documentedElements()>0?"PARTIAL":"INTERRUPTED",
+                restored.finish(restored.report!=null&&!restored.report.sections().isEmpty()?"PARTIAL":"INTERRUPTED",
                         "RUN_INTERRUPTED","Analizę przerwał restart. Zachowano dostępny materiał; nie uruchomiono jej ponownie.");
             if(interrupted)persist(restored);
             return restored;
@@ -227,7 +235,7 @@ public class ReleaseSummaryJobService {
                 report->checkpoint(state,report),()->persistence.saveRuntime(state.id,state.context),updateReport);
         synchronized(state){state.context=context;}
         String prompt=(updateReport?"Operator jawnie zleca korektę raportu przez report tools. ":"Pytanie tylko do odczytu. Nie zmieniaj raportu. ")+
-                "Odczytuj kod na zapisanych SHA; opctx zawiera zapisany katalog. Zachowaj coverage i wskazuj źródła.\n"+
+                "Odczytuj kod na zapisanych SHA; opctx zawiera zapisany katalog. Zachowaj jawne luki i wskazuj zrodla.\n"+
                 pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditGuidance.forFollowUp(state.report)+"\n"+
                 "Polecenie operatora:\n"+message;
         try {
@@ -264,7 +272,10 @@ public class ReleaseSummaryJobService {
             requireMutation(state,false);
             var updated=pl.mkn.tdw.shared.ai.report.AnalysisReportManualEditor.apply(state.report,request);
             var sources=state.context!=null?state.context.sources():reports.initialSources(state.scope,state.evidence);
-            try {for(var section:updated.sections())reports.validatePublication(section.id(),section.markdown(),section.meta(),state.evidence,sources);}
+            try {
+                reports.validateLayout(updated,state.evidence);
+                for(var section:updated.sections())reports.validatePublication(section.id(),section.markdown(),section.meta(),state.evidence,sources);
+            }
             catch(IllegalArgumentException e){throw new ReleaseSummaryException("INVALID_REPORT_EDIT",e.getMessage());}
             state.report=updated;state.result=reports.project(updated,state.evidence,sources);
             state.finish(state.result.status(),null,null);persist(state);return state.snapshot();

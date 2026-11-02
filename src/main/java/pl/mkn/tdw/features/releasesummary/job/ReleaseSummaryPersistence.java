@@ -50,6 +50,17 @@ public class ReleaseSummaryPersistence {
     public Optional<LocalAnalysisRunRecord> find(String id) {return store.findById(id);}
     public ReleaseSummarySnapshot read(LocalAnalysisRunRecord record) {
         try {
+            var job=record.exportEnvelope().at("/payload/job");
+            var evidence=job.path("evidence");
+            if(!evidence.isMissingNode()&&!evidence.isNull()&&(!evidence.path("changeListComplete").isBoolean()
+                    ||!evidence.path("changes").isArray()||!evidence.path("gaps").isArray()
+                    ||evidence.has("units")||evidence.has("sources")||evidence.has("scannedFiles")||evidence.has("sourceComplete")))
+                throw new IllegalArgumentException("Niepoprawny manifest diff-first.");
+            var result=job.path("result");
+            if(!result.isMissingNode()&&!result.isNull()&&(!result.path("changeListComplete").isBoolean()
+                    ||!result.path("changedFiles").canConvertToInt()||!result.path("documentedTables").canConvertToInt()
+                    ||!result.path("readSources").canConvertToInt()||result.has("coverage")||result.has("expectedElements")))
+                throw new IllegalArgumentException("Niepoprawny wynik diff-first.");
             var value=mapper.treeToValue(record.exportEnvelope(),Envelope.class);
             if(!value.supported())throw new IllegalArgumentException("Nieobsługiwany format Release summary.");
             return value.payload().job();

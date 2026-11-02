@@ -1,320 +1,227 @@
-# Release summary — runtime Liquibase
+# Release summary: Diff-First AI
 
 ## Zakres i ownership
 
-Release summary dokumentuje różnice Liquibase między stanem bazowym i docelowym
-jednego systemu z Operational Context. Jedyny aktywny tryb to `LIQUIBASE`.
-Zmiany kontraktów API pozostają poza bieżącym produktem. Feature nie wykonuje
-migracji i nie ustala stanu wdrożenia w konkretnej bazie.
+Release summary dokumentuje planowane zmiany bazodanowe miedzy dwoma refami
+systemu Operational Context. Jedyny tryb to `LIQUIBASE`. Nie wykonuje migracji
+i nie ustala rzeczywistego stanu bazy. Analiza zmian publicznych API jest poza zakresem.
 
-Pakiet `features.releasesummary` posiada request, katalog aplikacji, discovery,
-manifest elementów, prompt, policy, raport, job i persistence adapter. Korzysta
-z `integrations`, `agenttools`, `aiplatform`, `shared` i `localworkspace` bez
-importowania innych feature'ów. Parser Liquibase nie jest częścią platformy AI.
+`features.releasesummary` posiada katalog, kolektor diff, interpretacje AI,
+prompt/policy, raport, job i persistence. Neutralny transport porownania
+nalezy do `integrations.gitlab`; narzedzia odczytu do `agenttools`, a sesja
+i report tools do `aiplatform`. Feature nie importuje siblingow. Nie ma
+deterministycznego parsera ani obowiazkowego skanu tresci kandydatow Liquibase.
 
-## Wybór i publiczne API
-
-Ekran `/release-summary` używa wspólnego `ApplicationSelectComponent` oraz dwóch
-`GitLabBranchSelectComponent` z wyłączonym automatycznym wyborem pierwszej opcji.
-Każda strona ma rodzaj `BRANCH`, `TAG` albo `COMMIT`.
-Ten sam zestaw nazw refów obowiązuje wszystkie repozytoria systemu.
+## API i wybor
 
 | Endpoint | Kontrakt |
 | --- | --- |
-| `GET /api/release-summary/applications` | Systemy z jawnymi zakresami kodu i repozytoriami. |
-| `GET /api/release-summary/applications/{systemId}/refs` | `kind`, `search`, `page`; paginowane opcje i dostępność per repo. Dla commita wymagany pełny SHA. |
-| `POST /api/release-summary/jobs` | `systemId`, `mode: LIQUIBASE`, `baselineRef`, `targetRef`, opcjonalne `model`, `reasoningEffort`; `202` i snapshot joba. |
-| `GET /api/release-summary/jobs/{jobId}` | Stan runu, porównanie, evidence, raport, pokrycie, usage i chat. |
-| `POST /api/release-summary/jobs/{jobId}/chat/messages` | `message`, `updateReport` (domyślnie `false`); `202`. |
-| `PUT /api/release-summary/jobs/{jobId}/report` | Wspólny `AnalysisReportEditRequest` z oczekiwaną rewizją. |
+| `GET /api/release-summary/applications` | Systemy z jawnymi primary/priority 1. |
+| `GET /api/release-summary/applications/{systemId}/refs` | `kind`, `search`, `page`; paginowane opcje i dostepnosc per repo. |
+| `POST /api/release-summary/jobs` | `systemId`, `mode: LIQUIBASE`, `baselineRef`, `targetRef`, opcjonalne `model`, `reasoningEffort`; 202 i snapshot. |
+| `GET /api/release-summary/jobs/{jobId}` | Przebieg, porownanie, evidence, raport, wynik, usage i chat. |
+| `POST /api/release-summary/jobs/{jobId}/chat/messages` | `message`, `updateReport` domyslnie false; 202. |
+| `PUT /api/release-summary/jobs/{jobId}/report` | Shared AnalysisReportEditRequest z oczekiwana rewizja. |
 | `GET /api/release-summary/jobs/{jobId}/export` | Publiczny envelope V1 terminalnego runu. |
 
-Ref ma pola `kind` i `name`. Branch i tag są rozróżniane kanonicznymi nazwami
-`refs/heads/...` i `refs/tags/...`; commit to pełne 40 lub 64 znaki hex.
-Nie ma zastępowania niedostępnego refa domyślną gałęzią ani pomijania repozytorium.
+Ref to `kind: BRANCH|TAG|COMMIT` i `name`; branch/tag maja kanoniczne nazwy
+`refs/heads/...` / `refs/tags/...`, commit pelny SHA 40/64 hex. Ta sama para
+nazw obowiazuje wszystkie wybrane repozytoria. Brak refa nie uruchamia fallbacku.
 
-## Przygotowanie materiału
+Lista refow przekazuje `committedAt` i `repositoryCommits` (repositoryId,
+committedAt). Data pochodzi z `commit.committed_date` listy branches/tags,
+bez dodatkowych odczytow per ref; dla jawnego SHA z juz rozwiazywanej rewizji.
+Niepoprawna lub brakujaca data daje null, nie date zastepcza. Agregacja tej
+samej nazwy wybiera najnowszy znany timestamp i zachowuje daty per repo.
+Nie jest to data pusha ani utworzenia brancha/tagu.
 
-1. Job utrwala `QUEUED` w Analysis History przed przekazaniem pracy executorowi.
-   Wpis od początku identyfikuje aplikację i kierunek porównania, ma datę
-   rozpoczęcia i cztery planowane kroki. Błąd zapisu blokuje dispatch;
-   odmowa executora pozostawia wpis `FAILED` z `SCHEDULING_FAILED`.
-2. Katalog jest przechwytywany przez `OperationalContextPort.capture()`.
-   System i jego jawne `codeSearchScopes` wyznaczają wszystkie repozytoria
-   oraz sumę prefixów. Powtórzenia repo są scalane bez utraty zakresów.
-   Grupa GitLab pochodzi z konfiguracji.
-3. Oba refy każdego repo są rozwiązywane do SHA. Identyczna para projekt/ref
-   jest przypinana raz w runie, także przy porównaniu refa z nim samym.
-4. `GitLabRepositorySnapshotPort` pobiera pełne drzewo przez wspólny
-   `GitLabRepositoryTreeService`, zachowując blob ID, gitlinks i symlinki.
-   Odczyt przechodzi wszystkie strony; przekroczenie technicznego zakresu
-   kursora, niepoprawny wpis lub tryb obiektu kończy się błędem, nie pustym wynikiem.
-5. `LiquibaseEvidenceCollector` skanuje w prefixach XML, YAML/YML, JSON i SQL
-   na obu SHA. Rozpoznaje changelogi, formatted SQL oraz domyka odwołania
-   `include`, `includeAll`, `sqlFile`, `rollbackSqlFile`, pliki danych,
-   właściwości i inne deklarowane źródła. Zależność może wychodzić poza prefix
-   discovery, ale musi pozostać w tym samym repozytorium.
-6. Pełny odczyt UTF-8 jest weryfikowany względem blob ID z drzewa. Zmiana SQL/CSV
-   pod niezmienionym changelogiem, nowe dołączenie istniejącego pliku, usunięcie,
-   zmiana atrybutu lub kolejności pozostaje widoczna. Komentarz XML bez zmiany
-   deklaracji nie jest zmianą schematu.
-   Gdy ta sama ścieżka ma identyczny blob ID w obu pełnych drzewach, collector
-   korzysta z już zweryfikowanych bajtów strony bazowej. Nie powtarza wtedy
-   odczytu HTTP, ale ponownie parsuje plik i rozwiązuje zależności dla strony
-   docelowej. Nowy, zmieniony lub wcześniej nieodczytany plik wymaga własnego
-   verified read. Reuse jest lokalny dla repozytorium w jednym porównaniu.
-7. Manifest zawiera stabilne `unitId`, `elementId`, lokalizację, pełne mapy
-   właściwości `before`/`after`, źródła i luki. Duże pliki są dzielone według
-   changesetów/grup operacji na jednostki do 32 elementów, bez limitu łącznej
-   liczby elementów. Pełne źródła i deklaracje przodków zachowują kontekst.
+Katalog, refs i pinowanie stosuja ten sam filtr: tylko `role: primary`
+z `priority: 1`. Shared-library, pozostale role i brak wartosci sa wykluczone.
+Dopiero zaakceptowane wpisy sa scalane po repo z suma prefixow; odrzucony
+wpis nie rozszerza zakresu. Brak prefixow w zaakceptowanym wpisie oznacza
+cale repo. Brak takich repo daje `NO_REPOSITORIES`. Grupa jest z konfiguracji.
+Filtr nie jest dowodem skladu wdrozenia ani wersji bibliotek i nie ogranicza
+dotychczasowego osobno przypinanego research AI w skonfigurowanej grupie.
 
-XML nie rozwiązuje zewnętrznych encji. YAML jest odczytywany bez wykonywania
-konstruktorów. Parser nie wykonuje SQL, pluginów ani kodu custom changes.
+## Przygotowanie diff
 
-Przejściowe awarie odczytu GitLab są ponawiane w neutralnej integracji,
-na poziomie jednej strony drzewa albo jednego odczytu pliku/metadanych,
-z zachowaniem tego samego refa i ścieżki. Maksymalnie trzy próby obejmują
-HTTP 408, 429, 500, 502, 503, 504 oraz błędy transportu, także podczas czytania
-body. Backoff wynosi 500 ms i 1000 ms. `Retry-After` określa minimalną przerwę;
-jeżeli przekracza 120 s, odczyt kończy się błędem bez przedwczesnego ponowienia.
-Przerwanie wątku zatrzymuje retry. Błędy TLS, kodowania, parsowania i walidacji
-oraz HTTP 401/403/404 nie są ponawiane. Nie dotyczy to mutacji ani sesji AI.
+1. Zapis QUEUED z czterema planowanymi krokami nastepuje przed dispatch.
+   Blad zapisu blokuje dispatch; odmowa executora zostawia FAILED/SCHEDULING_FAILED.
+2. RESOLVE_REFS przechwytuje katalog i przypina oba refy per repo do SHA.
+   Identyczna para projekt/ref jest rozwiazywana raz w runie.
+3. COLLECT_DIFF wywoluje GitLabRepositoryComparisonPort. Dwa kompletne drzewa
+   path/id/mode ze wspolnego GitLabRepositoryTreeService wyznaczaja delte;
+   nie pobiera sie tresci blobow, archiwum, klona ani cache kodu.
+4. REST compare z `straight=true` dostarcza opcjonalne patche A -> B, nie
+   diff od merge base. GitLab moze ograniczyc tablice diffs przy timeout lub
+   limicie. Lista zmian nie opiera sie na tej tablicy: pominiety plik nadal
+   istnieje w manifeście. Rename jest laczony tylko dla potwierdzonych stron;
+   bez patcha zachowujemy dodanie/usuniecie zamiast zgadywac rename.
+5. Feature zachowuje tylko zmiany dopasowane do zaakceptowanych prefixow
+   i `release-summary.diff.path-contains-any` w application.properties.
+   Domyslna lista to `sql,changelog`; contains any of sprawdza stara i nowa
+   pelna sciezke bez rozrozniania wielkosci liter. Slowa sa trimowane;
+   pusta lista lub puste slowo blokuja start aplikacji. Rozszerzenie nie
+   ogranicza wyboru. Pozostale pliki nie trafiaja do evidence, eksportu
+   ani initial promptu. Rename uwzglednia oba konce. Evidence ma `changes`,
+   `gaps`, `changeListComplete`; ostatnie pole potwierdza kompletna liste Git
+   stanowiaca podstawe selekcji, nie kompletna interpretacje migracji.
+   ChangedFile zachowuje repositoryId, project i obie strony wraz z patchem.
+6. ReleaseSummaryPreparation uzupelnia brakujacy lub niepelny wybrany patch:
+   czyta tylko istniejace strony wybranej zmiany przez verified read na SHA
+   i wylicza unified diff biblioteka JGit. Gotowy kompletny patch nie wymaga
+   tych odczytow. Dodanie/usuniecie nie powoduje odczytu nieistniejacej strony.
+   Identyczny blob przy zmianie nazwy/trybu nie wymaga odczytu tresci.
+   Binary, LFS, symlink, gitlink, niepelny tekst i blad odczytu pozostaja
+   jawnym PATCH_INCOMPLETE, bez udawania braku zmian i bez skanu modulow.
+   Brak poprawnego drzewa/manifestu blokuje AI; problem pojedynczej wybranej
+   roznicy nie usuwa potwierdzonego manifestu i nie blokuje calej sesji.
+7. Ta sama preparacja dobiera `.github/**/*.instructions.md` z target SHA
+   przez neutralne GitLabInstructionContextPort.discoverApplicable.
+   Inventory sluzy do odkrycia nazw; tresc czytana jest tylko dla instrukcji,
+   nie pozostalych modulow. applyTo obsluguje przecinkowe globy `*`, `**`, `?`;
+   brak pola oznacza zakres repozytorium. Dopasowanie obejmuje obie sciezki
+   wybranych zmian. Grupy klamrowe, klasy znakow, negacja, bledny YAML,
+   obciecie, limit i niezgodne provenance sa jawna luka, bez cichego
+   zastosowania do wszystkiego. Nie sa dolaczane pliki niepasujace.
+   Brak wybranych zmian nie uruchamia discovery instrukcji.
+   Dotychczasowe discover dla GitLab Source i Change Verification pozostaje
+   bez zmian; scoped discovery nie podaza rekurencyjnie za referencjami.
 
-Po nieudanym odczycie luka `SOURCE_UNAVAILABLE` zawiera stronę porównania,
-ścieżkę pliku lub zależności i etap: drzewo, odczyt/weryfikacja lub parser.
-Opis rozróżnia status HTTP, timeout, TLS, błąd I/O i brak potwierdzenia
-poprawności źródła; HTTP 429 jawnie wskazuje ograniczenie liczby odczytów.
-Nie ujawnia surowej wiadomości wyjątku ani body błędu.
-Diagnostyka serwera zapisuje lokalizację i typy przyczyn. Niepełny materiał
-nadal blokuje AI; ponowienia nie osłabiają kontroli SHA, blobów i pełności.
+Paginacja przechodzi wszystkie strony. Niepoprawny kursor, wpis, path/id/mode,
+duplikat lub brak body jest bledem, nie pustym diffem. Przejsciowe bledy
+transportu i HTTP 408/429/500/502/503/504 maja neutralny GitLabReadRetry:
+trzy proby, backoff 500/1000 ms, Retry-After do 120 s. TLS, walidacja i
+401/403/404 nie sa ponawiane. Retry nie dotyczy mutacji ani sesji AI.
 
-Początkowy prompt zawiera kompletne `payload` wybranego systemu, repozytoriów
-i zakresów kodu oraz pełny zebrany materiał źródłowy. Nie sprowadza encji do
-kart wyszukiwania i nie wycina danych do top-N. Pozostałe encje są dostępne
-przez `opctx_*` na tym samym zamrożonym katalogu.
+To nadal odczyt metadanych obu pelnych drzew, wiec duze repo wymaga wielu
+stron HTTP. Nie gwarantuje czasu w sekundach. Ogranicza koszt glownie przez
+usuniecie tysiecy HEAD/GET tresci; wybrane brakujace diffy i instrukcje maja
+celowane odczyty. Czas przygotowania i AI nalezy mierzyc osobno.
 
-## Podgląd przebiegu przed AI
+## Przebieg i prompt
 
-Przebieg ma stałą kolejność: `RESOLVE_REFS` (przypięcie rewizji),
-`COLLECT_LIQUIBASE` (zmiany per plik), `PREPARE_PROMPT` (inicjalny prompt)
-i `AI_REPORT`. Krok, który nie został uruchomiony przed zakończeniem runu,
-ma status `SKIPPED`. Ukończone kroki pozostają dostępne po błędzie kolejnego.
+Kolejnosc to RESOLVE_REFS, COLLECT_DIFF, PREPARE_PROMPT, AI_REPORT.
+Nieuruchomione kroki sa SKIPPED, ukonczone pozostaja po bledzie i restarcie.
+ProgressEvidence publikuje manifest i patch jako atrybut `Patch`, nie jako
+pelne beforeContent/afterContent. Zawiera refy/SHA, oba konce i tryby oraz
+ograniczenia. `producesEvidence` wskazuje projekcje takze przy blokadzie.
+Nie duplikuje jej w prompcie.
 
-Po zbieraniu `ReleaseSummaryProgressEvidence` tworzy operatorową projekcję
-do `contextSections`: jedną pozycję na repozytorium i ścieżkę, niezależnie
-od liczby jednostek manifestu. Pozycja zawiera typ zmiany, refy i SHA obu
-stron, stan odczytu oraz pełne `beforeContent` / `afterContent`.
-Wspólny panel pokazuje diff liniowy z oznaczeniami dodania/usunięcia.
-Nie przycina treści; duży diff zachowuje całe bloki, ograniczając koszt
-wyliczania dopasowania. Zmiana dołączenia lub zależności bez zmiany treści
-ma jawny opis. Brak pliku w zakresie, zweryfikowany pusty plik i brak
-zweryfikowanego odczytu są różnymi stanami. Luki zbierania mają osobną sekcję.
-`producesEvidence` kroku wskazuje te sekcje, także przy blokadzie przygotowania.
-Projekcja nie jest dopisywana do materiału AI; pełne źródła już są w evidence.
+PREPARE_PROMPT utrwala dokladny `preparedPrompt` i COMPLETED przed sprawdzeniem
+modelu, assemble i wykonaniem. Ten sam tekst trafia do CopilotRunRequest.
+Zawiera pelne captured payload encji systemu/repozytoriow/scope, obie rewizje,
+manifest tylko wybranych zmian (repozytorium, projekt, old/newPath), changelogChanges
+z przygotowanymi patchami, pasujace repositoryInstructions z target SHA,
+jawne luki oraz adres GitLaba dla cytowan. Nie osadza patchy pozostalego kodu.
+Limity discovery instrukcji sa jawne; platformowy preflight pozostaje bez
+cichego przycinania diffow albo Operational Context.
+Shared panel dostaje `preparedPromptStepCode=PREPARE_PROMPT`.
 
-`PREPARE_PROMPT` zapisuje pełny `preparedPrompt` i status `COMPLETED` przed
-sprawdzeniem modelu, assemble i wykonaniem AI. Jest to ten sam tekst, który
-otrzymuje `CopilotRunRequest`, bez osobnej wersji wyświetlanej. Panel otrzymuje
-jawne `preparedPromptStepCode="PREPARE_PROMPT"` i oferuje podgląd/kopiowanie.
-Nie wymaga odpowiedzi ani raportu AI; prompt pozostaje w historii i eksporcie
-także po błędzie modelu. Przy niepełnych źródłach albo `NO_CHANGES` sesja AI
-i przygotowanie promptu są pomijane.
+Kompletna lista Git bez zmian dopasowanych do filtra daje NO_CHANGES bez AI
+i bez pustych tabel. Wynik dotyczy tylko skonfigurowanego zakresu: nie oznacza
+identycznych rewizji ani braku zmian bazodanowych poza filtrem. Niepusty wybrany
+diff nie daje NO_CHANGES tylko dlatego, ze nie rozpoznano Liquibase.
+AI interpretuje przygotowane wybrane roznice i instrukcje, wykorzystujac pelny
+captured Operational Context. Manifest pozostalych plikow nie jest przekazywany. Filtr sciezki nie dowodzi braku skutkow poza nim.
+AI doczytuje konkretne potrzebne pelne pliki, include/includeAll, SQL/CSV,
+properties, rollback, kolejnosc, warunki i kod wyjasniajacy funkcje, nie skanuje
+wszystkich modulow ani wszystkich zmienionych Java/POM. Uwzglednia zasoby pomiedzy modulami,
+bez zgadywania po basename. Nierozwiazana zaleznosc to jawna luka badania,
+nie deterministyczna blokada przed sesja.
 
-## Pełność źródeł i wynik
+## AI i raport
 
-| Sytuacja | Zachowanie |
+Polski skill `release-summary-write-report` pracuje w jednym wspolnym effective
+root platformy. Seed nie nadpisuje istniejacych plikow; operator moze przywrocic
+aktualny seed w Platform / AI Skills. Inline prompt, puste artifactContents,
+bez attachments, shell, DB, zapisu repo ani wykonywania migracji.
+
+Allowlista: szesc narzedzi GitLab (branches, tree, files, search, read, chunk),
+cztery opctx (scope, list, search, get) i szesc report (get, chunk, upsert,
+patch, header, meta). Built-in skill obsluguje platforma. GOAL_DRIVEN nie ma
+feature'owego limitu liczby wywolan; nadal obowiazuja scope i limity providera.
+Hidden forRevisions zachowuje oba SHA, odrzuca trzeci ref tych repo i osobno
+przypina dodatkowe projekty grupy. Katalog jest captured read session.
+Wybrany/domyslny model jest wymagany, a platformowy preflight sprawdza caly
+prompt bez cichego przycinania i bez feature'owego wyboru tieru.
+
+AnalysisReport jest trescia; finalna proza ani JSON nie zastepuja report tools.
+Scaffold jest prywatny. Zaakceptowany zapis sekcji publikuje checkpoint.
+
+| Sekcja | Order i tresc |
 | --- | --- |
-| Brak refa, błąd HTTP, niepełne drzewo, odczyt lub niezgodny blob | `BLOCKED`, bez sesji AI. |
-| Brak wymaganej zależności, cykl, dynamiczna ścieżka lub custom filtr includeAll | Jawna blokada przygotowania. Opcjonalne puste includeAll jest respektowane. |
-| Git LFS bez treści, symlink w zakresie lub zmieniony submodule | Jawna luka i blokada; nie deklarujemy pełności plików tych mechanizmów. |
-| Pełne źródła, brak jednostek i luk | `NO_CHANGES`, raport deterministyczny bez AI. |
-| SQL, dane, custom change lub nieznana przestrzeń nazw XML | Materiał trafia do AI, ale jego pełność semantyczna pozostaje `AI_IDENTIFIED`. |
-| Brak uzasadnienia funkcjonalnego lub nierozstrzygnięte ograniczenie | Raport `PARTIAL` z konkretną luką. |
-| Wszystkie wymagane sekcje i elementy udokumentowane bez luk | `COMPLETED`. |
-| AI nie zapisze raportu przez tools | `FAILED` z `REPORT_NOT_WRITTEN`; finalna proza nie zastępuje raportu. |
-| Błąd/timeout po zaakceptowanej mutacji raportu | `PARTIAL`; checkpoint zachowuje zapisane sekcje. |
+| OVERVIEW | 1; krotkie podsumowanie zmian danych i celu. |
+| TABLE_LIST | 2; Tabela / Zakres zmian albo dokladnie `Nie zidentyfikowano zmian tabel.`. |
+| DB_DETAIL_<slug> | 3..999999; osobno repo/kwalifikowana tabela, tytul zgodny z lista. |
+| APPENDIX | 1000000; pozostale operacje, ustawienia, wycofanie i warunki. |
 
-`expectedUnits` / `documentedUnits` liczą grupy tabel wyodrębnione po repozytorium
-i kwalifikowanej nazwie oraz opcjonalną grupę pozycji appendixu. Nie liczą
-plików, węzłów parsera ani jego paczek evidence. `expectedElements` to suma
-obowiązkowych pozycji inwentarza, a `documentedElements` obejmuje pozycje
-z poprawnie zwalidowanych sekcji. Dodatkowe wiersze opisane przez AI nie
-zwiększają tych liczników; mapowanie skryptu na wiersze nie jest niezależnym
-potwierdzeniem liczby wszystkich obiektów semantycznych SQL.
+Feature dopuszcza nowe DB_DETAIL id dopiero po walidacji, dopisujac je do
+wlasnej session-bound listy uzywanej przez report tools. Platforma nadal
+sprawdza dokladne id, bez wildcardow i bez semantyki Liquibase.
+Tabela szczegolow ma Obiekt / Zmiana / Opis funkcjonalny. Zmiana zachowuje
+SQL, typ, NULL, default, definicje i wartosci przed/po. Kolumna z constraints
+to jeden wiersz; indeks zachowuje kolejnosc i unikalnosc. SQL rozwin na obiekty,
+bez dodatkowego wiersza skryptu i bez sztucznego sql-coverage. Funkcja wymaga
+odczytanego kodu/opctx albo jawnego braku dowodow. Nie zawiera zargonu kodu,
+prefiksow wniosku, linkow i identyfikatorow parsera. Usuniecie pliku nie
+oznacza DROP w dzialajacej bazie.
 
-Pełne pokrycie wymaganych pozycji może nadal dawać `PARTIAL`, gdy pozostają
-niezweryfikowane operacje SQL, brak zastosowania funkcjonalnego lub inne luki.
-Nie oznacza to braku wygenerowanego raportu. Status, pokrycie strukturalne
-i `visibilityLimits` należy odczytywać razem. `AnalysisReport` jest źródłem
-treści; wynik V1 jest jego deterministyczną projekcją względem inwentarza
-zbudowanego z evidence.
+Cytowania sa tylko w meta.references jako URL rzeczywiscie odczytanego zrodla.
+Sam patch compare NIE rejestruje pelnego sourceRef. Pelne verified odczyty
+przygotowania roznic oraz kompletne pasujace instrukcje sa rejestrowane w
+prywatnym knownSources, przekazywane w source-links i zachowywane po restarcie;
+AI nie powtarza ich tylko dla cytowania. Kazda sekcja tabeli wymaga
+odczytanego pliku GitLab na przypietym SHA. URL opctx otwiera biezaca encje,
+ale podstawą badania jest captured snapshot. Patch i manual edit zachowuja
+walidacje struktury i cytowan; neutralny digest/revision guard pozostaje.
+Backend nie udaje niezaleznej weryfikacji prawdziwosci definicji SQL przez parser.
 
-## Sesja AI i narzędzia
+Wynik `release-summary-diff-report-v1` ma changeListComplete, changedFiles (liczba wybranych zmian),
+documentedTables, readSources, semanticCoverage i visibilityLimits. Nie ma
+expectedUnits/expectedElements ani licznika pelnosci semantycznej.
+semanticCoverage to AI_ASSESSED (NOT_APPLICABLE dla pustej delty). COMPLETED
+oznacza poprawnie zapisany raport bez zadeklarowanych luk, nie dowod rozpoznania
+wszystkich skutkow. Systemowy visibilityLimit przypomina o tej granicy także
+przy COMPLETED; UI i Share przekazuja go do shared meta. Braki sekcji,
+niezgodnosc listy tabel, niedozwolone zrodla lub jawne luki daja PARTIAL.
+Brak zapisu raportu to FAILED/REPORT_NOT_WRITTEN. Timeout po mutacji zachowuje
+PARTIAL z checkpointem. Niepelny manifest daje BLOCKED/CHANGE_LIST_INCOMPLETE.
 
-Feature składa `CopilotRunRequest` oraz polski skill
-`release-summary-write-report`. Katalog skilli jest wspólnym effective rootem
-platformy. Materiał jest inline w prompcie; `artifactContents` jest pusty,
-bez attachments i bez lokalnego filesystemu dla modelu.
+## Historia i UI
 
-Jawna allowlista obejmuje sześć neutralnych narzędzi GitLab
-(`gitlab_list_repository_branches`, `gitlab_list_repository_tree`,
-`gitlab_list_repository_files`, `gitlab_search_repository_files`,
-`gitlab_read_repository_file`, `gitlab_read_repository_file_chunk`), cztery
-narzędzia `opctx_*` (`get_scope`, `list_entities`, `search`, `get_entity`)
-oraz sześć narzędzi raportu (`report_get_current`, `report_read_section_chunk`,
-`report_upsert_section`, `report_patch_section`, `report_update_header`,
-`report_update_meta`). Wbudowany `skill` pozostaje obsługiwany przez platformę.
+Shared polling, progress/activity/evidence/usage, report renderer, Share,
+manual editor, chat i operation guard pozostaja. Usage initial i chatu nie
+jest liczone podwojnie. Restart zachowuje SHA i captured katalog bez resolve;
+przerwany run staje sie INTERRUPTED/PARTIAL, wiadomosc FAILED bez resend.
+Brak prywatnego kontekstu wylacza kontynuacje. Chat wznawia istniejaca sesje
+bez fallbacku; mutacje wymagaja jawnego updateReport, domyslnie false.
 
-Hidden `GitLabRepositoryToolScope.forRevisions` dopuszcza obie przypięte rewizje
-repozytoriów porównania, odrzuca trzeci ref tych repo i osobno przypina
-dodatkowe projekty skonfigurowanej grupy. Odczyty rejestrują `sourceRef`.
-Odczyt może podać nazwę wybranego refa albo jego pełny SHA; znany SHA jest
-akceptowany tylko dla projektu, do którego został przypięty, bez nowego resolve.
-Hidden `OPERATIONAL_CONTEXT_READ_SESSION` zamraża katalog. Nie zmienia to
-domyślnego zachowania innych feature'ów.
+Publiczny envelope: schema tdw.release-summary-export, version 1,
+payload.type release-summary-analysis i resultContract release-summary-diff-report-v1.
+Zawiera diff, prompt, przebieg, raport, wynik, chat i usage, bez auth i sessionId.
+Import lokalny jest read-only. Stary ksztalt skanu i inne wersje sa odrzucane,
+bez migratora. Stare lokalne runy mozna usunac przez shared History API
+sprzatajace tez sesje; wymaga to osobnej zgody na dokladny zakres danych.
 
-`GOAL_DRIVEN` wyłącza budżet liczby wywołań dla tej sesji, bez
-`CopilotSessionHardToolBudget`. Nadal obowiązują scope, allowlista, uprawnienia
-oraz limity dostawcy. Shell, DB, zapis kodu i mutation tools katalogu nie są
-dostępne. Brak budżetu wywołań nie oznacza nieskończonego okna modelu ani czasu.
+Ekran zachowuje wspolne application/branch select, paginacje i typowane refy,
+bez auto-select dla pary. Aplikacja i refy sa w jednym rzedzie, AI w drugim,
+akcje na dole; mobile uklada pola pionowo. Etykiety to Punkt wejscia i Stan
+docelowy, bez zamiany kierunku. Oba selektory zamiast etykiety rodzaju refa pokazuja date ostatniego commita
+w formacie dd.MM.yyyy, w strefie przegladarki, bez godziny. Brak danych to
+`Brak daty`. Tooltip wyjasnia najnowsza date i daty per repozytorium.
+Paginacja scala metadane powtarzajacych sie refow, nie gubi dat poprzedniej
+strony. Kolejnosc listy i wyszukiwanie po nazwie pozostaja bez zmian.
+Historia QUEUED/RUNNING wznawia polling.
+Wynik zaczyna jeden AnalysisResultHeader: `Zmiany bazodanowe miedzy ... a ...`
+z requestu joba, także dla Share. Bez dodatkowego naglowka, zakladek, paskow
+statusu i osobnego widoku kompletności. Report panel ma embedded=true,
+showTechnicalIds=false, zachowane kotwice i zwijany appendix/meta. Bledy i
+informacja o imporcie sa pod naglowkiem. Nawigacja lokuje feature po Change
+Verification, przed Config Drift Viewer, z ikona deployed_code.
 
-Wybrany model lub skonfigurowany `analysis.ai.copilot.model` jest wymagany.
-Platformowy preflight sprawdza cały przygotowany prompt z dynamicznym katalogiem
-modeli i polityką long context. Feature nie przycina wejścia, nie zmienia
-samodzielnie tieru ani nie przełącza go na inny model. Brak modelu daje
-`MODEL_REQUIRED`, odmowa preflightu `CONTEXT_PREFLIGHT_FAILED`. Bieżący
-`analysis.ai.copilot.send-and-wait-timeout` w application.properties wynosi `20m`.
-
-## Raport i walidacja
-
-Odbiorcą jest analityk systemowy na poziomie mid, który zna SQL, ale nie kod
-aplikacji ani Liquibase. `ReleaseSummaryReportInventory` grupuje obiekty według
-repozytorium i kwalifikowanej nazwy tabeli, niezależnie od plików i paczek
-parsera. Tabele z różnych repozytoriów lub schematów pozostają oddzielne.
-Kolumna wraz z ograniczeniami jest jedną pozycją, a indeks obejmuje uporządkowane
-kolumny i unikalność. Niezmienione właściwości rodzica są odtwarzane z pełnego
-pliku, także przy zmianie samego NULL/NOT NULL lub kolejności kolumn indeksu.
-Pełne źródła, manifest parsera i wszystkie właściwości pozostają w evidence.
-
-| Sekcja | Treść |
-| --- | --- |
-| `OVERVIEW` | Podsumowanie: 2–3 krótkie zdania o zmianach danych i ich celu. |
-| `TABLE_LIST` | Lista tabel: Tabela, Zakres zmian; bez odsyłaczy do innych sekcji. |
-| `DB_DETAIL_<groupId>` | Jedna sekcja tabeli: Obiekt, Zmiana, Opis funkcjonalny. |
-| `APPENDIX` | Nieprzypisane operacje, ustawienia migracji, wycofanie oraz istotne warunki wdrożenia. |
-
-Kolumna **Zmiana** zachowuje rodzaj operacji i szczegóły SQL: typ, dopuszczalność
-NULL, wartość domyślną, definicję indeksu lub ograniczenia oraz wartości przed/po.
-Znana definicja jest niezmiennym początkiem komórki; dodatkowe szczegóły tego
-obiektu można dopisać po `<br>`. Dzięki temu operacja SQL zmieniająca tryb tabeli
-pozostaje przy tej tabeli w kolumnie Zmiana. Akapity pod tabelą nie zastępują
-definicji w komórkach, a mapowanie SQL na znaną pozycję wymaga takiego uzupełnienia.
-Opis funkcjonalny wyjaśnia zastosowanie danych zwykle jednym, najwyżej dwoma
-krótkimi zdaniami. Nie zawiera nazw klas, metod, DAO, changelogów ani prefiksów
-„Potwierdzone”, „Wniosek” i „Do wyjaśnienia”. Każda sekcja jest samodzielna.
-Kod pozostaje materiałem badania, a źródła pojawiają się wyłącznie w meta.
-Gdy nie ustalono funkcji, opis mówi o tym wprost, np. „Nie ustalono zastosowania
-pola.”; zakres badania i brakujące dowody trafiają do `meta.gaps`.
-
-Surowy SQL otrzymuje jedynie wskazówki przypisania do tabeli. Nieznane operacje
-pozostają w appendixie, a AI nadal odpowiada za pełną inwentaryzację SQL.
-W głównej tabeli opisuje rzeczywiste obiekty bez powtarzającego je wiersza
-skryptu. Dla każdego tak rozwiniętego skryptu metadane zawierają referencję
-`type: sql-coverage`, etykietę z planu, URL źródła oraz dokładne nazwy opisanych
-wierszy w `description`, po jednej w linii. Walidator sprawdza istnienie wierszy
-i odczytanego źródła. Mapowanie nie jest dowodem semantycznej pełności SQL:
-`structurallyVerified` pozostaje false, a raport nie zyskuje przez nie COMPLETED.
-Usunięcie definicji z repozytorium nie oznacza wykonania DROP w działającej bazie.
-
-Walidator wymaga wszystkich pozycji, znanych definicji, właściwego kierunku
-zmiany, kompletnych komórek, kolejności sekcji i źródeł faktycznie odczytanych
-przez sesję. `meta.references.target` jest zweryfikowanym URL z mapy źródeł,
-nie surowym sourceRef. Krótkie etykiety linków otwierają pliki na przypiętym SHA;
-linki Operational Context otwierają bieżącą encję, lecz podstawą analizy pozostaje
-captured snapshot. Nie pokazujemy identyfikatorów parsera ani technicznych ID
-sekcji w treści raportu.
-
-Wspólny renderer sortuje sekcje według `order`, niezależnie od kolejności
-checkpointów. Reuse'uje section-content i zwijane meta pod sekcją. Feature
-wskazuje opcjonalną sekcję appendixu; jej treść i metadane całego raportu są
-zwinięte na samym dole. Share używa tej samej kolejności: Markdown obejmuje
-główny raport, a Markdown + Meta także źródła i appendix. Edytor ręczny
-zachowuje walidację definicji, źródeł i mapowania SQL.
-
-Mutacja jest walidowana przed zapisem. `report_patch_section` dodatkowo
-zachowuje wspólny digest guard i unikalność zastępowanego fragmentu.
-Scaffold i instrukcje uzupełniania są prywatnym materiałem AI. Samo przygotowanie
-kontekstu, blokada modelu lub zmiana nagłówka nie publikuje ich jako wyniku.
-Dopiero zaakceptowana sekcja daje checkpoint raportu. Placeholdery są odrzucane;
-literalne wartości źródłowe nie są traktowane jak instrukcje do uzupełnienia.
-Nie ma odczytu rezultatu z JSON ani prozy ostatniej wiadomości modelu.
-NO_CHANGES ma osobny krótki raport bez pustych tabel i bez sesji AI.
-
-## Historia, chat, edycja i przenoszenie
-
-UI reuse'uje polling, report panel, evidence/activity/usage, Share,
-manual editor i chat. Wymaga wybranego modelu albo modelu domyślnego backendu.
-W nawigacji Analysis Features i siatce Workspace Overview Release summary
-występuje bezpośrednio po Change Verification i używa ikony `deployed_code`.
-Analysis History udostępnia run również w stanach `QUEUED` i `RUNNING`.
-Otwarcie wpisu prowadzi do `/release-summary?localRunId=...`; ekran odczytuje
-bieżący snapshot i wznawia polling tego samego joba, bez ponownego startu.
-Formularz grupuje aplikację i parę refów oznaczonych „Punkt wejścia” i „Stan
-docelowy” w jednym rzędzie, a model i reasoning effort w dwóch równych polach
-poniżej. Akcje generowania, importu i eksportu są na dole. Wspólny application
-select przedstawia nazwę i opis aplikacji zgodnie z wzorcem Explorerów.
-Na węższych ekranach pola układają się pionowo.
-Formularz nie oferuje automatycznej zamiany kierunku.
-Wynik zaczyna się od jednego wspólnego nagłówka
-`Zmiany bazodanowe między {punkt wejścia} a {stan docelowy}`, bez poprzedzających
-go pasków statusu i kierunku ani zakładek. Tytuł pochodzi z requestu zapisanego
-joba, także w historii i imporcie; zmiana formularza kolejnego porównania
-go nie zmienia.
-Share używa tego samego tytułu. Shared report panel z `embedded=true` renderuje
-samą treść bez drugiego nagłówka i zewnętrznej zwijanej karty; domyślny wariant
-pozostałych konsumentów zachowuje nagłówek. `showTechnicalIds=false` ukrywa
-techniczne ID, zachowując kotwice sekcji.
-Nie generujemy osobnego widoku kompletności i źródeł. Źródła i ograniczenia
-raportu są w meta i appendixie, a pełny zebrany materiał w przebiegu analizy.
-Błędy oraz informacja o imporcie pojawiają się pod nagłówkiem. Wyliczanie
-kompletności i statusu nadal należy do backendowej walidacji raportu.
-Usage runu dotyczy initial analysis,
-a usage wiadomości kolejnych tur; wspólny aside agreguje je bez podwójnego liczenia.
-
-Publiczny export ma `schema: tdw.release-summary-export`, `version: 1`,
-`payload.type: release-summary-analysis` i
-`payload.resultContract: release-summary-analyst-report-v1`. Zawiera pełne źródła,
-kroki przebiegu, przygotowany prompt, raport, wynik, wiadomości i statystyki
-usage, w tym liczbę tokenów. Nie zawiera danych uwierzytelniających, identyfikatora
-sesji Copilota ani prywatnego kontekstu kontynuacji.
-Import pliku jest lokalny w UI, wyłącznie do odczytu, bez
-odtwarzania uprawnień lub sesji AI. Inne wersje, tryby i poprzedni układ sekcji
-raportu są odrzucane. Bieżący format pozostaje w wersji 1, bez migratora.
-Przy zmianie formatu lokalne raporty poprzedniego układu usuwa się przez API
-historii, które sprząta również powiązaną sesję Copilota.
-
-Prywatny local run zapisuje captured katalog, przypięte rewizje, znane źródła
-oraz referencję auth i sesji. Restart odtwarza je bez ponownego przypinania
-branchy. Przerwany run staje się `INTERRUPTED` lub `PARTIAL`, a niedokończona
-wiadomość otrzymuje błąd; wysłanie nie jest automatycznie powtarzane. Brak
-prywatnego kontekstu oznacza read-only z wyjaśnieniem.
-
-Zwykłe pytanie follow-up jest read-only. Checkbox „Zleć AI zmianę raportu”
-ustawia jawne `updateReport=true`. Kontynuacja używa istniejącej sesji bez
-fallbacku do nowej. Wspólna blokada operacji serializuje chat i manual edit,
-a revision guard chroni przed zapisem nieaktualnej wersji raportu.
-
-## Konfiguracja i diagnostyka
-
-`release-summary.enabled=${RELEASE_SUMMARY_ENABLED:true}` steruje dostępnością.
-Wyłączenie i restart usuwają formularz nowych runów oraz CTA z nawigacji/landing,
-blokują start, chat i zapis, zachowując trasę odczytu historii i export.
-Nie wymaga to wycofywania neutralnych capability używanych przez inne feature'y.
-
-Testy jednostkowe i integracyjne nie wymagają zewnętrznego Copilota. Pilot
-`ReleaseSummaryRuntimeTest` jest opt-in przez `RELEASE_SUMMARY_LIVE_TEST=true`;
-wymaga lokalnie skonfigurowanego dostępu do Copilota i zużywa jego limit/koszt.
-Używa fikcyjnych portów CRM dla źródeł, rzeczywistej sesji i report tools.
-Zapisuje raport pod `target/release-summary-pilot/result.json`. Zwykła regresja
-pomija tylko ten test live. Seed skilla nie nadpisuje operatorowych zmian
-effective kopii; przy potrzebie powrotu do seeda służy ekran Platform / AI Skills.
+`release-summary.enabled` blokuje nowe starty/chat/edit, zachowujac historie
+i export. Nie wycofuje reusable capability. Testy sa fikcyjnym CRM; opt-in
+RELEASE_SUMMARY_LIVE_TEST=true uruchamia platna sesje Copilota, standardowo
+pomijana. Walidacja wspolnego kontraktu wymaga testow Angulara, builda UI,
+a nastepnie `mvn -q -Pbackend-dev clean package`.

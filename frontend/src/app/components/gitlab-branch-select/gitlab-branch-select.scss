@@ -47,7 +47,7 @@
 }
 
 .branch-select__control > span:first-child,
-.branch-select__option > span {
+.branch-select__option-content {
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -81,8 +81,8 @@
   flex-direction: column;
   gap: 10px;
   min-width: min(16rem, calc(100vw - 32px));
-  max-height: min(20rem, 50vh);
-  overflow: auto;
+  max-height: min(28rem, 60vh);
+  overflow: hidden;
   padding: 10px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -98,8 +98,10 @@
 }
 
 .branch-select__options {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
+  gap: 4px;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -107,9 +109,10 @@
 
 .branch-select__option {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
+  align-items: start;
+  gap: 12px;
   min-width: 0;
   min-height: 44px;
   padding: 10px;
@@ -121,6 +124,30 @@
   line-height: 1.4;
   text-align: left;
   cursor: pointer;
+}
+
+.branch-select__option-content {
+  display: grid;
+  gap: 4px;
+}
+
+.branch-select__option-name {
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.branch-select__repositories {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.branch-select__option-badges {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  padding-top: 2px;
+  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .branch-select__option:hover,

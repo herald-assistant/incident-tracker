@@ -35,14 +35,26 @@ Incident Analysis, Flow Explorer, Change Verification, Config Drift Viewer,
 UI Explorer, UX Inspector i Release summary sa rodzenstwem. Zaden z nich nie jest generycznym
 core dla pozostalych.
 
-`features.releasesummary` posiada discovery/parsing Liquibase, manifest
-pokrycia, walidator tabel, prompt/policy, job i adapter lokalnej historii.
-Neutralne `GitLabRepositoryRefPort` i `GitLabRepositorySnapshotPort` należą do
-integracji; pełne drzewo deleguje do tego samego tree service i cache co inni
-konsumenci. Snapshot zachowuje blob ID, mode/gitlinks i symlinki. Narzędzia
+`features.releasesummary` posiada kolektor diff, interpretacje Liquibase przez
+AI, walidator raportu, prompt/policy, job i adapter lokalnej historii.
+Neutralne `GitLabRepositoryRefPort` i `GitLabRepositoryComparisonPort` należą do
+integracji. Porownanie potwierdza kompletna liste zmian przez metadane obu
+drzew ze wspolnego tree service, niezaleznie od ograniczen patchy compare.
+Zachowuje sciezki, blob/gitlink ID i tryby, bez odczytu tresci plikow.
+Feature-owned ReleaseSummaryDiffCollector wybiera zmiany przez konfigurowalny
+contains any of (`release-summary.diff.path-contains-any`, domyslnie
+`sql,changelog`) po obu sciezkach. ReleaseSummaryPreparation uzupelnia brakujace wybrane diffy przez GitLabRepositoryReadPort,
+GitLabVerifiedRepositoryFilePort i JGit, a neutralne
+GitLabInstructionContextPort.discoverApplicable dobiera instrukcje po applyTo
+na target SHA. Dotychczasowe discovery pozostaje bez zmian dla GitLab Source
+i Change Verification. Prompt i evidence zawieraja tylko manifest wybranych zmian i ich roznice,
+instrukcje i captured opctx; verified reads oraz instrukcje zachowuja provenance
+w dotychczasowym prywatnym runtime bez zmiany publicznego kontraktu V1. Narzedzia
 posiadają scope wielu rewizji i opcjonalny captured read session katalogu,
 bez wiedzy o Liquibase. Platforma uruchamia przekazany `CopilotRunRequest`
-i report tools. Kontrakt wyniku oraz ocena kompletności pozostają w feature.
+i report tools. Feature po walidacji dopisuje dynamiczne DB_DETAIL_* do
+wlasnej session-bound listy dozwolonych sekcji, bez rozszerzenia polityki
+platformy. Kontrakt wyniku odroznia kompletna liste Git od AI_ASSESSED.
 Wspólne selecty, renderer raportu, fragmenty Markdown i agregacja usage są
 wspólnymi mechanizmami frontendu. [Runtime](release-summary-runtime-flow.md)
 opisuje konsumentów i kierunek przepływu.
@@ -159,6 +171,14 @@ i fabryki w `config`, cache tree w `internal`, a serwisy w `service`.
 Konsumenci poza integracja importuja porty i kontrakty; wyjatkiem jest
 `api.workspacesettings.WorkspaceSettingsService`, ktory aktualizuje properties
 w runtime. `IntegrationPackageBoundaryTest` sprawdza obie granice.
+
+Adapter REST interpretuje `X-Gitlab-File-Path` jako zadana sciezke tylko wtedy,
+gdy naglowek jest z nia identyczny albo przedstawia dokladnie jej bajty UTF-8
+odczytane jako Latin-1. Nie dekoduje procentow ani nie zamienia plusow na
+spacje. Inna wartosc pozostaje niezgodna dla verified read. Ta lokalna
+interpretacja HTTP nie zmienia kontroli scope'u, rewizji, rozmiaru, hasha
+ani kompletnej tresci w `GitLabVerifiedRepositoryFileReader`. Konsumenci
+nadal odpowiadaja za swoja polityke niekompletnych zrodel.
 
 `integrations.gitlab.service.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular

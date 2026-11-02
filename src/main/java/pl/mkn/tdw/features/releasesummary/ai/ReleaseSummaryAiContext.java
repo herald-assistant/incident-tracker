@@ -15,6 +15,7 @@ public final class ReleaseSummaryAiContext {
     public final OperationalContextReadSession catalog;
     public final GitLabRepositoryToolScope repositoryScope;
     public final Set<String> knownSources=ConcurrentHashMap.newKeySet();
+    public final java.util.concurrent.CopyOnWriteArrayList<String> sectionIds=new java.util.concurrent.CopyOnWriteArrayList<>();
     public final Consumer<AnalysisReport> checkpoint;
     public final Runnable privateCheckpoint;
     public final boolean reportWritable;

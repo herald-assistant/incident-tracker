@@ -21,13 +21,16 @@ public class ReleaseSummaryCatalog {
     private final GitLabRepositoryRefPort refPort;
     private final GitLabRepositoryRevisionPort revisionPort;
     public record Application(String systemId, String name, String summary, int repositoryCount) {}
-    public record RefOption(String name, String label, GitLabRef.Kind kind, boolean isDefault, List<String> repositories) {}
+    public record RepositoryCommit(String repositoryId, String committedAt) {}
+    public record RefOption(String name, String label, GitLabRef.Kind kind, boolean isDefault,
+                            List<String> repositories, String committedAt, List<RepositoryCommit> repositoryCommits) {}
     public record RefOptions(List<RefOption> branches, Integer nextPage, boolean truncated, List<String> warnings) {}
 
     public List<Application> applications() {
         var catalog = operationalContextPort.capture().snapshot().catalog();
         return catalog.systems().stream().map(s -> new Application(s.id(), s.name(), s.summary(),
-                scopes(catalog,s.id()).stream().flatMap(c -> c.repositories().stream()).map(r -> r.repoId()).distinct().toList().size()))
+                scopes(catalog,s.id()).stream().flatMap(c -> c.repositories().stream())
+                        .filter(this::includedRepository).map(r -> r.repoId()).distinct().toList().size()))
                 .filter(s -> s.repositoryCount()>0).sorted(Comparator.comparing(a -> a.name()!=null?a.name():a.systemId())).toList();
     }
     public RefOptions refs(String systemId, GitLabRef.Kind kind, String search, int page) {
@@ -37,25 +40,37 @@ public class ReleaseSummaryCatalog {
             if (search == null || search.isBlank()) return new RefOptions(List.of(),null,false,List.of("Wpisz pełny SHA commita."));
             var ref=new GitLabRef(kind,search);
             var found=new ArrayList<String>();
+            var dates=new ArrayList<RepositoryCommit>();
             selected.repositories().forEach(r -> {
-                validateRevision(revisionPort.resolveRevision(group(),r.project(),ref.canonical()),r.project(),ref.canonical());
+                var revision=revisionPort.resolveRevision(group(),r.project(),ref.canonical());
+                validateRevision(revision,r.project(),ref.canonical());
+                dates.add(new RepositoryCommit(r.repositoryId(),new GitLabRefOption(ref,revision.committedAt(),false).committedAt()));
                 found.add(r.repositoryId());
             });
-            return new RefOptions(List.of(new RefOption(ref.canonical(),ref.name(),kind,false,found)),null,false,List.of());
+            return new RefOptions(List.of(new RefOption(ref.canonical(),ref.name(),kind,false,List.copyOf(found),latest(dates),List.copyOf(dates))),null,false,List.of());
         }
         var values=new LinkedHashMap<String,RefOption>();
         Integer next=null;
         for(var repository:selected.repositories()) {
             var result=refPort.listRefs(group()+"/"+repository.project(),kind,search,page);
             if(result.nextPage()!=null) next=result.nextPage();
-            for(var ref:result.refs()) {
+            for(var option:result.refs()) {
+                var ref=option.ref();
                 var ids=new ArrayList<String>();
+                var dates=new ArrayList<RepositoryCommit>();
+                var previous=values.get(ref.canonical());
+                if(previous!=null)dates.addAll(previous.repositoryCommits());
+                dates.add(new RepositoryCommit(repository.repositoryId(),option.committedAt()));
                 if(values.containsKey(ref.canonical())) ids.addAll(values.get(ref.canonical()).repositories());
                 ids.add(repository.repositoryId());
-                values.put(ref.canonical(),new RefOption(ref.canonical(),ref.name(),kind,false,List.copyOf(ids)));
+                values.put(ref.canonical(),new RefOption(ref.canonical(),ref.name(),kind,option.isDefault() || previous!=null && previous.isDefault(),List.copyOf(ids),latest(dates),List.copyOf(dates)));
             }
         }
         return new RefOptions(List.copyOf(values.values()),next,next!=null,List.of());
+    }
+    private String latest(List<RepositoryCommit> dates) {
+        return dates.stream().map(RepositoryCommit::committedAt).filter(Objects::nonNull)
+                .max(java.util.Comparator.comparing(java.time.Instant::parse)).orElse(null);
     }
     public ReleaseSummaryScope pin(ReleaseSummaryRequest request, OperationalContextReadSession session) {
         var selected=select(session, request.systemId());
@@ -93,6 +108,7 @@ public class ReleaseSummaryCatalog {
         for(var scope:scopes(catalog,systemId)) {
             entities.add(entity("codeSearchScope",scope.id(),scope.payload()));
             for(var entry:scope.repositories()) {
+                if(!includedRepository(entry)) continue;
                 var repo=catalog.repositories().stream().filter(r -> r.id().equals(entry.repoId())).findFirst()
                         .orElseThrow(() -> new ReleaseSummaryException("REPOSITORY_NOT_FOUND","Brak encji repozytorium "+entry.repoId()));
                 var path=repo.git().projectPath();
@@ -113,6 +129,10 @@ public class ReleaseSummaryCatalog {
         }
         if(repositories.isEmpty()) throw new ReleaseSummaryException("NO_REPOSITORIES","Aplikacja nie ma zakresu repozytoriów.");
         return new ReleaseSummaryScope(system.id(),system.name(),group(),session.contentDigest(),List.copyOf(repositories.values()),entities);
+    }
+    private boolean includedRepository(OperationalContextRepositorySearchRepository entry) {
+        return Integer.valueOf(1).equals(entry.priority())
+                && "primary".equals(entry.role());
     }
     private List<OperationalContextRepositorySearchScope> scopes(OperationalContextCatalog c,String systemId) {
         return c.codeSearchScopes().stream().filter(s -> "system".equals(s.target().type()) && systemId.equals(s.target().id())).toList();

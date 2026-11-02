@@ -1,6 +1,7 @@
 package pl.mkn.tdw.integrations.gitlab.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriUtils;
@@ -30,10 +31,12 @@ public class GitLabRepositoryRefService implements GitLabRepositoryRefPort {
         var next = response.getHeaders().getFirst("X-Next-Page");
         Integer nextPage = next != null && !next.isBlank() ? Integer.valueOf(next) : null;
         if (nextPage != null && nextPage <= page) throw new IllegalStateException("Invalid GitLab pagination");
-        return new GitLabRefPage(Arrays.stream(body).map(r -> new GitLabRef(kind, r.name())).toList(), nextPage);
+        return new GitLabRefPage(Arrays.stream(body).map(r -> new GitLabRefOption(new GitLabRef(kind, r.name()), r.commit() == null ? null : r.commit().committedDate(), r.defaultBranch())).toList(), nextPage);
     }
     private String encode(String value) { return UriUtils.encode(value, StandardCharsets.UTF_8); }
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record RefPayload(String name) {}
+    private record RefPayload(String name, @JsonProperty("default") boolean defaultBranch, CommitPayload commit) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record CommitPayload(@JsonProperty("committed_date") String committedDate) {}
 }
 

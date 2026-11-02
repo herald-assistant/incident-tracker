@@ -6,4 +6,6 @@ import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionContextRe
 public interface GitLabInstructionContextPort {
 
     InstructionContextResult discover(InstructionContextRequest request);
+
+    InstructionContextResult discoverApplicable(InstructionContextRequest request);
 }

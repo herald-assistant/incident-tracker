@@ -44,7 +44,9 @@ po Change Verification, przed Config Drift Viewer; oba miejsca używają ikony
 Release summary używa wspólnego application select (także Flow Explorer) oraz
 branch select z typowanymi refami i paginacją. Dla pary refów wyłącza auto-select.
 Historia otwiera także QUEUED/RUNNING i wznawia polling bez nowego startu.
-Przebieg pokazuje źródła per plik i pełny prompt na osobnym PREPARE_PROMPT;
+Przebieg pokazuje manifest diff i dostepny patch per plik, nie pelne tresci
+before/after. COLLECT_DIFF odroznia kompletna liste zmian od ograniczen patchy.
+Pelny prompt jest na osobnym PREPARE_PROMPT;
 przekazuj ten kod przez preparedPromptStepCode wspólnego panelu kroków.
 Polling, raport, editor, chat, aside i Share pozostają shared. Nie sumuj usage
 chatu drugi raz w initial job usage.
@@ -60,7 +62,11 @@ Shared report panel używa embedded=true i showTechnicalIds=false; zachowaj
 kotwice sekcji, meta, appendix i źródła. Tabele mają trzy kolumny: Obiekt,
 Zmiana (ze szczegółami SQL), Opis funkcjonalny. Pokazuj tylko opublikowane
 sekcje; blokada przygotowania nie jest raportem. Błędy i informacja o imporcie
-pozostają pod nagłówkiem, a pełne źródła w przebiegu analizy.
+pozostają pod nagłówkiem, a diff i odczytane przez AI zrodla w przebiegu analizy.
+Wynik release-summary-diff-report-v1 ma changeListComplete, changedFiles,
+documentedTables, readSources i semanticCoverage=AI_ASSESSED; liczniki nie
+sa dowodem pelnej interpretacji. visibilityLimits wyniku trafia do shared
+meta raportu i Share. Import V1 odrzuca stary ksztalt skanu bez migracji.
 Kontrakt opisuje
 `docs/architecture/release-summary-runtime-flow.md`.
 

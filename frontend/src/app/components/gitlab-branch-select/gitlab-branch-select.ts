@@ -38,6 +38,7 @@ export class GitLabBranchSelectComponent {
   readonly sourceKey = input('');
   readonly branchLoader = input<((sourceKey: string, search: string, page?: number) => Observable<GitLabBranchesResponse>) | null>(null);
   readonly autoSelect = input(true);
+  readonly showCommitDate = input(false);
   readonly nextPage = signal<number | null>(null);
   readonly selectedBranch = input('');
   readonly disabled = input(false);
@@ -60,6 +61,20 @@ export class GitLabBranchSelectComponent {
   readonly warnings = signal<string[]>([]);
   readonly effectiveSourceKey = computed(() => this.sourceKey().trim() || this.systemId().trim());
   readonly selectedLabel = computed(() => this.selectedBranch().trim() || this.emptyLabel());
+
+  protected commitDate(value: string | null | undefined): string {
+    const date = value ? new Date(value) : null;
+    return date && Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
+      : 'Brak daty';
+  }
+
+  protected commitDateTooltip(branch: GitLabBranchOption): string {
+    const dates = branch.repositoryCommits ?? [];
+    const label = dates.length > 1 ? 'Najnowszy commit' : 'Data ostatniego commita';
+    return `${label}: ${this.commitDate(branch.committedAt)}`
+      + (dates.length ? '\n' + dates.map(item => `${item.repositoryId}: ${this.commitDate(item.committedAt)}`).join('\n') : '');
+  }
 
   constructor() {
     this.queries
@@ -89,7 +104,22 @@ export class GitLabBranchSelectComponent {
         }
         this.error.set('');
         const items = query.page ? [...this.branches(), ...response.branches] : response.branches;
-        this.branches.set([...new Map(items.map(item => [item.name, item])).values()]);
+        const merged = new Map<string, GitLabBranchOption>();
+        for (const item of items) {
+          const previous = merged.get(item.name);
+          if (!previous) { merged.set(item.name, item); continue; }
+          const repositoryCommits = [...new Map([
+            ...(previous.repositoryCommits ?? []), ...(item.repositoryCommits ?? [])
+          ].map(commit => [commit.repositoryId, commit])).values()];
+          const committedAt = repositoryCommits.map(commit => commit.committedAt)
+            .filter((date): date is string => !!date && Number.isFinite(Date.parse(date)))
+            .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
+          merged.set(item.name, {...previous, ...item,
+            isDefault: previous.isDefault || item.isDefault,
+            repositories: [...new Set([...(previous.repositories ?? []), ...(item.repositories ?? [])])],
+            ...(repositoryCommits.length ? {repositoryCommits, committedAt: committedAt ?? null} : {})});
+        }
+        this.branches.set([...merged.values()]);
         this.nextPage.set(response.nextPage ?? null);
         this.truncated.set(response.truncated);
         this.warnings.set(response.warnings);

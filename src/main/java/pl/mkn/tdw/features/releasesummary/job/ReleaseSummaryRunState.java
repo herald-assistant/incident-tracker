@@ -36,7 +36,7 @@ final class ReleaseSummaryRunState {
     private ReleaseSummaryRunState(String id,ReleaseSummaryRequest request,AnalysisAiAuthRef auth,Instant createdAt) {
         this.id=id;this.request=request;this.auth=auth;this.createdAt=createdAt;updatedAt=createdAt;
         pendingStep("RESOLVE_REFS", "Przypięcie rewizji", "CONTEXT");
-        pendingStep("COLLECT_LIQUIBASE", "Zmiany Liquibase per plik", "CONTEXT");
+        pendingStep("COLLECT_DIFF", "Porownanie rewizji", "CONTEXT");
         pendingStep("PREPARE_PROMPT", "Inicjalny prompt AI", "CONTEXT");
         pendingStep("AI_REPORT", "Raport AI", "AI");
     }

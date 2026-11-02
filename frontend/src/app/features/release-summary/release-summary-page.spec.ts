@@ -33,6 +33,19 @@ describe('ReleaseSummary workspace',()=>{
       {provide:ActivatedRoute,useValue:{snapshot:{queryParamMap:convertToParamMap({})}}}
     ]});
   });
+  it('shows commit dates without kind badges in both revision pickers',()=>{
+    api.refs.mockReturnValue(of({branches:[{name:'refs/heads/release',label:'release',kind:'BRANCH',isDefault:false,
+      committedAt:'2026-11-02T12:35:00Z'}],truncated:false,warnings:[],nextPage:null}));
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);fixture.detectChanges();
+    fixture.componentInstance.selectSystem('crm');fixture.detectChanges();
+    const pickers=fixture.nativeElement.querySelectorAll('app-gitlab-branch-select') as NodeListOf<HTMLElement>;
+    expect(pickers.length).toBe(2);
+    for(const picker of pickers) {
+      picker.querySelector<HTMLButtonElement>('.branch-select__control')!.click();fixture.detectChanges();
+      expect(picker.querySelector('.branch-select__commit-date')?.textContent?.trim()).toBe('02.11.2026');
+      expect(picker.querySelector('.branch-select__option-badges')?.textContent).not.toContain('BRANCH');
+    }
+  });
   it('sends the comparison selected in the form and locks selection until the run finishes',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);fixture.detectChanges();
     const page=fixture.componentInstance;page.selectSystem('crm');
@@ -63,6 +76,32 @@ describe('ReleaseSummary workspace',()=>{
     expect(fixture.componentInstance.job()).toEqual(completed);
     expect(fixture.componentInstance.busy()).toBe(false);
     expect(api.start).not.toHaveBeenCalled();
+  });
+  it('animates the AI badge only during an active AI step, independently of preparation and saving',()=>{
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
+    const job=releaseSnapshot('RUNNING');page.job.set(job);
+    const badge=(label:string)=>fixture.nativeElement.querySelector(`button[aria-label="${label}"] .analysis-feature-aside__badge--loading`);
+    for(const code of ['RESOLVE_REFS','COLLECT_DIFF','PREPARE_PROMPT','AI_REPORT']) {
+      page.job.set({...job,steps:[{code,label:code,phase:code==='AI_REPORT'?'AI':'CONTEXT',status:'RUNNING',
+        message:'',itemCount:0,startedAt:'',completedAt:''}]});fixture.detectChanges();
+      expect(!!badge('Tok działania AI')).toBe(code==='AI_REPORT');
+      expect(badge('Przebieg analizy')).not.toBeNull();
+    }
+    page.job.set(releaseSnapshot());page.saving.set(true);fixture.detectChanges();
+    expect(badge('Tok działania AI')).toBeNull();
+    page.saving.set(false);fixture.detectChanges();expect(badge('Tok działania AI')).toBeNull();
+  });
+  it('animates the chat badge while submitting and waiting for a response without animating the initial AI badge',()=>{
+    const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
+    const job=releaseSnapshot();page.job.set(job);page.chatSubmitting.set(true);fixture.detectChanges();
+    const badge=(label:string)=>fixture.nativeElement.querySelector(`button[aria-label="${label}"] .analysis-feature-aside__badge--loading`);
+    expect(badge('Follow-up chat')).not.toBeNull();expect(badge('Tok działania AI')).toBeNull();
+    page.chatSubmitting.set(false);
+    page.job.set({...job,chatMessages:[{id:'crm-answer',role:'ASSISTANT',status:'IN_PROGRESS',content:'',
+      errorCode:'',errorMessage:'',createdAt:'',updatedAt:'',completedAt:'',toolEvidenceSections:[],
+      aiActivityEvents:[],toolFeedback:[],prompt:''}]});fixture.detectChanges();
+    expect(badge('Follow-up chat')).not.toBeNull();expect(badge('Tok działania AI')).toBeNull();
+    page.job.set(job);fixture.detectChanges();expect(badge('Follow-up chat')).toBeNull();
   });
   it('defaults questions to read-only and requires an explicit report update choice',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;

@@ -24,7 +24,7 @@
             </label>
             <app-gitlab-branch-select label="Punkt wejścia" emptyLabel="Wybierz ref" filterLabel="Znajdź ref"
               [sourceKey]="systemId() ? systemId()+':'+beforeKind():''" [branchLoader]="beforeLoader"
-              [selectedBranch]="before()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="before.set($event)" />
+              [selectedBranch]="before()" [autoSelect]="false" [showCommitDate]="true" [disabled]="busy()" (branchSelected)="before.set($event)" />
           </div>
           <div class="release-summary-ref" role="group" aria-label="Stan docelowy">
             <label class="form-field">
@@ -39,7 +39,7 @@
             </label>
             <app-gitlab-branch-select label="Stan docelowy" emptyLabel="Wybierz ref" filterLabel="Znajdź ref"
               [sourceKey]="systemId() ? systemId()+':'+afterKind():''" [branchLoader]="afterLoader"
-              [selectedBranch]="after()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="after.set($event)" />
+              [selectedBranch]="after()" [autoSelect]="false" [showCommitDate]="true" [disabled]="busy()" (branchSelected)="after.set($event)" />
           </div>
         </div>
         <div class="release-summary-ai-grid">
@@ -114,12 +114,12 @@
         @if(current.report) {
           @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
             (save)="saveReport($event)" (cancel)="editing.set(false)" />}
-          @else {<app-analysis-report-panel [report]="current.report" [embedded]="true" [showTechnicalIds]="false"
+          @else {<app-analysis-report-panel [report]="visibleReport()!" [embedded]="true" [showTechnicalIds]="false"
             appendixSectionId="APPENDIX" appendixTitle="Informacje wdrożeniowe, ograniczenia i źródła" />}
         }
         @else { <p>{{busy() ? 'Trwa przygotowanie materiału i raportu.' : 'Raport nie powstał. Sprawdź przebieg analizy.'}}</p> }
       </section>
-      <app-analysis-feature-aside [progressActive]="busy()" [aiActive]="busy()" [progressCount]="current.steps.length"
+      <app-analysis-feature-aside [progressActive]="busy()" [aiActive]="aiWorkflowIsRunning()" [chatActive]="chatIsWaiting()" [progressCount]="current.steps.length"
         [aiCount]="current.aiActivityEvents.length" [usage]="current.usage" [chatMessages]="current.chatMessages"
         [chatCount]="current.chatMessages.length" [showChat]="true" [showFeedback]="false">
         <div chatPanel>

@@ -5,6 +5,8 @@ import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabFileTooLargeException;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -13,8 +15,12 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.List;
 
+import pl.mkn.tdw.integrations.gitlab.service.GitLabVerifiedRepositoryFileReader;
 import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryFileRequest;
 import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionRepositoryInventoryRequest;
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
@@ -613,6 +619,63 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("content-sha-256", metadata.contentSha256());
         assertEquals(2048L, metadata.sizeBytes());
 
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldVerifyCompleteFileWithUnicodeMetadataPath(boolean latin1Header) throws Exception {
+        var properties = gitLabProperties("CRM");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
+                new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)));
+        var commit = "a".repeat(40);
+        var path = ".run/Lista klient\u00f3w + 100.run.xml";
+        var content = "<component name=\"CrmCustomerRun\"/>\n";
+        var bytes = content.getBytes(StandardCharsets.UTF_8);
+        var headerPath = latin1Header
+                ? new String(path.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1) : path;
+        var fileUrl = "https://gitlab.example.com/api/v4/projects/CRM%2Fcustomer/repository/files/"
+                + ".run%2FLista%20klient%C3%B3w%20+%20100.run.xml";
+        server.expect(requestTo(fileUrl + "?ref=" + commit))
+                .andExpect(method(HttpMethod.HEAD))
+                .andRespond(withSuccess().header("X-Gitlab-File-Path", headerPath)
+                        .header("X-Gitlab-Commit-Id", commit)
+                        .header("X-Gitlab-Size", Integer.toString(bytes.length))
+                        .header("X-Gitlab-Content-Sha256",
+                                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))));
+        server.expect(requestTo(fileUrl + "/raw?ref=" + commit))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(content, MediaType.TEXT_PLAIN));
+
+        var file = GitLabVerifiedRepositoryFileReader.readComplete(adapter, "CRM", "customer", commit, path);
+
+        assertEquals(path, file.path());
+        assertEquals(content, file.content());
+        assertEquals(bytes.length, file.sizeBytes());
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"db/other.xml", ".run/Lista klient%C3%B3w + 100.run.xml",
+            ".run/Lista klient\u00f3w   100.run.xml"})
+    void shouldRejectDifferentMetadataPathWithoutReadingContent(String headerPath) {
+        var properties = gitLabProperties("CRM");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
+                new GitLabRestClientFactory(properties, IntegrationRestClientBuilderFactoryTestCreator.create(restClientBuilder)));
+        var commit = "a".repeat(40);
+        var path = ".run/Lista klient\u00f3w + 100.run.xml";
+        server.expect(requestTo("https://gitlab.example.com/api/v4/projects/CRM%2Fcustomer/repository/files/"
+                        + ".run%2FLista%20klient%C3%B3w%20+%20100.run.xml?ref=" + commit))
+                .andExpect(method(HttpMethod.HEAD))
+                .andRespond(withSuccess().header("X-Gitlab-File-Path", headerPath)
+                        .header("X-Gitlab-Commit-Id", commit).header("X-Gitlab-Size", "1"));
+
+        assertThrows(IllegalStateException.class, () -> GitLabVerifiedRepositoryFileReader.readComplete(
+                adapter, "CRM", "customer", commit, path));
         server.verify();
     }
 

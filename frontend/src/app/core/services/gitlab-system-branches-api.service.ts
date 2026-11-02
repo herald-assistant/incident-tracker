@@ -8,6 +8,8 @@ export interface GitLabBranchOption {
   label?: string;
   kind?: string;
   repositories?: string[];
+  committedAt?: string | null;
+  repositoryCommits?: { repositoryId: string; committedAt: string | null }[];
 }
 
 export interface GitLabBranchesResponse {

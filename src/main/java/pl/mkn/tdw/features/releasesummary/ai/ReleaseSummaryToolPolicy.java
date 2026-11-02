@@ -39,6 +39,7 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
                 reports.validateOrder(args.path("id").asText(),args.path("order").asInt(),context.evidence);
                 reports.validatePublication(args.path("id").asText(),args.path("markdown").asText(),
                         args.hasNonNull("meta")?mapper.treeToValue(args.get("meta"),AnalysisReportMeta.class):AnalysisReportMeta.empty(),context.evidence,context.sources());
+                context.sectionIds.addIfAbsent(args.path("id").asText());
             }
             if(request.toolName().equals("report_patch_section")) {
                 var reportId=(String)request.sessionContext().hiddenContext().get(AgentToolContextKeys.REPORT_ID);

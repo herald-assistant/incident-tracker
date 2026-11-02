@@ -358,10 +358,17 @@ Zasady granic:
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
 - `src/main/java/pl/mkn/tdw/features/releasesummary`
-  Porównanie Liquibase dwóch refów wszystkich jawnych repozytoriów systemu,
-  pełne encje Operational Context, zweryfikowane źródła, manifest elementów,
-  report-first AI z GOAL_DRIVEN, checkpoint, historia, chat i eksport V1.
-  Brak źródeł blokuje AI; SQL/custom change zachowuje niezweryfikowane coverage.
+  Diff-first porownanie dwoch refow jawnych repozytoriow primary/priority 1,
+  pelne encje Operational Context i potwierdzony manifest wybranych zmian Git.
+  Evidence i initial prompt zawieraja tylko zmiany dopasowane przez
+  `release-summary.diff.path-contains-any` (domyslnie `sql,changelog`)
+  w starej lub nowej sciezce, bez rozrozniania wielkosci liter; brakujace wybrane diffy sa przygotowane przez verified reads obu
+  istniejacych stron i JGit. Pasujace `.github/**/*.instructions.md` sa dobrane
+  przez applyTo na target SHA. Bez skanowania zawartosci pozostalych modulow.
+  AI interpretuje roznice i doczytuje celowane zaleznosci przez przypiete tools.
+  Brak kompletnej listy zmian blokuje AI; brak patcha lub zaleznosci jest
+  zadaniem badania albo jawna luka. Coverage semantyczne to AI_ASSESSED.
+  Report-first GOAL_DRIVEN, checkpoint, historia, chat i eksport V1 pozostaja.
   Funkcjonalny cel wymaga dowodu albo jawnej luki. Tryb API jest poza zakresem.
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer`
   Feature porownania runtime configuration pomiedzy branchami: named GitLab

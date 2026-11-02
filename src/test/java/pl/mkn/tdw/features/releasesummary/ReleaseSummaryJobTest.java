@@ -41,7 +41,7 @@ class ReleaseSummaryJobTest {
     }
     @Test void incompleteSourcesNeverStartAiAndNoChangesIsDeterministic() {
         for(var complete:List.of(false,true)) {
-            var evidence=new ReleaseSummaryEvidence(List.of(),List.of(),List.of(),List.of(),4,complete);
+            var evidence=new ReleaseSummaryEvidence(List.of(),List.of(),complete);
             var fixture=new Fixture(evidence);var accepted=fixture.service.start(request());fixture.tasks.get(0).run();
             assertEquals(complete?"NO_CHANGES":"BLOCKED",fixture.service.get(accepted.jobId()).status());verifyNoInteractions(fixture.ai);
         }
@@ -75,11 +75,13 @@ class ReleaseSummaryJobTest {
         final List<Runnable> tasks=new ArrayList<>();
         final ReleaseSummaryJobService service;
         Fixture(ReleaseSummaryEvidence evidence) {
-            var catalog=mock(ReleaseSummaryCatalog.class);var collector=mock(LiquibaseEvidenceCollector.class);
+            var catalog=mock(ReleaseSummaryCatalog.class);var collector=mock(ReleaseSummaryDiffCollector.class);
             var captured=OperationalContextReadSession.fromSnapshot(OperationalContextSnapshot.local(OperationalContextDtos.OperationalContextCatalog.empty()));
             when(catalog.capture()).thenReturn(captured);when(catalog.pin(any(),any())).thenReturn(ReleaseSummaryReportTest.SCOPE);
             when(collector.collect(any())).thenReturn(evidence);
-            service=new ReleaseSummaryJobService(catalog,collector,new ReleaseSummaryPrompt(new ObjectMapper(),reports),reports,ai,persistence,
+            var preparation=mock(ReleaseSummaryPreparation.class);
+            when(preparation.prepare(any(),any())).thenAnswer(invocation->new ReleaseSummaryPreparation.Prepared(invocation.getArgument(1),Set.of(),List.of()));
+            service=new ReleaseSummaryJobService(catalog,collector,preparation,new ReleaseSummaryPrompt(new ObjectMapper(),reports),reports,ai,persistence,
                     ()->AnalysisAiAuthRef.localToken("CRM"),new LocalAnalysisRunOperationGuard(),tasks::add);
         }
     }

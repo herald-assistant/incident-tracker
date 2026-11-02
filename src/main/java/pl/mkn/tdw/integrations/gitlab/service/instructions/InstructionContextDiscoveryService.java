@@ -11,6 +11,11 @@ import pl.mkn.tdw.integrations.gitlab.contract.instructions.InstructionSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.util.AntPathMatcher;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
 import pl.mkn.tdw.integrations.gitlab.GitLabInstructionRepositoryPort;
 
 import java.util.ArrayList;
@@ -33,6 +38,79 @@ public class InstructionContextDiscoveryService implements GitLabInstructionCont
 
     private final GitLabInstructionRepositoryPort repositoryPort;
     private final InstructionDiscoveryProperties properties;
+
+    @Override
+    public InstructionContextResult discoverApplicable(InstructionContextRequest request) {
+        var sources = new ArrayList<InstructionSource>();
+        var limitations = new ArrayList<String>();
+        for (var scope : coalesceScopes(request.scopes())) {
+            if (scope.changedFilePaths().isEmpty()) continue;
+            if (scope.ref() == null || !scope.ref().matches("[a-fA-F0-9]{40}|[a-fA-F0-9]{64}")) {
+                limitations.add("Applicable instructions require a pinned commit: " + scope.repositoryKey());
+                continue;
+            }
+            try {
+                var inventory = repositoryPort.loadFileInventory(new InstructionRepositoryInventoryRequest(scope.repositoryKey(), scope.ref()));
+                if (inventory == null || !inventory.available()) {
+                    limitations.add("Applicable instruction inventory unavailable: " + scope.repositoryKey());
+                    continue;
+                }
+                var candidates = normalizedPaths(inventory.paths()).stream()
+                        .filter(path -> path.startsWith(".github/") && path.endsWith(".instructions.md"))
+                        .filter(path -> GitLabRepositoryPath.isSafePath(path, false)).sorted().toList();
+                int limit = Math.max(0, properties.getMaxInstructionFiles());
+                if (candidates.size() > limit) limitations.add("Applicable instruction file limit reached: " + scope.repositoryKey());
+                for (var path : candidates.subList(0, Math.min(candidates.size(), limit))) {
+                    try {
+                        var file = repositoryPort.readFile(new InstructionRepositoryFileRequest(
+                                scope.repositoryKey(), scope.ref(), path, properties.getMaxFileCharacters()));
+                        if (file == null || !file.exists() || file.truncated() || file.content() == null
+                            || !scope.repositoryKey().equals(file.repositoryKey()) || !scope.ref().equals(file.ref()) || !path.equals(file.path())
+                            || file.content().startsWith("version https://git-lfs.github.com/spec/v1")) {
+                            limitations.add("Applicable instruction unavailable or truncated: " + scope.repositoryKey() + "@" + scope.ref() + ":" + path);
+                            continue;
+                        }
+                        var matching = matchingChangedFiles(file.content(), scope.changedFilePaths());
+                        if (!matching.isEmpty()) sources.add(new InstructionSource(scope.repositoryKey(), scope.ref(), path,
+                                "SCOPED_INSTRUCTIONS", file.content(), false, null, matching));
+                    } catch (RuntimeException exception) {
+                        limitations.add("Applicable instruction unreadable or has invalid/unsupported applyTo: " + scope.repositoryKey() + "@" + scope.ref() + ":" + path);
+                    }
+                }
+            } catch (RuntimeException exception) {
+                limitations.add("Applicable instruction inventory unavailable: " + scope.repositoryKey());
+            }
+        }
+        return new InstructionContextResult(sources, limitations);
+    }
+
+    private List<String> matchingChangedFiles(String content, List<String> changedPaths) {
+        var text = content.startsWith("\uFEFF") ? content.substring(1) : content;
+        var lines = text.lines().toList();
+        if (lines.isEmpty() || !lines.get(0).strip().equals("---")) return changedPaths;
+        int end = 1;
+        while (end < lines.size() && !lines.get(end).strip().equals("---")) end++;
+        if (end == lines.size()) throw new IllegalArgumentException("Unclosed instruction frontmatter.");
+        var options = new LoaderOptions();
+        options.setAllowDuplicateKeys(false);
+        options.setMaxAliasesForCollections(0);
+        var metadata = new Yaml(new SafeConstructor(options)).load(String.join("\n", lines.subList(1, end)));
+        if (metadata == null) return changedPaths;
+        if (!(metadata instanceof Map<?, ?> fields)) throw new IllegalArgumentException("Expected instruction metadata.");
+        if (!fields.containsKey("applyTo")) return changedPaths;
+        if (!(fields.get("applyTo") instanceof String applyTo) || applyTo.isBlank())
+            throw new IllegalArgumentException("Expected applyTo glob string.");
+        var patterns = applyTo.split(",", -1);
+        var matcher = new AntPathMatcher("/");
+        for (var pattern : patterns) {
+            var glob = pattern.strip();
+            if (glob.isEmpty() || glob.startsWith("/") || glob.startsWith("!") || glob.contains("..")
+                    || glob.contains("\\") || glob.contains("{") || glob.contains("}") || glob.contains("[") || glob.contains("]"))
+                throw new IllegalArgumentException("Unsupported applyTo glob.");
+        }
+        return changedPaths.stream().filter(path -> java.util.Arrays.stream(patterns)
+                .anyMatch(pattern -> matcher.match(pattern.strip(), path))).toList();
+    }
 
     public InstructionContextResult discover(InstructionContextRequest request) {
         var limitations = new ArrayList<String>();

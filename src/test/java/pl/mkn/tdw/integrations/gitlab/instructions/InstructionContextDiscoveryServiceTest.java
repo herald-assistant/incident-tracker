@@ -15,6 +15,7 @@ import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileChunk;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabInstructionRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryProjectCandidate;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositorySearchQuery;
 
@@ -25,8 +26,73 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 class InstructionContextDiscoveryServiceTest {
+
+        private static final String COMMIT = "b".repeat(40);
+        private static final InstructionContextRequest SCOPED = new InstructionContextRequest(List.of(
+                        new InstructionRepositoryScope("CRM/customer", COMMIT, List.of("module/src/db/changelog/customer.sql"))));
+
+        private GitLabInstructionRepositoryPort instructionFiles(Map<String, String> files) {
+                var port = mock(GitLabInstructionRepositoryPort.class);
+                when(port.loadFileInventory(any())).thenReturn(InstructionRepositoryInventory.available(List.copyOf(files.keySet())));
+                when(port.readFile(any())).thenAnswer(invocation -> {
+                        InstructionRepositoryFileRequest request = invocation.getArgument(0);
+                        assertThat(request.ref()).isEqualTo(COMMIT);
+                        return new InstructionRepositoryFile(request.repositoryKey(), request.ref(), request.path(),
+                                        true, files.get(request.path()), false, null);
+                });
+                return port;
+        }
+
+        @Test void selectsGlobalAndMatchingNestedInstructionsAtPinnedCommit() {
+                var port = instructionFiles(Map.of(
+                                ".github/global.instructions.md", "Describe CRM changes.",
+                                ".github/instructions/sql.instructions.md", "---\napplyTo: '**/db/changelog/**,**/*.csv'\n---\nExplain customer labels.",
+                                ".github/instructions/java.instructions.md", "---\napplyTo: '**/*.java'\n---\nJava rules.",
+                                "module/pom.xml", "Not an instruction."));
+                var result = new InstructionContextDiscoveryService(port, new InstructionDiscoveryProperties()).discoverApplicable(SCOPED);
+                assertThat(result.limitations()).isEmpty();
+                assertThat(result.sources()).extracting(InstructionSource::path).containsExactly(
+                                ".github/global.instructions.md", ".github/instructions/sql.instructions.md");
+                assertThat(result.sources()).allSatisfy(source -> {
+                        assertThat(source.ref()).isEqualTo(COMMIT);
+                        assertThat(source.applicableChangedFiles()).containsExactly("module/src/db/changelog/customer.sql");
+                });
+                verify(port, never()).readFile(argThat(request -> request.path().equals("module/pom.xml")));
+        }
+
+        @Test void malformedAndUnsupportedApplyToNeverBecomeGlobalInstructions() {
+                var port = instructionFiles(Map.of(
+                                ".github/broken.instructions.md", "---\napplyTo: [\n---\nBroken.",
+                                ".github/unsupported.instructions.md", "---\napplyTo: '**/*.{sql,csv}'\n---\nUnsupported.",
+                                ".github/open.instructions.md", "---\napplyTo: '**/*.sql'\nNo closing frontmatter."));
+                var result = new InstructionContextDiscoveryService(port, new InstructionDiscoveryProperties()).discoverApplicable(SCOPED);
+                assertThat(result.sources()).isEmpty();assertThat(result.limitations()).hasSize(3);
+        }
+
+        @Test void limitsAndTruncationAreExplicitAndDoNotIncludePartialInstructions() {
+                var port = instructionFiles(Map.of(".github/a.instructions.md", "CRM", ".github/b.instructions.md", "CRM"));
+                doReturn(new InstructionRepositoryFile("CRM/customer", COMMIT,
+                        ".github/a.instructions.md", true, "Partial", true, "Limit")).when(port).readFile(any());
+                var properties = new InstructionDiscoveryProperties();properties.setMaxInstructionFiles(1);
+                var result = new InstructionContextDiscoveryService(port, properties).discoverApplicable(SCOPED);
+                assertThat(result.sources()).isEmpty();assertThat(result.limitations()).hasSize(2);
+                verify(port, times(1)).readFile(any());
+        }
+
+        @Test void scopedDiscoveryDoesNotReadMutableRefsOrInventFilesWithoutInventory() {
+                var port = instructionFiles(Map.of());
+                var service = new InstructionContextDiscoveryService(port, new InstructionDiscoveryProperties());
+                var mutable = service.discoverApplicable(new InstructionContextRequest(List.of(
+                                new InstructionRepositoryScope("CRM/customer", "main", List.of("db/changelog/customer.sql")))));
+                assertThat(mutable.sources()).isEmpty();assertThat(mutable.limitations()).hasSize(1);verifyNoInteractions(port);
+                when(port.loadFileInventory(any())).thenReturn(null);
+                var unavailable = service.discoverApplicable(SCOPED);
+                assertThat(unavailable.sources()).isEmpty();assertThat(unavailable.limitations()).hasSize(1);
+                verify(port, never()).readFile(any());
+        }
 
     @Test
     void shouldDiscoverRootLocalCopilotAndReferencedInstructionFiles() {

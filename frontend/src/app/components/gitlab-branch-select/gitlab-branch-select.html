@@ -48,10 +48,20 @@
               (click)="select(branch.name, $event)"
               (keydown)="onOptionKeydown($event, index)"
             >
-              <span>{{ branch.label || branch.name }}</span>
-              @if (branch.kind) { <small>{{ branch.kind }}</small> }
-              @if (branch.repositories) { <small>{{ branch.repositories.join(', ') }}</small> }
-              @if (branch.isDefault) { <small>default</small> }
+              <span class="branch-select__option-content">
+                <span class="branch-select__option-name" [title]="branch.label || branch.name">{{ branch.label || branch.name }}</span>
+                @if (branch.repositories?.length) {
+                  <small class="branch-select__repositories" [title]="branch.repositories!.join(', ')">{{ branch.repositories!.join(', ') }}</small>
+                }
+              </span>
+              @if (showCommitDate() || branch.kind || branch.isDefault) {
+                <span class="branch-select__option-badges">
+                  @if (showCommitDate()) {
+                    <small class="branch-select__commit-date" [title]="commitDateTooltip(branch)">{{ commitDate(branch.committedAt) }}</small>
+                  } @else if (branch.kind) { <small>{{ branch.kind }}</small> }
+                  @if (branch.isDefault) { <small>default</small> }
+                </span>
+              }
             </button>
           } @empty {
             <p class="branch-select__status">Brak gałęzi dla aktualnego filtra.</p>

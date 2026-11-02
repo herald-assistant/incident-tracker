@@ -63,16 +63,8 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- [Release summary](needs/release-summary.md) opisuje porównanie
-  dwóch refów aplikacji, pełny kontekst katalogowy i szczegółowy raport
-  wdrożeniowy. Bieżący kontrakt jest w
+- Biezacy kontrakt Release summary opisuje
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
-  Raport przedstawia podsumowanie, listę tabel i szczegóły każdej tabeli:
-  obiekt, zmianę z definicją SQL i krótki opis funkcjonalny. Źródła są w meta,
-  a informacje wdrożeniowe w końcowym appendixie.
-  Wynik ma jeden nagłówek z porównywanymi refami i treść bez zakładek.
-  Pełne źródła pozostają dostępne w przebiegu analizy.
-  Zapowiedziany tryb zmian kontraktów API pozostaje poza bieżącą implementacją.
 
 - Użycie Operational Context przez UI Explorer i UX Inspector opisują ich
   kanoniczne [runtime UI](architecture/ui-explorer-runtime-flow.md) oraz

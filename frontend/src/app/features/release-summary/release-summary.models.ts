@@ -7,22 +7,18 @@ export interface ReleaseSummaryRequest {
   systemId: string; mode: 'LIQUIBASE'; baselineRef: ReleaseRef; targetRef: ReleaseRef;
   model?: string; reasoningEffort?: string;
 }
-export interface ReleaseSummaryUnit {
-  unitId: string; repositoryId: string; path: string; changeType: string;
-  baselineSource: string | null; targetSource: string | null; structurallyVerified: boolean;
-  elements: {elementId: string; kind: string; locator: string; before: unknown; after: unknown}[];
+export interface ReleaseSummaryChangedFile {
+  repositoryId: string; project: string;
+  change: {oldPath: string | null; newPath: string | null; oldBlobId: string | null; newBlobId: string | null;
+    oldMode: string | null; newMode: string | null; patch: string | null; patchComplete: boolean};
 }
 export interface ReleaseSummaryEvidence {
-  scannedFiles: number; sourceComplete: boolean; units: ReleaseSummaryUnit[];
-  sources: {sourceRef: string; repositoryId: string; project: string; side: string; commitId: string;
-    path: string; blobId: string; content: string; dependencies: string[]}[];
+  changeListComplete: boolean; changes: ReleaseSummaryChangedFile[];
   gaps: {code: string; repositoryId: string; side: string; path: string; detail: string; blocking: boolean}[];
-  sections: AnalysisEvidenceSection[];
 }
 export interface ReleaseSummaryResult {
-  resultContract: 'release-summary-analyst-report-v1'; status: string; sourceComplete: boolean;
-  expectedUnits: number; documentedUnits: number; expectedElements: number; documentedElements: number;
-  coverage: {unitId: string; expectedElements: number; documentedElements: number; structurallyVerified: boolean; gaps: string[]}[];
+  resultContract: 'release-summary-diff-report-v1'; status: string; changeListComplete: boolean;
+  changedFiles: number; documentedTables: number; readSources: number; semanticCoverage: 'AI_ASSESSED' | 'NOT_APPLICABLE';
   visibilityLimits: string[];
 }
 export interface ReleaseSummarySnapshot {

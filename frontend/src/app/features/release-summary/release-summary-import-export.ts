@@ -1,7 +1,7 @@
 import { ReleaseSummarySnapshot } from './release-summary.models';
 import { normalizeAnalysisReport } from '../../core/utils/analysis-import-export.utils';
 const schema='tdw.release-summary-export';
-const contract='release-summary-analyst-report-v1';
+const contract='release-summary-diff-report-v1';
 const keys=['jobId','status','request','comparison','evidence','errorCode','error','createdAt','updatedAt','completedAt','steps',
   'contextSections','toolEvidenceSections','aiActivityEvents','toolFeedback','preparedPrompt','report','result','usage','chatMessages','chatAvailability','exportAvailable'];
 function object(value:unknown):Record<string,any> {
@@ -30,8 +30,10 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
     throw new Error('Niepoprawne daty analizy.');
   if(job['result']) {
     const result=object(job['result']);
-    if(result['resultContract']!==contract||!Array.isArray(result['coverage'])||!Array.isArray(result['visibilityLimits'])||
-      ['expectedUnits','documentedUnits','expectedElements','documentedElements'].some(key=>!Number.isInteger(result[key])||result[key]<0))
+    if(result['resultContract']!==contract||typeof result['changeListComplete']!=='boolean'||
+      !['AI_ASSESSED','NOT_APPLICABLE'].includes(result['semanticCoverage'])||!Array.isArray(result['visibilityLimits'])||
+      result['visibilityLimits'].some((limit:unknown)=>typeof limit!=='string')||'coverage' in result||'expectedElements' in result||
+      ['changedFiles','documentedTables','readSources'].some(key=>!Number.isInteger(result[key])||result[key]<0))
       throw new Error('Niepoprawny kontrakt wyniku.');
   }
   if(job['comparison']) {
@@ -41,8 +43,25 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
         !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(r['baselineCommit'])||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(r['targetCommit']);}))
       throw new Error('Niepoprawny manifest przypiętych rewizji.');
   }
-  if(job['evidence']) for(const field of ['units','sources','gaps','sections'])
-    if(!Array.isArray(object(job['evidence'])[field]))throw new Error('Niepoprawne evidence Liquibase.');
+  if(job['evidence']) {
+    const evidence=object(job['evidence']);
+    if(typeof evidence['changeListComplete']!=='boolean'||!Array.isArray(evidence['changes'])||!Array.isArray(evidence['gaps'])||
+      ['units','sources','scannedFiles','sourceComplete','sections'].some(key=>key in evidence))
+      throw new Error('Niepoprawny manifest zmian Git.');
+    for(const entry of evidence['changes']) {
+      const file=object(entry),change=object(file['change']);
+      if(typeof file['repositoryId']!=='string'||!file['repositoryId']||typeof file['project']!=='string'||!file['project']||
+        typeof change['patchComplete']!=='boolean'||(change['patch']!==null&&typeof change['patch']!=='string')||
+        (!change['oldPath']&&!change['newPath']))throw new Error('Niepoprawna zmiana pliku.');
+      for(const side of ['old','new']) {
+        const path=change[side+'Path'];
+        if(path===null) {if(change[side+'BlobId']!==null||change[side+'Mode']!==null)throw new Error('Niepoprawna strona zmiany.');}
+        else if(typeof path!=='string'||!path||path.startsWith('/')||path.includes('\\')||path.split('/').some(part=>['','..','.'].includes(part))||
+          !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(change[side+'BlobId'])||!['100644','100755','120000','160000'].includes(change[side+'Mode']))
+          throw new Error('Niepoprawna sciezka lub obiekt Git.');
+      }
+    }
+  }
   if(job['chatMessages'].some((m:Record<string,unknown>)=>m['status']==='IN_PROGRESS'))
     throw new Error('Eksport zawiera niezakończoną odpowiedź AI.');
   const result=Object.fromEntries(keys.map(key=>[key,job[key]])) as unknown as ReleaseSummarySnapshot;
@@ -51,10 +70,13 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
   result.report=job['report']?normalizeAnalysisReport(job['report']):null;
   if(result.report) {
     for(const section of result.report.sections) {
-      if(!['OVERVIEW','TABLE_LIST','APPENDIX'].includes(section.id)&&!section.id.startsWith('DB_DETAIL_'))
+      if(!['OVERVIEW','TABLE_LIST','APPENDIX'].includes(section.id)&&!/^DB_DETAIL_[A-Za-z0-9_]{1,100}$/.test(section.id))
         throw new Error('Raport nie odpowiada aktualnemu układowi sekcji Release summary.');
       if(section.order==null||!Number.isInteger(section.order)||section.order<1)
         throw new Error('Niepoprawna kolejność sekcji raportu.');
+      if(section.id==='OVERVIEW'&&section.order!==1||section.id==='TABLE_LIST'&&section.order!==2||
+        section.id==='APPENDIX'&&section.order!==1000000||section.id.startsWith('DB_DETAIL_')&&(section.order<3||section.order>=1000000))
+        throw new Error('Kolejnosc nie odpowiada aktualnemu ukladowi raportu.');
       if(section.id.startsWith('DB_DETAIL_')&&!/(?:^|\n)\s*\|\s*Obiekt\s*\|\s*Zmiana\s*\|\s*Opis funkcjonalny\s*\|\s*(?:\n|$)/.test(section.markdown))
         throw new Error('Szczegóły tabeli wymagają kolumn: Obiekt, Zmiana, Opis funkcjonalny.');
     }

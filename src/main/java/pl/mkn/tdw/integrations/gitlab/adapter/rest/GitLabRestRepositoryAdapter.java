@@ -1454,13 +1454,22 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort, GitLab
     ) {
         private static GitLabFileMetadataResponse fromHeaders(HttpHeaders headers, String fallbackFilePath) {
             return new GitLabFileMetadataResponse(
-                    firstHeader(headers, "X-Gitlab-File-Path", fallbackFilePath),
+                    filePathHeader(headers, fallbackFilePath),
                     firstHeader(headers, "X-Gitlab-Blob-Id", null),
                     firstHeader(headers, "X-Gitlab-Commit-Id", null),
                     firstHeader(headers, "X-Gitlab-Last-Commit-Id", null),
                     firstHeader(headers, "X-Gitlab-Content-Sha256", null),
                     parseLong(firstHeader(headers, "X-Gitlab-Size", null))
             );
+        }
+
+        private static String filePathHeader(HttpHeaders headers, String requestedPath) {
+            var path = firstHeader(headers, "X-Gitlab-File-Path", requestedPath);
+            if (requestedPath == null || requestedPath.equals(path)) {
+                return path;
+            }
+            var utf8AsLatin1 = new String(requestedPath.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1);
+            return utf8AsLatin1.equals(path) ? requestedPath : path;
         }
 
         private static String firstHeader(HttpHeaders headers, String headerName, String fallback) {

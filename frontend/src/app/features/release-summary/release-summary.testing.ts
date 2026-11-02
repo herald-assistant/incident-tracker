@@ -7,7 +7,7 @@ export function releaseReport():AnalysisReport {
       {id:'DB_DETAIL_customer',title:'customer',order:3,
         markdown:'| Obiekt | Zmiana | Opis funkcjonalny |\n| --- | --- | --- |\n| Kolumna customer.label | Dodanie. typ: varchar(40); NOT NULL; wartość domyślna: general | Grupuje klientów przy wyszukiwaniu. |',
         meta:{...meta,references:[{type:'source',label:'Definicja kolumny',target:'https://gitlab.example.com/CRM/customer/-/blob/'+'b'.repeat(40)+'/db/customer.xml',description:'Typ, NULL i wartość domyślna.'}]}},
-      {id:'APPENDIX',title:'Appendix',order:4,markdown:'Sprawdzić zapis etykiety klienta po wdrożeniu.',meta},
+      {id:'APPENDIX',title:'Appendix',order:1000000,markdown:'Sprawdzić zapis etykiety klienta po wdrożeniu.',meta},
       {id:'OVERVIEW',title:'Podsumowanie',order:1,markdown:'Etykiety ułatwiają wyszukiwanie klientów.',meta},
       {id:'TABLE_LIST',title:'Lista tabel',order:2,markdown:'| Tabela | Zakres zmian |\n| --- | --- |\n| customer | Dodanie etykiety klienta. |',meta}
     ]};

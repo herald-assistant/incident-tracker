@@ -52,3 +52,9 @@ statycznego opisu capability, dodaj go do route data jako `capabilityInfo`.
 - Nie buduj kart w kartach.
 - Nie przenos logiki backendowego scope'u albo Copilot SDK do komponentow UI.
 - Nie duplikuj brandu albo navigation state poza `app-shell`.
+
+Selektor refow moze otrzymac `showCommitDate=true` oraz metadane committedAt
+z datami per repozytorium. Wtedy zamiast rodzaju refa pokazuje dd.MM.yyyy,
+bez godziny, z tooltipem znaczenia daty. Inni konsumenci bez tej opcji
+zachowuja dotychczasowe badge. Przy paginacji scalaj metadane tej samej nazwy
+ze wszystkich zaladowanych stron, bez gubienia repozytoriow i dat.
