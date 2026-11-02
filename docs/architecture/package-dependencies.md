@@ -408,6 +408,11 @@ Warstwa posiada neutralny lokalny zapis:
 Feature posiada codec swojej zawartosci i decyduje, czy zapis wspiera
 kontynuacje. Local workspace nie importuje feature'ow i nie jest durable job
 queue.
+Zapis JSON przygotowuje plik tymczasowy i podmienia plik docelowy. Przy
+`AccessDeniedException` podmiana jest ponawiana maksymalnie do pieciu prob,
+z przerwa 50 ms pomiedzy probami. Trwaly blad jest propagowany, a przerwanie
+oczekiwania konczy ponowienia i zachowuje flage przerwania watku. Plik
+tymczasowy jest sprzatany takze po nieudanym zapisie.
 `localworkspace.analysisruns.LocalAnalysisRunSnapshotWriter` buduje neutralny
 rekord v1 i wpis indeksu z metadanych dostarczonych przez feature. Feature nadal
 tworzy koperte eksportu, nazwe runu i stan kontynuacji.

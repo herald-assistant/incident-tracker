@@ -347,6 +347,18 @@ utrwala ten snapshot do kontynuacji po restarcie oraz osobno dołącza pełne
 payloady wybranych encji do initial promptu. Nie zmienia to neutralnych,
 typowanych odpowiedzi tools ani ownershipu relacji.
 
+Snapshot jest buforowany w pamieci procesu. Udany zapis przez maintenance
+publikuje dokumenty i podmienia snapshot tego procesu. Reczna zmiana YAML na
+dysku nie wyzwala ponownego odczytu i nie odswieza dzialajacej aplikacji.
+Samo odswiezenie przegladarki nie wystarcza do zaladowania takiej zmiany.
+
+Kontrolowana edycja offline wymaga zgody operatora na konkretny podglad
+i zatrzymania aplikacji przed zapisem. Kandydat wymaga sprawdzenia parserem,
+walidatorem read-modelu i regulami pol objetych zmiana; porownanie zrodel
+musi potwierdzic brak nieuzgodnionych zmian. Po recznym uruchomieniu aplikacji
+nalezy potwierdzic aktualny odczyt HTTP, tools i UI. Nie jest to automatyczny
+fallback po odrzuceniu zapisu przez maintenance ani sposob omijania walidacji.
+
 Aktywne read modele sa celowo waskie:
 
 - entity detail,
@@ -873,6 +885,15 @@ Kolejnosc uzupelniania i zasady jakosci danych opisuje
 Maintenance API przyjmuje tylko biezacy schemat. Przy aktualizacji encji usuwa
 nieznane pola z jej YAML; nie uruchamia migracji starych ksztaltow. Po wiekszej
 zmianie katalogu sprawdz walidacje i diff dokumentow.
+
+Walidacja read-modelu i walidacja writable payload sprawdzaja rozne granice.
+Czytelna istniejaca karta moze nie miec findings, a jej pelny payload zostac
+odrzucony przez maintenance, np. za puste/null wartosci lub niepoprawny
+ksztalt zagniezdzonego pola. Zero findings nie gwarantuje poprawnego zapisu
+karty. Taka niezgodnosc wymaga jawnego rozliczenia, nie ustanawia alternatywnego
+kontraktu ani kompatybilnosci. Diagnostyke `422` i kontrolowanej edycji offline
+opisuje [przewodnik diagnostyczny](../operational-context-assistance-diagnostics.md).
+
 Podglad przed zapisem musi rozliczac takze merytoryczna tresc pol zrodlowych
 pomijanych przez editable payload. Zachowanie samego writable schema nie
 potwierdza zachowania wiedzy: tresc wymaga jawnego aktualnego pola albo
@@ -1064,6 +1085,11 @@ dotycza tylko open. Copy i karta pokazuja stabilne ID oraz `sourcePath`
 Resolved nie oferuje akcji rozwiazywania pytania; asysta odrzuca resolved,
 niezgodny target oraz niejednoznaczne ID przed wykonaniem AI. Usuniecie
 rozstrzygnietego wpisu pozostaje poprawna droga.
+
+Usuniecie pytania decyzja operatora nie jest dowodem ustalenia brakujacego
+faktu i nie ustanawia definicji ani relacji. Zerowy licznik pytan oznacza brak
+zarejestrowanych aktywnych zadan, nie kompletnosc wiedzy ani brak ograniczen
+widocznosci.
 
 Gap encji dziedziczy jej target. Gap dokumentu bez targetu jest globalny:
 pozostaje na liscie katalogu i w `opctx_get_scope.globalOpenQuestions`, ale nie

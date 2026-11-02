@@ -16,6 +16,27 @@ class CopilotSdkPropertiesTest {
     Path tempDirectory;
 
     @Test
+    void shouldResolveConfiguredGithubHost() {
+        var properties = new CopilotSdkProperties();
+        assertEquals("github.com", properties.resolvedGithubHost());
+
+        properties.setGithubHost(" crm.ghe.com ");
+
+        assertEquals("crm.ghe.com", properties.resolvedGithubHost());
+    }
+
+    @Test
+    void shouldRejectMissingGithubHost() {
+        var properties = new CopilotSdkProperties();
+        properties.setGithubHost(null);
+        assertThrows(IllegalStateException.class, properties::resolvedGithubHost);
+
+        properties.setGithubHost(" ");
+        var failure = assertThrows(IllegalStateException.class, properties::initializeRuntimeConfiguration);
+        assertEquals("analysis.ai.copilot.github-host must not be blank", failure.getMessage());
+    }
+
+    @Test
     void shouldCreateConfiguredCliWorkingDirectoryBeforeRuntimeStarts() {
         var properties = new CopilotSdkProperties();
         var workingDirectory = tempDirectory.resolve("neutral").resolve("copilot-workspace");

@@ -277,6 +277,7 @@ class LocalWorkspaceStoreTest {
             }
         } finally {
             executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Run save workers should terminate");
         }
 
         var runs = fixture.runStore.listRuns();

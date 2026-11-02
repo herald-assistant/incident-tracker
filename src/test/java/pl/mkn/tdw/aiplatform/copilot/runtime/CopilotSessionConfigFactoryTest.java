@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotSessionConfigFactoryTest {
 
@@ -28,6 +30,7 @@ class CopilotSessionConfigFactoryTest {
         properties.setWorkingDirectory("C:\\workspace");
         properties.setCopilotHome("C:\\tdw-data\\copilot");
         properties.setCliPath("C:\\tools\\copilot.exe");
+        properties.setGithubHost("crm.ghe.com");
         properties.setClientName("incidenttracker-test");
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
@@ -53,6 +56,14 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(normalized("C:\\tdw-data\\copilot"), clientOptions.getCopilotHome());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
         assertEquals("github_pat_crm_test_token", clientOptions.getGithubToken());
+        assertEquals("crm.ghe.com", clientOptions.getEnvironment().get("GH_HOST"));
+        assertEquals("crm.ghe.com", clientOptions.getEnvironment().get("COPILOT_GH_HOST"));
+        System.getenv().forEach((name, value) -> {
+            if (!name.equals("GH_HOST") && !name.equals("COPILOT_GH_HOST")) {
+                assertTrue(Objects.equals(value, clientOptions.getEnvironment().get(name)),
+                        () -> "Inherited environment variable changed: " + name);
+            }
+        });
         assertNull(clientOptions.getTelemetry());
         assertEquals("analysis-123", sessionConfig.getSessionId());
         assertEquals("incidenttracker-test", sessionConfig.getClientName());

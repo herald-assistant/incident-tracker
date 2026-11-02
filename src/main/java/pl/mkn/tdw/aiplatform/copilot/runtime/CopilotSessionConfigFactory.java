@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -32,9 +33,14 @@ public class CopilotSessionConfigFactory {
 
     public CopilotClientOptions clientOptions(CopilotRunAuth auth) {
         var accessToken = accessTokenResolver.resolve(auth);
+        var githubHost = properties.resolvedGithubHost();
+        var environment = new HashMap<>(System.getenv());
+        environment.put("GH_HOST", githubHost);
+        environment.put("COPILOT_GH_HOST", githubHost);
         var clientOptions = new CopilotClientOptions()
                 .setUseLoggedInUser(false)
                 .setGitHubToken(accessToken.value())
+            .setEnvironment(environment)
                 .setCwd(properties.getWorkingDirectory())
                 .setCliPath(cliExecutableResolver.resolve(
                         properties.getCliPath(),

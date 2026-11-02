@@ -90,6 +90,18 @@ scope'ów GitLaba. Nierozpoznany glossary ID pozostaje jawną luką wiedzy.
   repozytorium i sprawdź jego `repositoryType`. Zmiana systemu i repozytorium
   przez osobne ręczne zapisy może wymagać kolejności zgodnej z regułami
   katalogu; asysta pozwala przygotować obie zmiany w jednym batchu.
+- **Katalog nie ma findings, ale zapis istniejącej karty zwraca `422`.**
+  Walidacja read-modelu nie zastępuje walidacji pełnego writable payload.
+  Istniejąca karta może być czytelna, a jej zapis zostać odrzucony np. za
+  pusty tekst, `null`, niepoprawny typ listy/obiektu lub kształt targetu
+  relacji. Sprawdź `code`, `message` i `fieldErrors`; dla ręcznego update
+  wskaźniki dotyczą `/payload/...`, dla batcha
+  `/mutations/{index}/payload/...`. Walidacja obejmuje także pola, których
+  operator nie zmieniał. `422` oznacza odrzucenie mutacji, nie publikację.
+  Nie ponawiaj zapisu bez rozliczenia błędu ani nie czyść innych pól poza
+  zatwierdzonym zakresem. To niespójność danych z kontraktem zapisu, nie
+  obsługiwany alternatywny format; jej uporządkowanie wymaga osobnego podglądu
+  i decyzji operatora.
 - **Po powrocie z historii brakuje poprawek.** Sprawdź
   `PUT /jobs/{jobId}/review`, zapis runu w `runs/{jobId}/run.json` oraz
   odtworzenie nierozstrzygniętego joba. Lokalny stan przeglądarki chroni
@@ -107,6 +119,36 @@ GitLab; `draft` parsuje i sprawdza propozycje; `integrations.operationalcontext`
 posiada schemat, walidację i atomowy zapis. UI jest w
 `frontend/src/app/operational-context`. Zmieniając jedną z tych granic,
 sprawdź także jej konsumentów i lokalne `AGENTS.md`.
+
+## Odświeżanie katalogu i kontrolowana edycja offline
+
+Udany zapis przez maintenance aktualizuje pliki oraz snapshot katalogu
+w pamięci bieżącego procesu. Ręczna zmiana pliku na dysku nie odświeża
+snapshotu; odświeżenie strony UI nadal odczyta katalog z pamięci aplikacji.
+Taką zmianę proces zobaczy po ponownym uruchomieniu.
+
+Edycja offline nie jest automatycznym obejściem `422`. Można ją wykonać
+wyłącznie jako osobno uzgodnioną operację utrzymaniową:
+
+1. Przygotuj konkretny podgląd, zachowaj hash/digest źródeł i uzyskaj zgodę
+   operatora na zakres oraz tryb publikacji. Używaj efektywnego katalogu,
+   nie seeda z zasobów aplikacji.
+2. Operator zatrzymuje aplikację przed edycją; potwierdź jej zatrzymanie
+   i zgodność źródeł z zaakceptowanym podglądem. Nie steruj procesem
+   aplikacji automatycznie w ramach analizy AI.
+3. Sprawdź kandydata parserem YAML, kodekiem, walidatorem read-modelu
+   i regułami pól objętych zmianą. Jawnie rozlicz wykryte niezgodności;
+   poprawny odczyt nie potwierdza zgodności całej karty z maintenance.
+4. Zapisz wyłącznie uzgodnioną zmianę. Porównaj dokumenty przed i po,
+   zachowanie pozostałych pól, relacji, ownershipu i granic code search.
+   Nie normalizuj pozostałych danych przy okazji.
+5. Operator ponownie uruchamia aplikację. Potwierdź aktualny odczyt HTTP
+   i `opctx_*`, a następnie odśwież UI i sprawdź wynik. Weryfikacja
+   katalogu nie wymaga płatnego uruchomienia AI.
+
+Usunięcie pytania decyzją operatora nie rozstrzyga brakującego faktu i nie
+ustanawia definicji ani relacji. Zero Open Questions oznacza brak
+zarejestrowanych aktywnych zadań, nie dowód kompletności wiedzy.
 
 ## Scenariusze ręcznej weryfikacji
 

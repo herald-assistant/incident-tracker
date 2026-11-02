@@ -28,6 +28,7 @@ public class CopilotSdkProperties {
     }
 
     private String cliPath = "copilot";
+    private String githubHost = "github.com";
     private String workingDirectory;
     private String copilotHome = "tdw-data/copilot";
     private String model;
@@ -48,6 +49,7 @@ public class CopilotSdkProperties {
 
     @PostConstruct
     public void initializeRuntimeConfiguration() {
+        resolvedGithubHost();
         validateContextManagementConfiguration();
         workingDirectory = prepareWorkingDirectory().toString();
         log.info("Copilot CLI working directory prepared path={}", workingDirectory);
@@ -86,6 +88,13 @@ public class CopilotSdkProperties {
             );
         }
         return directory;
+    }
+
+    public String resolvedGithubHost() {
+        if (githubHost == null || githubHost.isBlank()) {
+            throw new IllegalStateException("analysis.ai.copilot.github-host must not be blank");
+        }
+        return githubHost.trim();
     }
 
     public Path resolvedCopilotHome() {
