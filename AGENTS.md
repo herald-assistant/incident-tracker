@@ -362,7 +362,9 @@ Zasady granic:
   pelne encje Operational Context i potwierdzony manifest wybranych zmian Git.
   Evidence i initial prompt zawieraja tylko zmiany dopasowane przez
   `release-summary.diff.path-contains-any` (domyslnie `sql,changelog`)
-  w starej lub nowej sciezce, bez rozrozniania wielkosci liter; brakujace wybrane diffy sa przygotowane przez verified reads obu
+  w starej lub nowej sciezce, bez rozrozniania wielkosci liter. Zmiany
+  zawierajace `src/test` w dowolnej sciezce sa wykluczane w pierwszej
+  kolejnosci, takze dla rename; brakujace wybrane diffy sa przygotowane przez verified reads obu
   istniejacych stron i JGit. Pasujace `.github/**/*.instructions.md` sa dobrane
   przez applyTo na target SHA. Bez skanowania zawartosci pozostalych modulow.
   AI interpretuje roznice i doczytuje celowane zaleznosci przez przypiete tools.

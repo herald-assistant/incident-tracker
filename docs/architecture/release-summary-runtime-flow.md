@@ -62,7 +62,10 @@ dotychczasowego osobno przypinanego research AI w skonfigurowanej grupie.
    Domyslna lista to `sql,changelog`; contains any of sprawdza stara i nowa
    pelna sciezke bez rozrozniania wielkosci liter. Slowa sa trimowane;
    pusta lista lub puste slowo blokuja start aplikacji. Rozszerzenie nie
-   ogranicza wyboru. Pozostale pliki nie trafiaja do evidence, eksportu
+   ogranicza wyboru. Przed pozytywnym dopasowaniem wykluczana jest cala
+   zmiana, jesli stara lub nowa sciezka zawiera `src/test`, bez rozrozniania
+   wielkosci liter. Dotyczy tez rename do/z katalogu testowego. Pozostale
+   pliki nie trafiaja do evidence, eksportu
    ani initial promptu. Rename uwzglednia oba konce. Evidence ma `changes`,
    `gaps`, `changeListComplete`; ostatnie pole potwierdza kompletna liste Git
    stanowiaca podstawe selekcji, nie kompletna interpretacje migracji.

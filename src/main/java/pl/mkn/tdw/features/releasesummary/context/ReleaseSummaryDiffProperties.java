@@ -22,7 +22,12 @@ public class ReleaseSummaryDiffProperties {
     private List<@NotBlank String> pathContainsAny = List.of("sql", "changelog");
 
     public boolean matches(GitLabRepositoryComparison.Change change) {
-        return matches(change.oldPath()) || matches(change.newPath());
+        return !isTestPath(change.oldPath()) && !isTestPath(change.newPath())
+                && (matches(change.oldPath()) || matches(change.newPath()));
+    }
+
+    private boolean isTestPath(String path) {
+        return path != null && path.toLowerCase(Locale.ROOT).contains("src/test");
     }
 
     private boolean matches(String path) {

@@ -11,6 +11,8 @@ i zaakceptowane prefixy. Initial context to pelne captured encje opctx,
 manifest i patche wylacznie zmian dopasowanych przez
 `release-summary.diff.path-contains-any` (domyslnie `sql,changelog`): contains
 any of, bez rozrozniania wielkosci liter, na obu pelnych sciezkach.
+Negatywne contains `src/test` na dowolnej stronie ma pierwszenstwo nad
+pozytywnym filtrem, bez rozrozniania wielkosci liter, takze dla rename.
 Pozostale pliki nie trafiaja do evidence, eksportu ani initial promptu.
 ReleaseSummaryPreparation uzupelnia brakujace
 wybrane roznice przez verified reads obu istniejacych stron i JGit; nie czyta

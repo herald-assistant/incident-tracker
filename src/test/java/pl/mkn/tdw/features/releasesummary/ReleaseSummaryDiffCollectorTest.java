@@ -171,7 +171,9 @@ class ReleaseSummaryDiffCollectorTest {
     @Test void defaultSqlSelectsMigrationAndExcludesUnrelatedCodeConfigAndFixturesEverywhere() throws Exception {
         var migration="src/main/resources/SQL/customer.yml";
         given(List.of(change(null,migration,true),change(null,"src/Customer.java",true),
-                change(null,"application.yml",true),change(null,"fixtures/customer.json",true)),true);
+                change(null,"application.yml",true),change(null,"fixtures/customer.json",true),
+                change(null,"module-customer/src/test/resources/sql/customer.yml",false),
+                change(null,"module-customer/SRC/TEST/resources/changelog/customer.xml",false)),true);
         var prepared=preparation.prepare(scope,collector.collect(scope));
         assertEquals(1,prepared.evidence().changes().size());
         verify(instructions).discoverApplicable(argThat(request->request.scopes().get(0).changedFilePaths().equals(List.of(migration))));
@@ -180,11 +182,25 @@ class ReleaseSummaryDiffCollectorTest {
         var prompt=new pl.mkn.tdw.features.releasesummary.ai.ReleaseSummaryPrompt(mapper,reports).render(scope,prepared);
         var exported=mapper.writeValueAsString(prepared.evidence());
         var progress=mapper.writeValueAsString(ReleaseSummaryProgressEvidence.sections(scope,prepared.evidence()));
-        for(var excluded:List.of("src/Customer.java","application.yml","fixtures/customer.json")) {
+        for(var excluded:List.of("src/Customer.java","application.yml","fixtures/customer.json",
+                "module-customer/src/test/resources/sql/customer.yml","module-customer/SRC/TEST/resources/changelog/customer.xml")) {
             assertFalse(prompt.contains(excluded));assertFalse(exported.contains(excluded));assertFalse(progress.contains(excluded));
         }
-        assertTrue(prompt.contains(migration));
+        assertTrue(prompt.contains(migration));verifyNoInteractions(files,verified);
     }
+    @Test void testPathsOverridePositiveMatchesOnEitherSideWithoutReadingSources() {
+        var tests="module-customer/src/test/resources/sql/customer.yml";
+        var main="module-customer/src/main/resources/sql/customer.yml";
+        var upper="module-customer/SRC/TEST/resources/CHANGELOG/customer.xml";
+        given(List.of(change(null,tests,false),change(tests,null,false),change(tests,tests,false),
+                change(tests,main,false),change(main,tests,false),change(null,upper,false)),true);
+        var prepared=preparation.prepare(scope,collector.collect(scope));
+        assertTrue(prepared.evidence().noChanges());assertTrue(prepared.evidence().gaps().isEmpty());
+        verifyNoInteractions(files,verified,instructions);
+        properties.setPathContainsAny(List.of("customer"));
+        assertTrue(collector.collect(scope).noChanges());
+    }
+
     @Test void noChangesReportDoesNotClaimIdenticalRevisions() {
         given(List.of(change(null,"src/Customer.java",true)),true);
         assertTrue(collector.collect(scope).noChanges());
