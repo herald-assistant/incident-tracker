@@ -61,7 +61,7 @@ class ReleaseSummaryDiffCollectorTest {
     @Test void renameAcrossScopeKeepsBothPathsAndPrefixMatchingUsesSegmentBoundaries() {
         given(List.of(change("db/changelog/customer.xml","archive/customer.xml",true),change(null,"database/changelog/customer.xml",true)),true);
         var selected=new ReleaseSummaryScope(scope.systemId(),scope.systemName(),scope.group(),scope.catalogDigest(),
-                List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of("db"),"refs/heads/current","a".repeat(40),"refs/tags/next","b".repeat(40))),scope.entities());
+                List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of("db"),"a".repeat(40),"a".repeat(40),"b".repeat(40),"b".repeat(40))),scope.entities());
         var result=collector.collect(selected);assertEquals(1,result.changes().size());assertEquals("archive/customer.xml",result.changes().get(0).change().newPath());
     }
     @Test void progressCallsAPatchAPatchNeverFullBeforeOrAfterContent() {

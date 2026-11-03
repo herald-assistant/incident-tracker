@@ -6,7 +6,7 @@ describe('Release summary file contract',()=>{
     const job=releaseSnapshot('PARTIAL');
     job.comparison={systemId:'crm',systemName:'CRM',group:'CRM',catalogDigest:'digest',
       entities:[{type:'system',id:'crm',payload:{name:'CRM',custom:{nested:['pełne dane']}}}],
-      repositories:[{repositoryId:'customer',project:'customer',prefixes:['db'],baselineRef:'refs/heads/current',baselineCommit:'a'.repeat(40),targetRef:'refs/tags/next',targetCommit:'b'.repeat(40)}]};
+      repositories:[{repositoryId:'customer',project:'customer',prefixes:['db'],baselineRef:'a'.repeat(40),baselineCommit:'a'.repeat(40),targetRef:'b'.repeat(40),targetCommit:'b'.repeat(40)}]};
     job.evidence={changeListComplete:true,changes:[{repositoryId:'customer',project:'customer',change:{oldPath:null,newPath:'db/customer.sql',
       oldBlobId:null,newBlobId:'c'.repeat(40),oldMode:null,newMode:'100644',patch:'@@ -0,0 +1 @@\n+alter table customer add label text;',patchComplete:true}}],gaps:[]};
     const imported=parseReleaseSummaryImport(JSON.parse(JSON.stringify(releaseSummaryExport(job))));
@@ -16,7 +16,12 @@ describe('Release summary file contract',()=>{
   it('rejects other schemas, versions, result contracts, modes and broken SHAs',()=>{
     for(const mutate of [
       (e:any)=>e.version=2,(e:any)=>e.schema='tdw.other',(e:any)=>e.payload.resultContract='unknown',
-      (e:any)=>e.payload.job.request.mode='API',(e:any)=>e.payload.job.request.baselineRef.kind='OTHER',
+      (e:any)=>e.payload.job.request.mode='API',
+      (e:any)=>delete e.payload.job.request.range,
+      (e:any)=>e.payload.job.request.range.baseline.committedAt='invalid',
+      (e:any)=>e.payload.job.request.range.selection.dateFrom='2026-02-30',
+      (e:any)=>e.payload.job.request.range.selection.timeZone='invalid',
+      (e:any)=>e.payload.job.request.range.selection.dateTo='2026-09-30',(e:any)=>e.payload.job.request.range.selection.branch='refs/tags/release',
       (e:any)=>e.payload.job.comparison={entities:[],repositories:[{prefixes:[],baselineCommit:'short',targetCommit:'b'.repeat(40)}]}
     ]) {const envelope=releaseSummaryExport(releaseSnapshot());mutate(envelope);expect(()=>parseReleaseSummaryImport(envelope)).toThrow();}
   });

@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription } from 'rxjs';
+import { Subscription, timer, switchMap } from 'rxjs';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
 import { AnalysisReportEditRequest } from '../../core/models/analysis.models';
@@ -16,7 +16,7 @@ import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-pan
 import { AnalysisReportPanelComponent } from '../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisResultHeaderComponent } from '../../components/analysis-result-header/analysis-result-header';
 import { ReleaseSummaryApiService } from './release-summary-api.service';
-import { ReleaseRefKind, ReleaseSummarySnapshot, releaseRef, terminalReleaseSummary } from './release-summary.models';
+import { ReleaseCommit, ReleaseRange, ReleaseSummarySnapshot, terminalReleaseSummary } from './release-summary.models';
 import { AnalysisJobPollingService } from '../../core/services/analysis-job-polling.service';
 import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
@@ -42,8 +42,15 @@ export class ReleaseSummaryPageComponent {
   private pollSubscription?: Subscription;
   readonly applications = signal<ApplicationOption[]>([]);
   readonly systemId = signal('');
-  readonly before = signal(''); readonly after = signal('');
-  readonly beforeKind = signal<ReleaseRefKind>('BRANCH'); readonly afterKind = signal<ReleaseRefKind>('BRANCH');
+  readonly branch = signal('');
+  readonly dateFrom = signal(''); readonly dateTo = signal('');
+  readonly timeZone = signal(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  readonly range = signal<ReleaseRange | null>(null);
+  readonly previewLoading = signal(false); readonly previewError = signal('');
+  private previewSubscription?: Subscription;
+  readonly dateError = computed(() => this.dateFrom() && this.dateTo() && this.dateFrom() > this.dateTo()
+    ? 'Data Od nie może być późniejsza niż data Do.' : '');
+  readonly noChanges = computed(() => !!this.range() && this.range()!.baseline.id === this.range()!.target.id);
   readonly loading = signal(false); readonly starting = signal(false); readonly error = signal('');
   readonly job = signal<ReleaseSummarySnapshot | null>(null);
   readonly imported = signal(false); readonly editing = signal(false); readonly saving = signal(false);
@@ -57,7 +64,7 @@ export class ReleaseSummaryPageComponent {
   readonly modelsLoading = signal(false);
   readonly modelError = signal('');
   readonly effectiveModel = computed(() => this.model() || this.modelCatalog().defaultModel);
-  readonly canStart = computed(() => !!this.systemId() && !!this.before() && !!this.after() && !!this.effectiveModel()
+  readonly canStart = computed(() => !!this.systemId() && !!this.range() && !this.noChanges() && !this.previewLoading() && !this.dateError() && !!this.effectiveModel()
     && !this.modelsLoading() && !this.busy() && !this.editing() && this.uiConfig.config().releaseSummaryEnabled);
   readonly busy = computed(() => this.starting() || this.saving() || this.chatSubmitting() || !!this.job() && !terminalReleaseSummary(this.job()!));
   readonly aiWorkflowIsRunning = computed(() => Boolean(this.job()?.steps.some(step =>
@@ -70,12 +77,15 @@ export class ReleaseSummaryPageComponent {
     if (this.editing()) return 'Zakończ edycję raportu, aby rozpocząć nowe porównanie.';
     if (this.modelsLoading()) return 'Pobieranie modeli AI…';
     if (!this.effectiveModel()) return 'Wybierz model AI, aby wygenerować raport.';
-    if (!this.systemId() || !this.before() || !this.after()) return 'Wybierz aplikację, punkt wejścia i stan docelowy.';
+    if (this.dateError()) return this.dateError();
+    if (this.previewLoading()) return 'Dobieranie commitów…';
+    if (this.noChanges()) return 'W wybranym okresie nie było zmian.';
+    if (!this.systemId() || !this.range()) return 'Wybierz aplikację, branch i zakres dat.';
     return 'Gotowe do wygenerowania raportu.';
   });
   readonly resultTitle = computed(() => {
     const request = this.job()?.request;
-    return request ? `Zmiany bazodanowe między ${request.baselineRef.name} a ${request.targetRef.name}` : 'Zmiany bazodanowe';
+    return request ? `Zmiany bazodanowe · ${request.range.selection.branch.replace(/^refs\/heads\//, '')} · ${this.formatDate(request.range.selection.dateFrom)} – ${this.formatDate(request.range.selection.dateTo)}` : 'Zmiany bazodanowe';
   });
   readonly shareDocument = computed(() => {
     const report = this.visibleReport();
@@ -86,9 +96,13 @@ export class ReleaseSummaryPageComponent {
     return report ? {...report, meta: {...report.meta,
       visibilityLimits: [...new Set([...(report.meta?.visibilityLimits ?? []), ...(job.result?.visibilityLimits ?? [])])]}} : null;
   });
-  readonly beforeLoader = (key: string, search: string, page?: number) =>
-    this.api.refs(key.slice(0, key.lastIndexOf(':')), key.slice(key.lastIndexOf(':') + 1) as ReleaseRefKind, search, page);
-  readonly afterLoader = this.beforeLoader;
+  readonly branchLoader = (key: string, search: string, page?: number) => this.api.branches(key, search, page);
+
+  formatDate(value: string): string { return value.split('-').reverse().join('.'); }
+  commitDate(commit: ReleaseCommit, zone = this.timeZone()): string {
+    return new Intl.DateTimeFormat('pl-PL', {timeZone: zone, day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit'}).format(new Date(commit.committedAt));
+  }
 
   constructor() {
     this.uiConfig.load();
@@ -108,10 +122,28 @@ export class ReleaseSummaryPageComponent {
       error: () => { this.loading.set(false); this.error.set('Nie udało się pobrać aplikacji.'); }
     });
   }
-  selectSystem(id: string): void { if(this.busy()) return; this.systemId.set(id); this.before.set(''); this.after.set(''); }
-  setKind(side: 'before' | 'after', kind: ReleaseRefKind): void {
+  selectSystem(id: string): void {
     if(this.busy()) return;
-    if(side === 'before') { this.beforeKind.set(kind); this.before.set(''); } else { this.afterKind.set(kind); this.after.set(''); }
+    this.systemId.set(id); this.branch.set(''); this.refreshPreview();
+  }
+  selectBranch(branch: string): void { if(!this.busy()) { this.branch.set(branch); this.refreshPreview(); } }
+  selectDate(side: 'from' | 'to', value: string): void {
+    if(this.busy()) return;
+    (side === 'from' ? this.dateFrom : this.dateTo).set(value); this.refreshPreview();
+  }
+  refreshPreview(): void {
+    this.previewSubscription?.unsubscribe();
+    this.range.set(null); this.previewError.set(''); this.previewLoading.set(false);
+    if(!this.systemId() || !this.branch() || !this.dateFrom() || !this.dateTo() || this.dateError()) return;
+    const selection = {branch:this.branch(), dateFrom:this.dateFrom(), dateTo:this.dateTo(), timeZone:this.timeZone()};
+    const systemId = this.systemId();
+    this.previewLoading.set(true);
+    this.previewSubscription = timer(300).pipe(switchMap(() => this.api.preview(systemId, selection)),
+      takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: range => { this.range.set(range); this.previewLoading.set(false); },
+        error: err => { this.previewLoading.set(false);
+          this.previewError.set(err?.error?.message || 'Nie udało się dobrać commitów. Spróbuj ponownie.'); }
+      });
   }
   selectModel(model: string): void {
     this.model.set(model); this.reasoning.set(defaultReasoningEffortForAiModel(this.modelCatalog(), model));
@@ -119,7 +151,7 @@ export class ReleaseSummaryPageComponent {
   start(): void {
     if(!this.canStart()) return;
     this.starting.set(true); this.error.set(''); this.imported.set(false); this.editing.set(false);
-    this.api.start({systemId: this.systemId(), mode: 'LIQUIBASE', baselineRef: releaseRef(this.before()), targetRef: releaseRef(this.after()),
+    this.api.start({systemId: this.systemId(), mode: 'LIQUIBASE', range: this.range()!,
       ...(this.model() ? {model: this.model()} : {}), ...(this.reasoning() ? {reasoningEffort: this.reasoning()} : {})})
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: job => { this.job.set(job); this.starting.set(false); if(!terminalReleaseSummary(job)) this.poll(job.jobId); },
@@ -130,8 +162,10 @@ export class ReleaseSummaryPageComponent {
     this.imported.set(false);this.editing.set(false);
     this.api.get(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: job => { this.job.set(job); this.systemId.set(job.request.systemId);
-        this.beforeKind.set(job.request.baselineRef.kind); this.afterKind.set(job.request.targetRef.kind);
-        this.before.set(this.canonical(job.request.baselineRef)); this.after.set(this.canonical(job.request.targetRef));
+        const range = job.request.range;
+        this.previewSubscription?.unsubscribe(); this.previewLoading.set(false); this.previewError.set('');
+        this.branch.set(range.selection.branch); this.dateFrom.set(range.selection.dateFrom); this.dateTo.set(range.selection.dateTo);
+        this.timeZone.set(range.selection.timeZone); this.range.set(range);
         if(job.request.model) this.selectModel(job.request.model);
         if(job.request.reasoningEffort) this.reasoning.set(job.request.reasoningEffort);
         if(!terminalReleaseSummary(job)) this.poll(id); },
@@ -166,9 +200,6 @@ export class ReleaseSummaryPageComponent {
     if(this.imported()){downloadJsonFile('release-summary.json',releaseSummaryExport(job));return;}
     this.api.export(job.jobId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next:payload=>downloadJsonFile('release-summary.json',payload),error:()=>this.error.set('Nie udało się wyeksportować analizy.')});
-  }
-  private canonical(ref: {kind: ReleaseRefKind; name: string}): string {
-    return ref.kind === 'BRANCH' ? 'refs/heads/' + ref.name : ref.kind === 'TAG' ? 'refs/tags/' + ref.name : ref.name;
   }
   private poll(id: string): void {
     this.pollSubscription?.unsubscribe();

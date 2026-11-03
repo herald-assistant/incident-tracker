@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRefPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryHistoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevisionPort;
 import pl.mkn.tdw.integrations.gitlab.contract.*;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
@@ -20,6 +21,7 @@ public class ReleaseSummaryCatalog {
     private final GitLabSettingsPort gitLabSettingsPort;
     private final GitLabRepositoryRefPort refPort;
     private final GitLabRepositoryRevisionPort revisionPort;
+    private final GitLabRepositoryHistoryPort historyPort;
     public record Application(String systemId, String name, String summary, int repositoryCount) {}
     public record RepositoryCommit(String repositoryId, String committedAt) {}
     public record RefOption(String name, String label, GitLabRef.Kind kind, boolean isDefault,
@@ -33,64 +35,51 @@ public class ReleaseSummaryCatalog {
                         .filter(this::includedRepository).map(r -> r.repoId()).distinct().toList().size()))
                 .filter(s -> s.repositoryCount()>0).sorted(Comparator.comparing(a -> a.name()!=null?a.name():a.systemId())).toList();
     }
-    public RefOptions refs(String systemId, GitLabRef.Kind kind, String search, int page) {
-        var session=operationalContextPort.capture();
-        var selected=select(session,systemId);
-        if (kind == GitLabRef.Kind.COMMIT) {
-            if (search == null || search.isBlank()) return new RefOptions(List.of(),null,false,List.of("Wpisz pełny SHA commita."));
-            var ref=new GitLabRef(kind,search);
-            var found=new ArrayList<String>();
-            var dates=new ArrayList<RepositoryCommit>();
-            selected.repositories().forEach(r -> {
-                var revision=revisionPort.resolveRevision(group(),r.project(),ref.canonical());
-                validateRevision(revision,r.project(),ref.canonical());
-                dates.add(new RepositoryCommit(r.repositoryId(),new GitLabRefOption(ref,revision.committedAt(),false).committedAt()));
-                found.add(r.repositoryId());
-            });
-            return new RefOptions(List.of(new RefOption(ref.canonical(),ref.name(),kind,false,List.copyOf(found),latest(dates),List.copyOf(dates))),null,false,List.of());
-        }
-        var values=new LinkedHashMap<String,RefOption>();
-        Integer next=null;
-        for(var repository:selected.repositories()) {
-            var result=refPort.listRefs(group()+"/"+repository.project(),kind,search,page);
-            if(result.nextPage()!=null) next=result.nextPage();
-            for(var option:result.refs()) {
-                var ref=option.ref();
-                var ids=new ArrayList<String>();
-                var dates=new ArrayList<RepositoryCommit>();
-                var previous=values.get(ref.canonical());
-                if(previous!=null)dates.addAll(previous.repositoryCommits());
-                dates.add(new RepositoryCommit(repository.repositoryId(),option.committedAt()));
-                if(values.containsKey(ref.canonical())) ids.addAll(values.get(ref.canonical()).repositories());
-                ids.add(repository.repositoryId());
-                values.put(ref.canonical(),new RefOption(ref.canonical(),ref.name(),kind,option.isDefault() || previous!=null && previous.isDefault(),List.copyOf(ids),latest(dates),List.copyOf(dates)));
-            }
-        }
-        return new RefOptions(List.copyOf(values.values()),next,next!=null,List.of());
+    public RefOptions branches(String systemId, String search, int page) {
+        var selected = select(operationalContextPort.capture(), systemId);
+        var repository = onlyRepository(selected);
+        var result = refPort.listRefs(group()+"/"+repository.project(), GitLabRef.Kind.BRANCH, search, page);
+        var options = result.refs().stream().map(option -> new RefOption(option.ref().canonical(), option.ref().name(),
+                GitLabRef.Kind.BRANCH, option.isDefault(), List.of(repository.repositoryId()), option.committedAt(),
+                List.of(new RepositoryCommit(repository.repositoryId(), option.committedAt())))).toList();
+        return new RefOptions(options, result.nextPage(), result.nextPage()!=null, List.of());
     }
-    private String latest(List<RepositoryCommit> dates) {
-        return dates.stream().map(RepositoryCommit::committedAt).filter(Objects::nonNull)
-                .max(java.util.Comparator.comparing(java.time.Instant::parse)).orElse(null);
+    public ReleaseSummaryRange preview(String systemId, ReleaseSummaryDateSelection selection) {
+        return resolveRange(select(operationalContextPort.capture(), systemId), selection);
+    }
+    private ReleaseSummaryRange resolveRange(ReleaseSummaryScope selected, ReleaseSummaryDateSelection selection) {
+        var repo = onlyRepository(selected);
+        try {
+            var head = revisionPort.resolveRevision(group(), repo.project(), selection.branch());
+            validateRevision(head, repo.project(), selection.branch());
+            var zone = java.time.ZoneId.of(selection.timeZone());
+            var from = selection.dateFrom().atStartOfDay(zone).toInstant();
+            var until = selection.dateTo().plusDays(1).atStartOfDay(zone).toInstant();
+            var baseline = historyPort.latestBefore(group(), repo.project(), head.commitId(), from)
+                    .orElseThrow(() -> new ReleaseSummaryException("BASELINE_NOT_FOUND", "Brak commita przed datą Od. Wybierz późniejszą datę początkową."));
+            var target = historyPort.latestBefore(group(), repo.project(), head.commitId(), until)
+                    .orElseThrow(() -> new ReleaseSummaryException("TARGET_NOT_FOUND", "Brak commita do wybranej daty Do."));
+            return new ReleaseSummaryRange(selection, repo.repositoryId(), baseline, target);
+        } catch (ReleaseSummaryException e) { throw e; }
+        catch (RuntimeException e) {
+            throw new ReleaseSummaryException("HISTORY_UNAVAILABLE", "Nie można dobrać commitów dla wybranego brancha i dat. Spróbuj ponownie.");
+        }
+    }
+    private ReleaseSummaryScope.Repository onlyRepository(ReleaseSummaryScope selected) {
+        if (selected.repositories().size()!=1)
+            throw new ReleaseSummaryException("SINGLE_PRIMARY_REQUIRED", "Release summary wymaga dokładnie jednego repozytorium primary z priority 1.");
+        return selected.repositories().get(0);
     }
     public ReleaseSummaryScope pin(ReleaseSummaryRequest request, OperationalContextReadSession session) {
-        var selected=select(session, request.systemId());
-        var pinned=new ArrayList<ReleaseSummaryScope.Repository>();
-        var resolved=new HashMap<String,GitLabRepositoryRevision>();
-        for(var r:selected.repositories()) {
-            try {
-                var before=resolved.computeIfAbsent(r.project()+"@"+request.baselineRef().canonical(),
-                        key->revisionPort.resolveRevision(group(),r.project(),request.baselineRef().canonical()));
-                var after=resolved.computeIfAbsent(r.project()+"@"+request.targetRef().canonical(),
-                        key->revisionPort.resolveRevision(group(),r.project(),request.targetRef().canonical()));
-                validateRevision(before,r.project(),request.baselineRef().canonical());
-                validateRevision(after,r.project(),request.targetRef().canonical());
-                pinned.add(new ReleaseSummaryScope.Repository(r.repositoryId(),r.project(),r.prefixes(),
-                        request.baselineRef().canonical(),before.commitId(),request.targetRef().canonical(),after.commitId()));
-            } catch(RuntimeException e) {
-                throw new ReleaseSummaryException("REF_UNAVAILABLE","Nie można odczytać obu refów repozytorium "+r.repositoryId()+".");
-            }
-        }
-        return new ReleaseSummaryScope(selected.systemId(),selected.systemName(),selected.group(),selected.catalogDigest(),pinned,selected.entities());
+        var selected = select(session, request.systemId());
+        var range = resolveRange(selected, request.range().selection());
+        if (!range.equals(request.range()))
+            throw new ReleaseSummaryException("RANGE_CHANGED", "Dobór commitów zmienił się od podglądu. Odśwież zakres dat przed ponownym startem.");
+        var repo = onlyRepository(selected);
+        var pinned = new ReleaseSummaryScope.Repository(repo.repositoryId(), repo.project(), repo.prefixes(),
+                range.baseline().id(), range.baseline().id(), range.target().id(), range.target().id());
+        return new ReleaseSummaryScope(selected.systemId(), selected.systemName(), selected.group(), selected.catalogDigest(),
+                List.of(pinned), selected.entities());
     }
     public OperationalContextReadSession capture() { return operationalContextPort.capture(); }
     private void validateRevision(GitLabRepositoryRevision revision,String project,String ref) {

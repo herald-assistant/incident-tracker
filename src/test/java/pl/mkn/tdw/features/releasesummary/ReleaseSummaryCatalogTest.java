@@ -2,179 +2,120 @@ package pl.mkn.tdw.features.releasesummary;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import pl.mkn.tdw.features.releasesummary.context.ReleaseSummaryCatalog;
-import pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryRequest;
-import pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryException;
-import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRefPort;
-import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryRevisionPort;
-import pl.mkn.tdw.integrations.gitlab.contract.GitLabRef;
-import pl.mkn.tdw.integrations.gitlab.contract.GitLabRefPage;
-import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryRevision;
+import pl.mkn.tdw.features.releasesummary.contract.*;
+import pl.mkn.tdw.integrations.gitlab.*;
+import pl.mkn.tdw.integrations.gitlab.contract.*;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.contract.*;
+import java.time.*;
 import java.util.*;
 import static pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ReleaseSummaryCatalogTest {
-        @Test void pinsIncludedRepositoriesAndKeepsWholePayload() {
-        var system = system(Map.of("id","crm","name","CRM","summary","Obsługa klientów",
-                "aliases",List.of("Customer workspace")));
-        var repos = List.of(repository(Map.of("id","crm-api","git",Map.of("provider","gitlab","projectPath","CRM/api"))),
-                repository(Map.of("id","crm-data","git",Map.of("provider","gitlab","projectPath","CRM/data"))));
-        var scopes = List.of(repositorySearchScope(Map.of("id","crm-code","target",Map.of("type","system","id","crm"),
-                "repositories",List.of(Map.of("repoId","crm-api","role","primary","priority",1,"pathPrefixes",List.of("src")),
-                        Map.of("repoId","crm-data","role","primary","priority",1)))));
-        var catalog = new OperationalContextCatalog(null,null,List.of(system),null,repos,scopes,null,null,null,null,null);
-        var session=OperationalContextReadSession.fromSnapshot(new OperationalContextSnapshot("digest","local",catalog));
-        var settings=mock(GitLabSettingsPort.class); when(settings.getGroup()).thenReturn("CRM");
-        var revisions=mock(GitLabRepositoryRevisionPort.class);
-        when(revisions.resolveRevision(eq("CRM"),anyString(),anyString())).thenAnswer(i ->
-                new GitLabRepositoryRevision("CRM",i.getArgument(1),i.getArgument(2),"a".repeat(40),null));
-        var service=new ReleaseSummaryCatalog(mock(OperationalContextPort.class),settings,mock(GitLabRepositoryRefPort.class),revisions);
-        var request=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,
-                new GitLabRef(GitLabRef.Kind.BRANCH,"release"),new GitLabRef(GitLabRef.Kind.TAG,"release"),null,null);
-        var pinned=service.pin(request,session);
-        assertEquals(2,pinned.repositories().size());
-        assertEquals(system.payload(),pinned.entities().get(0).get("payload"));
-        assertEquals(4,pinned.entities().size());
-        assertEquals(List.of("src"),pinned.repositories().get(0).prefixes());
-        verify(revisions).resolveRevision("CRM","data","refs/tags/release");
-        when(revisions.resolveRevision("CRM","data","refs/tags/release")).thenThrow(new IllegalStateException());
-        assertThrows(ReleaseSummaryException.class,()->service.pin(request,session));
-        verify(revisions,never()).resolveRevision(anyString(),anyString(),eq("main"));
-        reset(revisions);
-        var sequence=new java.util.concurrent.atomic.AtomicInteger();
-        when(revisions.resolveRevision(eq("CRM"),anyString(),anyString())).thenAnswer(i->new GitLabRepositoryRevision(
-                "CRM",i.getArgument(1),i.getArgument(2),Integer.toHexString(sequence.incrementAndGet()).repeat(40),null));
-        var same=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,request.baselineRef(),request.baselineRef(),null,null);
-        var stable=service.pin(same,session);
-        assertEquals(2,sequence.get());
-        stable.repositories().forEach(r->assertEquals(r.baselineCommit(),r.targetCommit()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("repositorySelectionCases")
-    void appliesRoleAndPriorityToApplicationsRefsAndPinning(String role,Integer priority,boolean included) {
-        var entry=new LinkedHashMap<String,Object>();
-        entry.put("repoId","crm-api");
-        if(role!=null) entry.put("role",role);
-        if(priority!=null) entry.put("priority",priority);
-        var session=selectionSession(List.of(entry));
-        var context=mock(OperationalContextPort.class);
-        when(context.capture()).thenReturn(session);
-        var settings=mock(GitLabSettingsPort.class);
-        when(settings.getGroup()).thenReturn("CRM");
-        var refs=mock(GitLabRepositoryRefPort.class);
-        var revisions=mock(GitLabRepositoryRevisionPort.class);
-        var service=new ReleaseSummaryCatalog(context,settings,refs,revisions);
-        var commit="a".repeat(40);
-        var ref=new GitLabRef(GitLabRef.Kind.COMMIT,commit);
-        var request=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,ref,ref,null,null);
-        if(included) {
-            when(revisions.resolveRevision("CRM","api",commit))
-                    .thenReturn(new GitLabRepositoryRevision("CRM","api",commit,commit,null));
-            assertEquals(1,service.applications().get(0).repositoryCount());
-            assertEquals(List.of("crm-api"),service.refs("crm",GitLabRef.Kind.COMMIT,commit,1)
-                    .branches().get(0).repositories());
-            assertEquals(List.of("crm-api"),service.pin(request,session).repositories().stream()
-                    .map(repository->repository.repositoryId()).toList());
-            verify(revisions,times(2)).resolveRevision("CRM","api",commit);
-        } else {
-            assertTrue(service.applications().isEmpty());
-            assertEquals("NO_REPOSITORIES",assertThrows(ReleaseSummaryException.class,
-                    ()->service.refs("crm",GitLabRef.Kind.BRANCH,"",1)).code());
-            assertEquals("NO_REPOSITORIES",assertThrows(ReleaseSummaryException.class,
-                    ()->service.pin(request,session)).code());
-            verifyNoInteractions(revisions);
-        }
-        verifyNoInteractions(refs);
-    }
-
-    static java.util.stream.Stream<Arguments> repositorySelectionCases() {
-        return java.util.stream.Stream.of(
-                Arguments.of("primary",1,true),Arguments.of("shared-library",1,false),
-                Arguments.of("primary",2,false),Arguments.of("shared-library",2,false),
-                Arguments.of("primary",0,false),Arguments.of("shared-library",null,false),
-                Arguments.of("primary",null,false),Arguments.of("supporting-library",1,false),
-                Arguments.of("supporting-contracts",1,false),Arguments.of(null,1,false),
-                Arguments.of(null,null,false));
-    }
-
-    @Test void mergesOnlyIncludedPrefixesBeforeRepositoryResolution() {
-        var session=selectionSession(List.of(
-                Map.of("repoId","crm-api","role","primary","priority",1,"pathPrefixes",List.of("src")),
-                Map.of("repoId","crm-api","role","primary","priority",1,"pathPrefixes",List.of("db")),
-                Map.of("repoId","crm-api","role","shared-library","priority",1),
-                Map.of("repoId","crm-api","role","primary","priority",2),
-                Map.of("repoId","crm-api","role","supporting-contracts","priority",1,"pathPrefixes",List.of("other")),
-                Map.of("repoId","crm-missing","role","supporting-library","priority",1)));
-        var context=mock(OperationalContextPort.class);
-        when(context.capture()).thenReturn(session);
-        var settings=mock(GitLabSettingsPort.class);
-        when(settings.getGroup()).thenReturn("CRM");
-        var revisions=mock(GitLabRepositoryRevisionPort.class);
-        when(revisions.resolveRevision("CRM","api","refs/heads/release"))
-                .thenReturn(new GitLabRepositoryRevision("CRM","api","refs/heads/release","a".repeat(40),null));
-        var ref=new GitLabRef(GitLabRef.Kind.BRANCH,"release");
-        var refs=mock(GitLabRepositoryRefPort.class);
-        when(refs.listRefs("CRM/api",GitLabRef.Kind.BRANCH,"release",1))
-                .thenReturn(new GitLabRefPage(List.of(new pl.mkn.tdw.integrations.gitlab.contract.GitLabRefOption(ref,null,false)),null));
-        var service=new ReleaseSummaryCatalog(context,settings,refs,revisions);
-        var scope=service.pin(new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,ref,ref,null,null),session);
-        assertEquals(1,service.applications().get(0).repositoryCount());
+    @Test void resolvesBothBoundariesOnOnePinnedHeadAndPreservesCatalogPayloadAndPrefixes() {
+        var f=new Fixture(List.of(entry("primary",1,"src"), entry("primary",1,"db"),entry("shared-library",1,"other")));
+        var range=f.service.preview("crm",selection());
+        var scope=f.service.pin(new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,range,null,null),f.session);
         assertEquals(1,scope.repositories().size());
-        assertEquals(List.of("src","db"),scope.repositories().get(0).prefixes());
-        assertEquals(List.of("crm-api"),service.refs("crm",GitLabRef.Kind.BRANCH,"release",1)
-                .branches().get(0).repositories());
-        verify(refs).listRefs("CRM/api",GitLabRef.Kind.BRANCH,"release",1);
-        verifyNoMoreInteractions(refs);
-        verify(revisions).resolveRevision("CRM","api","refs/heads/release");
-        verifyNoMoreInteractions(revisions);
+        var repo=scope.repositories().get(0);
+        assertEquals(List.of("src","db"),repo.prefixes());
+        assertEquals(range.baseline().id(),repo.baselineCommit());assertEquals(range.target().id(),repo.targetCommit());
+        assertEquals(range.target().id(),repo.targetRef());
+        assertEquals("Obsługa klientów",((Map<?,?>)scope.entities().get(0).get("payload")).get("summary"));
+        verify(f.history,times(2)).latestBefore("CRM","customer","c".repeat(40),Instant.parse("2026-09-30T22:00:00Z"));
+        verify(f.history,times(2)).latestBefore("CRM","customer","c".repeat(40),Instant.parse("2026-10-31T23:00:00Z"));
+        verify(f.revisions,times(2)).resolveRevision("CRM","customer","refs/heads/release");
     }
-
-    @Test void aggregatesNewestCommitWhileKeepingMissingDatesAndPerRepositoryProvenance() {
-        var catalog=new OperationalContextCatalog(null,null,List.of(system(Map.of("id","crm","name","CRM"))),null,
-            List.of(repository(Map.of("id","crm-api","git",Map.of("provider","gitlab","projectPath","CRM/api"))),
-                    repository(Map.of("id","crm-data","git",Map.of("provider","gitlab","projectPath","CRM/data"))),
-                    repository(Map.of("id","crm-web","git",Map.of("provider","gitlab","projectPath","CRM/web")))),
-            List.of(repositorySearchScope(Map.of("id","crm-code","target",Map.of("type","system","id","crm"),
-                "repositories",List.of(Map.of("repoId","crm-api","role","primary","priority",1),
-                    Map.of("repoId","crm-data","role","primary","priority",1),
-                    Map.of("repoId","crm-web","role","primary","priority",1))))),null,null,null,null,null);
-        var context=mock(OperationalContextPort.class);
-        when(context.capture()).thenReturn(OperationalContextReadSession.fromSnapshot(new OperationalContextSnapshot("digest","local",catalog)));
-        var settings=mock(GitLabSettingsPort.class);when(settings.getGroup()).thenReturn("CRM");
-        var refs=mock(GitLabRepositoryRefPort.class);var revisions=mock(GitLabRepositoryRevisionPort.class);
-        var ref=new GitLabRef(GitLabRef.Kind.BRANCH,"release");
-        var dates=Arrays.asList("2026-11-01T12:00:00Z","2026-11-02T12:00:00Z",null);
-        int index=0;
-        for(var project:List.of("api","data","web")) {
-            var date=dates.get(index++);
-            when(refs.listRefs("CRM/"+project,GitLabRef.Kind.BRANCH,"",1)).thenReturn(new GitLabRefPage(List.of(
-                new pl.mkn.tdw.integrations.gitlab.contract.GitLabRefOption(ref,date,project.equals("api"))),null));
-            when(revisions.resolveRevision(eq("CRM"),eq(project),anyString())).thenAnswer(invocation ->
-                new GitLabRepositoryRevision("CRM",project,invocation.getArgument(2),"a".repeat(40),date));
+    @Test void branchPaginationUsesOnlyOnePrimaryRepository() {
+        var f=new Fixture(List.of(entry("primary",1,"")));
+        when(f.refs.listRefs("CRM/customer",GitLabRef.Kind.BRANCH,"rel",2)).thenReturn(new GitLabRefPage(
+                List.of(new GitLabRefOption(new GitLabRef(GitLabRef.Kind.BRANCH,"release"),"2026-10-29T10:18:00Z",true)),3));
+        var page=f.service.branches("crm","rel",2);
+        assertEquals(3,page.nextPage());assertTrue(page.truncated());assertEquals("refs/heads/release",page.branches().get(0).name());
+        assertEquals(List.of("customer"),page.branches().get(0).repositories());
+        verifyNoInteractions(f.history,f.revisions);
+    }
+    @ParameterizedTest @CsvSource({"primary,1,true","shared-library,1,false","primary,2,false","primary,0,false",
+            "primary,,false",",1,false",",,false","supporting-library,1,false","supporting-contracts,1,false"})
+    void filtersRolesAndPrioritiesConsistently(String role,Integer priority,boolean included) {
+        var row=new HashMap<String,Object>();row.put("repoId","customer");
+        if(role!=null)row.put("role",role);if(priority!=null)row.put("priority",priority);
+        var f=new Fixture(List.of(row));
+        assertEquals(included?1:0,f.service.applications().size());
+        if(included) assertEquals("customer",f.service.preview("crm",selection()).repositoryId());
+        else {
+            assertEquals("NO_REPOSITORIES",assertThrows(ReleaseSummaryException.class,()->f.service.preview("crm",selection())).code());
+            assertEquals("NO_REPOSITORIES",assertThrows(ReleaseSummaryException.class,()->f.service.branches("crm","",1)).code());
+            verifyNoInteractions(f.history,f.revisions,f.refs);
         }
-        var service=new ReleaseSummaryCatalog(context,settings,refs,revisions);
-        var option=service.refs("crm",GitLabRef.Kind.BRANCH,"",1).branches().get(0);
-        assertEquals("2026-11-02T12:00:00Z",option.committedAt());assertTrue(option.isDefault());
-        assertEquals(List.of("crm-api","crm-data","crm-web"),option.repositories());
-        assertEquals(3,option.repositoryCommits().size());assertNull(option.repositoryCommits().get(2).committedAt());
-        verifyNoInteractions(revisions);
-        var commitOption=service.refs("crm",GitLabRef.Kind.COMMIT,"a".repeat(40),1).branches().get(0);
-        assertEquals(option.committedAt(),commitOption.committedAt());assertEquals(option.repositoryCommits(),commitOption.repositoryCommits());
     }
-
-    private OperationalContextReadSession selectionSession(List<Map<String,Object>> entries) {
-        var catalog=new OperationalContextCatalog(null,null,List.of(system(Map.of("id","crm","name","CRM"))),null,
-                List.of(repository(Map.of("id","crm-api","git",Map.of("provider","gitlab","projectPath","CRM/api")))),
-                List.of(repositorySearchScope(Map.of("id","crm-code","target",Map.of("type","system","id","crm"),
-                        "repositories",entries))),null,null,null,null,null);
-        return OperationalContextReadSession.fromSnapshot(new OperationalContextSnapshot("digest","local",catalog));
+    @Test void refusesMultiplePrimaryRepositoriesRatherThanPickingOne() {
+        var f=new Fixture(List.of(entry("primary",1,""),Map.of("repoId","crm-data","role","primary","priority",1)));
+        assertEquals("SINGLE_PRIMARY_REQUIRED",assertThrows(ReleaseSummaryException.class,()->f.service.preview("crm",selection())).code());
+        verifyNoInteractions(f.history,f.revisions);
+    }
+    @Test void noEarlierCommitIsAnExplicitGapAndIdenticalCommitsAreVisible() {
+        var f=new Fixture(List.of(entry("primary",1,"")));
+        doReturn(Optional.empty()).when(f.history).latestBefore(anyString(),anyString(),anyString(),any());
+        assertEquals("BASELINE_NOT_FOUND",assertThrows(ReleaseSummaryException.class,()->f.service.preview("crm",selection())).code());
+        doReturn(Optional.of(ReleaseSummaryCrmFixture.range().baseline())).when(f.history).latestBefore(anyString(),anyString(),anyString(),any());
+        assertTrue(f.service.preview("crm",selection()).noChanges());
+    }
+    @Test void changingBranchHistoryCannotSilentlyChangeThePreviewedCommits() {
+        var f=new Fixture(List.of(entry("primary",1,"")));
+        var range=f.service.preview("crm",selection());
+        when(f.history.latestBefore(eq("CRM"),eq("customer"),anyString(),eq(Instant.parse("2026-10-31T23:00:00Z"))))
+                .thenReturn(Optional.of(new GitLabCommit("d".repeat(40),Instant.parse("2026-10-30T10:00:00Z"),"Zmiana kontaktu klienta")));
+        assertEquals("RANGE_CHANGED",assertThrows(ReleaseSummaryException.class,()->f.service.pin(
+                new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,range,null,null),f.session)).code());
+    }
+    @Test void newerCommitsOutsideThePeriodDoNotInvalidateThePreview() {
+        var f=new Fixture(List.of(entry("primary",1,"")));
+        var range=f.service.preview("crm",selection());
+        when(f.revisions.resolveRevision("CRM","customer","refs/heads/release"))
+                .thenReturn(new GitLabRepositoryRevision("CRM","customer","refs/heads/release","d".repeat(40),null));
+        var scope=f.service.pin(new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,range,null,null),f.session);
+        assertEquals(range.target().id(),scope.repositories().get(0).targetCommit());
+        verify(f.history).latestBefore("CRM","customer","d".repeat(40),Instant.parse("2026-10-31T23:00:00Z"));
+    }
+    @Test void usesLocalMidnightsOnTheDayOfDaylightSavingTransitionAndIncludesTheEndDate() {
+        var f=new Fixture(List.of(entry("primary",1,"")));
+        f.service.preview("crm",new ReleaseSummaryDateSelection("release",LocalDate.parse("2026-10-25"),LocalDate.parse("2026-10-25"),"Europe/Warsaw"));
+        verify(f.history).latestBefore("CRM","customer","c".repeat(40),Instant.parse("2026-10-24T22:00:00Z"));
+        verify(f.history).latestBefore("CRM","customer","c".repeat(40),Instant.parse("2026-10-25T23:00:00Z"));
+    }
+    @Test void validatesBranchDatesAndZone() {
+        assertEquals(selection(),new ReleaseSummaryDateSelection(selection().branch(),selection().dateFrom(),selection().dateTo(),selection().timeZone()));
+        assertThrows(IllegalArgumentException.class,()->new ReleaseSummaryDateSelection("../main",LocalDate.now(),LocalDate.now(),"UTC"));
+        assertThrows(IllegalArgumentException.class,()->new ReleaseSummaryDateSelection("main",LocalDate.parse("2026-10-02"),LocalDate.parse("2026-10-01"),"UTC"));
+        assertThrows(DateTimeException.class,()->new ReleaseSummaryDateSelection("main",LocalDate.now(),LocalDate.now(),"unknown"));
+    }
+    private static ReleaseSummaryDateSelection selection(){return ReleaseSummaryCrmFixture.range().selection();}
+    private static Map<String,Object> entry(String role,int priority,String prefix){return Map.of("repoId","customer","role",role,"priority",priority,"pathPrefixes",List.of(prefix));}
+    private static class Fixture {
+        final GitLabRepositoryRevisionPort revisions=mock(GitLabRepositoryRevisionPort.class);
+        final GitLabRepositoryHistoryPort history=mock(GitLabRepositoryHistoryPort.class);
+        final GitLabRepositoryRefPort refs=mock(GitLabRepositoryRefPort.class);
+        final OperationalContextReadSession session;
+        final ReleaseSummaryCatalog service;
+        Fixture(List<Map<String,Object>> entries) {
+            var catalog=new OperationalContextCatalog(null,null,List.of(system(Map.of("id","crm","name","CRM","summary","Obsługa klientów"))),null,
+                    List.of(repository(Map.of("id","customer","git",Map.of("provider","gitlab","projectPath","CRM/customer"))),
+                            repository(Map.of("id","crm-data","git",Map.of("provider","gitlab","projectPath","CRM/data")))),
+                    List.of(repositorySearchScope(Map.of("id","crm-code","target",Map.of("type","system","id","crm"),"repositories",entries))),null,null,null,null,null);
+            session=OperationalContextReadSession.fromSnapshot(new OperationalContextSnapshot("digest","local",catalog));
+            var context=mock(OperationalContextPort.class);when(context.capture()).thenReturn(session);
+            var settings=mock(GitLabSettingsPort.class);when(settings.getGroup()).thenReturn("CRM");
+            service=new ReleaseSummaryCatalog(context,settings,refs,revisions,history);
+            when(revisions.resolveRevision("CRM","customer","refs/heads/release"))
+                    .thenReturn(new GitLabRepositoryRevision("CRM","customer","refs/heads/release","c".repeat(40),null));
+            when(history.latestBefore(anyString(),anyString(),anyString(),any())).thenAnswer(i->Optional.of(
+                    ((Instant)i.getArgument(3)).isBefore(Instant.parse("2026-10-26T00:00:00Z"))?
+                            ReleaseSummaryCrmFixture.range().baseline():ReleaseSummaryCrmFixture.range().target()));
+        }
     }
 }

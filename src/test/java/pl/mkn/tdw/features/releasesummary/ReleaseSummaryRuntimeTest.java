@@ -70,14 +70,14 @@ class ReleaseSummaryRuntimeTest {
                 selected.id(),projection.status(),projection.documentedTables());
     }
     private ReleaseSummaryRequest request(String model,String effort) {return new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,
-            new GitLabRef(GitLabRef.Kind.BRANCH,"current"),new GitLabRef(GitLabRef.Kind.TAG,"next"),model,effort);}
+            ReleaseSummaryCrmFixture.range(),model,effort);}
     private ReleaseSummaryAiContext context(AtomicReference<AnalysisReport> saved) {
         var scope=ReleaseSummaryCrmFixture.scope();var evidence=ReleaseSummaryCrmFixture.evidence();
         var system=OperationalContextDtos.system(Map.of("id","crm","name","CRM Customers","summary","Etykiety klienta wspierają wyszukiwanie i filtry operatora."));
         var catalog=new OperationalContextDtos.OperationalContextCatalog(null,null,List.of(system),null,null,null,null,null,null,null,null);
         return new ReleaseSummaryAiContext(scope,evidence,OperationalContextReadSession.fromSnapshot(new OperationalContextSnapshot("digest","CRM fixture",catalog)),
-                GitLabRepositoryToolScope.forRevisions("CRM",List.of(new GitLabRepositoryToolScope.PinnedRevision("customer","refs/heads/current",ReleaseSummaryCrmFixture.BEFORE),
-                        new GitLabRepositoryToolScope.PinnedRevision("customer","refs/tags/next",ReleaseSummaryCrmFixture.AFTER))),
+                GitLabRepositoryToolScope.forRevisions("CRM",List.of(new GitLabRepositoryToolScope.PinnedRevision("customer","a".repeat(40),ReleaseSummaryCrmFixture.BEFORE),
+                        new GitLabRepositoryToolScope.PinnedRevision("customer","b".repeat(40),ReleaseSummaryCrmFixture.AFTER))),
                 reports.initialSources(scope,evidence),saved::set,()->{},true);
     }
     @TestConfiguration static class CrmPorts {

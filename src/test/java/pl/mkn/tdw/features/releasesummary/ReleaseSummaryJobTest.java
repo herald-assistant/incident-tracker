@@ -67,7 +67,7 @@ class ReleaseSummaryJobTest {
         verify(fixture.ai,never()).execute(any());
     }
     private static ReleaseSummaryRequest request(){return new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,
-            new GitLabRef(GitLabRef.Kind.BRANCH,"current"),new GitLabRef(GitLabRef.Kind.TAG,"next"),"crm-model",null);}
+            ReleaseSummaryCrmFixture.range(),"crm-model",null);}
     private static class Fixture {
         final ReleaseSummaryAiRunner ai=mock(ReleaseSummaryAiRunner.class);
         final ReleaseSummaryPersistence persistence=mock(ReleaseSummaryPersistence.class);

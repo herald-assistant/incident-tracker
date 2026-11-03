@@ -51,12 +51,12 @@ public class ReleaseSummaryJobService {
         try(var lease=operationGuard.tryAcquire(state.id).orElseThrow(()->new IllegalStateException("Analysis already active"))) {
             try {
                 synchronized(state) {
-                    state.status="RUNNING";state.step("RESOLVE_REFS","Przypięcie rewizji","RUNNING","Odczyt pełnych encji i refów.",0);persist(state);
+                    state.status="RUNNING";state.step("RESOLVE_REFS","Przypięcie rewizji","RUNNING","Odczyt encji i weryfikacja commitów dla zakresu dat.",0);persist(state);
                 }
                 var captured=catalog.capture();
                 var scope=catalog.pin(state.request,captured);
                 synchronized(state) {
-                    state.scope=scope;state.step("RESOLVE_REFS","Przypięcie rewizji","COMPLETED","Oba refy zostały przypięte do commitów.",scope.repositories().size());
+                    state.scope=scope;state.step("RESOLVE_REFS","Przypięcie rewizji","COMPLETED","Potwierdzono oba commity z podglądu zakresu dat.",scope.repositories().size());
                     state.step("COLLECT_DIFF","Porownanie rewizji","RUNNING","Przygotowanie kompletnej listy zmian i dostepnych patchy.",0);persist(state);
                 }
                 var collected=collector.collect(scope);

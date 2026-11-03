@@ -104,7 +104,7 @@ class ReleaseSummaryProgressTest {
             var history=new AnalysisRunHistoryService(reader,List.of(),null);
             var entry=history.listRuns().runs().get(0);
             assertEquals("QUEUED",entry.status());
-            assertEquals("crm · current → next",entry.name());
+            assertEquals("crm · refs/heads/release · 2026-10-01 → 2026-10-31",entry.name());
             assertNull(entry.completedAt());
             var saved=persistence.read(reader.findById(entry.analysisId()).orElseThrow());
             assertEquals(List.of("RESOLVE_REFS","COLLECT_DIFF","PREPARE_PROMPT","AI_REPORT"),

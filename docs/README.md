@@ -65,6 +65,7 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
 - Biezacy kontrakt Release summary opisuje
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
+  Potrzebę wyboru okresu opisuje [zakres dat](needs/release-summary-date-range.md).
 
 - Użycie Operational Context przez UI Explorer i UX Inspector opisują ich
   kanoniczne [runtime UI](architecture/ui-explorer-runtime-flow.md) oraz

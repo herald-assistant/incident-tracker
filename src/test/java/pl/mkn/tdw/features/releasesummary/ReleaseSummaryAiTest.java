@@ -46,8 +46,8 @@ class ReleaseSummaryAiTest {
     ReleaseSummaryAiContext context(java.util.function.Consumer<AnalysisReport> checkpoint,boolean writable) {
         return new ReleaseSummaryAiContext(ReleaseSummaryReportTest.SCOPE,ReleaseSummaryReportTest.evidence(true),
                 OperationalContextReadSession.fromSnapshot(OperationalContextSnapshot.local(OperationalContextDtos.OperationalContextCatalog.empty())),
-                GitLabRepositoryToolScope.forRevisions("CRM",List.of(new GitLabRepositoryToolScope.PinnedRevision("customer","refs/heads/current","a".repeat(40)),
-                        new GitLabRepositoryToolScope.PinnedRevision("customer","refs/tags/next","b".repeat(40)))),
+                GitLabRepositoryToolScope.forRevisions("CRM",List.of(new GitLabRepositoryToolScope.PinnedRevision("customer","a".repeat(40),"a".repeat(40)),
+                        new GitLabRepositoryToolScope.PinnedRevision("customer","b".repeat(40),"b".repeat(40)))),
                 Set.of(ReleaseSummaryReportTest.SOURCE),checkpoint,()->{},writable);
     }
     @Test void assemblyUsesExplicitReadReportToolsFrozenScopeAndGoalDrivenWithoutHardBudget() {
@@ -59,8 +59,7 @@ class ReleaseSummaryAiTest {
         var runner=new ReleaseSummaryAiRunner(factory,mock(CopilotRunAuthMapper.class),mock(CopilotRunPreparationService.class),
                 mock(CopilotSdkExecutionGateway.class),mock(CopilotInitialContextModelSelector.class),new CopilotSdkProperties(),reports);
         var context=context(r->{},true);
-        var request=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,new GitLabRef(GitLabRef.Kind.BRANCH,"current"),
-                new GitLabRef(GitLabRef.Kind.TAG,"next"),"crm-model",null);
+        var request=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,ReleaseSummaryCrmFixture.range(),"crm-model",null);
         var run=runner.assemble("crm-run",request,"full prompt",AnalysisAiAuthRef.localToken("CRM"),context,
                 reports.scaffold("report",context.scope,context.evidence),null,s->{},e->{});
         assertEquals(ReleaseSummaryToolPolicy.ALLOWED,new HashSet<>(run.sessionConfigRequest().availableToolNames()));

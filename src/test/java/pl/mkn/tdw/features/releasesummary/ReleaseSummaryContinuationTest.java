@@ -103,7 +103,7 @@ class ReleaseSummaryContinuationTest {
         final List<Runnable> tasks=new ArrayList<>();
         final AtomicReference<ReleaseSummaryAiContext> context=new AtomicReference<>();
         final ReleaseSummaryRequest request=new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,
-                new GitLabRef(GitLabRef.Kind.BRANCH,"current"),new GitLabRef(GitLabRef.Kind.TAG,"next"),"crm-model",null);
+                ReleaseSummaryCrmFixture.range(),"crm-model",null);
         ReleaseSummaryJobService service;
         Fixture() {
             when(store.findById(anyString())).thenAnswer(i->Optional.ofNullable(records.get(i.getArgument(0))));

@@ -4,43 +4,46 @@
       <header class="release-summary-heading">
         <p class="section-eyebrow">Release summary</p>
         <h2 id="releaseSummaryTitle">Zmiany bazodanowe we wdrożeniu</h2>
-        <p>Wybierz aplikację i kierunek porównania. Raport opisze zmiany Liquibase oraz ich znaczenie funkcjonalne.</p>
+        <p>Wybierz aplikację, branch i zakres dat. Raport opisze zmiany Liquibase oraz ich znaczenie funkcjonalne.</p>
       </header>
       <input #importInput type="file" aria-label="Importuj raport Release summary" accept="application/json,.json" hidden (change)="importFile($event)" />
       @if (uiConfig.config().releaseSummaryEnabled) {
         <div class="release-summary-target-grid">
           <app-application-select [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
             [disabled]="busy()" [error]="error()" (selected)="selectSystem($event)" (retry)="loadApplications()" />
-          <div class="release-summary-ref" role="group" aria-label="Punkt wejścia">
-            <label class="form-field">
-              <span class="field-label">Typ refa</span>
-              <span class="release-summary-select">
-                <select class="select-input" aria-label="Typ refa punktu wejścia" [disabled]="busy()" [value]="beforeKind()"
-                  (change)="setKind('before',$any($event.target).value)">
-                  <option value="BRANCH">Branch</option><option value="TAG">Tag</option><option value="COMMIT">Commit</option>
-                </select>
-                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-              </span>
+          <app-gitlab-branch-select label="Branch" [sourceKey]="systemId()" [branchLoader]="branchLoader"
+            [selectedBranch]="branch()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="selectBranch($event)" />
+          <div class="release-summary-date">
+            <label class="form-field"><span class="field-label">Od</span>
+              <input type="date" class="text-input" aria-label="Od" [value]="dateFrom()" [max]="dateTo()"
+                [disabled]="busy()" (change)="selectDate('from', $any($event.target).value)" />
             </label>
-            <app-gitlab-branch-select label="Punkt wejścia" emptyLabel="Wybierz ref" filterLabel="Znajdź ref"
-              [sourceKey]="systemId() ? systemId()+':'+beforeKind():''" [branchLoader]="beforeLoader"
-              [selectedBranch]="before()" [autoSelect]="false" [showCommitDate]="true" [disabled]="busy()" (branchSelected)="before.set($event)" />
+            @if(range(); as selected) {
+              <p class="release-summary-commit" data-testid="baseline-commit">
+                <span>{{commitDate(selected.baseline)}}</span>
+                <span><code>{{selected.baseline.id.slice(0,8)}}</code> · {{selected.baseline.title}}</span>
+              </p>
+            }
           </div>
-          <div class="release-summary-ref" role="group" aria-label="Stan docelowy">
-            <label class="form-field">
-              <span class="field-label">Typ refa</span>
-              <span class="release-summary-select">
-                <select class="select-input" aria-label="Typ refa stanu docelowego" [disabled]="busy()" [value]="afterKind()"
-                  (change)="setKind('after',$any($event.target).value)">
-                  <option value="BRANCH">Branch</option><option value="TAG">Tag</option><option value="COMMIT">Commit</option>
-                </select>
-                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-              </span>
+          <div class="release-summary-date">
+            <label class="form-field"><span class="field-label">Do</span>
+              <input type="date" class="text-input" aria-label="Do" [value]="dateTo()" [min]="dateFrom()"
+                [disabled]="busy()" (change)="selectDate('to', $any($event.target).value)" />
             </label>
-            <app-gitlab-branch-select label="Stan docelowy" emptyLabel="Wybierz ref" filterLabel="Znajdź ref"
-              [sourceKey]="systemId() ? systemId()+':'+afterKind():''" [branchLoader]="afterLoader"
-              [selectedBranch]="after()" [autoSelect]="false" [showCommitDate]="true" [disabled]="busy()" (branchSelected)="after.set($event)" />
+            @if(range(); as selected) {
+              <p class="release-summary-commit" data-testid="target-commit">
+                <span>{{commitDate(selected.target)}}</span>
+                <span><code>{{selected.target.id.slice(0,8)}}</code> · {{selected.target.title}}</span>
+              </p>
+            }
           </div>
+        </div>
+        <div class="release-summary-range-status" aria-live="polite">
+          <p class="release-summary-note">Data Do włącznie. Porównujemy stan sprzed daty Od ze stanem do daty Do. Strefa: {{timeZone()}}.</p>
+          @if(previewLoading()) {<p role="status">Dobieranie commitów…</p>}
+          @if(dateError()) {<p role="alert">{{dateError()}}</p>}
+          @if(previewError()) {<p role="alert">{{previewError()}}</p><button class="secondary-button" type="button" (click)="refreshPreview()">Ponów podgląd</button>}
+          @if(noChanges()) {<p role="status">W wybranym okresie nie było zmian.</p>}
         </div>
         <div class="release-summary-ai-grid">
           <label class="form-field">
@@ -109,8 +112,19 @@
         <app-analysis-result-header [title]="resultTitle()" [context]="current.comparison?.systemName || current.request.systemId"
           [partialNotice]="current.status === 'PARTIAL' ? 'Raport częściowy — ograniczenia są opisane w metadanych sekcji i appendixie.' : ''"
           [shareDocument]="shareDocument()" [editable]="canEdit() && !editing()" (editRequested)="editing.set(true)" />
+        <div class="release-summary-effective-range">
+          <p>Branch: <strong>{{current.request.range.selection.branch.replace('refs/heads/', '')}}</strong> ·
+            {{formatDate(current.request.range.selection.dateFrom)}} – {{formatDate(current.request.range.selection.dateTo)}} · {{current.request.range.selection.timeZone}}</p>
+          <p>Stan początkowy: {{commitDate(current.request.range.baseline, current.request.range.selection.timeZone)}} ·
+            <code>{{current.request.range.baseline.id.slice(0,8)}}</code> · {{current.request.range.baseline.title}}</p>
+          <p>Stan końcowy: {{commitDate(current.request.range.target, current.request.range.selection.timeZone)}} ·
+            <code>{{current.request.range.target.id.slice(0,8)}}</code> · {{current.request.range.target.title}}</p>
+        </div>
         @if(imported()) {<p role="status">Import pliku — wynik tylko do odczytu, bez sesji AI.</p>}
         @if(current.error) { <p role="alert">{{current.error}}</p> }
+        @if(current.errorCode === 'RANGE_CHANGED' && !imported()) {
+          <button class="secondary-button" type="button" [disabled]="busy() || previewLoading()" (click)="refreshPreview()">Odśwież podgląd commitów</button>
+        }
         @if(current.report) {
           @if(editing()) {<app-analysis-report-editor [report]="current.report" [saving]="saving()" [error]="error()"
             (save)="saveReport($event)" (cancel)="editing.set(false)" />}

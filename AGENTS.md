@@ -358,8 +358,10 @@ Zasady granic:
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
 - `src/main/java/pl/mkn/tdw/features/releasesummary`
-  Diff-first porownanie dwoch refow jawnych repozytoriow primary/priority 1,
-  pelne encje Operational Context i potwierdzony manifest wybranych zmian Git.
+  Diff-first porównanie dwóch commitów jednego repozytorium primary/priority 1
+  na wybranym branchu, dobranych po datach Od/Do (Do włącznie, strefa przeglądarki).
+  Podgląd zachowuje faktyczne daty, SHA i opisy; start blokuje zmianę doboru.
+  Przygotowuje pełne encje Operational Context i potwierdzony manifest zmian Git.
   Evidence i initial prompt zawieraja tylko zmiany dopasowane przez
   `release-summary.diff.path-contains-any` (domyslnie `sql,changelog`)
   w starej lub nowej sciezce, bez rozrozniania wielkosci liter. Zmiany

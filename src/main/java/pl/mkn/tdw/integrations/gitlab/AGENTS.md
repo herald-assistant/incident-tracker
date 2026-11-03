@@ -61,6 +61,12 @@ pełnego snapshotu do zwykłych plików przed przekazaniem go konsumentowi.
 `GitLabRepositoryRevisionPort` przypina je do SHA. Polityka zakresu porównania
 oraz interpretacja nieobsługiwanych źródeł należą do konsumenta.
 
+`GitLabRepositoryHistoryPort.latestBefore` zwraca ostatni first-parent commit
+przed wyłączną granicą czasu na przypiętym SHA. Adapter używa committed_date,
+nie authored_date, odróżnia pustą historię od błędu/niepełnej odpowiedzi i nie
+zna dat formularza ani semantyki Release summary. Dobór strefy, granic dni
+oraz walidacja podglądu należą do feature'a.
+
 ## Endpoint inventory
 
 - Endpoint discovery ma pozostac neutralne domenowo: zwracaj endpointy,

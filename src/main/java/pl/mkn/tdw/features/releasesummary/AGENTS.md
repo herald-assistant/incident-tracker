@@ -1,13 +1,18 @@
 # Release summary
 
-Feature posiada porownanie dwoch refow systemu, interpretacje Liquibase,
+Feature posiada porównanie dwóch stanów jednego brancha systemu, interpretacje Liquibase,
 prompt, policy, raport, job i historie. Jedyny tryb to LIQUIBASE; API poza zakresem.
 Nie importuj sibling feature'ow. Reuse integrations, agenttools, aiplatform i shared.
 Testy i przyklady sa w calosci fikcyjnym CRM.
 Kanoniczny runtime: `docs/architecture/release-summary-runtime-flow.md`.
 
-Refy pinuj osobno per repo, bez fallbacku. Wybieraj tylko primary/priority 1
-i zaakceptowane prefixy. Initial context to pelne captured encje opctx,
+Wymagaj dokładnie jednego primary/priority 1 repo i zachowaj zaakceptowane
+prefixy. Wybór to branch i daty Od/Do (Do włącznie) w strefie przeglądarki.
+Podgląd pokazuje ostatni first-parent commit sprzed Od oraz do końca Do.
+Pinuj HEAD raz na dobór; start weryfikuje pełny podgląd i blokuje RANGE_CHANGED,
+bez podmiany SHA. Używaj GitLabRepositoryHistoryPort; UI pokazuje efektywne
+committedAt, SHA i title obu stanów, zapisanych też w request.range historii/V1.
+Nie przywracaj wyboru dwóch refów, tagów ani ręcznych SHA. Initial context to pelne captured encje opctx,
 manifest i patche wylacznie zmian dopasowanych przez
 `release-summary.diff.path-contains-any` (domyslnie `sql,changelog`): contains
 any of, bez rozrozniania wielkosci liter, na obu pelnych sciezkach.

@@ -2,8 +2,8 @@
 
 ## Zakres i ownership
 
-Release summary dokumentuje planowane zmiany bazodanowe miedzy dwoma refami
-systemu Operational Context. Jedyny tryb to `LIQUIBASE`. Nie wykonuje migracji
+Release summary dokumentuje planowane zmiany bazodanowe między dwoma stanami
+jednego brancha primary repozytorium systemu Operational Context. Jedyny tryb to `LIQUIBASE`. Nie wykonuje migracji
 i nie ustala rzeczywistego stanu bazy. Analiza zmian publicznych API jest poza zakresem.
 
 `features.releasesummary` posiada katalog, kolektor diff, interpretacje AI,
@@ -17,29 +17,45 @@ deterministycznego parsera ani obowiazkowego skanu tresci kandydatow Liquibase.
 | Endpoint | Kontrakt |
 | --- | --- |
 | `GET /api/release-summary/applications` | Systemy z jawnymi primary/priority 1. |
-| `GET /api/release-summary/applications/{systemId}/refs` | `kind`, `search`, `page`; paginowane opcje i dostepnosc per repo. |
-| `POST /api/release-summary/jobs` | `systemId`, `mode: LIQUIBASE`, `baselineRef`, `targetRef`, opcjonalne `model`, `reasoningEffort`; 202 i snapshot. |
+| `GET /api/release-summary/applications/{systemId}/branches` | `search`, `page`; paginowane branche jednego primary repo. |
+| `POST /api/release-summary/applications/{systemId}/range-preview` | `branch`, `dateFrom`, `dateTo`, `timeZone`; dobrane commity. |
+| `POST /api/release-summary/jobs` | `systemId`, `mode: LIQUIBASE`, `range`, opcjonalne `model`, `reasoningEffort`; 202 i snapshot. |
 | `GET /api/release-summary/jobs/{jobId}` | Przebieg, porownanie, evidence, raport, wynik, usage i chat. |
 | `POST /api/release-summary/jobs/{jobId}/chat/messages` | `message`, `updateReport` domyslnie false; 202. |
 | `PUT /api/release-summary/jobs/{jobId}/report` | Shared AnalysisReportEditRequest z oczekiwana rewizja. |
 | `GET /api/release-summary/jobs/{jobId}/export` | Publiczny envelope V1 terminalnego runu. |
 
-Ref to `kind: BRANCH|TAG|COMMIT` i `name`; branch/tag maja kanoniczne nazwy
-`refs/heads/...` / `refs/tags/...`, commit pelny SHA 40/64 hex. Ta sama para
-nazw obowiazuje wszystkie wybrane repozytoria. Brak refa nie uruchamia fallbacku.
+`range` zawiera `selection` (`branch`, `dateFrom`, `dateTo`, `timeZone`),
+`repositoryId`, `baseline` i `target`. Każdy commit ma pełny `id` (SHA),
+`committedAt` i `title`. Branch jest kanonicznym `refs/heads/...`.
+Daty są lokalnymi datami ISO; strefa IANA pochodzi z przeglądarki.
+`dateTo` jest włącznie; obie wyłączne granice to lokalny początek `dateFrom`
+i lokalny początek dnia po `dateTo`, z uwzględnieniem DST.
 
-Lista refow przekazuje `committedAt` i `repositoryCommits` (repositoryId,
-committedAt). Data pochodzi z `commit.committed_date` listy branches/tags,
-bez dodatkowych odczytow per ref; dla jawnego SHA z juz rozwiazywanej rewizji.
-Niepoprawna lub brakujaca data daje null, nie date zastepcza. Agregacja tej
-samej nazwy wybiera najnowszy znany timestamp i zachowuje daty per repo.
-Nie jest to data pusha ani utworzenia brancha/tagu.
+Podgląd przypina HEAD raz i używa neutralnego `GitLabRepositoryHistoryPort`
+do dwóch odczytów [`repository/commits`](https://docs.gitlab.com/api/commits/#list-repository-commits): przypięty `ref_name`, `first_parent=true`,
+`order=default`, `per_page=1` i `until` o sekundę przed wyłączną granicą (Git ma
+sekundową precyzję czasu). Wybierany jest ostatni commit głównej linii brancha
+przed każdą granicą, nie pierwszy commit okresu ani stary commit bocznej gałęzi.
+Używamy `committed_date`, nie `authored_date`, daty pusha lub wdrożenia.
+Brak stanu początkowego daje `BASELINE_NOT_FOUND`, brak końcowego
+`TARGET_NOT_FOUND`; błąd odczytu nie udaje pustej historii.
+Identyczne SHA są widocznym brakiem zmian i blokują przycisk generowania.
 
-Katalog, refs i pinowanie stosuja ten sam filtr: tylko `role: primary`
+Start przekazuje kompletny podgląd. RESOLVE_REFS powtarza dobór na nowym
+przypiętym HEAD; inny commit, metadata lub repozytorium dają `RANGE_CHANGED`
+bez AI. Zwykły ruch HEAD, który nie zmienia dobranych stanów, nie blokuje.
+Po zatwierdzeniu wszystkie odczyty i kontynuacja używają zapisanych SHA.
+Daty commitów są metadanymi Git, a nie historycznym dowodem stanu HEAD serwera.
+Dwie daty opisują różnicę stanów: zmiana dodana i wycofana pomiędzy nimi może
+nie wystąpić w końcowym diffie.
+
+Katalog, branche i pinowanie stosuja ten sam filtr: tylko `role: primary`
 z `priority: 1`. Shared-library, pozostale role i brak wartosci sa wykluczone.
 Dopiero zaakceptowane wpisy sa scalane po repo z suma prefixow; odrzucony
 wpis nie rozszerza zakresu. Brak prefixow w zaakceptowanym wpisie oznacza
-cale repo. Brak takich repo daje `NO_REPOSITORIES`. Grupa jest z konfiguracji.
+cale repo. Brak takich repo daje `NO_REPOSITORIES`; więcej niż jedno daje
+`SINGLE_PRIMARY_REQUIRED` przy wyborze brancha/podglądzie/starcie. Grupa jest z konfiguracji.
 Filtr nie jest dowodem skladu wdrozenia ani wersji bibliotek i nie ogranicza
 dotychczasowego osobno przypinanego research AI w skonfigurowanej grupie.
 
@@ -47,8 +63,8 @@ dotychczasowego osobno przypinanego research AI w skonfigurowanej grupie.
 
 1. Zapis QUEUED z czterema planowanymi krokami nastepuje przed dispatch.
    Blad zapisu blokuje dispatch; odmowa executora zostawia FAILED/SCHEDULING_FAILED.
-2. RESOLVE_REFS przechwytuje katalog i przypina oba refy per repo do SHA.
-   Identyczna para projekt/ref jest rozwiazywana raz w runie.
+2. RESOLVE_REFS przechwytuje katalog, weryfikuje podgląd zakresu i przypina
+   dwa wybrane SHA jednego primary repo. Stary wybór dwóch refów nie istnieje.
 3. COLLECT_DIFF wywoluje GitLabRepositoryComparisonPort. Dwa kompletne drzewa
    path/id/mode ze wspolnego GitLabRepositoryTreeService wyznaczaja delte;
    nie pobiera sie tresci blobow, archiwum, klona ani cache kodu.
@@ -207,18 +223,21 @@ Import lokalny jest read-only. Stary ksztalt skanu i inne wersje sa odrzucane,
 bez migratora. Stare lokalne runy mozna usunac przez shared History API
 sprzatajace tez sesje; wymaga to osobnej zgody na dokladny zakres danych.
 
-Ekran zachowuje wspolne application/branch select, paginacje i typowane refy,
-bez auto-select dla pary. Aplikacja i refy sa w jednym rzedzie, AI w drugim,
-akcje na dole; mobile uklada pola pionowo. Etykiety to Punkt wejscia i Stan
-docelowy, bez zamiany kierunku. Oba selektory zamiast etykiety rodzaju refa pokazuja date ostatniego commita
-w formacie dd.MM.yyyy, w strefie przegladarki, bez godziny. Brak danych to
-`Brak daty`. Tooltip wyjasnia najnowsza date i daty per repozytorium.
-Paginacja scala metadane powtarzajacych sie refow, nie gubi dat poprzedniej
-strony. Kolejnosc listy i wyszukiwanie po nazwie pozostaja bez zmian.
+Ekran reuse'uje application select i jeden paginowany branch select bez
+selekcji tagów/SHA. Użytkownik wybiera daty Od/Do bez godzin i etykiet
+początku/końca dnia. Pod każdą datą widzi datę i godzinę rzeczywistego commita,
+krótkie SHA i opis. Strefa dat jest jawna. Zmiana aplikacji, brancha lub dat
+natychmiast unieważnia podgląd i anuluje jego poprzedni request; nowy jest
+opóźniony o 300 ms. Start jest niedostępny do otrzymania kompletnego podglądu,
+dla odwróconych dat, identycznych SHA oraz błędów/braków. Można ponowić podgląd.
+System, branch i daty tworzą jeden rząd, ustawienia AI drugi; mobile układa
+pola pionowo. Historia i import zachowują daty, strefę, metadata i pełne SHA.
+Stary request i stare eksporty bez `range` są odrzucane, bez migracji, nadal V1.
 Historia QUEUED/RUNNING wznawia polling.
-Wynik zaczyna jeden AnalysisResultHeader: `Zmiany bazodanowe miedzy ... a ...`
-z requestu joba, także dla Share. Bez dodatkowego naglowka, zakladek, paskow
-statusu i osobnego widoku kompletności. Report panel ma embedded=true,
+Wynik zaczyna jeden AnalysisResultHeader: `Zmiany bazodanowe · branch · Od – Do`
+z requestu joba, także dla Share. Pod nagłówkiem są faktyczne daty, opisy i SHA
+obu commitów oraz strefa zapisanego zakresu, niezależnie od zmian formularza.
+Bez dodatkowego naglowka, zakladek, paskow statusu i osobnego widoku kompletności. Report panel ma embedded=true,
 showTechnicalIds=false, zachowane kotwice i zwijany appendix/meta. Bledy i
 informacja o imporcie sa pod naglowkiem. Nawigacja lokuje feature po Change
 Verification, przed Config Drift Viewer, z ikona deployed_code.

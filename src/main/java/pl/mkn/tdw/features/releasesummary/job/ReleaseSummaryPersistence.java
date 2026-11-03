@@ -21,7 +21,7 @@ public class ReleaseSummaryPersistence {
     public record Envelope(String schema,int version,Instant exportedAt,Payload payload) {
         public boolean supported() {return "tdw.release-summary-export".equals(schema)&&version==1&&payload!=null
                 &&"release-summary-analysis".equals(payload.type())&&pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.CONTRACT.equals(payload.resultContract())&&payload.job()!=null
-                &&payload.job().request()!=null&&payload.job().request().mode()==pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryRequest.Mode.LIQUIBASE
+                &&payload.job().request()!=null&&payload.job().request().range()!=null&&payload.job().request().mode()==pl.mkn.tdw.features.releasesummary.contract.ReleaseSummaryRequest.Mode.LIQUIBASE
                 &&(payload.job().result()==null||pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService.CONTRACT.equals(payload.job().result().resultContract()));}
     }
     public record Payload(String type,String resultContract,ReleaseSummarySnapshot job) {}
@@ -37,7 +37,7 @@ public class ReleaseSummaryPersistence {
         LocalAnalysisRunSnapshotWriter.save(store,mapper.valueToTree(envelope(job)),continuation,
                 new LocalAnalysisRunSnapshotWriter.Metadata(job.jobId(),FEATURE,
                         (job.comparison()!=null?job.comparison().systemName():job.request().systemId())+" · "+
-                                job.request().baselineRef().name()+" → "+job.request().targetRef().name(),
+                                job.request().range().selection().branch()+" · "+job.request().range().selection().dateFrom()+" → "+job.request().range().selection().dateTo(),
                         job.status(),job.createdAt(),job.updatedAt(),job.completedAt()));
     }
     public void saveRuntime(String id,ReleaseSummaryAiContext context) {

@@ -19,6 +19,31 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ReleaseSummarySelectionTest {
+    @Test void previewsTheEffectiveCommitsAndValidatesTheDateSelection() throws Exception {
+        var catalog=mock(ReleaseSummaryCatalog.class);
+        var range=ReleaseSummaryCrmFixture.range();
+        when(catalog.preview("crm",range.selection())).thenReturn(range);
+        var mvc=MockMvcBuilders.standaloneSetup(new ReleaseSummaryController(catalog,mock(ReleaseSummaryJobService.class)))
+                .setControllerAdvice(new ApiExceptionHandler()).build();
+        mvc.perform(post("/api/release-summary/applications/crm/range-preview").contentType("application/json")
+                .content("""
+                    {"branch":"refs/heads/release","dateFrom":"2026-10-01","dateTo":"2026-10-31","timeZone":"Europe/Warsaw"}
+                    """))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.selection.branch").value("refs/heads/release"))
+                .andExpect(jsonPath("$.baseline.id").value(ReleaseSummaryCrmFixture.BEFORE))
+                .andExpect(jsonPath("$.target.title").value("Dodanie etykiety klienta"));
+        verify(catalog).preview("crm",range.selection());
+        for(var body:List.of(
+                "{\"branch\":\"release\",\"dateFrom\":\"2026-11-01\",\"dateTo\":\"2026-10-01\",\"timeZone\":\"UTC\"}",
+                "{\"branch\":\"release\",\"dateFrom\":\"2026-10-01\",\"dateTo\":\"2026-10-31\",\"timeZone\":\"unknown\"}",
+                "{\"branch\":\"../main\",\"dateFrom\":\"2026-10-01\",\"dateTo\":\"2026-10-31\",\"timeZone\":\"UTC\"}"))
+            mvc.perform(post("/api/release-summary/applications/crm/range-preview").contentType("application/json").content(body))
+                    .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content("""
+                {"systemId":"crm","mode":"LIQUIBASE","baselineRef":{"kind":"BRANCH","name":"release"},
+                 "targetRef":{"kind":"TAG","name":"next"}}
+                """ )).andExpect(status().isBadRequest());
+    }
     @Test void chatIsReadOnlyByDefaultAndRequiresExplicitMutationFlag() throws Exception {
         var jobs=mock(ReleaseSummaryJobService.class);
         var mvc=MockMvcBuilders.standaloneSetup(new ReleaseSummaryController(mock(ReleaseSummaryCatalog.class),jobs))
@@ -49,10 +74,9 @@ class ReleaseSummarySelectionTest {
                 ()->pl.mkn.tdw.shared.ai.AnalysisAiAuthRef.localToken("CRM"),new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard(),tasks::add);
         var mvc=MockMvcBuilders.standaloneSetup(new ReleaseSummaryController(catalog,service))
                 .setControllerAdvice(new ApiExceptionHandler()).build();
-        mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content("""
-                {"systemId":"crm","mode":"LIQUIBASE","baselineRef":{"kind":"BRANCH","name":"current"},
-                 "targetRef":{"kind":"TAG","name":"next"}}
-                """)).andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("QUEUED"));
+        var mapper=new ObjectMapper().findAndRegisterModules();
+        mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content(mapper.writeValueAsString(
+                new ReleaseSummaryRequest("crm",ReleaseSummaryRequest.Mode.LIQUIBASE,ReleaseSummaryCrmFixture.range(),null,null)))).andExpect(status().isAccepted()).andExpect(jsonPath("$.status").value("QUEUED"));
         assertEquals(1,tasks.size());
         verifyNoInteractions(catalog);
         mvc.perform(post("/api/release-summary/jobs").contentType("application/json").content("""

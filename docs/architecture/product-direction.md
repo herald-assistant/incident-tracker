@@ -139,16 +139,17 @@ raportu oraz aktywnych sekcjach.
 
 ### Release summary
 
-Dostępny tryb Liquibase porównuje dwa refy aplikacji i dokumentuje każdą
-rozpoznaną zmianę tabel, kolumn, indeksów, ograniczeń i danych razem z jej
+Dostępny tryb Liquibase porównuje dwa stany brancha aplikacji wybrane datami
+Od/Do i dokumentuje każdą rozpoznaną zmianę tabel, kolumn, indeksów, ograniczeń i danych razem z jej
 znaczeniem funkcjonalnym. Aplikacja oznacza system Operational Context oraz
-wszystkie jego jawne zakresy repozytoriów. Pełny materiał jest zbierany
-deterministycznie; AI doczytuje kod i katalog oraz zapisuje tabelaryczny raport.
+jego jedno primary repozytorium priority 1 z jawnymi zakresami ścieżek.
+Materiał jest zbierany deterministycznie; AI doczytuje kod i katalog oraz zapisuje tabelaryczny raport.
 Odbiorca zna SQL, ale nie musi znać kodu ani Liquibase. Raport ma podsumowanie,
 listę tabel i niezależne sekcje tabel z kolumnami Obiekt, Zmiana (ze szczegółami
 SQL) i krótki Opis funkcjonalny. Źródła są w zwijanych metadanych, a informacje
-wdrożeniowe w końcowym appendixie. Jeden nagłówek wskazuje porównywane refy;
-treść jest dostępna bez zakładek.
+wdrożeniowe w końcowym appendixie. Jeden nagłówek wskazuje branch i zakres dat,
+a pod nim widoczne są rzeczywiste daty z godziną, opisy i SHA dobranych commitów.
+Treść jest dostępna bez zakładek.
 
 Pokrycie źródeł, udokumentowanie elementów i pewność funkcjonalna są osobnymi
 informacjami. Historia zapisuje analizę od startu i pozwala wrócić do jej

@@ -42,7 +42,9 @@ W Analysis Features i Workspace Overview Release summary występuje bezpośredni
 po Change Verification, przed Config Drift Viewer; oba miejsca używają ikony
 `deployed_code` i respektują flagę dostępności feature'a.
 Release summary używa wspólnego application select (także Flow Explorer) oraz
-branch select z typowanymi refami i paginacją. Dla pary refów wyłącza auto-select.
+jednego branch select z paginacją, bez auto-select. Daty Od/Do (Do włącznie)
+dobierają dwa first-parent commity jednego primary repo; pokazuj efektywną datę
+z godziną, SHA i opis. Podgląd unieważniaj natychmiast po zmianie wyboru.
 Historia otwiera także QUEUED/RUNNING i wznawia polling bez nowego startu.
 Przebieg pokazuje manifest diff i dostepny patch per plik, nie pelne tresci
 before/after. COLLECT_DIFF odroznia kompletna liste zmian od ograniczen patchy.
@@ -53,9 +55,10 @@ chatu drugi raz w initial job usage.
 Import Release summary pozostaje read-only, a checkbox korekty raportu jest
 domyślnie wyłączony. Wymagaj wybranego modelu lub modelu domyślnego backendu.
 Formularz ma osobne rzędy źródeł i ustawień AI oraz dolny pasek akcji.
-Używaj etykiet „Punkt wejścia” i „Stan docelowy”; bez akcji zamiany kierunku.
-Wynik zaczyna się od AnalysisResultHeader z tytułem „Zmiany bazodanowe między
-… a …” wyprowadzonym z requestu zapisanego joba, nie z edytowanego formularza.
+Używaj etykiet „Od” i „Do” bez godzin dla wybranych granic.
+Wynik zaczyna się od AnalysisResultHeader z tytułem
+„Zmiany bazodanowe · branch · Od – Do” wyprowadzonym z requestu zapisanego joba,
+nie z edytowanego formularza.
 Share używa tego samego tytułu. Nie renderuj zakładek, osobnego widoku
 kompletności, statusu i kierunku przed nagłówkiem ani drugiego nagłówka raportu.
 Shared report panel używa embedded=true i showTechnicalIds=false; zachowaj

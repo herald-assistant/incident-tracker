@@ -1,4 +1,4 @@
-import { ReleaseSummarySnapshot } from './release-summary.models';
+import { ReleaseRange, ReleaseSummarySnapshot } from './release-summary.models';
 import { AnalysisReport } from '../../core/models/analysis.models';
 export function releaseReport():AnalysisReport {
   const meta={references:[],visibilityLimits:[],openQuestions:[],gaps:[],confidence:'',warnings:[]};
@@ -12,8 +12,13 @@ export function releaseReport():AnalysisReport {
       {id:'TABLE_LIST',title:'Lista tabel',order:2,markdown:'| Tabela | Zakres zmian |\n| --- | --- |\n| customer | Dodanie etykiety klienta. |',meta}
     ]};
 }
+export function releaseRange():ReleaseRange {
+  return {selection:{branch:'refs/heads/release',dateFrom:'2026-10-01',dateTo:'2026-10-31',timeZone:'Europe/Warsaw'},
+    repositoryId:'customer',baseline:{id:'a'.repeat(40),committedAt:'2026-09-30T14:42:00Z',title:'Stan klientów przed zmianą'},
+    target:{id:'b'.repeat(40),committedAt:'2026-10-29T10:18:00Z',title:'Dodanie etykiety klienta'}};
+}
 export function releaseSnapshot(status = 'COMPLETED'): ReleaseSummarySnapshot {
-  return {jobId:'crm-run',status,request:{systemId:'crm',mode:'LIQUIBASE',baselineRef:{kind:'BRANCH',name:'current'},targetRef:{kind:'TAG',name:'next'}},
+  return {jobId:'crm-run',status,request:{systemId:'crm',mode:'LIQUIBASE',range:releaseRange()},
     comparison:null,evidence:null,errorCode:null,error:null,createdAt:'2026-10-31T10:00:00Z',updatedAt:'2026-10-31T10:00:00Z',completedAt:null,
     steps:[],contextSections:[],toolEvidenceSections:[],aiActivityEvents:[],toolFeedback:[],preparedPrompt:'CRM full prompt',report:null,result:null,usage:null,chatMessages:[],
     chatAvailability:{available:false,code:'UNAVAILABLE',message:'Brak sesji'},exportAvailable:true};

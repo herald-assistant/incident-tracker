@@ -37,7 +37,8 @@ core dla pozostalych.
 
 `features.releasesummary` posiada kolektor diff, interpretacje Liquibase przez
 AI, walidator raportu, prompt/policy, job i adapter lokalnej historii.
-Neutralne `GitLabRepositoryRefPort` i `GitLabRepositoryComparisonPort` należą do
+Neutralne `GitLabRepositoryRefPort`, `GitLabRepositoryHistoryPort` i
+`GitLabRepositoryComparisonPort` należą do
 integracji. Porownanie potwierdza kompletna liste zmian przez metadane obu
 drzew ze wspolnego tree service, niezaleznie od ograniczen patchy compare.
 Zachowuje sciezki, blob/gitlink ID i tryby, bez odczytu tresci plikow.

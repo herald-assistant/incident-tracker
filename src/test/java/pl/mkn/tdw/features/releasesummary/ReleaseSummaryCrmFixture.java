@@ -50,9 +50,15 @@ final class ReleaseSummaryCrmFixture {
                 void deleteCustomer(long customerId) { jdbc.update("DELETE FROM customer WHERE id = ?", customerId); }
             }
             """;
+    static ReleaseSummaryRange range() {
+        return new ReleaseSummaryRange(new ReleaseSummaryDateSelection("release", java.time.LocalDate.parse("2026-10-01"),
+                java.time.LocalDate.parse("2026-10-31"), "Europe/Warsaw"), "customer",
+                new GitLabCommit(BEFORE, java.time.Instant.parse("2026-09-30T14:42:00Z"), "Stan klientów przed zmianą"),
+                new GitLabCommit(AFTER, java.time.Instant.parse("2026-10-29T10:18:00Z"), "Dodanie etykiety klienta"));
+    }
     static ReleaseSummaryScope scope() {
         return new ReleaseSummaryScope("crm","CRM Customers","CRM","digest",
-                List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of(""),"refs/heads/current",BEFORE,"refs/tags/next",AFTER)),
+                List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of(""),BEFORE,BEFORE,AFTER,AFTER)),
                 List.of(Map.of("type","system","id","crm","payload",Map.of("name","CRM Customers",
                         "summary","Etykiety klienta wspierają wyszukiwanie i filtry operatora.","implementation","customer: "+CODE_PATH))));
     }

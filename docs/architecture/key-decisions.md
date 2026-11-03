@@ -1265,29 +1265,29 @@ continuation UI/UX uzywaja wylacznie wersji 1 i odrzucaja inne formaty.
 
 ## 32. Release summary oddziela pełność źródeł od interpretacji AI
 
-Release summary przygotowuje pełne źródła Liquibase na obu SHA oraz pełne
-payloady encji systemu, repozytoriów i zakresów. Reuse'uje neutralne listing
-refów, repository tree, verified read, zamrożony odczyt Operational Context
-i `GitLabRepositoryToolScope.forRevisions`; nie importuje orchestration innych
-feature'ów. Dodatkowe projekty są przypinane osobno, bez zmiany pary porównania.
+Release summary porównuje dwa stany jednego brancha dokładnie jednego primary
+repozytorium priority 1. Operator wybiera daty Od/Do, Do włącznie, w strefie
+przeglądarki. Podgląd pokazuje ostatni first-parent commit przed datą Od oraz
+do końca daty Do: committedAt z godziną, SHA i opis. Początek nie jest pierwszym
+commitem okresu, aby nie pominąć jego zmian. Start ponawia dobór i blokuje
+zmieniony podgląd zamiast zmieniać analizowane SHA. Historia i eksport V1
+zachowują wybrane daty, strefę i faktyczne commity; stare dwa refy nie są czytane.
+Daty Git nie dowodzą daty pusha ani historycznego stanu wdrożenia.
 
-Feature używa `GOAL_DRIVEN` bez limitu liczby wywołań, ale preflight całego
-promptu, scope i timeout pozostają platformowe. Niepełny materiał blokuje AI.
-SQL i custom changes nie zyskują deklaracji deterministycznej pełności tylko
-dlatego, że model opisał ich treść.
+Feature przygotowuje kompletną listę zmian Git przez metadane obu drzew,
+wybiera zmiany filtrem ścieżek, uzupełnia ich brakujące patche verified read
+oraz dobiera instrukcje repozytorium po applyTo. Przekazuje pełne captured
+encje Operational Context. Brak kompletnej listy blokuje AI; brak pojedynczego
+patcha lub zależności pozostaje jawną luką badania. Nie ma parsera Liquibase
+ani pełnego skanu zawartości modułów. Reuse obejmuje neutralne branch/revision/
+history, tree/compare, verified read, captured opctx i scope wielu SHA.
+Dodatkowe projekty research są przypinane osobno.
 
-`AnalysisReport` jest jedynym źródłem wyniku. Inwentarz dla analityka scala
-kolumny z constraints i indeksy z ich uporządkowanymi kolumnami oraz grupuje
-zmiany według repozytorium i tabeli; pełny manifest parsera pozostaje w evidence.
-Raport ma podsumowanie, listę tabel i niezależne sekcje tabel w stałej kolejności.
-Trzy kolumny to Obiekt, Zmiana (z pełnymi szczegółami SQL) i Opis funkcjonalny,
-zrozumiały bez znajomości kodu. Źródła są w meta pod sekcjami, a informacje
-wdrożeniowe w końcowym zwijanym appendixie. SQL ma mapowanie na opisane obiekty
-w meta bez dublowania skryptu i obiektu; nadal nie dowodzi to jego semantycznej
-pełności. Walidator wymaga każdej pozycji,
-niezmienionych rozpoznanych właściwości i odczytanych źródeł. Scaffold nie jest
-wynikiem: dopiero poprawna sekcja przez `report_*` publikuje checkpoint.
-Brak uzasadnienia lub niezweryfikowana konstrukcja pozostaje
-`PARTIAL`. Odpowiedź tekstowa nie zastępuje raportu. Follow-up domyślnie tylko
-odpowiada; korekta wymaga jawnego `updateReport`. Publiczny import V1 nie
-odtwarza sesji. Szczegóły: [runtime](release-summary-runtime-flow.md).
+`GOAL_DRIVEN` nie znosi platformowego preflight, scope ani timeoutu.
+`AnalysisReport` jest źródłem treści wyniku; tylko poprawny zapis przez
+`report_*` publikuje checkpoint. Raport ma podsumowanie, listę tabel,
+niezależne sekcje tabel (Obiekt / Zmiana / Opis funkcjonalny) i appendix.
+Źródła i ograniczenia są w meta. Kompletna lista Git nie dowodzi kompletnej
+interpretacji AI ani stanu działającej bazy; wynik zachowuje AI_ASSESSED.
+Follow-up jest domyślnie read-only, korekta wymaga jawnego `updateReport`.
+Import V1 nie odtwarza sesji. Szczegóły: [runtime](release-summary-runtime-flow.md).

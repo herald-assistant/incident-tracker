@@ -18,10 +18,21 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
     request['mode']!=='LIQUIBASE'||typeof request['systemId']!=='string'||!request['systemId']||
     typeof job['jobId']!=='string'||!['COMPLETED','PARTIAL','NO_CHANGES','BLOCKED','FAILED','INTERRUPTED'].includes(job['status']))
     throw new Error('Nieobsługiwany format, wersja lub tryb Release summary.');
-  for(const field of ['baselineRef','targetRef']) {
-    const ref=object(request[field]);
-    if(!['BRANCH','TAG','COMMIT'].includes(ref['kind'])||typeof ref['name']!=='string'||!ref['name'])
-      throw new Error('Brak poprawnych refów porównania.');
+  const range=object(request['range']),selection=object(range['selection']);
+  const validDate=(value:unknown): value is string => typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10)===value;
+  if(typeof selection['branch']!=='string'||!selection['branch'].startsWith('refs/heads/')||selection['branch'].length<=11||
+    !validDate(selection['dateFrom'])||!validDate(selection['dateTo'])||selection['dateFrom']>selection['dateTo']||
+    typeof selection['timeZone']!=='string'||!selection['timeZone']||typeof range['repositoryId']!=='string'||!range['repositoryId']||
+    'baselineRef' in request||'targetRef' in request)
+    throw new Error('Brak poprawnego zakresu dat i brancha.');
+  try { new Intl.DateTimeFormat('pl-PL',{timeZone:selection['timeZone']}).format(); }
+  catch { throw new Error('Niepoprawna strefa czasowa zakresu.'); }
+  for(const side of ['baseline','target']) {
+    const commit=object(range[side]);
+    if(typeof commit['id']!=='string'||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(commit['id'])||
+      typeof commit['title']!=='string'||typeof commit['committedAt']!=='string'||!Number.isFinite(Date.parse(commit['committedAt'])))
+      throw new Error('Brak poprawnych commitów porównania.');
   }
   for(const field of ['steps','contextSections','toolEvidenceSections','aiActivityEvents','toolFeedback','chatMessages'])
     if(!Array.isArray(job[field])||job[field].some((item:unknown)=>!item||typeof item!=='object'||Array.isArray(item)))
@@ -38,8 +49,9 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
   }
   if(job['comparison']) {
     const comparison=object(job['comparison']);
-    if(!Array.isArray(comparison['repositories'])||!Array.isArray(comparison['entities'])||
-      comparison['repositories'].some((repo:unknown)=>{const r=object(repo);return !Array.isArray(r['prefixes'])||
+    if(!Array.isArray(comparison['repositories'])||comparison['repositories'].length!==1||!Array.isArray(comparison['entities'])||
+      comparison['repositories'].some((repo:unknown)=>{const r=object(repo);return r['repositoryId']!==range['repositoryId']||r['baselineCommit']!==range['baseline']['id']||
+        r['targetCommit']!==range['target']['id']||!Array.isArray(r['prefixes'])||
         !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(r['baselineCommit'])||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(r['targetCommit']);}))
       throw new Error('Niepoprawny manifest przypiętych rewizji.');
   }
@@ -65,7 +77,9 @@ export function parseReleaseSummaryImport(value:unknown):ReleaseSummarySnapshot 
   if(job['chatMessages'].some((m:Record<string,unknown>)=>m['status']==='IN_PROGRESS'))
     throw new Error('Eksport zawiera niezakończoną odpowiedź AI.');
   const result=Object.fromEntries(keys.map(key=>[key,job[key]])) as unknown as ReleaseSummarySnapshot;
-  result.request={systemId:request['systemId'],mode:'LIQUIBASE',baselineRef:request['baselineRef'],targetRef:request['targetRef'],
+  result.request={systemId:request['systemId'],mode:'LIQUIBASE',range:{selection:{branch:selection['branch'],dateFrom:selection['dateFrom'],dateTo:selection['dateTo'],timeZone:selection['timeZone']},
+      repositoryId:range['repositoryId'],baseline:{id:range['baseline']['id'],committedAt:range['baseline']['committedAt'],title:range['baseline']['title']},
+      target:{id:range['target']['id'],committedAt:range['target']['committedAt'],title:range['target']['title']}},
     model:request['model'],reasoningEffort:request['reasoningEffort']};
   result.report=job['report']?normalizeAnalysisReport(job['report']):null;
   if(result.report) {

@@ -41,7 +41,8 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer, Behavior Change Assessment i
 Technical Change Assessment oraz Release summary. Release summary porównuje
-dwa przypięte refy wszystkich repozytoriów wybranego systemu, zbiera Liquibase
+dwa przypięte commity jednego primary repo wybranego systemu na jednym branchu,
+dobrane z zakresu dat Od/Do w strefie operatora, zbiera Liquibase
 i pełne encje Operational Context, a następnie uruchamia report-first AI.
 Wynik, pokrycie, historia i read-only lub jawnie mutujący follow-up są opisane
 w [runtime Release summary](release-summary-runtime-flow.md).

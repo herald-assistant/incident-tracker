@@ -1,10 +1,15 @@
 import { GitLabBranchesResponse } from '../../core/services/gitlab-system-branches-api.service';
 import { AnalysisReport, AnalysisAiUsage, AnalysisAiActivityEvent, AnalysisAiToolFeedback,
   AnalysisEvidenceSection, AnalysisJobStepResponse, AnalysisChatMessageResponse } from '../../core/models/analysis.models';
-export type ReleaseRefKind = 'BRANCH' | 'TAG' | 'COMMIT';
-export interface ReleaseRef { kind: ReleaseRefKind; name: string }
+export interface ReleaseDateSelection {
+  branch: string; dateFrom: string; dateTo: string; timeZone: string;
+}
+export interface ReleaseCommit { id: string; committedAt: string; title: string }
+export interface ReleaseRange {
+  selection: ReleaseDateSelection; repositoryId: string; baseline: ReleaseCommit; target: ReleaseCommit;
+}
 export interface ReleaseSummaryRequest {
-  systemId: string; mode: 'LIQUIBASE'; baselineRef: ReleaseRef; targetRef: ReleaseRef;
+  systemId: string; mode: 'LIQUIBASE'; range: ReleaseRange;
   model?: string; reasoningEffort?: string;
 }
 export interface ReleaseSummaryChangedFile {
@@ -34,11 +39,6 @@ export interface ReleaseSummarySnapshot {
   exportAvailable: boolean;
 }
 export interface ReleaseRefOptions extends GitLabBranchesResponse { nextPage: number | null }
-export function releaseRef(value: string): ReleaseRef {
-  if (value.startsWith('refs/heads/')) return {kind: 'BRANCH', name: value.slice(11)};
-  if (value.startsWith('refs/tags/')) return {kind: 'TAG', name: value.slice(10)};
-  return {kind: 'COMMIT', name: value};
-}
 export function terminalReleaseSummary(job: ReleaseSummarySnapshot): boolean {
   return !['QUEUED', 'RUNNING'].includes(job.status) && !job.chatMessages.some(m=>m.status==='IN_PROGRESS');
 }

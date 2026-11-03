@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 class ReleaseSummaryReportTest {
     static final String SOURCE="gitlab:CRM/customer@"+"b".repeat(40)+":db/customer.xml";
     static final ReleaseSummaryScope SCOPE=new ReleaseSummaryScope("crm","CRM","CRM","digest",
-            List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of(""),"refs/heads/current","a".repeat(40),"refs/tags/next","b".repeat(40))),
+            List.of(new ReleaseSummaryScope.Repository("customer","customer",List.of(""),"a".repeat(40),"a".repeat(40),"b".repeat(40),"b".repeat(40))),
             List.of(Map.of("type","system","id","crm","payload",Map.of("name","CRM"))));
     static ReleaseSummaryEvidence evidence(boolean completePatch) {
         var base=ReleaseSummaryCrmFixture.evidence("db/customer.xml",null,"<databaseChangeLog/>");

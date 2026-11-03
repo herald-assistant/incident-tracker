@@ -36,18 +36,17 @@
 
 .release-summary-target-grid {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) repeat(2, minmax(0, 1.25fr));
-  align-items: end;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) repeat(2, minmax(160px, 0.85fr));
+  align-items: start;
   gap: 12px;
 }
 
-.release-summary-ref {
-  display: grid;
-  grid-template-columns: 122px minmax(0, 1fr);
-  align-items: end;
-  gap: 10px;
-  min-width: 0;
-}
+.release-summary-date { min-width: 0; }
+.release-summary-date input { min-height: 58px; width: 100%; box-sizing: border-box; }
+.release-summary-commit { display: grid; gap: 4px; margin: 8px 0 0; font-size: .82rem; overflow-wrap: anywhere; }
+.release-summary-commit span:first-child { font-weight: 700; }
+.release-summary-note, .release-summary-effective-range { color: var(--text-muted); font-size: .82rem; }
+.release-summary-effective-range p, .release-summary-range-status p { margin: 0 0 6px; }
 
 .release-summary-ai-grid {
   display: grid;
@@ -180,9 +179,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .release-summary-target-grid > app-application-select {
-    grid-column: 1 / -1;
-  }
+
 }
 
 @media (max-width: 760px) {
