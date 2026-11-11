@@ -47,6 +47,20 @@ class GitLabFrontendMcpToolsTest {
             new GitLabFrontendMcpTools(routeService, symbolService, importResolverService);
 
     @Test
+    void neutralToolRejectsInvalidTypeScriptModesAndMemberLimit() {
+        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(null, null, null, null, null,
+                List.of(), "Sprawdzam CRM.", toolContext())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(COMPONENT_PATH, "CrmComponent", COMPONENT_PATH,
+                "./crm", "CrmComponent", List.of(), "Sprawdzam CRM.", toolContext()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(COMPONENT_PATH, null, null, null, null,
+                List.of(), "Sprawdzam CRM.", toolContext())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> tools.readTypeScriptSymbolSlice(COMPONENT_PATH, "CrmComponent", null, null, null,
+                java.util.Collections.nCopies(51, "load"), "Sprawdzam CRM.", toolContext()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void shouldResolveRouteSliceExclusivelyFromHiddenCrmScope() throws Exception {
         when(routeService.readBranchSlice(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(routeResponse());

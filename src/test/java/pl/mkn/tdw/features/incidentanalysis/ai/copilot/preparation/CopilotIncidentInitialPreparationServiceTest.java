@@ -98,12 +98,12 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         try (var prepared = service.prepare(request)) {
             assertEquals("C:\\tools\\copilot.exe", prepared.session().clientOptions().getCliPath());
-            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().clientOptions().getCwd());
+            assertEquals("C:\\crm-workspace\\analysis", prepared.session().clientOptions().getCwd());
             assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
             assertEquals("github_pat_crm_test_token", prepared.session().clientOptions().getGithubToken());
 
             assertEquals("incidenttracker-test", prepared.session().sessionConfig().getClientName());
-            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
+            assertEquals("C:\\crm-workspace\\analysis", prepared.session().sessionConfig().getWorkingDirectory());
             assertEquals("gpt-5.4", prepared.session().sessionConfig().getModel());
             assertEquals("medium", prepared.session().sessionConfig().getReasoningEffort());
             assertNotNull(prepared.session().sessionConfig().getSessionId());
@@ -321,7 +321,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                     org.mockito.ArgumentMatchers.argThat(context ->
                             "timeout-123".equals(context.correlationId())
                                     && "dev3".equals(context.environment())
-                                    && !context.hiddenContext().containsKey(GITLAB_BRANCH)
+                                    && "release/2026.04".equals(context.hiddenContext().get(GITLAB_BRANCH))
                                     && !context.hiddenContext().containsKey(GITLAB_GROUP)
                                     && context.analysisRunId() != null
                                     && !context.analysisRunId().isBlank()
@@ -489,7 +489,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
         try (var prepared = service.prepare(request)) {
             assertEquals("incidenttracker", prepared.session().sessionConfig().getClientName());
-            assertEquals("C:\\Users\\mknie\\IdeaProjects\\incidenttracker", prepared.session().sessionConfig().getWorkingDirectory());
+            assertEquals("C:\\crm-workspace\\analysis", prepared.session().sessionConfig().getWorkingDirectory());
             assertEquals(Boolean.FALSE, prepared.session().clientOptions().getUseLoggedInUser().orElseThrow());
             assertEquals("github_pat_crm_test_token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
@@ -584,7 +584,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
     private CopilotSdkProperties baseProperties() {
         var properties = new CopilotSdkProperties();
-        properties.setWorkingDirectory("C:\\Users\\mknie\\IdeaProjects\\incidenttracker");
+        properties.setWorkingDirectory("C:\\crm-workspace\\analysis");
         properties.setCopilotHome(tempDirectory.resolve("copilot").toString());
         return properties;
     }

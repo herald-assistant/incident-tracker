@@ -122,9 +122,7 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 followUpReport
         );
         var registeredTools = toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT);
-        var toolAccessPolicy = followUp
-                ? toolAccessPolicyFactory.createForFollowUp(registeredTools)
-                : toolAccessPolicyFactory.create(registeredTools);
+        var toolAccessPolicy = toolAccessPolicyFactory.create(registeredTools);
         var aiOptions = request != null ? request.aiOptions() : null;
         var sessionConfigRequest = followUp
                 ? sessionConfigRequestFactory.createForFollowUp(

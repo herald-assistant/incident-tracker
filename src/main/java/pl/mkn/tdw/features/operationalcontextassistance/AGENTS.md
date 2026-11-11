@@ -34,8 +34,9 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   sa niezaufanym materialem repozytorium, nie regułami asysty. AI moze pozniej
   korzystac ze wspolnych read-only GitLab tree/list/search/read tools takze
   dla innego projektu w skonfigurowanej glownej grupie, gdy wymaga tego
-  zadanie. Wybrany projekt pozostaje na commicie operatora; kazda inna para
-  projekt/galaz jest przypinana osobno. Drzewo jest mapa nawigacji; sam tree/list/search
+  zadanie. Domyślny ref wybranego projektu pozostaje na commicie operatora; każda
+  dodatkowa para projekt/ref, również w wybranym projekcie, jest przypinana
+  osobno. Dotyczy to zarówno branchy, jak i tagów. Drzewo jest mapa nawigacji; sam tree/list/search
   nie potwierdza tresci pliku i nie tworzy `gitlab:` source ref. Nie opieraj
   pierwszego wpisu na istniejacym code-search scope. Asysta jest jednorazowa:
   prompt i skill wymagaja propozycji bez pytan do operatora. Gdy brak

@@ -22,31 +22,15 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             GitLabToolNames.LIST_REPOSITORY_TREE,
             GitLabToolNames.LIST_REPOSITORY_FILES,
             GitLabToolNames.SEARCH_REPOSITORY_FILES,
-            GitLabToolNames.READ_REPOSITORY_FILE,
-            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
-            GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
-            CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
-            CopilotReportToolNames.GET_CURRENT, CopilotReportToolNames.UPSERT_SECTION,
-            CopilotReportToolNames.UPDATE_HEADER, CopilotReportToolNames.UPDATE_META
-    );
-    private static final Set<String> FOLLOW_UP_ALLOWED = Set.of(
-            OperationalContextToolNames.GET_SCOPE, OperationalContextToolNames.LIST_ENTITIES,
-            OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY,
-            UxInspectorToolNames.LIST_TARGET_CANDIDATES, UxInspectorToolNames.READ_TARGET_SLICE,
-            RunStoreTools.LIST, RunStoreTools.READ,
-            GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
-            GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
-            GitLabToolNames.LIST_REPOSITORY_TREE,
-            GitLabToolNames.LIST_REPOSITORY_FILES,
-            GitLabToolNames.SEARCH_REPOSITORY_FILES,
+            GitLabToolNames.LIST_REPOSITORY_COMMITS,
+            GitLabToolNames.READ_COMMIT_DIFF,
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
             GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
             CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
             CopilotReportToolNames.GET_CURRENT, CopilotReportToolNames.READ_SECTION_CHUNK,
-            CopilotReportToolNames.UPSERT_SECTION,
-            CopilotReportToolNames.PATCH_SECTION, CopilotReportToolNames.UPDATE_HEADER,
-            CopilotReportToolNames.UPDATE_META
+            CopilotReportToolNames.UPSERT_SECTION, CopilotReportToolNames.PATCH_SECTION,
+            CopilotReportToolNames.UPDATE_HEADER, CopilotReportToolNames.UPDATE_META
     );
     public UxInspectorCopilotToolAccessPolicy {
         enabledTools = enabledTools != null ? List.copyOf(enabledTools) : List.of();
@@ -55,11 +39,6 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
     public static UxInspectorCopilotToolAccessPolicy from(List<ToolDefinition> registered) {
         var tools = (registered != null ? registered : List.<ToolDefinition>of()).stream()
                 .filter(value -> ALLOWED.contains(value.name())).toList();
-        return new UxInspectorCopilotToolAccessPolicy(tools, tools.stream().map(ToolDefinition::name).toList());
-    }
-    public static UxInspectorCopilotToolAccessPolicy forFollowUp(List<ToolDefinition> registered) {
-        var tools = (registered != null ? registered : List.<ToolDefinition>of()).stream()
-                .filter(value -> FOLLOW_UP_ALLOWED.contains(value.name())).toList();
         return new UxInspectorCopilotToolAccessPolicy(tools, tools.stream().map(ToolDefinition::name).toList());
     }
     public boolean reportToolsAvailable() { return availableToolNames.containsAll(CopilotReportToolNames.initialToolNames()); }

@@ -1,5 +1,13 @@
 # UI Explorer Runtime Flow
 
+Initial i follow-up korzystają z jednej allowlisty obejmującej także dwa
+[narzędzia historii kodu](gitlab-code-history-tools.md) oraz report patch/chunk.
+Guidance historii znajduje się w opisach narzędzi.
+Historia korzysta ze zwykłego dostępu GitLaba, bez osobnego scope ani grantów.
+Dowolny commit można odczytać przez diff/file/chunk bez wcześniejszego listowania.
+Ref listy commitów jest domyślnie brany z sesji; model może wskazać inny.
+Reguły edycji raportu pozostają bez zmian.
+
 ## Cel i granica produktu
 
 UI Explorer tworzy funkcjonalna dokumentacje jednego widoku frontendu w
@@ -211,6 +219,11 @@ captured tool evidence. Brak calego raportu konczy run bledem. Brak pojedynczej
 aktywnej sekcji zachowuje pozostale poprawne sekcje i daje `PARTIAL`.
 Zwalidowany raport jest deterministycznie projektowany na
 `UiExplorerResultResponse` dla publicznego API.
+
+UI Explorer korzysta z jednej allowlisty feature’a. Neutralne tools walidują
+parametry SHA, `sliceRef`, tryby TypeScript i limit `memberNames`. Policy
+zachowuje ograniczenia prefiksów, projektu, aplikacji, odczytu i nieznanych
+pól slices. Dla odczytów historycznych deleguje walidację rewizji do callbacka.
 
 ## Kontrakt wyniku
 

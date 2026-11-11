@@ -1,5 +1,13 @@
 # Release summary: Diff-First AI
 
+Initial i follow-up korzystają z jednej allowlisty obejmującej także dwa
+[narzędzia historii kodu](gitlab-code-history-tools.md) oraz report patch/chunk.
+Guidance historii znajduje się w opisach narzędzi.
+Kotwicą jest targetCommit przygotowanego porównania, z tym samym projektem
+i prefiksami. File/chunk reads mogą czytać historyczne SHA i ich rodziców
+potwierdzonych w bieżącej turze. Jawne `updateReport` nadal warunkuje mutację
+w follow-up; historia nie oznacza zgody na korektę raportu.
+
 ## Zakres i ownership
 
 Release summary dokumentuje planowane zmiany bazodanowe między dwoma stanami
@@ -206,6 +214,10 @@ przy COMPLETED; UI i Share przekazuja go do shared meta. Braki sekcji,
 niezgodnosc listy tabel, niedozwolone zrodla lub jawne luki daja PARTIAL.
 Brak zapisu raportu to FAILED/REPORT_NOT_WRITTEN. Timeout po mutacji zachowuje
 PARTIAL z checkpointem. Niepelny manifest daje BLOCKED/CHANGE_LIST_INCOMPLETE.
+
+Podgląd patcha do walidacji publikacji i atomowy zapis report store korzystają
+z tej samej czystej operacji `CopilotReportTextPatch`. Kontrola digestu pozostaje
+przy atomowym zapisie; zgoda operatora i walidacja publikacji należą do feature’a.
 
 ## Historia i UI
 

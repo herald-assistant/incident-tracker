@@ -94,17 +94,7 @@ public class CopilotReportSessionStore {
                         .equalsIgnoreCase(expectedMarkdownSha256.trim())) {
                     throw new CopilotReportSessionException("Report section changed since it was read.");
                 }
-                var start = markdown.indexOf(oldText);
-                if (start < 0) {
-                    throw new CopilotReportSessionException("oldText was not found in the report section.");
-                }
-                if (markdown.indexOf(oldText, start + 1) >= 0) {
-                    throw new CopilotReportSessionException("oldText occurs more than once in the report section.");
-                }
-                var updated = markdown.substring(0, start) + newText + markdown.substring(start + oldText.length());
-                if (!StringUtils.hasText(updated) || markdown.equals(updated)) {
-                    throw new CopilotReportSessionException("Patch must leave a non-empty changed section.");
-                }
+                var updated = CopilotReportTextPatch.apply(markdown, oldText, newText);
                 sections.set(index, new AnalysisReportSection(section.id(), section.title(), section.order(),
                         updated, section.meta()));
                 return new AnalysisReport(current.reportId(), current.header(), current.subHeader(),

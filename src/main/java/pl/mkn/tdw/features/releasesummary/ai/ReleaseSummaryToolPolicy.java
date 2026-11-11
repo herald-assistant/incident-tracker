@@ -10,6 +10,8 @@ import pl.mkn.tdw.aiplatform.copilot.tools.policy.*;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.*;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.*;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.features.releasesummary.report.ReleaseSummaryReportService;
 import java.util.Map;
@@ -19,11 +21,32 @@ import java.util.Set;
 @Order(Ordered.HIGHEST_PRECEDENCE+46)
 @RequiredArgsConstructor
 public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
-    public static final Set<String> ALLOWED=Set.of("gitlab_list_repository_branches","gitlab_list_repository_tree",
-            "gitlab_list_repository_files","gitlab_search_repository_files","gitlab_read_repository_file","gitlab_read_repository_file_chunk",
-            "opctx_get_scope","opctx_list_entities","opctx_search","opctx_get_entity",
-            "report_get_current","report_read_section_chunk","report_upsert_section","report_patch_section","report_update_header","report_update_meta");
-    private static final Set<String> MUTATIONS=Set.of("report_upsert_section","report_patch_section","report_update_header","report_update_meta");
+    public static final Set<String> ALLOWED = Set.of(
+            GitLabToolNames.LIST_REPOSITORY_BRANCHES,
+            GitLabToolNames.LIST_REPOSITORY_TREE,
+            GitLabToolNames.LIST_REPOSITORY_FILES,
+            GitLabToolNames.SEARCH_REPOSITORY_FILES,
+            GitLabToolNames.READ_REPOSITORY_FILE,
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+            GitLabToolNames.LIST_REPOSITORY_COMMITS,
+            GitLabToolNames.READ_COMMIT_DIFF,
+            OperationalContextToolNames.GET_SCOPE,
+            OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH,
+            OperationalContextToolNames.GET_ENTITY,
+            CopilotReportToolNames.GET_CURRENT,
+            CopilotReportToolNames.READ_SECTION_CHUNK,
+            CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.PATCH_SECTION,
+            CopilotReportToolNames.UPDATE_HEADER,
+            CopilotReportToolNames.UPDATE_META
+    );
+    private static final Set<String> MUTATIONS = Set.of(
+            CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.PATCH_SECTION,
+            CopilotReportToolNames.UPDATE_HEADER,
+            CopilotReportToolNames.UPDATE_META
+    );
     private final ObjectMapper mapper;
     private final ReleaseSummaryReportService reports;
     private final CopilotReportSessionStore reportStore;
@@ -35,20 +58,18 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
             if(MUTATIONS.contains(request.toolName())&&!context.reportWritable) throw new IllegalArgumentException("Ta wiadomość nie zezwala na zmianę raportu.");
             var args=mapper.readTree(request.rawArguments());
             if(args==null||!args.isObject()) throw new IllegalArgumentException("Wymagane argumenty JSON.");
-            if(request.toolName().equals("report_upsert_section")) {
+            if(request.toolName().equals(CopilotReportToolNames.UPSERT_SECTION)) {
                 reports.validateOrder(args.path("id").asText(),args.path("order").asInt(),context.evidence);
                 reports.validatePublication(args.path("id").asText(),args.path("markdown").asText(),
                         args.hasNonNull("meta")?mapper.treeToValue(args.get("meta"),AnalysisReportMeta.class):AnalysisReportMeta.empty(),context.evidence,context.sources());
                 context.sectionIds.addIfAbsent(args.path("id").asText());
             }
-            if(request.toolName().equals("report_patch_section")) {
+            if(request.toolName().equals(CopilotReportToolNames.PATCH_SECTION)) {
                 var reportId=(String)request.sessionContext().hiddenContext().get(AgentToolContextKeys.REPORT_ID);
                 var sectionId=args.path("sectionId").asText();
                 var section=reportStore.current(reportId).orElseThrow().sections().stream().filter(s->s.id().equals(sectionId)).findFirst().orElseThrow();
                 var old=args.path("oldText").asText();var replacement=args.path("newText").asText();
-                int at=section.markdown().indexOf(old);
-                if(old.isEmpty()||at<0||section.markdown().indexOf(old,at+old.length())>=0)throw new IllegalArgumentException("Fragment musi występować dokładnie raz.");
-                var candidate=section.markdown().substring(0,at)+replacement+section.markdown().substring(at+old.length());
+                var candidate=CopilotReportTextPatch.apply(section.markdown(),old,replacement);
                 reports.validatePublication(sectionId,candidate,section.meta(),context.evidence,context.sources());
             }
             if(args.hasNonNull("meta")) reports.validateMeta(mapper.treeToValue(args.get("meta"),AnalysisReportMeta.class),context.sources());
@@ -62,7 +83,7 @@ public class ReleaseSummaryToolPolicy implements CopilotToolInvocationPolicy {
         if(!(raw instanceof ReleaseSummaryAiContext context)||event.outcome()!=CopilotToolInvocationOutcome.COMPLETED) return;
         try {
             var result=mapper.readTree(event.rawResult());
-            if(event.toolName().equals("opctx_get_entity")&&result!=null&&result.hasNonNull("id")&&result.hasNonNull("type"))
+            if(event.toolName().equals(OperationalContextToolNames.GET_ENTITY)&&result!=null&&result.hasNonNull("id")&&result.hasNonNull("type"))
                 context.knownSources.add("opctx:"+result.path("type").asText()+":"+result.path("id").asText());
             context.privateCheckpoint.run();
             if(MUTATIONS.contains(event.toolName())&&result!=null&&result.path("status").asText().equals("ok")) {

@@ -65,28 +65,19 @@ public class UiExplorerCopilotToolSessionContextFactory {
         if (!StringUtils.hasText(copilotSessionId)) {
             throw new IllegalArgumentException("UI Explorer follow-up requires copilotSessionId.");
         }
-        if (context == null || context.sourceScope() == null || context.sourceRevision() == null) {
-            throw new IllegalArgumentException("Resolved UI Explorer source scope is required.");
-        }
-        var runId = StringUtils.hasText(runReference) ? runReference.trim() : UUID.randomUUID().toString();
-        var scope = context.sourceScope();
-        var hidden = new LinkedHashMap<String, Object>();
-        hidden.put(UiExplorerCopilotToolContextKeys.FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
+        var created = create(runReference, request, context);
+        var hidden = new LinkedHashMap<>(created.hiddenContext());
         hidden.put(UiExplorerCopilotToolContextKeys.RUN_KIND, UiExplorerCopilotToolContextKeys.RUN_KIND_FOLLOW_UP);
         if (report != null) {
             hidden.put(AgentToolContextKeys.REPORT_ID, report.reportId());
             hidden.put(AgentToolContextKeys.REPORT_FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
             hidden.put(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
                     UiExplorerReportSectionIds.activeSectionIds(request));
+        } else {
+            hidden.remove(AgentToolContextKeys.REPORT_ID);
+            hidden.remove(AgentToolContextKeys.REPORT_FEATURE);
+            hidden.remove(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS);
         }
-        hidden.put(AgentToolContextKeys.TOOL_BUDGET_POLICY, AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
-        hidden.put(UiExplorerCopilotToolContextKeys.SYSTEM_ID, context.systemId());
-        hidden.put(AgentToolContextKeys.GITLAB_GROUP, scope.gitLabGroup());
-        hidden.put(AgentToolContextKeys.GITLAB_BRANCH, scope.ref());
-        hidden.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, List.of(context.systemId()));
-        hidden.put(GitLabFrontendToolContextKeys.PROJECT_NAME, scope.projectName());
-        hidden.put(GitLabFrontendToolContextKeys.PATH_PREFIXES, scope.pathPrefixes());
-        hidden.put(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF, context.screen().screenId());
-        return new CopilotToolSessionContext(runId, copilotSessionId.trim(), hidden);
+        return new CopilotToolSessionContext(created.analysisRunId(), copilotSessionId.trim(), hidden);
     }
 }

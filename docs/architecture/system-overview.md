@@ -1,5 +1,12 @@
 # System Overview
 
+Historia kodu w istniejących follow-upach Incident Analysis, Flow Explorera,
+UI Explorera, UX Inspectora i Release summary korzysta ze wspólnej capability
+GitLab. Każdy z tych feature’ów ma jedną allowlistę dla initial i follow-up,
+własny scope odczytu oraz guidance w opisach narzędzi; initial zawsze
+poprzedza rozmowę. Zasady commit/diff/verified reads opisuje
+[historia kodu GitLab](gitlab-code-history-tools.md).
+
 ## Cel projektu
 
 Projekt rozwija platforme do AI-augmented system analysis. Aplikacja ma
@@ -159,7 +166,8 @@ workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
 aktywne sekcje, confidence, references, visibility limits i open questions.
 Obok raportu shared follow-up chat pozwala pytac o wyjasnienia i rozszerzac
 analize. Odpowiedz uzywa prostego jezyka analityka i moze wykonac celowany
-odczyt kodu przez piec read-only tools na wybranym branchu. Jawna prosba
+odczyt kodu przez read-only tools na wybranym branchu oraz historię zmian
+przez scoped commit/diff tools. Jawna prosba
 operatora o aktualizacje raportu pozwala uzyc report tools; zwalidowane
 zmiany aktualizuja razem raport i wynik w historii oraz eksporcie. Odpowiedz,
 ktora zmienila raport, zachowuje w swoich referencjach surowa tresc zmienionych

@@ -73,7 +73,11 @@ context pipeline, przygotowania AI, raportu, follow-up chatu i persistence.
   i limitu przejsc. Odróżniaj wiedze katalogowa od dowodu zachowania w kodzie;
   katalog nie zmienia trybow, raportu ani zakresu dostepu do GitLaba.
 - Follow-up wznawia te sama sesje Copilota dla `COMPLETED` i `PARTIAL`, uzywa
-  wybranego brancha i pieciu read-only research tools. Report tools
+  wybranego brancha i read-only research tools. Dwa neutralne history tools
+  pozwalają czytać commity/diffy przez zwykły dostęp GitLaba;
+  dowolny SHA jest dostępny w file/chunk reads bez wcześniejszego odkrycia.
+  Initial i follow-up mają jedną allowlistę (także report patch/chunk)
+  bez osobnego history scope. Guidance historii należy do opisów tools. Report tools
   maja hidden scope biezacego raportu; mutacja wymaga jawnej prosby operatora
   w najnowszej wiadomosci i ponownej walidacji report/result.
 - Local history zapisuje minimalny prywatny continuation snapshot bez tokenow,

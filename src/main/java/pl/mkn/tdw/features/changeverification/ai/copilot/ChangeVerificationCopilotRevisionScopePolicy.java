@@ -36,7 +36,7 @@ public class ChangeVerificationCopilotRevisionScopePolicy implements CopilotTool
                 throw new IllegalArgumentException("Tool arguments must be a JSON object.");
             }
             if (GitLabToolNames.READ_MERGE_REQUEST_DIFF.equals(request.toolName())) {
-                scope.requireMergeRequest(text(args, "projectName"), args.path("mergeRequestIid").asLong(-1));
+                // The MR callback owns validation of the prepared snapshot.
                 return;
             }
             var sha = text(args, "branchRef");

@@ -9,6 +9,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotIncidentToolDescriptionCustomizerTest {
 
+    @Test void historyGuidanceBelongsToToolDescriptionsAndSelectedProfile() {
+        for (var name : java.util.List.of(
+                pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_COMMITS,
+                pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_COMMIT_DIFF)) {
+            var description = customizer.customize(
+                    pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext.profile("incident-analysis"),
+                    name, "Neutral history contract.");
+            org.assertj.core.api.Assertions.assertThat(description).startsWith("Neutral history contract.")
+                    .isNotEqualTo("Neutral history contract.").doesNotContain("Pass branchRef explicitly");
+            org.assertj.core.api.Assertions.assertThat(customizer.customize(
+                    pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext.profile("other-feature"),
+                    name, "Neutral history contract.")).isEqualTo("Neutral history contract.");
+        }
+    }
+
     private final CopilotIncidentToolDescriptionCustomizer customizer = new CopilotIncidentToolDescriptionCustomizer(
             new CopilotIncidentToolGuidanceCatalog()
     );
@@ -26,7 +41,7 @@ class CopilotIncidentToolDescriptionCustomizerTest {
         assertTrue(description.contains("Expensive. Use only when outline/chunk tools are insufficient."));
         assertTrue(description.contains("gitlab_build_java_method_use_case_context"));
         assertTrue(description.contains("Prefer gitlab_read_java_method_slice"));
-        assertTrue(description.contains("Pass branchRef explicitly"));
+        assertTrue(description.contains("For tools accepting branchRef"));
         assertTrue(description.contains("Do not pass gitLabGroup"));
         assertTrue(description.contains("Do not use for broad browsing."));
     }
@@ -53,7 +68,7 @@ class CopilotIncidentToolDescriptionCustomizerTest {
         assertTrue(description.contains("lineStart is optional"));
         assertTrue(description.contains("method body, predicate, mapper, validator, helper or client call"));
         assertTrue(description.contains("downstream use-case flow"));
-        assertTrue(description.contains("Pass branchRef explicitly"));
+        assertTrue(description.contains("For tools accepting branchRef"));
         assertTrue(description.contains("Do not pass gitLabGroup"));
     }
 

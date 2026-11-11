@@ -26,6 +26,9 @@ public final class GitLabToolNames {
     public static final String READ_FRONTEND_ROUTE_BRANCH_SLICE = PREFIX + "read_frontend_route_branch_slice";
     public static final String READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE = PREFIX + "read_frontend_typescript_symbol_slice";
 
+    public static final String LIST_REPOSITORY_COMMITS = PREFIX + "list_repository_commits";
+    public static final String READ_COMMIT_DIFF = PREFIX + "read_commit_diff";
+
     private GitLabToolNames() {
     }
 }

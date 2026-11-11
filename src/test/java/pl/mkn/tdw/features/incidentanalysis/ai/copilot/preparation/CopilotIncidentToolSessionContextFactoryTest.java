@@ -45,7 +45,10 @@ class CopilotIncidentToolSessionContextFactoryTest {
                 List.of("FUNCTIONAL_ANALYSIS", "TECHNICAL_HANDOFF"),
                 context.hiddenContext().get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)
         );
-        assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+        assertTrue(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+        var history = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(context, "customer", "src/Phone.java");
+        history.exercise(CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithConfiguredElastic()
+                .create(request, history.definitions()).enabledTools());
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_GROUP));
         assertEquals(
                 List.of("crm-entry", "crm-support"),
@@ -71,6 +74,9 @@ class CopilotIncidentToolSessionContextFactoryTest {
         );
 
         var context = factory.fromChatRequest(request);
+        var history = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(context, "customer", "src/Phone.java");
+        var policy = CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithConfiguredElastic();
+        history.exercise(policy.createForFollowUp(request, history.definitions()).enabledTools());
 
         assertTrue(context.copilotSessionId().startsWith("analysis-chat-"));
         assertEquals("analysis-chat-" + context.analysisRunId(), context.copilotSessionId());
@@ -79,7 +85,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.REPORT_ID));
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.REPORT_FEATURE));
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS));
-        assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+        assertTrue(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_GROUP));
         assertEquals(
                 List.of("crm-entry", "crm-support"),

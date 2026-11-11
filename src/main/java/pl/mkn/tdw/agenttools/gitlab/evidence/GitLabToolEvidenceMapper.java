@@ -41,6 +41,8 @@ import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_FRONTEND_ROUTE_B
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_MERGE_REQUEST_DIFF;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_COMMITS;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_COMMIT_DIFF;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE;
@@ -69,7 +71,7 @@ public class GitLabToolEvidenceMapper {
         }
 
         return switch (toolName) {
-            case READ_MERGE_REQUEST_DIFF, READ_REPOSITORY_FILE,
+            case LIST_REPOSITORY_COMMITS, READ_COMMIT_DIFF, READ_MERGE_REQUEST_DIFF, READ_REPOSITORY_FILE,
                  READ_REPOSITORY_FILES_BY_PATH,
                  READ_REPOSITORY_FILE_CHUNK,
                  READ_REPOSITORY_FILE_CHUNKS,
@@ -96,10 +98,10 @@ public class GitLabToolEvidenceMapper {
             GitLabToolEvidenceSink sessionEvidence
     ) {
         return switch (toolName) {
-            case READ_MERGE_REQUEST_DIFF -> sessionEvidence.appendItem(
+            case LIST_REPOSITORY_COMMITS, READ_COMMIT_DIFF, READ_MERGE_REQUEST_DIFF -> sessionEvidence.appendItem(
                     GITLAB_PROVIDER, "tool-fetched-diff", discoveryKey(toolCallId, toolName),
                     GITLAB_DISCOVERY_ORDER_NAMESPACE, GITLAB_DISCOVERY_FALLBACK_KEY,
-                    new AnalysisEvidenceItem("GitLab immutable MR diff", List.of(
+                    new AnalysisEvidenceItem(READ_MERGE_REQUEST_DIFF.equals(toolName) ? "GitLab immutable MR diff" : "GitLab code history", List.of(
                             new AnalysisEvidenceAttribute("toolName", toolName),
                             new AnalysisEvidenceAttribute("toolCallId", toolCallId),
                             new AnalysisEvidenceAttribute("toolArguments", rawArguments),

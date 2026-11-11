@@ -89,20 +89,22 @@ class GitLabRepositoryNavigationMcpToolsTest {
     }
 
     @Test
-    void branchScopeNavigatesWithBranchRefWithoutExposingACommit() {
+    void branchScopeNavigatesAtResolvedCommit() {
         var branchScope = GitLabRepositoryToolScope.forBranch("CRM", "PROCESSES/customer-profile", "main");
         var branchContext = new ToolContext(Map.of(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, branchScope));
-        when(port.listRepositoryFilesPage("CRM", "PROCESSES/customer-profile", "main", "", "", 200))
+        when(port.resolveRevision("CRM", "PROCESSES/customer-profile", "main"))
+                .thenReturn(new GitLabRepositoryRevision("CRM", "PROCESSES/customer-profile", "main", SELECTED_COMMIT, null));
+        when(port.listRepositoryFilesPage("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "", "", 200))
                 .thenReturn(new GitLabRepositoryFilePage(List.of(
-                        new GitLabRepositoryFile("CRM", "PROCESSES/customer-profile", "main", "README.md")
+                        new GitLabRepositoryFile("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "README.md")
                 ), null));
 
         var files = tools.listRepositoryFiles("PROCESSES/customer-profile", "main", "", "",
                 "Szukam pliku CRM.", branchContext);
 
         assertThat(files.paths()).containsExactly("README.md");
-        assertThat(files.commitId()).isNull();
-        verify(port, never()).resolveRevision("CRM", "PROCESSES/customer-profile", "main");
+        assertThat(files.commitId()).isEqualTo(SELECTED_COMMIT);
+        verify(port).resolveRevision("CRM", "PROCESSES/customer-profile", "main");
     }
 
     @Test
@@ -167,7 +169,7 @@ class GitLabRepositoryNavigationMcpToolsTest {
     }
 
     @Test
-    void verifiedReadRegistersExactSourceRefAndCannotChangeSelectedBranch() {
+    void verifiedReadRegistersSourceRefsAndCanResearchOtherRevisions() {
         var content = "<project><artifactId>customer-profile-client</artifactId></project>";
         when(port.readFileMetadata("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, "pom.xml"))
                 .thenReturn(new GitLabRepositoryFileMetadata("CRM", "PROCESSES/customer-profile",
@@ -197,13 +199,21 @@ class GitLabRepositoryNavigationMcpToolsTest {
         assertThat(raw.content()).isEqualTo(configuration);
         assertThat(raw.sourceRef()).endsWith(":.env");
 
-        assertThatThrownBy(() -> gitlab.readRepositoryFile("PROCESSES/customer-profile", "other", List.of(),
-                "pom.xml", null, "Zmieniam gałąź.", context()))
-                .isInstanceOf(IllegalArgumentException.class);
+        when(port.resolveRevision("CRM", "PROCESSES/customer-profile", "other"))
+                .thenReturn(new GitLabRepositoryRevision("CRM", "PROCESSES/customer-profile", "other", OTHER_COMMIT, null));
+        when(port.readFileMetadata("CRM", "PROCESSES/customer-profile", OTHER_COMMIT, "pom.xml"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "PROCESSES/customer-profile",
+                        OTHER_COMMIT, "pom.xml", null, OTHER_COMMIT, null, null, null, (long) content.length()));
+        when(port.readFileBounded("CRM", "PROCESSES/customer-profile", OTHER_COMMIT, "pom.xml", 256 * 1024))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "PROCESSES/customer-profile", OTHER_COMMIT, "pom.xml", content, false));
+        var other = gitlab.readRepositoryFile("PROCESSES/customer-profile", "other", List.of(),
+                "pom.xml", null, "Sprawdzam inną wersję CRM.", context());
+        assertThat(other.content()).isEqualTo(content);
+        assertThat(scope.selectedBranch()).isEqualTo("main");
         assertThatThrownBy(() -> gitlab.readRepositoryFile("../outside", "main", List.of(),
                 "pom.xml", null, "Próbuję wyjść poza grupę.", context()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(scope.readSourceRefs()).containsExactlyInAnyOrder(result.sourceRef(), raw.sourceRef());
+        assertThat(scope.readSourceRefs()).containsExactlyInAnyOrder(result.sourceRef(), raw.sourceRef(), other.sourceRef());
     }
 
     @Test

@@ -49,7 +49,7 @@ class ChangeVerificationCopilotRevisionScopePolicyTest {
     }
 
     @Test
-    void chunkBatchValidatesEveryProjectAndDiffChecksIid() {
+    void chunkBatchValidatesEveryProjectAndDiffDelegatesIidToCallback() {
         var chunks = "{\"branchRef\":\"%s\",\"chunks\":[{\"projectName\":\"customer-api\"},{\"projectName\":\"other-api\"}]}"
                 .formatted("c".repeat(40));
         assertThatThrownBy(() -> invoke("gitlab_read_repository_file_chunks", chunks))
@@ -58,8 +58,9 @@ class ChangeVerificationCopilotRevisionScopePolicyTest {
                 .doesNotThrowAnyException();
         assertThatCode(() -> invoke("gitlab_read_merge_request_diff", "{\"projectName\":\"customer-api\",\"mergeRequestIid\":7}"))
                 .doesNotThrowAnyException();
-        assertThatThrownBy(() -> invoke("gitlab_read_merge_request_diff", "{\"projectName\":\"customer-api\",\"mergeRequestIid\":8}"))
-                .isInstanceOf(CopilotToolInvocationRejectedException.class);
+        assertThatCode(() -> invoke("gitlab_read_merge_request_diff", "{\"projectName\":\"customer-api\",\"mergeRequestIid\":8}"))
+                .doesNotThrowAnyException();
+
     }
 
     private String single(String project, String ref) {

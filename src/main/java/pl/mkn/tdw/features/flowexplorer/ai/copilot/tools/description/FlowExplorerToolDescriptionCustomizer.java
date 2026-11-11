@@ -9,12 +9,20 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCus
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescriptionCustomizer {
 
     private static final String FLOW_EXPLORER_PROFILE_ID = "flow-explorer";
     private static final String GUIDANCE_HEADER = "Flow Explorer guidance:";
+    private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.of(
+            GitLabToolNames.LIST_REPOSITORY_COMMITS, List.of(
+                    "Użyj do ustalenia, kiedy zmienił się kod badanego przepływu; wybierz projekt i pliki na podstawie artefaktów lub discovery.",
+                    "Zakres repozytoriów i ścieżek historii pochodzi z sesji. Podaj krótki reason po polsku."),
+            GitLabToolNames.READ_COMMIT_DIFF, List.of(
+                    "Sprawdź wpływ potwierdzonego commita na badany przepływ; oprzyj wyjaśnienie na patchu lub kodzie przed i po zmianie.",
+                    "Podaj źródło i istotne luki; sama zmiana kodu nie dowodzi przyczyny awarii."));
 
     @Override
     public String customize(CopilotToolDescriptionContext descriptionContext, String toolName, String description) {
@@ -49,6 +57,9 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         }
 
         var normalizedToolName = toolName.trim();
+        if (GUIDANCE_BY_TOOL_NAME.containsKey(normalizedToolName)) {
+            return GUIDANCE_BY_TOOL_NAME.get(normalizedToolName);
+        }
         if (GitLabToolNames.READ_JAVA_METHOD_SLICE.equals(normalizedToolName)) {
             return List.of(
                     "Use when a concrete class and method are known and you need the method body, conditions, helper logic or mapper details.",
@@ -92,6 +103,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_REPOSITORY_FILE.equals(normalizedToolName)) {
             return List.of(
                     "Expensive in Flow Explorer. Use only when method context, method slice, outline or focused chunks are insufficient.",
+                    "For historical reads, use any requested commit SHA as branchRef; no earlier history lookup is required.",
                     "Concrete filePath reads are allowed outside canonical pathPrefixes when the dependency is explicit; report this as a visibility note instead of starting broad rediscovery.",
                     "maxCharacters returns a prefix of the file; if truncated=true, continue with gitlab_read_repository_file_chunk instead of inferring the rest.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
@@ -114,7 +126,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         }
         if (GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(normalizedToolName)
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
-            return List.of(
+            var guidance = new ArrayList<>(List.of(
                     "Fallback when method context, method slice or outline does not fit, parser context is missing or a line range is the only grounded input.",
                     "Concrete filePath reads are allowed outside canonical pathPrefixes when the dependency is explicit; report this as a visibility note instead of starting broad rediscovery.",
                     "For Flow Explorer PERSISTENCE section, use chunks only to close exact ORM annotation gaps requested by flow-explorer-map-persistence-section; keep the range narrow.",
@@ -123,7 +135,11 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Keep ranges tight and tied to a specific goal or sectionModes gap.",
                     "Always provide reason as one short Polish sentence for the operator."
-            );
+            ));
+            if (GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(normalizedToolName)) {
+                guidance.add("For historical reads, branchRef may be any requested commit SHA; no earlier history lookup is required.");
+            }
+            return List.copyOf(guidance);
         }
         if (GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH.equals(normalizedToolName)) {
             return List.of(

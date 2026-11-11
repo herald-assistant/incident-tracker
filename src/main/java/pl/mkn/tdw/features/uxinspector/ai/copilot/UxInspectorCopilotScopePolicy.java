@@ -14,7 +14,6 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
-import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryPath;
 
 import java.util.LinkedHashMap;
 import java.util.Set;
@@ -48,36 +47,9 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
 
         var hidden = request.sessionContext().hiddenContext();
         var bound = hidden.get(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE);
-        if (!(bound instanceof GitLabRepositoryToolScope repositoryScope)) {
+        if (!(bound instanceof GitLabRepositoryToolScope)) {
             reject(request, "Resolved UX Inspector repository scope is unavailable.", false);
             return;
-        }
-
-        var projectName = text(arguments, "projectName");
-        if (!repositoryScope.selectedProject().equals(projectName)
-                && !repositoryScope.selectedProjectPath().equals(projectName)) {
-            reject(request, "projectName is outside the selected UX Inspector frontend.", true);
-        }
-        if (!repositoryScope.selectedBranch().equals(text(arguments, "branchRef"))) {
-            reject(request, "branchRef must be the selected UX Inspector branch.", true);
-        }
-
-        if (Set.of(
-                GitLabToolNames.READ_REPOSITORY_FILE,
-                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
-                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE
-        )
-                .contains(request.toolName())) {
-            requireSafePath(request, text(arguments, "filePath"), false, "filePath");
-        } else if (GitLabToolNames.LIST_REPOSITORY_TREE.equals(request.toolName())) {
-            requireSafePath(request, optionalText(arguments, "path"), true, "path");
-        } else {
-            requireSafePath(request, optionalText(arguments, "pathPrefix"), true, "pathPrefix");
-        }
-
-        var reason = text(arguments, "reason");
-        if (!StringUtils.hasText(reason) || reason.length() > 500) {
-            reject(request, "A short reason is required for every UX Inspector repository read.", true);
         }
 
         var applicationNames = arguments.get("applicationNames");
@@ -95,13 +67,6 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
         var normalized = filePath != null ? filePath.toLowerCase(java.util.Locale.ROOT) : "";
         if (!(normalized.endsWith(".json") || normalized.endsWith(".yaml") || normalized.endsWith(".yml"))) {
             reject(request, "OpenAPI filePath must end with .json, .yaml or .yml.", true);
-        }
-        var httpMethod = text(arguments, "httpMethod");
-        var endpointPath = text(arguments, "endpointPath");
-        var operationId = text(arguments, "operationId");
-        if (!StringUtils.hasText(operationId)
-                && (!StringUtils.hasText(httpMethod) || !StringUtils.hasText(endpointPath))) {
-            reject(request, "OpenAPI reads require operationId or both httpMethod and endpointPath.", true);
         }
         var schemaDepth = integer(arguments, "schemaDepth");
         if (schemaDepth != null && (schemaDepth < 0 || schemaDepth > 4)) {
@@ -128,26 +93,10 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
         }
     }
 
-    private void requireSafePath(
-            CopilotToolInvocationPolicyRequest request,
-            String path,
-            boolean allowRoot,
-            String field
-    ) {
-        if (!GitLabRepositoryPath.isSafePath(path, allowRoot)) {
-            reject(request, field + " must be a safe path inside the selected UX Inspector repository.", true);
-        }
-    }
-
     private static String text(JsonNode node, String field) {
         var value = node != null ? node.get(field) : null;
         return value != null && value.isTextual() && StringUtils.hasText(value.asText())
                 ? value.asText().trim() : null;
-    }
-
-    private static String optionalText(JsonNode node, String field) {
-        var value = node != null ? node.get(field) : null;
-        return value != null && value.isTextual() ? value.asText() : null;
     }
 
     private static Integer integer(JsonNode node, String field) {

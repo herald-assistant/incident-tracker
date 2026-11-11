@@ -1,5 +1,13 @@
 # UX Inspector Runtime Flow
 
+Initial i follow-up korzystają z jednej allowlisty obejmującej także dwa
+[narzędzia historii kodu](gitlab-code-history-tools.md) oraz report patch/chunk.
+Guidance historii znajduje się w opisach narzędzi.
+Historia korzysta ze zwykłego dostępu GitLaba, bez osobnego scope ani grantów.
+Dowolny commit można odczytać przez diff/file/chunk bez wcześniejszego listowania.
+Ref listy commitów jest domyślnie brany z sesji; model może wskazać inny.
+Reguły edycji raportu pozostają bez zmian.
+
 ## Cel i granica feature'a
 
 UX Inspector odpowiada na jedno pytanie o jeden element wskazany w uruchomionej
@@ -233,7 +241,7 @@ focused slice; wymaga adekwatnego wyszukania albo jawnego visibility limit.
 
 Sesja ma read-only dostep do calego jednego wybranego repozytorium przez
 neutralne GitLab tools do listowania, wyszukiwania i czytania plikow. Hidden
-scope ogranicza projekt i branch bez przypinania commita. Feature nie tworzy tooli o nazwach
+scope ogranicza projekt i przypina badane branche/tagi do SHA, bez blokowania innych rewizji tego projektu. Feature nie tworzy tooli o nazwach
 specyficznych dla UX Inspectora. Model moze czytac m.in. README, `AGENTS.md`,
 instrukcje repozytorium, konfiguracje, frontend i backend. TypeScript symbol
 slice nie korzysta z przygotowanego katalogu plikow, typow, importow ani metod:
@@ -390,3 +398,7 @@ Minimalna macierz obejmuje:
 
 Testy automatyczne nie zastepuja kontrolowanego pilota z rzeczywistym
 Copilot/GitLab dla rodzin pytan o walidacje, dane, stan i skutek akcji.
+
+Walidacja parametrów, zwykłego zakresu repozytorium i reason należy do
+neutralnych GitLab tools. UX policy zachowuje guard obecności repository scope,
+zakaz applicationNames oraz ograniczenia rozszerzenia pliku i limitów OpenAPI.

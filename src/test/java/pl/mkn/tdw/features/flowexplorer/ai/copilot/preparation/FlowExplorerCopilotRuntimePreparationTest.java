@@ -50,8 +50,27 @@ import static org.mockito.ArgumentMatchers.eq;
 
 class FlowExplorerCopilotRuntimePreparationTest {
 
+    @Test void historyIsExecutableInInitialAndFollowUpWithFreshScope() {
+        var factory = new FlowExplorerCopilotToolSessionContextFactory();
+        for (int turn = 0; turn < 3; turn++) {
+            var session = turn == 0 ? factory.create("crm-history", request(), contextSnapshot(), preparation())
+                    : factory.create("crm-history", "crm-history-session", request(), contextSnapshot(), preparation(), true);
+            var fixture = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(session, "customer", "src/Phone.java",
+                    new FlowExplorerCopilotRedundantDiscoveryPolicy());
+            fixture.exercise(FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(fixture.definitions()).enabledTools());
+        }
+    }
+
     private static final CopilotToolDescriptionContext FLOW_EXPLORER_DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("flow-explorer");
+
+    @Test void sharedAllowlistIncludesReportPatchAndChunkButRejectsUnknownCallbacks() {
+        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(
+                tool(CopilotReportToolNames.PATCH_SECTION), tool(CopilotReportToolNames.READ_SECTION_CHUNK),
+                tool("gitlab_future_tool"), tool("report_future_tool")));
+        assertEquals(List.of(CopilotReportToolNames.PATCH_SECTION, CopilotReportToolNames.READ_SECTION_CHUNK),
+                policy.availableToolNames());
+    }
 
     @Test
     void shouldAllowOnlyFlowExplorerGitLabOperationalContextAndFeedbackTools() {
@@ -134,7 +153,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals("flow-explorer-job-123", sessionContext.copilotSessionId());
         assertEquals("job-123", hiddenContext.get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals("flow-explorer-job-123", hiddenContext.get(AgentToolContextKeys.COPILOT_SESSION_ID));
-        assertEquals(10, hiddenContext.size());
+        assertEquals(11, hiddenContext.size());
         assertEquals(
                 FlowExplorerCopilotToolContextKeys.FEATURE_VALUE,
                 hiddenContext.get(FlowExplorerCopilotToolContextKeys.FEATURE)
@@ -158,7 +177,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         );
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.CORRELATION_ID));
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_GROUP));
-        assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+        assertEquals(contextSnapshot().resolvedRef(), hiddenContext.get(AgentToolContextKeys.GITLAB_BRANCH));
     }
 
     @Test

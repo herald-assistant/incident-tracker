@@ -24,6 +24,16 @@ Nie obejmuje:
 
 ## Zasady
 
+- Historia GitLaba nie ma osobnego hidden scope ani grantów SHA. AI może
+  od razu odczytać wskazany commit i dowolnie kontynuować badanie. Zwykłe
+  granice dostępu GitLaba pozostają. Kursory są stateless, służą paginacji,
+  nie autoryzacji. Wspólny `GitLabRepositoryToolScope.resolve` przypina
+  każdy nowy branch/tag raz do SHA i dopuszcza dodatkowe rewizje bez zmiany
+  istniejących przypięć. File/chunk, navigation i historia reuse'ują ten
+  sam resolver; nie dodawaj osobnej ścieżki research omijającej pinowanie.
+  Szczegóły:
+  [historia kodu](../../../../../../../docs/architecture/gitlab-code-history-tools.md).
+
 - Trzymaj tu tylko male, stabilne kontrakty, ktore sa potrzebne przynajmniej
   dwom warstwom, np. MCP wrapperom i Copilot runtime.
 - Wrappery `agenttools.*.mcp` moga importowac `integrations.*`, bo tools sa
@@ -74,16 +84,15 @@ Nie obejmuje:
   neutralnym zestawem read-only dla projektow w glownej grupie GitLab.
   `projectName` i (dla odczytu tresci) `branchRef` sa jawne w schema, a grupa
   wynika z konfiguracji. Lista galezi pozwala ustalic ref drugiego projektu.
-  Hidden `GitLabRepositoryToolScope` ma tryb pinned dla Operational Context
-  Assistance: przypina wybrany projekt do commita operatora i kolejne projekty
-  w tej grupie do osobnych commitow. `forRevisions` przyjmuje wiele jawnych
-  przypiętych rewizji na projekt; trzecia rewizja takiego projektu jest
-  odrzucana, a dodatkowe projekty są przypinane osobno. Snapshot rewizji można
-  zachować i odtworzyć bez powtórnego rozwiązywania branchy.
-  Nazwa wybranego refa i pełny SHA przypięty do tego samego projektu wskazują
-  ten sam dozwolony odczyt. SHA innego projektu nie rozszerza zakresu porównania.
-  Tryb branchowy UX Inspectora ogranicza
-  projekt i branch bez przypinania SHA. Tree/list/search
+  Hidden `GitLabRepositoryToolScope` zachowuje przygotowane commity oraz
+  przypina każdą dodatkową parę projekt/ref przy pierwszym odczycie.
+  `forRevisions` przyjmuje wiele jawnych przypięć i dopuszcza kolejne rewizje
+  tych samych projektów. Snapshot można odtworzyć bez ponownego rozwiązywania
+  branchy/tagów; restore nie pozwala nadpisać istniejącego przypięcia.
+  Pełny SHA nie wymaga wcześniejszego discovery. Granice grupy i projektu
+  pozostają niezależne od wyboru rewizji. Tryb `forBranch` UX Inspectora
+  ogranicza projekt, a jego branche/tagi również są przypinane do SHA.
+  Tree/list/search
   zwracaja sciezki, nie `sourceRef`; pelny odczyt i odczyt fragmentu z
   przypietego commita rejestruja ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie
   wzorcow danych wrazliwych; pozostaja walidacja sciezki, rozmiaru i tekstu.

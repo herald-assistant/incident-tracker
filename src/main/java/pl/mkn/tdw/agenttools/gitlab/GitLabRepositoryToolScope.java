@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
-/** Session-bound group boundary with either a pinned commit or a moving branch ref. */
+/** Session-bound repository boundary with stable commit snapshots for requested refs. */
 public final class GitLabRepositoryToolScope {
 
     private static final Pattern PROJECT_PATH = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,511}");
@@ -18,10 +18,9 @@ public final class GitLabRepositoryToolScope {
     private final String selectedProject;
     private final String selectedBranch;
     private final String selectedCommit;
-    private final boolean branchScoped;
+    private final boolean selectedProjectOnly;
     private final ConcurrentHashMap<String, String> revisions = new ConcurrentHashMap<>();
     private final Set<String> readSourceRefs = ConcurrentHashMap.newKeySet();
-    private final Set<String> comparedProjects = ConcurrentHashMap.newKeySet();
 
     public GitLabRepositoryToolScope(
             String group, String selectedProject, String selectedBranch, String selectedCommit
@@ -33,7 +32,7 @@ public final class GitLabRepositoryToolScope {
             throw new IllegalArgumentException("Selected GitLab commit is invalid.");
         }
         this.selectedCommit = selectedCommit;
-        this.branchScoped = false;
+        this.selectedProjectOnly = false;
         revisions.put(this.selectedProject + "@" + this.selectedBranch, selectedCommit);
     }
 
@@ -42,7 +41,7 @@ public final class GitLabRepositoryToolScope {
         this.selectedProject = relativeProject(selectedProject);
         this.selectedBranch = checkedBranch(selectedBranch);
         this.selectedCommit = null;
-        this.branchScoped = true;
+        this.selectedProjectOnly = true;
     }
 
     public static GitLabRepositoryToolScope forBranch(String group, String selectedProject, String selectedBranch) {
@@ -51,7 +50,7 @@ public final class GitLabRepositoryToolScope {
 
     public record PinnedRevision(String project, String ref, String commitId) {}
 
-    /** Multiple immutable operator-selected revisions; other projects pin their first requested revision. */
+    /** Immutable prepared revisions; additional refs are pinned on their first read. */
     public static GitLabRepositoryToolScope forRevisions(String group, List<PinnedRevision> selected) {
         if(selected == null || selected.isEmpty()) throw new IllegalArgumentException("Pinned revisions are required.");
         var first=selected.get(0);
@@ -62,7 +61,6 @@ public final class GitLabRepositoryToolScope {
                 throw new IllegalArgumentException("Invalid pinned commit.");
             var old=scope.revisions.put(project+"@"+ref,revision.commitId());
             if(old!=null&&!old.equals(revision.commitId())) throw new IllegalArgumentException("Conflicting pinned revisions.");
-            scope.comparedProjects.add(project);
         }
         return scope;
     }
@@ -70,7 +68,6 @@ public final class GitLabRepositoryToolScope {
     public void restoreResearchRevisions(List<PinnedRevision> values) {
         for(var revision:values) {
             var project=relativeProject(revision.project()); var ref=checkedBranch(revision.ref());
-            if(comparedProjects.contains(project) && !revisions.containsKey(project+"@"+ref)) throw new IllegalArgumentException("Unknown compared revision.");
             if(revision.commitId()==null||!COMMIT_ID.matcher(revision.commitId()).matches()) throw new IllegalArgumentException("Invalid commit.");
             var old=revisions.putIfAbsent(project+"@"+ref,revision.commitId());
             if(old!=null&&!old.equals(revision.commitId())) throw new IllegalArgumentException("Conflicting commit.");
@@ -116,24 +113,11 @@ public final class GitLabRepositoryToolScope {
     public Target resolve(String projectName, String branchRef, GitLabRepositoryRevisionPort port) {
         var project = relativeProject(projectName);
         var branch = checkedBranch(branchRef);
-        if (comparedProjects.contains(project)) {
-            var commit = revisions.get(project + "@" + branch);
-            if (commit == null && COMMIT_ID.matcher(branch).matches()) {
-                commit = revisions.entrySet().stream()
-                        .filter(entry -> entry.getKey().startsWith(project + "@") && entry.getValue().equalsIgnoreCase(branch))
-                        .map(Map.Entry::getValue).findFirst().orElse(null);
-            }
-            if (commit == null) throw new IllegalArgumentException("Only the selected comparison revisions are available for this project.");
-            return new Target(group, project, branch, commit);
+        if (selectedProjectOnly && !selectedProject.equals(project)) {
+            throw new IllegalArgumentException("The GitLab session is limited to its selected project.");
         }
-        if (comparedProjects.isEmpty() && selectedProject.equals(project) && !selectedBranch.equals(branch)) {
-            throw new IllegalArgumentException("The selected GitLab project is pinned to the operator's branch.");
-        }
-        if (branchScoped) {
-            if (!selectedProject.equals(project)) {
-                throw new IllegalArgumentException("The branch-scoped GitLab session is limited to its selected project.");
-            }
-            return new Target(group, project, branch, branch, false);
+        if (COMMIT_ID.matcher(branch).matches()) {
+            return new Target(group, project, branch, branch.toLowerCase(java.util.Locale.ROOT));
         }
         var commit = revisions.computeIfAbsent(project + "@" + branch, ignored -> {
             var revision = port.resolveRevision(group, project, branch);

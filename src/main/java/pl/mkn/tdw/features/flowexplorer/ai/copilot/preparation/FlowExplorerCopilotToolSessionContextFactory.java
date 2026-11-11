@@ -87,6 +87,9 @@ public class FlowExplorerCopilotToolSessionContextFactory {
                 FlowExplorerCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED,
                 repositoryScopeResolved(contextSnapshot)
         );
+        if (contextSnapshot != null && StringUtils.hasText(contextSnapshot.resolvedRef())) {
+            context.put(AgentToolContextKeys.GITLAB_BRANCH, contextSnapshot.resolvedRef());
+        }
         var systemId = contextSnapshot != null && StringUtils.hasText(contextSnapshot.systemId())
                 ? contextSnapshot.systemId()
                 : request != null ? request.systemId() : null;

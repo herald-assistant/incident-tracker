@@ -15,15 +15,20 @@ public record UiExplorerCopilotToolAccessPolicy(
         boolean fallbackAvailable
 ) {
 
-    private static final Set<String> FALLBACK_TOOLS = Set.of(
+    private static final Set<String> UI_EXPLORER_TOOL_ALLOWLIST = Set.of(
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
             GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
             GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
             GitLabToolNames.READ_REPOSITORY_FILE,
-            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
-    );
-
-    private static final Set<String> OPERATIONAL_CONTEXT_TOOLS = Set.of(
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+            GitLabToolNames.LIST_REPOSITORY_COMMITS,
+            GitLabToolNames.READ_COMMIT_DIFF,
+            CopilotReportToolNames.GET_CURRENT,
+            CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.PATCH_SECTION,
+            CopilotReportToolNames.READ_SECTION_CHUNK,
+            CopilotReportToolNames.UPDATE_HEADER,
+            CopilotReportToolNames.UPDATE_META,
             OperationalContextToolNames.GET_SCOPE,
             OperationalContextToolNames.LIST_ENTITIES,
             OperationalContextToolNames.SEARCH,
@@ -40,11 +45,7 @@ public record UiExplorerCopilotToolAccessPolicy(
             boolean fallbackRequired
     ) {
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
-                .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
-                        || OPERATIONAL_CONTEXT_TOOLS.contains(tool.name())
-                        || CopilotReportToolNames.isReportTool(tool.name())
-                        && !CopilotReportToolNames.PATCH_SECTION.equals(tool.name())
-                        && !CopilotReportToolNames.READ_SECTION_CHUNK.equals(tool.name()))
+                .filter(tool -> allows(tool.name()))
                 .toList();
         var names = enabled.stream().map(ToolDefinition::name).toList();
         var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
@@ -55,19 +56,8 @@ public record UiExplorerCopilotToolAccessPolicy(
         return new UiExplorerCopilotToolAccessPolicy(enabled, names, fallbackRequired, available);
     }
 
-    public static UiExplorerCopilotToolAccessPolicy forFollowUp(List<ToolDefinition> registeredTools) {
-        var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
-                .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
-                        || OPERATIONAL_CONTEXT_TOOLS.contains(tool.name())
-                        || CopilotReportToolNames.isReportTool(tool.name()))
-                .toList();
-        var names = enabled.stream().map(ToolDefinition::name).toList();
-        var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
-                && names.contains(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE)
-                && names.contains(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES)
-                && (names.contains(GitLabToolNames.READ_REPOSITORY_FILE)
-                || names.contains(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK));
-        return new UiExplorerCopilotToolAccessPolicy(enabled, names, true, available);
+    static boolean allows(String name) {
+        return name != null && UI_EXPLORER_TOOL_ALLOWLIST.contains(name);
     }
 
     public boolean reportToolsAvailable() {

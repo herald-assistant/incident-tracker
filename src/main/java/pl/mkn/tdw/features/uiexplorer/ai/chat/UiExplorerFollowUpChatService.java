@@ -46,7 +46,7 @@ public class UiExplorerFollowUpChatService {
                 request.runReference(), request.copilotSessionId(), request.initialRequest(), request.context(),
                 request.report());
         var registered = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT);
-        var policy = UiExplorerCopilotToolAccessPolicy.forFollowUp(registered);
+        var policy = UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(registered, true);
         if (!policy.fallbackAvailable()) {
             throw new IllegalStateException("UI Explorer follow-up research tools are unavailable.");
         }

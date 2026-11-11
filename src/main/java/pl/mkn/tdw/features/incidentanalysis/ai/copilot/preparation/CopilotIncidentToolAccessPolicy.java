@@ -28,7 +28,64 @@ public record CopilotIncidentToolAccessPolicy(
         CopilotIncidentEvidenceCoverageReport evidenceCoverage
 ) {
 
+    private static final Set<String> INCIDENT_TOOL_ALLOWLIST = Set.of(
+            GitLabToolNames.LIST_REPOSITORY_COMMITS,
+            GitLabToolNames.READ_COMMIT_DIFF,
+            GitLabToolNames.READ_MERGE_REQUEST_DIFF,
+            GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
+            GitLabToolNames.LIST_REPOSITORY_BRANCHES,
+            GitLabToolNames.LIST_REPOSITORY_TREE,
+            GitLabToolNames.LIST_REPOSITORY_FILES,
+            GitLabToolNames.SEARCH_REPOSITORY_FILES,
+            GitLabToolNames.LIST_REPOSITORY_ENDPOINTS,
+            GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT,
+            GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+            GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
+            GitLabToolNames.READ_REPOSITORY_FILE,
+            GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH,
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS,
+            GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE,
+            GitLabToolNames.READ_JAVA_METHOD_SLICE,
+            GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
+            GitLabToolNames.FIND_CLASS_REFERENCES,
+            GitLabToolNames.FIND_FLOW_CONTEXT,
+            GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+            GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+            DatabaseToolNames.GET_SCOPE,
+            DatabaseToolNames.FIND_TABLES,
+            DatabaseToolNames.FIND_COLUMNS,
+            DatabaseToolNames.DESCRIBE_TABLE,
+            DatabaseToolNames.EXISTS_BY_KEY,
+            DatabaseToolNames.COUNT_ROWS,
+            DatabaseToolNames.GROUP_COUNT,
+            DatabaseToolNames.SAMPLE_ROWS,
+            DatabaseToolNames.CHECK_ORPHANS,
+            DatabaseToolNames.FIND_RELATIONSHIPS,
+            DatabaseToolNames.JOIN_COUNT,
+            DatabaseToolNames.JOIN_SAMPLE,
+            DatabaseToolNames.COMPARE_TABLE_TO_EXPECTED_MAPPING,
+            DatabaseToolNames.EXECUTE_READONLY_SQL,
+            ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID,
+            ElasticToolNames.SUMMARIZE_HTTP_CALLS_BY_PATH,
+            ElasticToolNames.FETCH_HTTP_CALL_LOGS,
+            OperationalContextToolNames.GET_SCOPE,
+            OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH,
+            OperationalContextToolNames.GET_ENTITY,
+            CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
+            CopilotReportToolNames.GET_CURRENT,
+            CopilotReportToolNames.READ_SECTION_CHUNK,
+            CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.PATCH_SECTION,
+            CopilotReportToolNames.UPDATE_HEADER,
+            CopilotReportToolNames.UPDATE_META
+    );
+
+    // Evidence-dependent eligibility, not a separate initial/follow-up authorization list.
     private static final Set<String> FOCUSED_GITLAB_TOOLS = Set.of(
+            GitLabToolNames.LIST_REPOSITORY_COMMITS,
+            GitLabToolNames.READ_COMMIT_DIFF,
             GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
             GitLabToolNames.FIND_CLASS_REFERENCES,
             GitLabToolNames.FIND_FLOW_CONTEXT,
@@ -349,15 +406,11 @@ public record CopilotIncidentToolAccessPolicy(
             boolean elasticToolsConfigured,
             boolean databaseRawSqlEnabled
     ) {
-        if (toolName == null || toolName.isBlank()) {
+        if (toolName == null || !INCIDENT_TOOL_ALLOWLIST.contains(toolName)) {
             return false;
         }
         if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
             return true;
-        }
-        if (CopilotReportToolNames.PATCH_SECTION.equals(toolName)
-                || CopilotReportToolNames.READ_SECTION_CHUNK.equals(toolName)) {
-            return false;
         }
         if (CopilotReportToolNames.isReportTool(toolName)) {
             return true;
@@ -411,7 +464,7 @@ public record CopilotIncidentToolAccessPolicy(
             boolean elasticToolsConfigured,
             boolean databaseRawSqlEnabled
     ) {
-        if (toolName == null || toolName.isBlank()) {
+        if (toolName == null || !INCIDENT_TOOL_ALLOWLIST.contains(toolName)) {
             return false;
         }
         if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {

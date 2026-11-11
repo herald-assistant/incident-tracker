@@ -44,7 +44,7 @@ public class UxInspectorFollowUpChatService {
                 ? storeToolSetFactory.create(request.storeRunId()) : java.util.List.<org.springframework.ai.tool.ToolCallback>of();
         callbacks.addAll(storeCallbacks);
         var registered = toolFactory.createToolDefinitions(context, DESCRIPTION_CONTEXT, callbacks);
-        var policy = UxInspectorCopilotToolAccessPolicy.forFollowUp(registered);
+        var policy = UxInspectorCopilotToolAccessPolicy.from(registered);
         if (!policy.followUpResearchAvailable()) {
             throw new IllegalStateException("UX Inspector follow-up research tools are unavailable.");
         }

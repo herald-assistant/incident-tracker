@@ -31,13 +31,19 @@ public class CopilotIncidentToolGuidanceCatalog {
 
     private static final List<String> GITLAB_SCOPE_GUIDANCE = List.of(
             "Follow incident-code-grounding: use GitLab calls only to close a concrete incident evidence gap.",
-            "Pass branchRef explicitly from the incident gitLabBranch or a previous GitLab tool result.",
+            "For tools accepting branchRef, use the incident gitLabBranch as the starting point; explore other revisions when needed to answer the user.",
             "Pass known projectName values from deterministic evidence, operational context or previous GitLab tool results.",
             "Do not pass gitLabGroup; the backend resolves GitLab group through operational context or configuration.",
             "Always provide reason as one short Polish sentence for the operator."
     );
 
     private static final Map<String, List<String>> GUIDANCE_BY_TOOL_NAME = Map.ofEntries(
+            Map.entry(GitLabToolNames.LIST_REPOSITORY_COMMITS, List.of(
+                    "Użyj do ustalenia, kiedy zmieniła się implementacja istotna dla incydentu lub pytania operatora.",
+                    "Oprzyj projectName i opcjonalne filePaths na evidence lub discovery; zakres historii pochodzi z sesji.")),
+            Map.entry(GitLabToolNames.READ_COMMIT_DIFF, List.of(
+                    "Sprawdź, co zmienił wskazany commit w logice istotnej dla incydentu lub pytania operatora.",
+                    "Oddziel potwierdzoną zmianę kodu od hipotezy o przyczynie awarii; pokaż źródło i istotne luki.")),
             Map.entry(
                     ElasticToolNames.SUMMARIZE_HTTP_CALLS_BY_PATH,
                     List.of(

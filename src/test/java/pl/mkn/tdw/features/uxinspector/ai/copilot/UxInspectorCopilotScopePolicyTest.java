@@ -37,12 +37,7 @@ class UxInspectorCopilotScopePolicyTest {
                 assertThatCode(() -> policy.beforeInvocation(read)).doesNotThrowAnyException();
                 assertThatCode(() -> budget.beforeInvocation(read)).doesNotThrowAnyException();
             }
-            assertThatThrownBy(() -> policy.beforeInvocation(request(session, GitLabToolNames.READ_REPOSITORY_FILE,
-                    """
-                    {"projectName":"crm-policy-backend","branchRef":"main","filePath":"README.md",
-                     "reason":"Sprawdzenie wpisu katalogowego CRM."}
-                    """))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                    .hasMessageContaining("projectName");
+
         }
     }
     private final UxInspectorCopilotScopePolicy policy = new UxInspectorCopilotScopePolicy(new ObjectMapper());
@@ -89,47 +84,13 @@ class UxInspectorCopilotScopePolicyTest {
     }
 
     @Test
-    void shouldRejectProjectBranchPathAndApplicationExpansion() {
+    void shouldRejectApplicationExpansion() {
         var context = new UxInspectorCopilotToolSessionContextFactory().create("crm-scope-run", targetContext());
-        var valid = """
-                {
-                  "projectName": "crm-ui",
-                  "branchRef": "main",
-                  "filePath": "pom.xml",
-                  "reason": "Potwierdzenie zrodla danych."
-                }
-                """;
-
-        assertThatThrownBy(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE,
-                valid.replace("crm-ui", "other-project"))))
-                .isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("projectName");
-        assertThatThrownBy(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE,
-                valid.replace("\"main\"", "\"other\""))))
-                .isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("branchRef");
-        assertThatThrownBy(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE,
-                valid.replace("pom.xml", "src/app/../secrets.txt"))))
-                .isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("filePath");
         assertThatThrownBy(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE, """
                 {"projectName":"crm-ui","branchRef":"main","applicationNames":["crm-agent-portal"],
                  "filePath":"README.md","reason":"Proba rozszerzenia scope."}
                 """))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("applicationNames");
-    }
-
-    @Test
-    void shouldRejectUnexplainedReadsAndIgnoreOtherTools() {
-        var context = new UxInspectorCopilotToolSessionContextFactory().create("crm-scope-run", targetContext());
-
-        assertThatThrownBy(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE, """
-                {
-                  "projectName": "crm-ui",
-                  "branchRef": "main",
-                  "filePath": "README.md"
-                }
-                """)))
-                .isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("reason");
-        assertThatCode(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
-                "not-json"))).doesNotThrowAnyException();
     }
 
     @Test
@@ -140,19 +101,20 @@ class UxInspectorCopilotScopePolicyTest {
                 context,
                 GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
                 """
-                        {"projectName":"crm-ui","branchRef":"main","filePath":"contracts/customer-api.json",
-                         "reason":"Proba odczytu bez lokatora."}
-                        """
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining("operationId");
-
-        assertThatThrownBy(() -> policy.beforeInvocation(request(
-                context,
-                GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
-                """
                         {"projectName":"crm-ui","branchRef":"main","filePath":"contracts/customer-api.txt",
                          "operationId":"getCustomer","reason":"Proba odczytu zlego formatu."}
                         """
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class).hasMessageContaining(".json");
+    }
+
+    @Test
+    void shouldKeepStrictOpenApiLimits() {
+        var context = new UxInspectorCopilotToolSessionContextFactory().create("crm-run", targetContext());
+        for (var extra : java.util.List.of("\"schemaDepth\":5", "\"maxCharacters\":999", "\"maxCharacters\":50001")) {
+            assertThatThrownBy(() -> policy.beforeInvocation(request(context, GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
+                    "{\"filePath\":\"contracts/customer.json\",\"operationId\":\"getCustomer\"," + extra + "}")))
+                    .isInstanceOf(CopilotToolInvocationRejectedException.class);
+        }
     }
 
     @Test

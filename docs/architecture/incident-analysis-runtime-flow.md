@@ -1,5 +1,13 @@
 # Incident Analysis Runtime Flow
 
+Initial i follow-up mogą doczytać historię kodu przez `gitlab_list_repository_commits`
+i `gitlab_read_commit_diff`, przy istniejącym group/branch/application scope.
+Potwierdzone SHA i parent SHA są dostępne przez dotychczasowe file/chunk reads.
+Jedna jawna allowlista zawiera też report patch/chunk; coverage i konfiguracja
+nadal określają dostępność capability. Zwykłe pytanie nie zmienia raportu.
+Guidance historii jest w opisach tools, bez dopisku w prompcie rozmowy.
+Kontrakt i luki: [historia kodu GitLab](gitlab-code-history-tools.md).
+
 Ten dokument opisuje aktualny przeplyw pierwszego feature'a platformy:
 analizy incydentu dla job API, evidence pipeline i providera AI opartego o
 Copilot SDK.

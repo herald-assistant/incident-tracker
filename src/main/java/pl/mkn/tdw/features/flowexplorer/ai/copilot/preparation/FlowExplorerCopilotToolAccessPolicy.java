@@ -23,6 +23,8 @@ public record FlowExplorerCopilotToolAccessPolicy(
 
     private static final Set<String> FLOW_EXPLORER_TOOL_ALLOWLIST = Set.of(
             GitLabToolNames.LIST_AVAILABLE_REPOSITORIES,
+            GitLabToolNames.LIST_REPOSITORY_COMMITS,
+            GitLabToolNames.READ_COMMIT_DIFF,
             GitLabToolNames.LIST_REPOSITORY_ENDPOINTS,
             GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT,
             GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
@@ -40,6 +42,8 @@ public record FlowExplorerCopilotToolAccessPolicy(
             OperationalContextToolNames.GET_ENTITY,
             CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
             CopilotReportToolNames.GET_CURRENT,
+            CopilotReportToolNames.PATCH_SECTION,
+            CopilotReportToolNames.READ_SECTION_CHUNK,
             CopilotReportToolNames.UPSERT_SECTION,
             CopilotReportToolNames.UPDATE_HEADER,
             CopilotReportToolNames.UPDATE_META
@@ -51,16 +55,9 @@ public record FlowExplorerCopilotToolAccessPolicy(
     }
 
     public static FlowExplorerCopilotToolAccessPolicy fromRegisteredTools(List<ToolDefinition> registeredTools) {
-        return fromRegisteredTools(registeredTools, false);
-    }
-
-    public static FlowExplorerCopilotToolAccessPolicy fromRegisteredTools(
-            List<ToolDefinition> registeredTools, boolean followUp) {
         var tools = registeredTools != null ? List.copyOf(registeredTools) : List.<ToolDefinition>of();
         var enabledTools = tools.stream()
-                .filter(tool -> FLOW_EXPLORER_TOOL_ALLOWLIST.contains(tool.name())
-                        || followUp && (CopilotReportToolNames.PATCH_SECTION.equals(tool.name())
-                                || CopilotReportToolNames.READ_SECTION_CHUNK.equals(tool.name())))
+                .filter(tool -> FLOW_EXPLORER_TOOL_ALLOWLIST.contains(tool.name()))
                 .toList();
 
         return new FlowExplorerCopilotToolAccessPolicy(

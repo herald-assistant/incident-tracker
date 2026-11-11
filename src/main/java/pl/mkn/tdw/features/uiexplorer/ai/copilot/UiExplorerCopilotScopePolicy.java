@@ -25,20 +25,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy {
 
-    private static final Set<String> ALLOWED_GITLAB_TOOLS = Set.of(
-            GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
-            GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
-            GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
-            GitLabToolNames.READ_REPOSITORY_FILE,
-            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
-    );
     private static final Set<String> FRONTEND_SLICE_TOOLS = Set.of(
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
             GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE
     );
     private static final int MAX_READ_CHARACTERS = 20_000;
     private static final int MAX_CHUNK_LINES = 600;
-    private static final int MAX_TYPESCRIPT_MEMBERS = 50;
 
     private final ObjectMapper objectMapper;
 
@@ -47,8 +39,16 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         if (!uiExplorerRun(request) || !gitLabTool(request.toolName())) {
             return;
         }
-        if (!ALLOWED_GITLAB_TOOLS.contains(request.toolName())) {
+        if (!UiExplorerCopilotToolAccessPolicy.allows(request.toolName())) {
             reject(request, "GitLab tool is not enabled for UI Explorer targeted fallback.", false);
+        }
+        // Only these tools expose coordinates governed by this feature policy.
+        // Other allowed callbacks validate their own hidden scope.
+        if (!FRONTEND_SLICE_TOOLS.contains(request.toolName())
+                && !GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(request.toolName())
+                && !GitLabToolNames.READ_REPOSITORY_FILE.equals(request.toolName())
+                && !GitLabToolNames.READ_REPOSITORY_FILE_CHUNK.equals(request.toolName())) {
+            return;
         }
         var arguments = arguments(request.rawArguments());
         if (arguments == null) {
@@ -58,11 +58,11 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         if (repository == null) {
             reject(request, "Resolved UI Explorer repository scope is unavailable.", false);
         }
-        validateReason(request, arguments);
         if (FRONTEND_SLICE_TOOLS.contains(request.toolName())) {
             validateFrontendSlice(request, arguments);
             return;
         }
+        validateReason(request, arguments);
         validateBranchAndApplication(request, arguments, repository);
         if (GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(request.toolName())) {
             validateSearch(request, arguments, repository);
@@ -88,15 +88,6 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         if (!unexpected.isEmpty()) {
             reject(request, "Frontend slice tools accept only sliceRef and reason.", true);
         }
-        var sliceRef = text(arguments, "sliceRef");
-        if (!StringUtils.hasText(sliceRef)) {
-            reject(request, "A safe sliceRef is required.", true);
-        }
-        var selectedScreenRef = stringValue(request.sessionContext().hiddenContext()
-                .get(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF));
-        if (!sliceRef.equals(selectedScreenRef)) {
-            reject(request, "sliceRef is not the selected screen reference for this UI Explorer session.", true);
-        }
     }
 
     private void validateTypeScriptSlice(
@@ -113,33 +104,6 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         if (!unexpected.isEmpty()) {
             reject(request, "TypeScript slice accepts only natural file/import coordinates, memberNames and reason.", true);
         }
-        var filePath = text(arguments, "filePath");
-        var declaringTypeName = text(arguments, "declaringTypeName");
-        var consumerFilePath = text(arguments, "consumerFilePath");
-        var moduleSpecifier = text(arguments, "moduleSpecifier");
-        var importedSymbol = text(arguments, "importedSymbol");
-        var directMode = StringUtils.hasText(filePath) || StringUtils.hasText(declaringTypeName);
-        var importMode = StringUtils.hasText(consumerFilePath)
-                || StringUtils.hasText(moduleSpecifier) || StringUtils.hasText(importedSymbol);
-        if (directMode == importMode) {
-            reject(request, "Use exactly one TypeScript target mode: direct file/type or visible import.", true);
-        }
-
-        if (directMode) {
-            if (!StringUtils.hasText(filePath) || !StringUtils.hasText(declaringTypeName)) {
-                reject(request, "Direct TypeScript mode requires filePath and declaringTypeName.", true);
-            }
-        } else {
-            if (!StringUtils.hasText(consumerFilePath)
-                    || !StringUtils.hasText(moduleSpecifier) || !StringUtils.hasText(importedSymbol)) {
-                reject(request,
-                        "Import TypeScript mode requires consumerFilePath, moduleSpecifier and importedSymbol.", true);
-            }
-        }
-        var requestedMembers = textList(arguments.get("memberNames"));
-        if (requestedMembers.size() > MAX_TYPESCRIPT_MEMBERS) {
-            reject(request, "memberNames must contain at most 50 values.", true);
-        }
     }
 
     private void validateReason(CopilotToolInvocationPolicyRequest request, JsonNode arguments) {
@@ -154,9 +118,6 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             JsonNode arguments,
             RepositoryScope repository
     ) {
-        if (!repository.branchRef().equals(text(arguments, "branchRef"))) {
-            reject(request, "branchRef is outside the selected UI Explorer branch.", true);
-        }
         var applicationNames = textList(arguments.get("applicationNames"));
         var expectedSystemId = stringValue(request.sessionContext().hiddenContext()
                 .get(UiExplorerCopilotToolContextKeys.SYSTEM_ID));

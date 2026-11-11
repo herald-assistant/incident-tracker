@@ -22,6 +22,19 @@ import static pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.Copilo
 
 class CopilotIncidentToolAccessPolicyCoverageTest {
 
+    @Test void historyToolsAreAvailableInInitialAndFollowUp() {
+        var names = new String[]{"gitlab_list_repository_commits", "gitlab_read_commit_diff"};
+        assertEquals(Set.of(names), Set.copyOf(policy(request("dev3", List.of()), tools(names)).availableToolNames()));
+        assertEquals(Set.of(names), Set.copyOf(policyFactory.createForFollowUp(
+                chatRequest("dev3", "CRM", "main"), tools(names)).availableToolNames()));
+    }
+
+    @Test void unlistedCallbacksAreDeniedInBothModes() {
+        var registered = tools("gitlab_future_tool", "report_future_tool", "opctx_future_tool", "unknown_tool");
+        assertTrue(policy(request("dev3", List.of()), registered).enabledTools().isEmpty());
+        assertTrue(policyFactory.createForFollowUp(chatRequest("dev3", "CRM", "main"), registered).enabledTools().isEmpty());
+    }
+
     private final CopilotIncidentToolAccessPolicyFactory policyFactory =
             policyFactoryWithConfiguredElastic();
 
@@ -367,13 +380,14 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                         CopilotReportToolNames.GET_CURRENT,
                         CopilotReportToolNames.READ_SECTION_CHUNK,
                         CopilotReportToolNames.UPSERT_SECTION,
+                        CopilotReportToolNames.PATCH_SECTION,
                         CopilotReportToolNames.UPDATE_HEADER,
                         CopilotReportToolNames.UPDATE_META,
                         "db_find_tables"
                 )
         );
 
-        assertEquals(Set.copyOf(CopilotReportToolNames.initialToolNames()), Set.copyOf(policy.availableToolNames()));
+        assertEquals(Set.copyOf(CopilotReportToolNames.allToolNames()), Set.copyOf(policy.availableToolNames()));
         assertTrue(policy.reportToolsEnabled());
     }
 

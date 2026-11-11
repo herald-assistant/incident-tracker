@@ -28,6 +28,38 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ReleaseSummaryAiTest {
+    @Test void initialAndFollowUpAssemblyExposeTheSameScopedHistoryCallbacks() {
+        var factory = mock(CopilotSdkToolFactory.class);
+        var current = new java.util.concurrent.atomic.AtomicReference<pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture>();
+        var policy = new ReleaseSummaryToolPolicy(mapper, reports, new CopilotReportSessionStore());
+        when(factory.createToolDefinitions(any(), any())).thenAnswer(call -> {
+            CopilotToolSessionContext session = call.getArgument(0);
+            var definitions = new ArrayList<ToolDefinition>();
+            if (session.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE)) {
+                var fixture = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(session, "customer", "src/Phone.java", policy);
+                current.set(fixture); definitions.addAll(fixture.definitions());
+            }
+            var names = new HashSet<>(ReleaseSummaryToolPolicy.ALLOWED);
+            for (var name : names) if (definitions.stream().noneMatch(t -> name.equals(t.name()))) {
+                var tool = mock(ToolDefinition.class); when(tool.name()).thenReturn(name); definitions.add(tool);
+            }
+            return definitions;
+        });
+        var runner = new ReleaseSummaryAiRunner(factory, mock(CopilotRunAuthMapper.class), mock(CopilotRunPreparationService.class),
+                mock(CopilotSdkExecutionGateway.class), mock(CopilotInitialContextModelSelector.class), new CopilotSdkProperties(), reports);
+        var request = new ReleaseSummaryRequest("crm", ReleaseSummaryRequest.Mode.LIQUIBASE, ReleaseSummaryCrmFixture.range(), "crm-model", null);
+        var context = context(r -> {}, false);
+        var report = reports.scaffold("report", context.scope, context.evidence);
+        var initial = runner.assemble("crm-history", request, "CRM", AnalysisAiAuthRef.localToken("CRM"), context, report, null, s -> {}, e -> {});
+        current.get().exercise(initial.sessionConfigRequest().tools());
+        for (int turn = 0; turn < 2; turn++) {
+            var followUp = runner.assemble("crm-history", request, "Kiedy zmieniono walidację telefonu?", AnalysisAiAuthRef.localToken("CRM"),
+                    context, report, "crm-history-session", s -> {}, e -> {});
+            assertEquals(initial.sessionConfigRequest().availableToolNames(), followUp.sessionConfigRequest().availableToolNames());
+            current.get().exercise(followUp.sessionConfigRequest().tools());
+            assertFalse(context.reportMutated);
+        }
+    }
     @Test void fullOversizedInputIsBlockedBeforeExecutionWithoutTruncation() {
         var properties=new CopilotSdkProperties();
         var models=mock(pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsProvider.class);

@@ -11,8 +11,4 @@ public class FlowExplorerCopilotToolAccessPolicyFactory {
     public FlowExplorerCopilotToolAccessPolicy create(List<ToolDefinition> registeredTools) {
         return FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(registeredTools);
     }
-
-    public FlowExplorerCopilotToolAccessPolicy createForFollowUp(List<ToolDefinition> registeredTools) {
-        return FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(registeredTools, true);
-    }
 }

@@ -19,6 +19,18 @@ import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparat
 
 class UiExplorerCopilotPoliciesTest {
 
+    @Test void initialAndFollowUpHistoryKeepProjectAndPathPolicy() {
+        var factory = new UiExplorerCopilotToolSessionContextFactory();
+        var start = pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request();
+        for (int turn = 0; turn < 3; turn++) {
+            var session = turn == 0 ? factory.create("crm-history", start, context())
+                    : factory.createFollowUp("crm-history", "crm-history-session", start, context());
+            var fixture = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(session,
+                    context().sourceScope().projectName(), FETCHED_VALIDATOR_PATH, scopePolicy);
+            fixture.exercise(UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(fixture.definitions(), true).enabledTools());
+        }
+    }
+
     @Test
     void shouldAllowCatalogNavigationBeyondFrontendAndBudgetWithoutOpeningBackendCode() {
         var factory = new UiExplorerCopilotToolSessionContextFactory();
@@ -78,12 +90,11 @@ class UiExplorerCopilotPoliciesTest {
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 valid.replace("apps/crm-agent", "apps/crm-agent/src/app/contact")
         ))).doesNotThrowAnyException();
-        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 valid.replace("main", "other-ref")
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("branchRef");
+        ))).doesNotThrowAnyException();
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
@@ -130,12 +141,6 @@ class UiExplorerCopilotPoliciesTest {
                         "loadDefinition", "Potwierdzenie operacji CRM.")
         ))).doesNotThrowAnyException();
 
-        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
-                context,
-                GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
-                routeSlice("other-screen", "Proba wyjscia poza ekran CRM.")
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("selected screen reference");
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,

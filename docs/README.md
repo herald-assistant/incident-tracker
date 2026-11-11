@@ -63,6 +63,13 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- [Historia kodu w follow-up](needs/gitlab-history-in-follow-up.md) oraz
+  [kontrakt narzędzi historii GitLaba](architecture/gitlab-code-history-tools.md)
+  opisują dostępne odczyty commitów, diffów i wcześniejszego kodu.
+  Każdy z pięciu feature’ów używa jednej allowlisty dla initial i follow-up
+  oraz guidance w opisach narzędzi. Historia nie wymaga grantów SHA;
+  wspólny resolver zachowuje przypięcia branchy i tagów do commitów.
+
 - Biezacy kontrakt Release summary opisuje
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
   Potrzebę wyboru okresu opisuje [zakres dat](needs/release-summary-date-range.md).
@@ -116,6 +123,9 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/gitlab-mr-diff-tools.md`
   opisuje source scope, rule ledger, deterministyczna decyzje, prompt, skille,
   tools, report, import/export i UI Change Verification.
+- [Historia kodu GitLab](architecture/gitlab-code-history-tools.md)
+  opisuje commit/diff tools, dane commitera i zakres historycznych odczytów
+  w pięciu follow-upach, w tym Flow Explorerze.
 - `architecture/ui-explorer-runtime-flow.md`
   opisuje katalog widokow, branchowy source context, report-first Copilot flow,
   osiem sekcji wyniku, follow-up chat, historie i portability UI Explorera.

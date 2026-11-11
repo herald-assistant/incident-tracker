@@ -42,9 +42,18 @@ class UiExplorerCopilotRunRequestAssemblerTest {
     private static final CopilotToolDescriptionContext DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("ui-explorer");
 
+    @Test void sharedAllowlistIncludesReportPatchAndChunkButRejectsUnknownCallbacks() {
+        var registered = List.of(tool(CopilotReportToolNames.PATCH_SECTION), tool(CopilotReportToolNames.READ_SECTION_CHUNK),
+                tool("gitlab_future_tool"), tool("report_future_tool"));
+        for (boolean fallbackRequired : List.of(false, true)) {
+            assertThat(UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(registered, fallbackRequired).availableToolNames())
+                    .containsExactly(CopilotReportToolNames.PATCH_SECTION, CopilotReportToolNames.READ_SECTION_CHUNK);
+        }
+    }
+
     @Test
     void shouldExposeResearchAndReportToolsForFollowUp() {
-        var policy = UiExplorerCopilotToolAccessPolicy.forFollowUp(registeredTools());
+        var policy = UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(registeredTools(), true);
 
         assertThat(policy.fallbackAvailable()).isTrue();
         assertThat(policy.availableToolNames()).contains(
@@ -198,7 +207,7 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         var withoutCatalog = registeredTools().stream()
                 .filter(tool -> !tool.name().startsWith(OperationalContextToolNames.PREFIX)).toList();
         assertThat(UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(withoutCatalog, false).fallbackAvailable()).isTrue();
-        assertThat(UiExplorerCopilotToolAccessPolicy.forFollowUp(withoutCatalog).reportToolsAvailable()).isTrue();
+        assertThat(UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(withoutCatalog, true).reportToolsAvailable()).isTrue();
     }
 
     private ToolDefinition tool(String name) {

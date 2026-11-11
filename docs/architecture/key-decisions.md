@@ -1,5 +1,18 @@
 # Key Decisions
 
+## Jedna allowlista per feature i opisy narzędzi historii kodu
+
+Incident Analysis, Flow Explorer, UI Explorer, UX Inspector i Release summary
+mają po jednej jawnej allowliście dla initial i follow-up, z commit history/diff
+oraz report patch/chunk jako zwykłymi wpisami. Neutralne integracje/tools
+obsługują odczyty; feature posiada hidden scope i guidance per tool. Prompt
+nie dubluje instrukcji historii. Scope, konfiguracja, coverage evidence oraz
+prawo do mutacji raportu są walidowane niezależnie od członkostwa na liście.
+Historia nie ma osobnego scope ani grantów SHA. AI może bezpośrednio badać
+wskazany commit oraz inne rewizje przez zwykły dostęp GitLaba. Kursory służą
+wyłącznie paginacji i nie są przypisane do tury. Committer pozostaje opcjonalną metadaną odrębną od autora.
+Szczegóły i ograniczenia: [historia kodu GitLab](gitlab-code-history-tools.md).
+
 Ten dokument zbiera decyzje architektoniczne, ktore sa wazne przy utrzymaniu
 platformy AI-augmented system analysis oraz pierwszego feature'a, czyli
 analizy incydentu.

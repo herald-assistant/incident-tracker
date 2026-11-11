@@ -45,16 +45,21 @@ report, historie oraz import/export.
   i follow-up. Caly katalog jest dostepny bez filtrow do frontendu i limitu
   przejsc. Regula katalogowa nie dowodzi wykonania przez frontend/backend;
   odczyt repository/code-search scope nie rozszerza kodowego scope ani raportu.
-- Follow-up chat wznawia te sama sesje i zachowuje branchowy repository scope.
+- Follow-up chat wznawia te sama sesje i zachowuje scope wybranego repozytorium.
+  Lista commitów przypina ref w pojedynczym
+  zapytaniu dla stabilnej paginacji; dowolny SHA można odczytać bez wcześniejszego odkrycia.
+  Initial i follow-up mają jedną allowlistę (także report patch/chunk)
+  bez osobnego history scope. Guidance historii należy do opisów tools.
   Report tools moga zmienic raport tylko po jawnej prosbie w najnowszej
   wiadomosci operatora; mapper ponownie waliduje report/result. Odpowiedzi
   pozostaja osobnymi wiadomosciami dla nietechnicznego analityka.
 - Nowe feature-specific tools nie przyjmuja group, project, branch, ref ani
   path. Istniejace neutralne GitLab file-read tools zachowuja swoje uniwersalne
-  schema. Feature-owned policy wymusza wybrany project i branch, a ukryty
-  `GitLabRepositoryToolScope` utrzymuje wybrany branch bez przypinania commita. Model moze nawigowac,
+  schema. Neutralne tools wymuszają wybrany projekt przez ukryty
+  `GitLabRepositoryToolScope`, który przypina każdy badany branch/tag do SHA. Model moze nawigowac,
   wyszukiwac i czytac cale wybrane repozytorium bez `pathPrefixes` oraz
-  `codeSearchScopes`, ale nigdy inny projekt ani branch.
+  `codeSearchScopes`, ale nie inny projekt. File/chunk research może czytać
+  dowolny ref bez wcześniejszego odkrycia commita.
 - Initial prompt zawiera komplet nazw sciezek pierwszych czterech poziomow
   repository na wybranym branchu. Drzewo jest tylko mapa nawigacyjna; brak kompletnego
   drzewa zatrzymuje preparation i nie uruchamia fallbacku.
@@ -103,3 +108,7 @@ report, historie oraz import/export.
   selected view, uporzadkowanych runtime `componentBoundaryTags` i kilku
   celowanych selector searches. Nie uruchamia pelnego BFS ekranu ani
   rekurencyjnego dependency traversal przed pierwszym wywolaniem AI.
+
+Walidacja parametrów, zwykłego zakresu repozytorium i reason należy do
+neutralnych GitLab tools. UX policy zachowuje guard obecności repository scope,
+zakaz applicationNames oraz ograniczenia rozszerzenia pliku i limitów OpenAPI.

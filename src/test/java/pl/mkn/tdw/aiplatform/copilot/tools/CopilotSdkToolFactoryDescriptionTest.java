@@ -58,7 +58,7 @@ class CopilotSdkToolFactoryDescriptionTest {
         assertTrue(descriptionsByName.get("gitlab_read_repository_file")
                 .contains("Prefer gitlab_read_java_method_slice"));
         assertTrue(descriptionsByName.get("gitlab_read_repository_file")
-                .contains("Pass branchRef explicitly"));
+                .contains("For tools accepting branchRef"));
         assertTrue(descriptionsByName.get("gitlab_read_repository_files_by_path")
                 .contains("grounded file list"));
         assertTrue(descriptionsByName.get("gitlab_list_available_repositories")

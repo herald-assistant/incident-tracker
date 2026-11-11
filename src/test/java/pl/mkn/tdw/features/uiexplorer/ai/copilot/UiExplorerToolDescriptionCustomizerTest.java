@@ -8,6 +8,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class UiExplorerToolDescriptionCustomizerTest {
 
+    @Test void historyGuidanceBelongsToToolDescriptionsAndSelectedProfile() {
+        for (var name : java.util.List.of(
+                pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_COMMITS,
+                pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_COMMIT_DIFF)) {
+            var description = customizer.customize(
+                    pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext.profile("ui-explorer"),
+                    name, "Neutral history contract.");
+            org.assertj.core.api.Assertions.assertThat(description).startsWith("Neutral history contract.")
+                    .isNotEqualTo("Neutral history contract.").doesNotContain("Pass branchRef explicitly");
+            org.assertj.core.api.Assertions.assertThat(customizer.customize(
+                    pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext.profile("other-feature"),
+                    name, "Neutral history contract.")).isEqualTo("Neutral history contract.");
+        }
+    }
+
     private final UiExplorerToolDescriptionCustomizer customizer = new UiExplorerToolDescriptionCustomizer();
 
     @Test

@@ -197,6 +197,10 @@ packaged skilla najpierw porownaj effective kopie z poprzednim seedem. Kopie
 bez zmian mozna usunac i pozwolic loaderowi odtworzyc; lokalnie zmienionych
 skilli nie usuwaj bez jawnej decyzji operatora.
 
+Callback MR diff jest właścicielem walidacji przygotowanego MR/IID. Feature
+policy zachowuje guard scope oraz kontrolę dozwolonych rewizji pozostałych
+narzędzi.
+
 ## Ograniczenia widocznosci
 
 Ograniczenie zwrocone przez model musi wskazywac `affectedRuleIds` i wyjasniac,

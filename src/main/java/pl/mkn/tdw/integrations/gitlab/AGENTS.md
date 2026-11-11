@@ -82,6 +82,13 @@ oraz walidacja podglądu należą do feature'a.
 
 ## HTTP i modele
 
+- `GitLabCommitHistoryPort` czyta strony historii i diffu od pełnego SHA.
+  Nie zastępuje first-parent `latestBefore`. `committed_date` oraz opcjonalne
+  `committer_name`/`committer_email` nie są metadanymi autora ani wdrożenia.
+  Nie zakładaj total-count; pełna strona bez next-page wymaga sprawdzenia
+  następnej. Koniec paginacji diffu nie dowodzi kompletności przy limitach
+  serwera. Historia nie ma osobnych grantów SHA ani scope sesji.
+
 - Integracja HTTP korzysta z `RestClient` przez `GitLabRestClientFactory`.
 - Izoluj nietypowe zachowania GitLaba lokalnie dla tej integracji; nie dodawaj
   globalnych zmian SSL ani globalnych klientow HTTP.
