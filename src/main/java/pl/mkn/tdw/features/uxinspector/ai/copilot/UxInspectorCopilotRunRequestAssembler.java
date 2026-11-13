@@ -17,6 +17,7 @@ import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportFactory;
 import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory;
+import pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryToolSetFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 @Component
@@ -29,6 +30,7 @@ public class UxInspectorCopilotRunRequestAssembler {
     private final CopilotRunAuthMapper authMapper;
     private final UxInspectorReportFactory reportFactory;
     private final RunStoreToolSetFactory storeToolSetFactory;
+    private final RunHttpHistoryToolSetFactory httpHistoryToolSetFactory;
 
     public UxInspectorCopilotRunAssembly assemble(String runReference, UxInspectorAnalysisRequest request,
                                                   UxInspectorTargetContext context,
@@ -39,11 +41,12 @@ public class UxInspectorCopilotRunRequestAssembler {
         var storeCallbacks = storeToolSetFactory.create(runReference);
         var callbacks = new java.util.ArrayList<>(targetTools.callbacks());
         callbacks.addAll(storeCallbacks);
+        callbacks.addAll(httpHistoryToolSetFactory.create(runReference));
         var registered = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT, callbacks);
         var access = UxInspectorCopilotToolAccessPolicy.from(registered);
         var sessionConfig = new CopilotSessionConfigRequest(toolContext.copilotSessionId(), access.enabledTools(),
                 access.availableToolNames(), new CopilotModelSelection(request.model(), request.reasoningEffort()),
-                "Use only enabled UX Inspector target/source/store/report tools and read-only Operational Context tools. Code access remains in the selected branch scope.",
+                "Use only enabled UX Inspector target/source/store/HTTP-history/report tools and read-only Operational Context tools. Code access remains in the selected branch scope.",
                 !storeCallbacks.isEmpty())
                 .withDurableSystemInstructions(UxInspectorDurableSystemInstructions.render(preparation));
         var initialReport = reportFactory.create((String) toolContext.hiddenContext().get(AgentToolContextKeys.REPORT_ID), context);

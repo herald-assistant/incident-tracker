@@ -46,13 +46,27 @@ usuwa Browser Tools i wszystkie jego listenery z badanej strony.
   wystawiac do tej funkcji stan odpowiedni do
   analizy AI; znane pola sekretow sa redagowane. Blad, timeout lub brak
   funkcji pozostawia capture bez store'a.
-- Runtime nie czyta requestow ani screenshotow.
-- UX capture v3 jest zapisywany jednym POST przez CORS. Odpowiedz zwraca
+- W obu profilach `globalThis.getHttpHistory()` jest odczytywany jednokrotnie,
+  niezaleznie od store'a. Przyjmuje tablice do 50 wpisow albo Promise; czeka
+  najwyzej 3 sekundy. Zachowuje pelne URL-e po redakcji sekretow, naglowki i
+  cale dostepne body; nie instaluje interceptora ani nie ponawia wywolan API.
+  Retry POST uzywa tego samego snapshotu. Po starcie historia jest prywatnym
+  polem run.json; AI widzi indeks wszystkich wpisow i doczytuje wybrane
+  dane przez JSON Pointer oraz fragmenty ponizej 8 KB.
+- HTTP body obsluguje natywne FormData, File i Blob zwracane przez
+  HttpDebugSnapshotUtils. FormData zachowuje kolejnosc i powtorzone nazwy;
+  pliki zachowuja MIME, nazwe, size, lastModified i tresc UTF-8 lub Base64
+  dla innych bajtow. Sekrety tekstowe nadal podlegaja redakcji. `[OMITTED]`
+  jako cale body daje jawne SOURCE_OMITTED. Blad odczytu bajtow zachowuje
+  metadane i BINARY_READ_FAILED. Dane wczesniej usuniete przez eksporter sa
+  nieodzyskiwalne. Odczyt plikow podlega temu samemu timeoutowi 3 sekund.
+- Runtime nie odczytuje screenshotow.
+- UX capture v1 jest zapisywany jednym POST przez CORS. Odpowiedz zwraca
   `captureId`, a karta TDW otwiera formularz z tym ID i pobiera snapshot
-  przez GET. Capture, pola i store nie maja transportowego limitu rozmiaru.
-  Blad odczytu pol lub store nie zatrzymuje capture ani analizy. Nieudany
+  przez GET. Capture, pola, store i body HTTP nie maja transportowego limitu rozmiaru.
+  Blad odczytu pol, store lub HTTP nie zatrzymuje capture ani analizy. Nieudany
   POST mozna ponowic bez ponownego wybierania elementu.
-- UI Explorer nie pobiera store'a i przekazuje tylko dotychczasowa wskazowke
+- UI Explorer nie pobiera store'a ani historii HTTP i przekazuje tylko dotychczasowa wskazowke
   widoku.
 - Backend UX Inspectora ponownie waliduje capture. UI Explorer
   odbiera osobny kontekst: zredagowany route path oraz tagi glownego
@@ -71,3 +85,11 @@ snapshotow zuzycie pamieci backendu moze rosnac.
 
 Nie sa wspierane chronione strony Chrome, PDF viewer, `file://` ani
 cross-origin iframe.
+
+## Demo CRM
+
+`demo/index.html` zawiera fikcyjny getter z sukcesem, bledem, pending, cancelled
+i duzym body oraz przelacznik store'a. Serwuj katalog demo z innego originu
+HTTP i uruchom na nim zakladke swojej instancji TDW. Przykladowy cel odczytu:
+entryId=101, part=responseBody, pointer=/customer/permissions/editable.
+Pelny kontrakt opisuje `docs/architecture/ux-inspector-runtime-flow.md`.

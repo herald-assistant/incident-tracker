@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.uxinspector.ai.copilot;
 
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorHttpHistoryPrompt;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparation;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
 
@@ -22,7 +23,7 @@ public final class UxInspectorDurableSystemInstructions {
 
                 %s
                 </ux_inspector_durable_contract>
-                """.formatted(contract).trim() + "\n\n" + operationalContextGuidance();
+                """.formatted(contract).trim() + "\n\n" + operationalContextGuidance() + "\n\n" + UxInspectorHttpHistoryPrompt.guidance();
     }
 
     public static String followUp() {
@@ -60,7 +61,7 @@ public final class UxInspectorDurableSystemInstructions {
                 """.formatted(storeAvailable
                 ? "Jesli pytanie zalezy od stanu tej sesji, uzyj ux-inspector-store-grounding i celowanych run_store_* tools z runId=" + storeRunId + ". Zrzut jest zamrozony w chwili capture."
                 : "Dane store nie sa dostepne w tej sesji; nie zgaduj ich wartosci.").trim()
-                + "\n\n" + operationalContextGuidance();
+                + "\n\n" + operationalContextGuidance() + "\n\n" + UxInspectorHttpHistoryPrompt.guidance();
     }
 
     public static String operationalContextGuidance() {

@@ -15,6 +15,7 @@ import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapping;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
+import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelopeReader;
 import pl.mkn.tdw.localworkspace.analysisruns.*;
 import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatAssistantCapture;
@@ -35,6 +36,7 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
     private static final String FEATURE = "ux-inspector";
 
     private final ObjectMapper objectMapper;
+    private final UxInspectorExportEnvelopeReader envelopeReader;
     private final UxInspectorTargetResolver targetResolver;
     private final UxInspectorFollowUpPromptService promptService;
     private final UxInspectorFollowUpChatService chatService;
@@ -120,13 +122,13 @@ public class UxInspectorLocalRunChatHandler implements LocalAnalysisRunChatHandl
                 response.content(), prompt, response.usage(), capture, startedAt, completedAt, mapping);
         var updatedRecord = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(UxInspectorExportEnvelope.from(updated, completedAt)),
-                continuation.withLatestCopilotSession(response.sessionId())).withStoreSnapshot(record.storeSnapshot());
+                continuation.withLatestCopilotSession(response.sessionId())).withStoreSnapshot(record.storeSnapshot()).withHttpHistorySnapshot(record.httpHistorySnapshot());
         return new LocalAnalysisRunChatResult(updatedRecord, completedAt);
     }
 
     private UxInspectorJobStateSnapshot snapshot(LocalAnalysisRunIndexEntry indexEntry, LocalAnalysisRunRecord record) {
         try {
-            var envelope = objectMapper.treeToValue(record.exportEnvelope(), UxInspectorExportEnvelope.class);
+            var envelope = envelopeReader.read(record.exportEnvelope());
             if (envelope == null || !envelope.supported() || envelope.payload() == null
                     || !UxInspectorExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
                     || envelope.payload().job() == null

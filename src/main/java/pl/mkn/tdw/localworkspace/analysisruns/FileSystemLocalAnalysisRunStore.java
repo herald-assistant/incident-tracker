@@ -58,8 +58,19 @@ public class FileSystemLocalAnalysisRunStore implements LocalAnalysisRunStore {
         var existing = findById(normalizedEntry.analysisId());
         var stored = record.storeSnapshot() == null && existing.isPresent()
                 ? record.withStoreSnapshot(existing.get().storeSnapshot()) : record;
+        if (stored.httpHistorySnapshot() == null && existing.isPresent()) {
+            stored = stored.withHttpHistorySnapshot(existing.get().httpHistorySnapshot());
+        }
         jsonFileStore.writeAtomic(paths.runFile(normalizedEntry.analysisId()), stored);
         writeIndex(upsert(readIndex(), normalizedEntry));
+    }
+
+    @Override
+    public synchronized void updateHttpHistorySnapshot(String analysisId, LocalAnalysisRunHttpHistorySnapshot snapshot) {
+        if (!properties.isEnabled() || snapshot == null) return;
+        var record = findById(analysisId)
+                .orElseThrow(() -> new IllegalArgumentException("Local run was not found: " + analysisId));
+        jsonFileStore.writeAtomic(paths.runFile(analysisId), record.withHttpHistorySnapshot(snapshot));
     }
 
     @Override

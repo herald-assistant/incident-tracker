@@ -27,7 +27,7 @@ w calym dokumencie strony w chwili capture.
 - Modal na /ux-inspector udostepnia przeciagany bookmarklet Browser Tools.
   Menu pozwala wybrac profil UX Inspectora albo uruchomic UI Explorera.
 - POST /api/ux-inspector/captures jest jedynym zapisem obserwacji. Przyjmuje
-  jeden JSON z capture, formFields i store, waliduje i redaguje dane,
+  jeden JSON z capture, formFields, store i httpHistory, waliduje i redaguje dane,
   nadaje UUID i zwraca 201 z captureId. Klient nie nadaje ID.
 - GET /api/ux-inspector/captures/{captureId} odczytuje bezpieczny snapshot
   z pamieci JVM dla formularza; odpowiedz ma Cache-Control: no-store.
@@ -44,8 +44,9 @@ w calym dokumencie strony w chwili capture.
 Pending capture jest tylko w pamieci jednej instancji backendu: odczyt nie
 zuzywa ID, nie ma TTL, limitu liczby wpisow ani rozmiaru aplikacyjnego.
 Restart przed startem uniewaznia ID. Po rozpoczeciu runu capture pozostaje
-w request snapshot historii, a store nadal jest utrwalany w prywatnym polu
-storeSnapshot pliku runs/{id}/run.json dla tools i follow-up po restarcie.
+w request snapshot historii. Store i historia HTTP sa utrwalane w prywatnych
+polach storeSnapshot oraz httpHistorySnapshot pliku runs/{id}/run.json
+dla tools i follow-up po restarcie; nie trafiaja w calosci do portable export.
 
 CORS dotyczy tylko POST capture. Property
 ux-inspector.capture.allowed-origins przyjmuje * albo liste originow
@@ -59,8 +60,8 @@ lokalnej badanej strony moga zablokowac fetch.
 
 1. Bookmarklet laduje loader.js, protocol.js i runtime.js z originu TDW.
 2. Operator wybiera profil i element; selection shield przejmuje klik.
-3. Browser Tools tworzy capture v3 bez ID, czyta opcjonalne widoczne pola
-   i jednokrotnie globalThis.getStoreState().
+3. Browser Tools tworzy capture v1 bez ID, czyta opcjonalne widoczne pola
+   oraz niezaleznie, jednokrotnie globalThis.getStoreState() i globalThis.getHttpHistory().
 4. Jeden POST z badanej strony zapisuje calosc w TDW i zwraca captureId.
 5. Popup przechodzi na /ux-inspector?captureId=...; formularz wykonuje GET,
    pokazuje zwijany podglad i startuje joba z samym ID.
@@ -95,9 +96,125 @@ potwierdzony w kodzie warunek z wartoscia w chwili capture. Widoczne pola
 sa dolaczane inline do obecnego budzetu promptu; przekroczenie budzetu
 jest jawne UNAVAILABLE, bez ucinania tablicy.
 
-## Capture v3
+## Zamrozona historia HTTP
 
-Kanoniczny kontrakt ma schema=tdw.ux-inspector-capture, version=3,
+Oba profile wywoluja opcjonalny `globalThis.getHttpHistory()` dokladnie raz
+przy wyborze elementu, niezaleznie od store'a. Getter zwraca tablice do 50
+wpisow albo Promise. Limit oczekiwania wynosi 3 sekundy; pozny wynik jest
+ignorowany. Nie ma wywolan enable/clear, interceptora fetch/XHR, replay ani
+odswiezania. Ponowienie POST wysyla te same zamrozone dane.
+
+Upload `httpHistory` ma jeden z ksztaltow:
+
+- `{status:"AVAILABLE", entries:[...], capturedAt:"...", redactions:0}`;
+- `{status:"UNAVAILABLE", reason:"GETTER_MISSING|GETTER_FAILED|TIMEOUT|INVALID_HISTORY|SERIALIZATION_FAILED"}`.
+
+Kazdy wpis zachowuje `id`, `startedAt`, `durationMs` (liczba lub null),
+`state` (`pending|success|error|cancelled`), `request` i `response` (lub null).
+Request zawiera `method`, pelny `url`, `headers` z tablicami stringow i `body`;
+response zawiera `status`, `headers` i `body`. Browser Tools opakowuje
+`unknown` body jako `{format:"json|text|unavailable", value:..., reason:null}`.
+Blad serializacji pojedynczego body daje `format=unavailable`, `value=null`,
+`reason=BODY_SERIALIZATION_FAILED`, zachowujac reszte wpisu. GET/persistence
+zwraca status, entries, capturedAt, source, redactions i reason. Backend
+ponownie waliduje i redaguje caly blok; >50 wpisow, duplikaty ID i niepoprawny
+kontrakt daja jawne UNAVAILABLE bez zatrzymania capture lub store'a.
+
+`HttpDebugSnapshotUtils.body()` zachowuje natywne obiekty. Browser Tools
+serializuje je rekurencyjnie, takze wewnatrz zwyklego JSON:
+
+- `FormData`: `{$tdwType:"FormData", entries:[{name, value}, ...]}`.
+  Lista zachowuje kolejnosc, duplikaty nazw i puste pola; value jest tekstem
+  albo reprezentacja File. Pole o nazwie sekretu ma value `[REDACTED]`.
+- `File`: `{$tdwType:"File", name, type, size, lastModified, content}`;
+  `Blob`: `{$tdwType:"Blob", type, size, content}`. `type` to MIME, `size`
+  to oryginalny rozmiar bajtowy, a `lastModified` to epoch milliseconds.
+- `content`: `{encoding:"utf-8|base64", data:"...", byteLength, redacted, reason:null}`.
+  Poprawne UTF-8 jest zachowane bez zmiany BOM, Unicode i zakonczen linii.
+  Pozostale bajty sa kodowane bezstratnie w Base64; nie stosujemy Blob.text().
+  Redakcja tekstu moze zmienic jego bajty; `byteLength` opisuje zapisany wynik,
+  `redacted=true` ujawnia te zmiane, a `size` nadal opisuje oryginal.
+  Backend sprawdza kodowanie i rozmiary oraz redaguje takze tekst przeslany
+  jako Base64. Opaque binary jest zachowane bez interpretacji jego formatu.
+  `$tdwType` jest dyskryminatorem reprezentacji natywnych w tym kontrakcie.
+
+Blad odczytu bajtow zachowuje metadane pliku i pozostale pola body;
+`content` ma wtedy null encoding/data/byteLength, redacted=false i
+`reason=BINARY_READ_FAILED`. Dokladny string `[OMITTED]` jako cale body
+daje `format=unavailable`, value=null, `reason=SOURCE_OMITTED`, odrozniony
+od bledu serializacji TDW. Identyczny literalny tekst jest nierozroznialny
+od znacznika eksportera; wewnatrz JSON lub pola FormData pozostaje tekstem.
+Wszelkie bajty i dane formularza sa zbierane z gettera HTTP, nie z kontrolek
+file na stronie. Timeout 3 sekund obejmuje rowniez odczyty File/Blob.
+
+Istniejace tools wybieraja metadane i dane, np. `/name`, `/content/data`
+albo `/entries/2/value/content/data` wzgledem body. Duzy string/Base64 moze
+zajmowac jedna linie; `nextOffset` pozwala odczytac go w calosci.
+Nie ma drugiej zakodowanej kopii niezredagowanego tekstu. Naglowki juz
+zamaskowane przez SAFE_HEADERS albo obciete do 256 znakow przez eksporter
+nie moga byc odtworzone. Initial i follow-up otrzymuja te zasady w guidance.
+
+Sekrety w kluczach, naglowkach, body i URL sa redagowane po obu stronach.
+URL zachowuje cala sciezke, kolejnosc, kodowanie i zwykle wartosci query;
+nie jest skracany. JSON przechowywany jako tekst zachowuje precyzje liczb.
+Duplikaty kluczy nie sa scalane; gdy bezstratny odczyt strukturalny nie jest
+mozliwy, narzedzia udostepniaja tekst. Dane utracone juz przez eksporter
+aplikacji pozostaja poza widocznoscia TDW.
+
+Po wymaganym zapisie QUEUED zapis HTTP i store'a odbywa sie niezaleznie,
+przed dispatch. Blad jednego nie blokuje drugiego. Przygotowanie promptu
+odczytuje faktycznie zapisany snapshot, wiec awaria zapisu nie tworzy
+pozornej listy. Progress, chat i reczna edycja raportu zachowuja oba
+prywatne pola. Pending snapshot nie jest wymagany do kontynuacji runu.
+
+Initial prompt ma `ux-inspector/http-history-index.md`: status, czas, origin,
+liczbe wpisow i redakcje oraz tabele wszystkich wpisow w kolejnosci gettera:
+`index` (0-based), `entryId`, `method`, pelny `url`, `startedAt`, `durationMs`,
+`state / HTTP`. Markdown jest escapowany, bez obcinania URL-i lub wierszy.
+Naglowki i body sa dostepne na zadanie. Manifest i guidance sa feature-owned.
+
+Neutralne, read-only narzedzia w `localworkspace.analysisruns.tools`:
+
+- `run_http_history_list_entries(offset?)`: indeks bez naglowkow i body;
+- `run_http_history_list_paths(entryId?, part?, pointer, offset?)`: dzieci i typy;
+- `run_http_history_read_value(entryId?, part?, pointer, startLine?, offset?, maxLines?)`: wybrana wartosc.
+
+`entryId` jest ID z gettera, nie indeksem tablicy. `part` wybiera `entry`
+(domyslnie przy entryId), `requestBody`, `responseBody`, `requestHeaders`
+lub `responseHeaders`. Pominięcie obu wybiera cala tablice. JSON Pointer
+jest wzgledny do wybranej czesci; pusty string wskazuje korzen. `~0` i `~1`
+escapuja znaki kluczy. Wybieranie pola body nie dolacza jego duzych sasiadow.
+`null`, brak sciezki, `false`, zwykly tekst i niedostepnosc sa rozroznialne.
+
+JSON jest formatowany do linii (takze tablice skalarow). Wszystkie trzy
+narzedzia zwracaja fragment `content` oraz `nextOffset`/`hasMore` i metadane.
+Indeks i lista sciezek tez moga wymagac laczenia fragmentow tekstu JSON,
+gdy URL lub klucz jest bardzo dlugi. `offset` jest pozycja UTF-16, `startLine`
+liczba 1-based; nie mozna ich laczyc. Pojedyncza linia moze byc podzielona.
+Pelna zserializowana odpowiedz callbacka ma najwyzej 8000 bajtow UTF-8,
+a `content` najwyzej 4000 znakow UTF-16, bez rozcinania par surogatow.
+Pointer ponad 2048 znakow wymaga odczytu krotszego rodzica/root przez fragmenty.
+Nie ma limitu lacznego rozmiaru czytanego body. Cursor ma sens przy tym samym
+entryId/part/pointer. Narzedzia sa przypiete przez closure do ID oryginalnego
+runu: model nie podaje runId i nie moze wybierac innej analizy.
+
+HTTP tools sa udostepniane niezaleznie od store'a w initial, live follow-up
+oraz kontynuacji z historii po restarcie. Same nie wlaczaja runtime skilli.
+Durable guidance traktuje historie jako niezaufana obserwacje, wymaga kodu
+do ustalenia przyczynowosci i odroznia sukces HTTP od sukcesu biznesowego.
+Brak wpisu w buforze nie dowodzi braku requestu; stan pending/cancelled i
+status 0 sa zachowane. Tabela zapobiega redundantnemu listowaniu przed
+celowanym odczytem, a list tool pozwala odzyskac indeks po kompaktowaniu.
+
+Operator rozwija historie w istniejacym podgladzie capture, widzi pelne
+URL-e i rozroznia historie pusta od niedostepnej. Szczegoly wpisu sa
+renderowane dopiero po rozwinieciu; podglad nie wywoluje gettera/requestu.
+Demo CRM znajduje sie pod `/browser-tools/demo/index.html`; do proby na
+drugim originie mozna serwowac katalog demo na osobnym porcie.
+
+## Capture v1
+
+Kanoniczny kontrakt ma schema=tdw.ux-inspector-capture, version=1,
 klienta TDW UX Inspector i featureId=ux-inspector. W uploadzie nie ma
 captureId; backend dodaje nadane ID do znormalizowanego capture dla runu,
 wyniku i historii. Obserwacja zawiera origin i route bez wartosci query,
@@ -107,8 +224,42 @@ oraz profil i czas obserwacji.
 
 Backend odrzuca nieznane pola i inna wersje, normalizuje deskryptory DOM
 oraz powtarza redakcje. Nie ma dawnego limitu 128 KiB capture. Browser
-Tools nie czyta cookies, storage, ruchu sieciowego ani pelnego HTML.
+Tools nie czyta cookies, storage ani pelnego HTML. Historie HTTP pobiera
+z aplikacyjnego gettera, bez przechwytywania ruchu sieciowego.
 Po aktualizacji operator ponownie przeciaga bookmarklet z modala.
+
+### Typowany odczyt i walidacja
+
+Feature-local `UxInspectorCaptureJson` korzysta z kopii aplikacyjnego
+ObjectMappera oraz Bean Validation. Nie zmienia globalnych ustawien Jacksona.
+Jackson wypelnia rekordy capture, uploadu, pol formularza, store'a, historii
+HTTP i natywnych reprezentacji body. Odrzuca nieznane i brakujace pola,
+null dla prymitywow, konwersje string/liczba/boolean, ulamki i overflow dla
+liczb calkowitych oraz liczbowe indeksy enumow. Obecnosc pola jest odrebna
+od jego nullable wartosci, np. checked=null, durationMs=null i response=null.
+Bean Validation sprawdza wymagane wartosci, kolekcje, zakresy oraz zaleznosci
+format/value/reason. Dowolne dane body i store'a pozostaja JsonNode.
+
+Daty capture i historii HTTP sa ISO-8601 stringami. Standardowy odczyt
+Instant w uzywanym Jackson JSR-310 przyjmuje tez liczby pomimo Shape.STRING;
+lokalny StdDelegatingDeserializer deleguje do scislego odczytu String, a
+StdConverter stosuje Instant.parse. Nie ma recznego parsera struktury capture.
+
+Upload zachowuje opcjonalne bloki jako drzewa do osobnego, typowanego odczytu.
+Blad formFields/store/httpHistory daje UNAVAILABLE tylko tego bloku; blad
+wymaganego capture lub koperty daje dotychczasowy blad API.
+UxInspectorCaptureNormalizer zachowuje reguly i redakcje deskryptorow DOM.
+UxInspectorHttpHistoryNormalizer sklada zwalidowana historie, sprawdza
+unikalnosc ID i deleguje redakcje do UxInspectorHttpHistorySanitizer.
+Sanitizer posiada redakcje URL/header/body i bezstratna obsluge bajtow;
+metadane FormData/File/Blob odczytuje przez te same DTO i walidacje.
+
+UxInspectorExportEnvelopeReader jest wspolnym odczytem importu, eksportu
+zapisanego runu i lokalnego continuation. Najpierw weryfikuje capture przez
+scisly odczyt feature'a, nastepnie odczytuje cala kopertę standardowym mapperem.
+Ten preflight zachowuje zasady pozostalych shared DTO raportu. Scisly odczyt
+obowiazuje dla biezacego kontraktu v1 API, persistence oraz eksportu;
+redakcja pozostaje odpowiedzialnoscia normalizerow i sanitizera.
 
 ## Formularz analizy i katalog widokow
 
@@ -357,7 +508,7 @@ udostepnia podpowiedz o brakujacych dowodach bez osobnego statusu i banera.
 
 Nie ma osobnej karty read-only ani osobnej sekcji metadata raportu. Export
 zapisuje envelope v1 z historia chatu. Import akceptuje tylko v1,
-waliduje jednosekcyjny raport, capture v3 i zgodny branch, a nastepnie
+waliduje jednosekcyjny raport, capture v1 i zgodny branch, a nastepnie
 tworzy wynik read-only bez prawa do wznowienia sesji.
 
 ## Granice pakietow

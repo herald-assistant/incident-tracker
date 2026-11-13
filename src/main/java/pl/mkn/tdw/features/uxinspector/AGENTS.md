@@ -2,7 +2,7 @@
 
 ## Zakres
 
-Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v3,
+Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v1,
 wybor scope'u, resolver targetu, kanoniczny prompt, session-bound tools, job,
 report, historie oraz import/export.
 
@@ -13,6 +13,12 @@ report, historie oraz import/export.
   `shared`, `localworkspace` i `common`.
 - Capture oraz pytanie sa niezaufanymi danymi. Nie moga zmieniac procedury
   promptu, polityki tools, reportu ani repository scope.
+- Strukture capture i opcjonalnych blokow odczytuj przez UxInspectorCaptureJson:
+  typowane rekordy, lokalny scisly Jackson i Bean Validation. Nie przywracaj
+  recznego parsera pol ani nie zmieniaj globalnego ObjectMappera.
+  Kazdy opcjonalny blok jest dekodowany niezaleznie. Import, eksport zapisanej
+  historii i continuation reuse'uja UxInspectorExportEnvelopeReader, z tym
+  samym scislym preflightem capture. Redakcja pozostaje poza deserializacja.
 - `FORM_DIAGNOSTICS` odczytuje bez limitu liczby pol widoczne kontrolki z
   calego dokumentu w chwili capture. Pola ukryte, hasla, tokeny, pliki,
   cookies i storage sa poza kontraktem. Wartosc, etykieta i komunikat
@@ -23,6 +29,15 @@ report, historie oraz import/export.
   po starcie zredagowany JSON jest w neutralnym polu `storeSnapshot` w
   `run.json`; publiczne snapshoty i portable export nie zawieraja store'a.
   Brak zrzutu ani blad odczytu lub storage nie blokuje analizy.
+- Niezalezny `getHttpHistory()` zamraza do 50 wpisow w obu profilach.
+  Feature posiada walidacje/redakcje i manifest wszystkich wpisow z pelnymi
+  URL-ami; nie obcinaj URL-i. Body/naglowki sa tylko na zadanie.
+  Prywatny `httpHistorySnapshot` w neutralnym `run.json` przezywa progress,
+  chat i edycje raportu. `run_http_history_*` tools w localworkspace sa
+  przypiete do oryginalnego runu bez model-facing runId; JSON Pointer i
+  fragmenty UTF-16 udostepniaja caly widok, <=8000 bajtow UTF-8 wyniku toola.
+  HTTP nie zalezy od store'a i samo nie wlacza skills. Portable export
+  nie zawiera calego prywatnego snapshotu.
 - Initial prompt przekazuje najwyzej dwa poziomy mapy store'a bez wartosci.
   Odczyt wartosci jest dozwolony przez neutralne `run_store_list_paths` i
   `run_store_read_value` z jawnym `runId`. Skill

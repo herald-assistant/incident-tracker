@@ -3,7 +3,7 @@
 
   const GLOBAL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const PROTOCOL_VERSION = 1;
-  const CAPTURE_VERSION = 3;
+  const CAPTURE_VERSION = 1;
   const CAPTURE_SCHEMA = 'tdw.ux-inspector-capture';
   const PAGE_CONTEXT_SCHEMA = 'tdw.ui-explorer-page-context';
   const PAGE_CONTEXT_VERSION = 1;
@@ -1144,6 +1144,170 @@
     });
   }
 
+
+  // HTTP history belongs to the same frozen observation, never to a live network hook.
+  async function prepareHttpHistory(entries) {
+    if (!Array.isArray(entries) || entries.length > 50) throw new Error('INVALID_HISTORY');
+    let redactions = 0;
+    const secret = /(password|passwd|token|secret|authorization|bearer|cookie|session|csrf|jwt|api.?key|one[-_ ]?time|otp|cvv|cvc)/i;
+    const redactText = (text) => {
+      const safe = text
+        .replace(/Bearer\s+[^\s"'<>;,}]+/gi, '[REDACTED]')
+        .replace(/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/g, '[REDACTED]')
+        .replace(/(?<![\w-])((?:[\w-]*(?:password|passwd|token|secret|authorization|cookie|session|csrf|jwt|api.?key)[\w-]*)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'[^']*'|[^\s&,;<>}]+)/gi, '$1"[REDACTED]"');
+      if (safe !== text) redactions++;
+      return safe;
+    };
+    // Replace only JSON string tokens/secret values; never round numbers or discard duplicate keys.
+    const safeText = (text) => {
+      try { JSON.parse(text); } catch { return redactText(text); }
+      const tokens = [...text.matchAll(/"(?:\\.|[^"\\])*"|[{}\[\]:,]|[^\s{}\[\]:,]+/g)];
+      let result = '', cursor = 0;
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (!token[0].startsWith('"')) continue;
+        const value = JSON.parse(token[0]);
+        if (tokens[i + 1]?.[0] === ':') {
+          if (!secret.test(value)) continue;
+          const start = tokens[i + 2];
+          let endIndex = i + 2;
+          if (start[0] === '{' || start[0] === '[') {
+            let depth = 0;
+            do {
+              if (tokens[endIndex][0] === '{' || tokens[endIndex][0] === '[') depth++;
+              if (tokens[endIndex][0] === '}' || tokens[endIndex][0] === ']') depth--;
+              endIndex++;
+            } while (depth > 0);
+            endIndex--;
+          }
+          result += text.slice(cursor, start.index) + '"[REDACTED]"';
+          cursor = tokens[endIndex].index + tokens[endIndex][0].length;
+          redactions++;
+          i = endIndex;
+        } else {
+          const safe = redactText(value);
+          if (safe !== value) {
+            result += text.slice(cursor, token.index) + JSON.stringify(safe);
+            cursor = token.index + token[0].length;
+          }
+        }
+      }
+      return result + text.slice(cursor);
+    };
+    const safeUrl = (url) => {
+      if (typeof url !== 'string' || !url) throw new Error('INVALID_HISTORY');
+      let safe = url.replace(/(\/\/)[^/?#]*@/, '$1[REDACTED]@');
+      safe = safe.replace(/([?&#])([^=&#]+)=([^&#]*)/g, (full, sep, key, value) => {
+        let decodedKey, decodedValue;
+        try { decodedKey = decodeURIComponent(key.replace(/\+/g, ' ')); decodedValue = decodeURIComponent(value.replace(/\+/g, ' ')); }
+        catch { throw new Error('INVALID_HISTORY'); }
+        return secret.test(decodedKey) || redactText(decodedValue) !== decodedValue ? sep + key + '=[REDACTED]' : full;
+      });
+      if (safe !== url) redactions++;
+      return safe.replace(/Bearer\s+[^\s"'<>;,}]+/gi, '[REDACTED]').replace(/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/g, '[REDACTED]');
+    };
+    const binary = async (value) => {
+      const isFile = global.File && value instanceof global.File;
+      const result = { $tdwType: isFile ? 'File' : 'Blob', type: redactText(value.type), size: value.size };
+      if (isFile) Object.assign(result, { name: redactText(value.name), lastModified: value.lastModified });
+      try {
+        const bytes = new Uint8Array(await value.arrayBuffer());
+        let text;
+        // Fatal decoding avoids replacing arbitrary binary bytes with U+FFFD. Keep BOM as data.
+        try { text = new global.TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
+        catch { text = null; }
+        if (text !== null) {
+          const safe = safeText(text);
+          result.content = { encoding: 'utf-8', data: safe, byteLength: new global.TextEncoder().encode(safe).length,
+            redacted: safe !== text, reason: null };
+        } else {
+          const chunks = [];
+          for (let i = 0; i < bytes.length; i += 8192) chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+          result.content = { encoding: 'base64', data: global.btoa(chunks.join('')), byteLength: bytes.length,
+            redacted: false, reason: null };
+        }
+      } catch {
+        result.content = { encoding: null, data: null, byteLength: null, redacted: false, reason: 'BINARY_READ_FAILED' };
+      }
+      return result;
+    };
+    const serialize = async (value, ancestors = new Set()) => {
+      if (typeof value === 'string') return safeText(value);
+      if (typeof value === 'bigint') return value.toString();
+      if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
+      if (typeof value !== 'object') return undefined; // JSON.stringify's ordinary optional-property semantics.
+      if (ancestors.has(value)) throw new Error('BODY_SERIALIZATION_FAILED');
+      const branch = new Set(ancestors).add(value);
+      if (global.Blob && value instanceof global.Blob) return binary(value);
+      if (global.FormData && value instanceof global.FormData) {
+        // Enumerate before any await; preserve repeated names and their order.
+        const pending = [...value.entries()].map(([name, child]) => {
+          const safeName = redactText(name);
+          if (secret.test(name)) { redactions++; return { name: safeName, value: '[REDACTED]' }; }
+          return serialize(child, branch).then(value => ({ name: safeName, value }));
+        });
+        return { $tdwType: 'FormData', entries: await Promise.all(pending) };
+      }
+      if (Array.isArray(value) || value instanceof Set) {
+        return Promise.all([...value].map(child => serialize(child, branch).then(item => item === undefined ? null : item)));
+      }
+      if (typeof value.toJSON === 'function') return serialize(value.toJSON(), branch);
+      const fields = value instanceof Map ? [...value.entries()] : Object.entries(value);
+      if (fields.length === 0 && !(value instanceof Map) && value.constructor?.name !== 'Object' &&
+          Object.getPrototypeOf(value) !== null) {
+        const json = JSON.stringify(value);
+        if (json !== '{}') return serialize(JSON.parse(json), branch);
+        const text = String(value);
+        if (/^\[object .*\]$/.test(text)) throw new Error('BODY_SERIALIZATION_FAILED');
+        return safeText(text);
+      }
+      const pending = fields.map(([key, child]) => {
+        if (secret.test(key)) { redactions++; return [key, '[REDACTED]']; }
+        return serialize(child, branch).then(value => [key, value]);
+      });
+      return Object.fromEntries(await Promise.all(pending));
+    };
+    const body = async (value) => {
+      if (value === '[OMITTED]') return { format: 'unavailable', value: null, reason: 'SOURCE_OMITTED' };
+      try {
+        const safe = await serialize(value);
+        if (safe === undefined) throw new Error('BODY_SERIALIZATION_FAILED');
+        return { format: typeof value === 'string' ? 'text' : 'json', value: safe, reason: null };
+      } catch {
+        return { format: 'unavailable', value: null, reason: 'BODY_SERIALIZATION_FAILED' };
+      }
+    };
+    const message = async (value, request) => {
+      if (!value || typeof value !== 'object' || !value.headers || typeof value.headers !== 'object' || Array.isArray(value.headers)) throw new Error('INVALID_HISTORY');
+      const headers = Object.create(null);
+      for (const [key, values] of Object.entries(value.headers)) {
+        if (!Array.isArray(values) || !values.every((item) => typeof item === 'string')) throw new Error('INVALID_HISTORY');
+        if (secret.test(key)) { headers[key] = ['[REDACTED]']; redactions++; }
+        else headers[key] = values.map(redactText);
+      }
+      const metadata = request ? { method: value.method, url: safeUrl(value.url) } : { status: value.status };
+      if (request && (typeof value.method !== 'string' || !/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(value.method))) throw new Error('INVALID_HISTORY');
+      if (!request && (!Number.isInteger(value.status) || value.status < 0 || value.status > 599)) throw new Error('INVALID_HISTORY');
+      return { ...metadata, headers, body: await body(value.body) };
+    };
+    const ids = new Set();
+    // Invoke serialization now, before awaiting other optional getters.
+    const pending = entries.map(async (entry) => {
+      if (!entry || !Number.isSafeInteger(entry.id) || entry.id <= 0 || ids.has(entry.id) ||
+          !Number.isFinite(Date.parse(entry.startedAt)) ||
+          !(entry.durationMs === null || typeof entry.durationMs === 'number' && Number.isFinite(entry.durationMs) && entry.durationMs >= 0) ||
+          !['pending', 'success', 'error', 'cancelled'].includes(entry.state)) throw new Error('INVALID_HISTORY');
+      ids.add(entry.id);
+      const metadata = { id: entry.id, startedAt: new Date(entry.startedAt).toISOString(), durationMs: entry.durationMs, state: entry.state };
+      const request = message(entry.request, true);
+      const response = entry.response === null ? Promise.resolve(null) : message(entry.response, false);
+      return Promise.all([request, response]).then(([request, response]) => ({ ...metadata, request, response }));
+    });
+    const capturedAt = new Date().toISOString();
+    const safeEntries = await Promise.all(pending);
+    return { status: 'AVAILABLE', entries: safeEntries, capturedAt, redactions };
+  }
+
   const api = Object.freeze({
     PROTOCOL_VERSION,
     CAPTURE_VERSION,
@@ -1160,6 +1324,7 @@
     describeElement,
     captureElement,
     captureVisibleFormFields,
+    prepareHttpHistory,
     capturePageContext,
     normalizeCapture,
     normalizePageContext,

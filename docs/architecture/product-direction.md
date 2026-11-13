@@ -274,8 +274,16 @@ TDW potwierdza frontend, branch, view, model i reasoning effort. Feature
 czyta wybrany branch bez przypinania SHA, deterministycznie rozpoznaje target,
 wyprowadza jego source binding i rozszerza source research tylko w kierunku
 wymaganym przez pytanie. Operator przed wskazaniem wybiera kontekst elementu
-albo diagnostyke najblizszego formularza; drugi profil zamraza ograniczone
-wartosci i stan walidacji, zawsze bez hasel, hidden/file fields i sekretow.
+albo diagnostyke formularza; drugi profil zamraza wartosci bezpiecznych,
+widocznych pol z calego dokumentu i ich stan walidacji, bez limitu liczby pol,
+zawsze bez hasel, hidden/file fields i sekretow.
+W obu profilach opcjonalne gettery aplikacji dostarczaja niezaleznie stan
+store'a i historie ostatnich maksymalnie 50 wywolan HTTP. Jeden upload zapisuje
+zamrozona obserwacje; operator moze przejrzec ja przed startem. AI otrzymuje
+indeks historii z pelnymi URL-ami po redakcji i doczytuje wybrane dane po
+sciezce JSON lub we fragmentach. Duze body oraz dane i metadane plikow z
+historii HTTP pozostaja dostepne na zadanie, takze w kontynuacji po restarcie.
+Brak lub blad pojedynczego bloku opcjonalnego nie zatrzymuje analizy.
 
 UX Inspector jest rodzenstwem UI Explorera, nie jego profilem. UI Explorer
 tworzy wielosekcyjna dokumentacje calego widoku, natomiast UX Inspector ma

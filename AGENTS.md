@@ -397,7 +397,7 @@ Zasady granic:
   `0-200`, job, historia/import-export i UI bez importow do drugiego
   assessmentu.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`
-  Focused analiza jednego elementu wskazanego przez Browser Tools: capture v3
+  Focused analiza jednego elementu wskazanego przez Browser Tools: capture v1
   zapisywany jednym POST i odczytywany po ID przed startem,
   deterministic target resolution, session-bound tools, one-section report,
   job, historia i import/export v1.
@@ -423,7 +423,7 @@ Zasady granic:
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 - `frontend/public/browser-tools`
-  Statyczny installer, demo, loader, capture protocol v2 i efemeryczny runtime
+  Statyczny installer, demo, loader, capture protocol v1 i efemeryczny runtime
   Browser Tools. Stary `/tdw-inspector/**` nie ma aliasu ani redirectu.
 - `src/main/resources/copilot/skills`
   Skille Copilota pakowane do runtime. Incidentowe playbooki uzycia tools, np.

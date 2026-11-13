@@ -25,6 +25,6 @@ public final class LocalAnalysisRunReportEdit {
         if (envelope.has("storedAt")) envelope.put("storedAt", updatedAt.toString());
         if (envelope.has("exportedAt")) envelope.put("exportedAt", updatedAt.toString());
         return new LocalAnalysisRunChatResult(LocalAnalysisRunRecord.v1(envelope, record.continuation())
-                .withStoreSnapshot(record.storeSnapshot()), updatedAt);
+                .withStoreSnapshot(record.storeSnapshot()).withHttpHistorySnapshot(record.httpHistorySnapshot()), updatedAt);
     }
 }

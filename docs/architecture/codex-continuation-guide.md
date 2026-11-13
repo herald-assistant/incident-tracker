@@ -95,9 +95,10 @@ zatwierdzony invariant trafia do architektury.
   chat na wybranym branchu, wznowienie z historii po restarcie oraz
   import/export v1.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`
-  UX Inspector: strict capture v3 zapisany jednym POST w pamieci przed startem,
+  UX Inspector: strict capture v1 zapisany jednym POST w pamieci przed startem,
   odczyt GET po ID, deterministic target resolution i source binding, focused
-  Copilot prompt bez runtime skilli, session-bound `uxi_*` target tools,
+  Copilot prompt, opcjonalny skill store-grounding, session-bound `uxi_*` target tools,
+  prywatny snapshot HTTP i neutralne `run_http_history_*` tools z JSON Pointer/chunkami,
   czteropoziomowa mape nazw sciezek i neutralne GitLab
   navigation/search/read tools dla calego wybranego repozytorium pod branchowa
   policy, jednosekcyjny report, job/history oraz import/export v1. Runtime opisuje
@@ -152,8 +153,9 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
 - `frontend/public/browser-tools`
   loader, protocol v1 i efemeryczny runtime dwoch akcji na badanej stronie;
   bookmarklet jest generowany przez modal UX Inspectora. UX Inspector ma
-  wybor zakresu danych, a UI Explorer otwiera widok bez selekcji elementu;
-  oba transfery nie uzywaja klienta REST ani storage.
+  wybor zakresu danych i wysyla jeden POST capture przez fetch do TDW.
+  UI Explorer otwiera widok bez selekcji elementu, zachowujac handshake
+  page-context przez postMessage. Oba transfery nie korzystaja ze storage.
 - shell i routing aplikacji
   composition root nawigacji oraz rejestracji feature'ow.
 

@@ -291,16 +291,23 @@ feature'ow, API, tools ani platformy AI. UI Explorer mapuje ten katalog na
 swoj publiczny kontrakt przez adapter, a UX Inspector korzysta z niego bez
 importowania UI Explorera.
 
-`features.uxinspector` posiada capture v3, pamieciowy snapshot i REST ingress,
+`features.uxinspector` posiada capture v1, pamieciowy snapshot i REST ingress,
 target resolution, source binding,
 kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek
 oraz jego neutralne formatowanie przez `common`,
 session-bound `uxi_*` target tools oraz policy dla neutralnych GitLab
 navigation/search/read tools nad calym wybranym repozytorium. Posiada report z
-jedna sekcja, job i scisly import/export. Nie posiada runtime skilli ani
-feature-specific narzedzia do nawigacji lub czytania pliku z repozytorium.
+jedna sekcja, job i scisly import/export. Typowane DTO capture i opcjonalnych
+blokow, lokalny scisly Jackson, Bean Validation oraz sanitizery pozostaja
+wewnatrz feature'a. Wspolny reader koperty stosuje ten sam preflight capture
+przy imporcie, eksporcie zapisanego runu i continuation; nie zmienia globalnego
+ObjectMappera ani kontraktow shared DTO raportu.
+Feature posiada skill store-grounding oraz manifest HTTP; neutralny snapshot
+i tools historii HTTP sa w `localworkspace.analysisruns`, a formatowanie JSON
+w `common`. Nie posiada feature-specific narzedzia do nawigacji lub czytania
+pliku z repozytorium.
 Moze zalezec od `frontendcatalog`, `integrations`, `agenttools`, `aiplatform`,
-`shared` i `localworkspace`; zadna z tych warstw nie importuje UX Inspectora.
+`shared`, `localworkspace` i `common`; zadna z tych warstw nie importuje UX Inspectora.
 Publiczny kontrakt wyniku nie importuje integracji. Sibling guard zabrania
 obu kierunkow zaleznosci pomiedzy UX Inspectorem i UI Explorerem.
 

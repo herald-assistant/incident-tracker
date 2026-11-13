@@ -140,7 +140,7 @@ class FrontendPageTest {
                 .andExpect(content().string(containsString("/ux-inspector")))
                 .andExpect(content().string(containsString("tdw-tools-launcher")))
                 .andExpect(content().string(containsString("data-tdw-browser-tool-root")))
-                .andExpect(content().string(containsString("1.5.0")));
+                .andExpect(content().string(containsString("1.7.0")));
 
         mockMvc.perform(get("/browser-tools/protocol.js"))
                 .andExpect(status().isOk())
@@ -154,7 +154,7 @@ class FrontendPageTest {
                 .andExpect(content().string(containsString("Remote runtime loading failed")))
                 .andExpect(content().string(containsString("protocol.js")))
                 .andExpect(content().string(containsString("runtime.js")))
-                .andExpect(content().string(containsString("1.5.0")));
+                .andExpect(content().string(containsString("1.7.0")));
 
         mockMvc.perform(get("/browser-tools/demo.html"))
                 .andExpect(status().isNotFound())

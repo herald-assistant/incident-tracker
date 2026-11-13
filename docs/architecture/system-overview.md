@@ -204,9 +204,9 @@ korzystajac z tego samego matcheru co UX Inspector; zrodlem `screenId` pozostaje
 katalog kodu, a job startuje tylko jawnie i ponownie czyta branch.
 UX Inspector jest osobnym pionem dla jednego pytania o element wskazany przez
 TDW Browser Tools. Statyczne zasoby sa dostepne tylko pod `/browser-tools/**`;
-selection runtime tworzy capture v3 w jawnym profilu `ELEMENT_CONTEXT` albo
+selection runtime tworzy capture v1 w jawnym profilu `ELEMENT_CONTEXT` albo
 `FORM_DIAGNOSTICS` i jednym POST zapisuje element, opcjonalne widoczne pola
-oraz store w pamieci backendu. Backend nadaje ID; formularz na
+oraz niezalezne store i historie do 50 wywolan HTTP w pamieci backendu. Backend nadaje ID; formularz na
 `/ux-inspector?captureId=...` pobiera snapshot przez GET i pokazuje zwijany
 podglad. Profil formularza wyklucza dane wrazliwe. Zaufany
 formularz wymaga
@@ -225,7 +225,8 @@ pod branchowa policy. Model musi doczytac materialny project skill i sprawdzic
 mechanizmy przekrojowe przed wnioskiem. Repository scope nie korzysta z
 Operational Context `pathPrefixes` i nie ma feature-specific limitu liczby
 wywolan; inny projekt lub branch jest odrzucany. Sesja ma
-`skillsEnabled=false`; zdalne skille nie sa instalowane w TDW. Initial
+`skillsEnabled=false` bez store'a; store wlacza skill grounding, sama historia
+HTTP nie zmienia tego ustawienia. Zdalne skille nie sa instalowane w TDW. Initial
 report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest
 wynikiem ani fallbackiem. Run jest zapisywany jako `QUEUED` przed dispatch,
 trafia do Analysis History i uzywa scislego

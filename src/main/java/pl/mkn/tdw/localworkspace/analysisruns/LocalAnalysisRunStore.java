@@ -11,6 +11,10 @@ public interface LocalAnalysisRunStore {
 
     void save(LocalAnalysisRunIndexEntry indexEntry, LocalAnalysisRunRecord record);
 
+    default void updateHttpHistorySnapshot(String analysisId, LocalAnalysisRunHttpHistorySnapshot snapshot) {
+        throw new UnsupportedOperationException("HTTP history persistence is unavailable");
+    }
+
     default void updateStoreSnapshot(String analysisId, LocalAnalysisRunStoreSnapshot snapshot) {
         throw new UnsupportedOperationException("Store snapshots are unavailable for this local run store.");
     }

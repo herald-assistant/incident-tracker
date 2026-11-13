@@ -15,24 +15,25 @@ import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.capture;
 
 class UxInspectorCaptureContractTest {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final UxInspectorCaptureJson json = UxInspectorCaptureTestSupport.json(objectMapper);
     private final UxInspectorCaptureNormalizer normalizer = new UxInspectorCaptureNormalizer();
 
     @Test
     void shouldRejectUnknownNestedFieldsAndUnsupportedVersionWhileAcceptingLargeCapture() throws Exception {
         var node = objectMapper.valueToTree(capture());
         node.withObject("target").put("value", "FORM_VALUE_MUST_NOT_ENTER_CAPTURE");
-        assertThrows(Exception.class, () -> objectMapper.treeToValue(node, UxInspectorCapture.class));
+        assertThrows(Exception.class, () -> json.read(node, UxInspectorCapture.class));
 
         ObjectNode unsupported = objectMapper.valueToTree(capture());
         unsupported.put("capturedAt", "2026-09-15T10:00:00Z");
         unsupported.put("version", 2);
-        var unsupportedCapture = objectMapper.treeToValue(unsupported, UxInspectorCapture.class);
+        var unsupportedCapture = json.read(unsupported, UxInspectorCapture.class);
         assertThrows(IllegalArgumentException.class, () -> normalizer.normalize(unsupportedCapture));
 
         ObjectNode oversized = objectMapper.valueToTree(capture());
         oversized.put("capturedAt", "2026-09-15T10:00:00Z");
         oversized.withObject("page").put("title", "x".repeat(200_000));
-        assertDoesNotThrow(() -> normalizer.normalize(objectMapper.treeToValue(oversized, UxInspectorCapture.class)));
+        assertDoesNotThrow(() -> normalizer.normalize(json.read(oversized, UxInspectorCapture.class)));
     }
 
     @Test
@@ -86,7 +87,7 @@ class UxInspectorCaptureContractTest {
         node.withObject("target").withObject("domFingerprint").withArray("selectorCandidates")
                 .removeAll().add("button[class~=\"crm-primary-action\"]");
 
-        var normalized = normalizer.normalize(objectMapper.treeToValue(node, UxInspectorCapture.class));
+        var normalized = normalizer.normalize(json.read(node, UxInspectorCapture.class));
 
         assertEquals(List.of("button[class~=\"crm-primary-action\"]"),
                 normalized.target().domFingerprint().selectorCandidates());
@@ -100,7 +101,7 @@ class UxInspectorCaptureContractTest {
                 .withArray("componentBoundaryTags").removeAll();
         for (var index = 1; index <= 30; index++) boundaries.add("crm-layer-" + index);
 
-        var normalized = normalizer.normalize(objectMapper.treeToValue(node, UxInspectorCapture.class));
+        var normalized = normalizer.normalize(json.read(node, UxInspectorCapture.class));
 
         assertEquals(30, normalized.target().domFingerprint().componentBoundaryTags().size());
         assertEquals("crm-layer-30", normalized.target().domFingerprint().componentBoundaryTags().get(29));
@@ -111,10 +112,10 @@ class UxInspectorCaptureContractTest {
         ObjectNode legacy = objectMapper.valueToTree(capture());
         legacy.put("capturedAt", "2026-09-15T10:00:00Z");
         legacy.putNull("formSnapshot");
-        assertThrows(Exception.class, () -> objectMapper.treeToValue(legacy, UxInspectorCapture.class));
+        assertThrows(Exception.class, () -> json.read(legacy, UxInspectorCapture.class));
         legacy.remove("formSnapshot");
-        legacy.put("version", 1);
-        var oldCapture = objectMapper.treeToValue(legacy, UxInspectorCapture.class);
+        legacy.put("version", 3);
+        var oldCapture = json.read(legacy, UxInspectorCapture.class);
         assertThrows(IllegalArgumentException.class, () -> normalizer.normalize(oldCapture));
     }
 

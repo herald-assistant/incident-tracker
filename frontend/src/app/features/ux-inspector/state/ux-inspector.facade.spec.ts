@@ -267,7 +267,7 @@ function viewCatalog(views: ReturnType<typeof view>[]) {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 3, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
+    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
     target: { tag: 'button', role: 'button', accessibleName: 'Zapisz kontakt', text: 'Zapisz kontakt',

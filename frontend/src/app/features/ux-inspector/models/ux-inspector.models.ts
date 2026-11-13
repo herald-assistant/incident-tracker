@@ -10,7 +10,7 @@ import {
 } from '../../../core/models/analysis.models';
 
 export const UX_INSPECTOR_CAPTURE_SCHEMA = 'tdw.ux-inspector-capture' as const;
-export const UX_INSPECTOR_CAPTURE_VERSION = 3 as const;
+export const UX_INSPECTOR_CAPTURE_VERSION = 1 as const;
 export const UX_INSPECTOR_CLIENT_NAME = 'TDW UX Inspector' as const;
 export const UX_INSPECTOR_FEATURE_ID = 'ux-inspector' as const;
 export type UxInspectorCaptureProfile = 'ELEMENT_CONTEXT' | 'FORM_DIAGNOSTICS';
@@ -111,8 +111,32 @@ export interface UxInspectorVisibleFormField {
   nativeValidationMessage: string;
 }
 
+export interface UxInspectorHttpBody {
+  format: 'json' | 'text' | 'unavailable';
+  // JSON can contain native File/Blob/FormData representations with preserved content and metadata.
+  value: unknown;
+  reason: 'SOURCE_OMITTED' | 'BODY_SERIALIZATION_FAILED' | null;
+}
+export interface UxInspectorHttpEntry {
+  id: number;
+  startedAt: string;
+  durationMs: number | null;
+  state: 'pending' | 'success' | 'error' | 'cancelled';
+  request: { method: string; url: string; headers: Record<string, string[]>; body: UxInspectorHttpBody };
+  response: { status: number; headers: Record<string, string[]>; body: UxInspectorHttpBody } | null;
+}
+export interface UxInspectorHttpHistory {
+  status: 'AVAILABLE' | 'UNAVAILABLE';
+  entries: UxInspectorHttpEntry[];
+  capturedAt: string | null;
+  source: string;
+  redactions: number;
+  reason: string | null;
+}
+
 export interface UxInspectorCaptureSnapshot {
   captureId: string;
+  httpHistory: UxInspectorHttpHistory;
   capture: UxInspectorCapture;
   formFields: { status: 'NOT_REQUESTED' | 'AVAILABLE' | 'UNAVAILABLE'; fields: UxInspectorVisibleFormField[]; omittedSensitiveFields: number; reason: string | null };
   store: { status: 'AVAILABLE' | 'UNAVAILABLE'; state: Record<string, unknown> | unknown[] | null; redactions: number; reason: string | null };

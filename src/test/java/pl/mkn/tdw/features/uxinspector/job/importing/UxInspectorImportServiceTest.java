@@ -31,8 +31,27 @@ class UxInspectorImportServiceTest {
             .findAndAddModules().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     private final LocalWorkspaceProperties properties = new LocalWorkspaceProperties();
     private final UxInspectorLocalRunPersistence persistence = mock(UxInspectorLocalRunPersistence.class);
-    private final UxInspectorImportService service = new UxInspectorImportService(objectMapper, properties, persistence,
+    private final UxInspectorImportService service = new UxInspectorImportService(pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureTestSupport.envelopes(objectMapper), properties, persistence,
             new UxInspectorCaptureNormalizer());
+
+    @Test
+    void usesStrictCaptureBindingInsideExportEvenWhenApplicationMapperIsLenient() {
+        objectMapper.disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        ObjectNode valid = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
+        var unknown = valid.deepCopy();
+        unknown.withObject("/payload/job/request/capture/target").put("extra", "CRM");
+        assertInvalid(unknown);
+        var coercion = valid.deepCopy();
+        coercion.withObject("/payload/job/request/capture/target/state").put("checked", "false");
+        assertInvalid(coercion);
+        var missingNullable = valid.deepCopy();
+        missingNullable.withObject("/payload/job/request/capture/target/state").remove("checked");
+        assertInvalid(missingNullable);
+        var requiredNull = valid.deepCopy();
+        requiredNull.withObject("/payload/job/request/capture/page").putNull("origin");
+        assertInvalid(requiredNull);
+        assertThat(service.importReadOnly(valid).request().capture()).isEqualTo(capture());
+    }
 
     @Test
     void shouldImportOnlyStrictUxInspectorExportAsReadOnlyHistoricalResult() {

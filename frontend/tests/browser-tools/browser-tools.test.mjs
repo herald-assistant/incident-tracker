@@ -39,7 +39,7 @@ function config(tdwOrigin = 'https://tdw.example.com') {
 function captureFixture(overrides = {}) {
   return {
     schema: 'tdw.ux-inspector-capture',
-    version: 3,
+    version: 1,
     capturedAt: '2026-09-15T10:00:00.000Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: {
@@ -160,7 +160,7 @@ test('element context capture redacts identifiers and never reads form values or
   const serialized = JSON.stringify(capture);
 
   assert.equal(capture.schema, 'tdw.ux-inspector-capture');
-  assert.equal(capture.version, 3);
+  assert.equal(capture.version, 1);
   assert.equal(capture.captureProfile, 'ELEMENT_CONTEXT');
   assert.equal(capture.page.path, '/customers/:value');
   assert.deepEqual(Array.from(capture.page.queryParameterNames), ['view']);
@@ -338,7 +338,7 @@ test('remote loader derives TDW origin and loads protocol before runtime', async
     `<!doctype html><html><head></head><body>
       <script
         id="tdw-loader"
-        src="https://tdw.example.com/browser-tools/loader.js?v=1.5.0"
+        src="https://tdw.example.com/browser-tools/loader.js?v=1.7.0"
         data-tdw-feature-id="browser-tools"
       ></script>
     </body></html>`,
@@ -406,7 +406,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.5.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.7.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -513,7 +513,7 @@ test('new runtime replaces an older Browser Tools instance on the same page', ()
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]')
       ?.getAttribute('data-tdw-browser-tool-version'),
-    '1.5.0'
+    '1.7.0'
   );
   dom.window.close();
 });
@@ -543,6 +543,123 @@ function selectUxElement(window, profile = 'ELEMENT_CONTEXT') {
   return { host, shield };
 }
 
+function httpEntry(id = 1, body = { customer: { editable: false } }) {
+  return { id, startedAt: '2026-11-11T10:00:00.000Z', durationMs: 0, state: 'success',
+    request: { method: 'GET', url: 'https://crm.example.com/api/contacts?view=active&sort=name',
+      headers: { Accept: ['application/json', 'text/plain'] }, body: null },
+    response: { status: 200, headers: {}, body } };
+}
+
+test('HTTP normalization keeps 0/50 complete entries, full URLs, JSON text precision and safe unknown bodies', async () => {
+  const dom = createDom('<html></html>', 'https://crm.example.com/');
+  const prepare = protocolFor(dom).prepareHttpHistory;
+  assert.equal((await prepare([])).entries.length, 0);
+  const url = 'https://crm.example.com/api/contacts?query=' + 'contact'.repeat(2000);
+  const entries = Array.from({ length: 50 }, (_, i) => httpEntry(i + 1, { notes: '🙂CRM'.repeat(25000) }));
+  entries[0].request.url = url;
+  entries[1].response.body = '{"id":900719925474099312345,"token":"CRM_SECRET","memo":"password=CRM_PLAIN","id":2}';
+  entries[2].response.body = dom.window.eval('new Map([["customer", "CRM"]])');
+  entries[3].response.body = { toJSON() { throw new Error('synthetic'); } };
+  entries[4].response = null; entries[4].durationMs = null; entries[4].state = 'pending';
+  entries[5].state = 'cancelled'; entries[5].response = null;
+  entries[6].state = 'error'; entries[6].response.status = 0;
+  const snapshot = await prepare(entries);
+  assert.equal(snapshot.entries.length, 50);
+  assert.equal(snapshot.entries[0].request.url, url);
+  assert.equal(snapshot.entries[0].response.body.value.notes.length, 125000);
+  assert.match(snapshot.entries[1].response.body.value, /900719925474099312345/);
+  assert.doesNotMatch(snapshot.entries[1].response.body.value, /CRM_SECRET|CRM_PLAIN/);
+  assert.doesNotThrow(() => JSON.parse(snapshot.entries[1].response.body.value));
+  assert.equal((snapshot.entries[1].response.body.value.match(/"id":/g) || []).length, 2);
+  assert.equal(snapshot.entries[2].response.body.value.customer, 'CRM');
+  assert.equal(snapshot.entries[3].response.body.format, 'unavailable');
+  assert.equal(snapshot.entries[4].response, null);
+  assert.equal(snapshot.entries[6].response.status, 0);
+  entries[0].response.body.notes = 'changed';
+  assert.equal(snapshot.entries[0].response.body.value.notes.length, 125000);
+  await assert.rejects(prepare([...entries, httpEntry(51)]), /INVALID_HISTORY/);
+  await assert.rejects(prepare([httpEntry(), httpEntry()]), /INVALID_HISTORY/);
+  await assert.rejects(prepare([{ ...httpEntry(), request: {} }, null]), /INVALID_HISTORY/);
+  dom.window.close();
+});
+
+test('HTTP redaction preserves ordinary URL query values and redacts both bodies and multi-value headers', async () => {
+  const dom = createDom('<html></html>', 'https://crm.example.com/');
+  const entry = httpEntry(1, { password: 'CRM_PASSWORD', notes: 'Bearer CRM_BEARER' });
+  entry.request.url = 'https://user:CRM_PASS@crm.example.com/api?query=all%20contacts&token=CRM_TOKEN&sort=name';
+  entry.request.headers.Authorization = ['Bearer CRM_AUTH'];
+  entry.request.body = { token: 'CRM_REQUEST' };
+  const result = await protocolFor(dom).prepareHttpHistory([entry]);
+  assert.doesNotMatch(JSON.stringify(result), /CRM_PASS|CRM_PASSWORD|CRM_BEARER|CRM_AUTH|CRM_REQUEST|CRM_TOKEN/);
+  assert.match(result.entries[0].request.url, /query=all%20contacts&token=\[REDACTED\]&sort=name$/);
+  assert.equal(result.entries[0].request.headers.Accept.length, 2);
+  dom.window.close();
+});
+
+for (const profile of ['ELEMENT_CONTEXT', 'FORM_DIAGNOSTICS']) {
+  test(`HTTP capture is independent, frozen and retried once without rereading getters (${profile})`, async () => {
+    const dom = createDom('<html><body><button data-testid="crm-save">Save</button></body></html>', 'https://crm.example.com/');
+    const { window } = dom;
+    const entries = [httpEntry()];
+    let historyReads = 0, storeReads = 0;
+    window.getHttpHistory = () => { historyReads++; return entries; };
+    window.getStoreState = () => { storeReads++; throw new Error('CRM store failure'); };
+    window.open = () => null;
+    const posted = [];
+    window.fetch = async (_url, options) => {
+      posted.push(options.body);
+      if (posted.length === 1) throw new Error('CRM transport failure');
+      return { ok: true, json: async () => ({ captureId: '11111111-2222-4333-8444-555555555555' }) };
+    };
+    const { host, shield } = selectUxElement(window, profile);
+    await new Promise(resolve => window.setTimeout(resolve, 25));
+    shield.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    entries[0].response.body.customer.editable = true;
+    await new Promise(resolve => window.setTimeout(resolve, 30));
+    host.shadowRoot.querySelector('.tdw-status button').click();
+    await new Promise(resolve => window.setTimeout(resolve, 30));
+    assert.equal(historyReads, 1); assert.equal(storeReads, 1);
+    assert.equal(posted.length, 2); assert.equal(posted[0], posted[1]);
+    const payload = JSON.parse(posted[0]);
+    assert.equal(payload.httpHistory.entries[0].response.body.value.customer.editable, false);
+    assert.equal(payload.store.status, 'UNAVAILABLE');
+    assert.equal(payload.capture.captureProfile, profile);
+    dom.window.close();
+  });
+}
+
+test('HTTP Promise timeout, failure and malformed history do not block a valid store or trigger later POSTs', async () => {
+  for (const mode of ['missing', 'throw', 'invalid', 'promise', 'timeout']) {
+    const dom = createDom('<html><body><button data-testid="crm-save">Save</button></body></html>', 'https://crm.example.com/');
+    const { window } = dom;
+    let resolveLate;
+    if (mode !== 'missing') window.getHttpHistory = () => {
+      if (mode === 'throw') throw new Error('CRM getter failure');
+      if (mode === 'invalid') return {};
+      if (mode === 'promise') return Promise.resolve([httpEntry()]);
+      return new Promise(resolve => { resolveLate = resolve; });
+    };
+    window.getStoreState = () => ({ customer: 'CRM' });
+    window.open = () => null;
+    const posted = [];
+    window.fetch = async (_url, options) => { posted.push(JSON.parse(options.body)); return { ok: true, json: async () => ({ captureId: '11111111-2222-4333-8444-555555555555' }) }; };
+    const { shield } = selectUxElement(window);
+    await new Promise(resolve => window.setTimeout(resolve, 25));
+    shield.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    await new Promise(resolve => window.setTimeout(resolve, 110));
+    assert.equal(posted.length, 1, mode);
+    assert.equal(posted[0].store.status, 'AVAILABLE');
+    assert.equal(posted[0].httpHistory.status, mode === 'promise' ? 'AVAILABLE' : 'UNAVAILABLE');
+    if (resolveLate) {
+      resolveLate([httpEntry()]);
+      await new Promise(resolve => window.setTimeout(resolve, 15));
+      assert.equal(posted.length, 1);
+      assert.equal(posted[0].httpHistory.reason, 'TIMEOUT');
+    }
+    dom.window.close();
+  }
+});
+
 test('UX Inspector posts one snapshot from examined page and navigates with server capture ID', async () => {
   const dom = createDom(
     '<!doctype html><html><body><input name="contactName" value="Ada"><button data-testid="crm-save">Save CRM contact</button></body></html>',
@@ -568,7 +685,7 @@ test('UX Inspector posts one snapshot from examined page and navigates with serv
   assert.equal(calls[0].options.mode, 'cors');
   assert.equal(calls[0].options.credentials, 'omit');
   const payload = JSON.parse(calls[0].options.body);
-  assert.equal(payload.capture.version, 3);
+  assert.equal(payload.capture.version, 1);
   assert.equal('captureId' in payload.capture, false);
   assert.equal(payload.capture.page.origin, 'https://crm.example.com');
   assert.equal(payload.formFields.status, 'AVAILABLE');

@@ -17,6 +17,10 @@ public class UxInspectorLocalRunPersister implements UxInspectorLocalRunPersiste
     private final LocalAnalysisRunStore store;
 
     @Override
+    public void persistHttpHistorySnapshot(String runId, LocalAnalysisRunHttpHistorySnapshot snapshot) {
+        store.updateHttpHistorySnapshot(runId, snapshot);
+    }
+
     public void persistStoreSnapshot(String runId, LocalAnalysisRunStoreSnapshot snapshot) {
         store.updateStoreSnapshot(runId, snapshot);
     }

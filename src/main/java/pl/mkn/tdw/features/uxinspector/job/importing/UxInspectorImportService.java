@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.uxinspector.job.importing;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
@@ -9,6 +8,7 @@ import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobException;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
+import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelopeReader;
 import pl.mkn.tdw.features.uxinspector.job.localworkspace.UxInspectorLocalRunPersistence;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
@@ -22,7 +22,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UxInspectorImportService {
-    private final ObjectMapper objectMapper;
+    private final UxInspectorExportEnvelopeReader envelopeReader;
     private final LocalWorkspaceProperties properties;
     private final UxInspectorLocalRunPersistence persistence;
     private final UxInspectorCaptureNormalizer captureNormalizer;
@@ -30,7 +30,7 @@ public class UxInspectorImportService {
     public UxInspectorJobStateSnapshot importReadOnly(JsonNode document) {
         validateDocument(document);
         UxInspectorExportEnvelope envelope;
-        try { envelope = objectMapper.treeToValue(document, UxInspectorExportEnvelope.class); }
+        try { envelope = envelopeReader.read(document); }
         catch (Exception exception) { throw invalid("UX Inspector export has an invalid structure."); }
         validateEnvelope(envelope);
         if (!properties.isEnabled()) throw invalid("Local workspace is required to import UX Inspector results.");
@@ -66,7 +66,7 @@ public class UxInspectorImportService {
                 || job.report().sections().size() != 1 || !"answer".equals(job.report().sections().get(0).id())
                 || job.request().capture() == null
                 || job.request().capture().version() != UxInspectorCapture.VERSION) {
-            throw invalid("Only a completed UX Inspector export v3 result with capture v3 can be imported.");
+            throw invalid("Only a completed UX Inspector export v1 result with capture v1 can be imported.");
         }
         try {
             if (!captureNormalizer.normalize(job.request().capture()).equals(job.request().capture())) {

@@ -67,6 +67,11 @@ public class UxInspectorJobService {
         authRefs.put(id, auth);
         try {
             persistRequired(state);
+            try {
+                localRunPersistence.persistHttpHistorySnapshot(id, captureSnapshot.httpHistory());
+            } catch (RuntimeException exception) {
+                log.warn("UX Inspector HTTP history unavailable jobId={}", id, exception);
+            }
             if (claimedStore != null) {
                 try {
                     localRunPersistence.persistStoreSnapshot(id, claimedStore);
@@ -103,7 +108,8 @@ public class UxInspectorJobService {
             persist(state);
             state.preparationStarted();
             persist(state);
-            var preparation = promptPreparationService.prepare(request, context, id, captureSnapshots.findRunStore(id).orElse(null), formFields);
+            var preparation = promptPreparationService.prepare(request, context, id, captureSnapshots.findRunStore(id).orElse(null), formFields,
+                    captureSnapshots.findRunHttpHistory(id).orElse(null));
             state.preparationCompleted(preparation.prompt(), preparation.artifactContents().size());
             persist(state);
             state.analysisStarted();

@@ -47,17 +47,17 @@ class UxInspectorPromptAndSkillsTest {
         fields.addObject().put("label", "CRM contact").put("value", "CRM value");
         var snapshot = new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", fields, 0, null);
 
-        assertThat(service.prepare(request, targetContext(), "crm-run", null, snapshot).prompt())
+        assertThat(service.prepare(request, targetContext(), "crm-run", null, snapshot, null).prompt())
                 .contains("kompletny zestaw", "widocznych na stronie w chwili capture", "CRM value");
         assertThat(service.prepare(request, targetContext(), "crm-run", null,
-                new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", new ObjectMapper().createArrayNode(), 0, null))
+                new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", new ObjectMapper().createArrayNode(), 0, null), null)
                 .prompt()).contains("[] oznacza brak widocznych pol");
-        assertThat(service.prepare(request, targetContext(), "crm-run", null, null).prompt())
+        assertThat(service.prepare(request, targetContext(), "crm-run", null, null, null).prompt())
                 .contains("UNAVAILABLE: odczyt lub walidacja pol nie powiodly sie");
         var oversized = new ObjectMapper().createArrayNode();
         oversized.addObject().put("value", "x".repeat(1_000_001));
         assertThat(service.prepare(request, targetContext(), "crm-run", null,
-                new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", oversized, 0, null)).prompt())
+                new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", oversized, 0, null), null).prompt())
                 .contains("UNAVAILABLE: caly wynik pol przekracza budzet initial promptu")
                 .doesNotContain("x".repeat(100));
     }

@@ -1237,9 +1237,10 @@ UX Inspector odpowiada na jedno pytanie o jeden wskazany element, a UI
 Explorer analizuje widok. Oba uzywaja neutralnego katalogu frontendu, ale
 maja rozdzielne requesty, prompty, joby i kontrakty wyniku.
 
-Browser Tools dla UX tworzy capture v3 bez klientowego ID. W chwili wyboru
+Browser Tools dla UX tworzy capture v1 bez klientowego ID. W chwili wyboru
 elementu zbiera opcjonalnie widoczne pola formularza i stan
-globalThis.getStoreState(), po czym wysyla wszystko w jednym POST
+globalThis.getStoreState() oraz niezalezny snapshot globalThis.getHttpHistory()
+(do 50 wpisow), po czym wysyla wszystko w jednym POST
 /api/ux-inspector/captures z badanej strony. Backend nadaje ID, waliduje,
 redaguje i przechowuje pending snapshot tylko w pamieci. Odpowiedz prowadzi
 do /ux-inspector?captureId=..., gdzie formularz pobiera snapshot przez GET.
@@ -1251,10 +1252,18 @@ POST capture ma lokalny CORS konfigurowany przez
 ux-inspector.capture.allowed-origins, domyslnie *. Browser Tools nie
 przesyla credentials. Pending snapshot nie ma aplikacyjnego limitu
 rozmiaru, liczby wpisow ani TTL; znika przy restarcie backendu. Brak
-store lub pol nie blokuje analizy. Start joba przyjmuje samo captureId
+store, historii HTTP lub pol nie blokuje analizy. Typowane DTO, lokalny scisly
+Jackson i Bean Validation weryfikuja capture oraz kazdy opcjonalny blok osobno.
+Blad bloku opcjonalnego daje jego UNAVAILABLE; blad capture odrzuca zapis.
+Redakcja pozostaje osobnym krokiem. Import, eksport zapisanego runu i continuation
+stosuja ten sam scisly odczyt capture, bez zmiany globalnego ObjectMappera.
+Start joba przyjmuje samo captureId
 oraz zaufane wybory formularza i pytanie. QUEUED jest utrwalany przed
-dispatch; po starcie store pozostaje w run.json dla neutralnych tools
-i follow-up po restarcie.
+dispatch; po starcie store i historia HTTP pozostaja w prywatnych polach
+run.json dla neutralnych tools i follow-up po restarcie. Indeks wszystkich
+wywolan z pelnymi URL-ami jest w initial prompcie; body i naglowki sa
+doczytywane przez JSON Pointer oraz fragmenty do 8000 bajtow wyniku toola.
+HTTP tools sa przypiete do oryginalnego runu bez model-facing runId.
 
 System, branch i katalogowy view pochodza z formularza i katalogu kodu.
 Backend ponownie normalizuje capture i prowadzi target-first discovery na

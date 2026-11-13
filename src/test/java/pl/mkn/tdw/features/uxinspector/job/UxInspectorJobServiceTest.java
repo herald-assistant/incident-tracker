@@ -129,6 +129,28 @@ class UxInspectorJobServiceTest {
         assertThat(tasks).hasSize(1);
         tasks.get(0).run();
         assertThat(service.getJob(accepted.jobId()).status()).isEqualTo(UxInspectorJobStatus.COMPLETED);
+        verify(persistence).persistHttpHistorySnapshot(eq(accepted.jobId()), any());
+    }
+
+    @Test
+    void shouldPersistHttpBeforeDispatchAndKeepStoreWhenHttpPersistenceFails() {
+        var captures = captureService();
+        var persistence = mock(UxInspectorLocalRunPersistence.class);
+        var storeSnapshot = new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot(
+                new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode(),
+                java.time.Instant.parse("2026-11-11T10:00:00Z"), "https://crm.example.com", 0);
+        when(captures.runStoreSnapshot(any())).thenReturn(storeSnapshot);
+        doThrow(new IllegalStateException("CRM HTTP snapshot write failure"))
+                .when(persistence).persistHttpHistorySnapshot(anyString(), any());
+        var tasks = new ArrayList<Runnable>();
+        var service = service(tasks::add, persistence, captures);
+        var accepted = service.startJob(request());
+        var order = inOrder(persistence);
+        order.verify(persistence).persistRunSnapshot(any(), any(), isNull());
+        order.verify(persistence).persistHttpHistorySnapshot(eq(accepted.jobId()), any());
+        order.verify(persistence).persistStoreSnapshot(accepted.jobId(), storeSnapshot);
+        tasks.get(0).run();
+        assertThat(service.getJob(accepted.jobId()).status()).isEqualTo(UxInspectorJobStatus.COMPLETED);
     }
 
     private UxInspectorJobService service(TaskExecutor executor, UxInspectorLocalRunPersistence persistence) {
@@ -145,7 +167,8 @@ class UxInspectorJobServiceTest {
         when(evidence.map(any())).thenReturn(List.of());
         var preparation = mock(UxInspectorPromptPreparationService.class);
         when(preparation.prepare(any(), any(), anyString(), nullable(pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot.class),
-                nullable(UxInspectorCaptureSnapshot.FormFields.class))).thenReturn(new UxInspectorPromptPreparation(
+                nullable(UxInspectorCaptureSnapshot.FormFields.class),
+                nullable(pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunHttpHistorySnapshot.class))).thenReturn(new UxInspectorPromptPreparation(
                 "Focused CRM prompt", java.util.Map.of("target", "CRM target")));
         var provider = mock(UxInspectorAnalysisProvider.class);
         when(provider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
@@ -163,7 +186,8 @@ class UxInspectorJobServiceTest {
         when(service.get(capture().captureId())).thenReturn(new UxInspectorCaptureSnapshot(
                 capture().captureId(), capture(),
                 new UxInspectorCaptureSnapshot.FormFields("NOT_REQUESTED", new com.fasterxml.jackson.databind.ObjectMapper().createArrayNode(), 0, null),
-                new UxInspectorCaptureSnapshot.Store("UNAVAILABLE", null, 0, null)));
+                new UxInspectorCaptureSnapshot.Store("UNAVAILABLE", null, 0, null),
+                pl.mkn.tdw.features.uxinspector.capture.UxInspectorHttpHistoryNormalizer.unavailable("https://crm.example.com", "GETTER_MISSING")));
         when(service.findRunStore(anyString())).thenReturn(java.util.Optional.empty());
         return service;
     }

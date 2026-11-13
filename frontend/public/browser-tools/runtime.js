@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.5.0';
+  const RUNTIME_VERSION = '1.7.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -356,6 +356,7 @@
     this.bridgeWindow = null;
     this.capture = null;
     this.storeState = null;
+    this.httpHistory = { status: 'UNAVAILABLE', reason: 'GETTER_MISSING' };
     this.formFields = null;
     this.captureProfile = protocol.CAPTURE_PROFILES.includes(options?.captureProfile)
       ? options.captureProfile
@@ -518,7 +519,7 @@
       this.state = 'capturing';
       try { this.bridgeWindow = global.open('about:blank', 'tdw-ux-inspector-pending-' + protocol.createNonce()); }
       catch { this.bridgeWindow = null; }
-      this.captureStore();
+      this.captureRuntimeSnapshots();
     } catch (error) {
       console.error('[TDW UX Inspector] Capture failed.', error);
       this.hideSelection();
@@ -642,7 +643,8 @@
         : { status: this.captureProfile === 'FORM_DIAGNOSTICS' ? 'UNAVAILABLE' : 'NOT_REQUESTED' },
       store: this.storeState !== null
         ? { status: 'AVAILABLE', state: this.storeState }
-        : { status: 'UNAVAILABLE' }
+        : { status: 'UNAVAILABLE' },
+      httpHistory: this.httpHistory
     };
     try {
       const response = await global.fetch(new URL('/api/ux-inspector/captures', this.config.tdwOrigin), {
@@ -681,36 +683,36 @@
     this.statusText.textContent = message;
   };
 
-  UxInspector.prototype.captureStore = function captureStore() {
-    let getter;
-    try { getter = global.getStoreState; }
-    catch { void this.sendCapture(); return; }
-    if (typeof getter !== 'function') {
+  UxInspector.prototype.captureRuntimeSnapshots = function captureRuntimeSnapshots() {
+    const optional = (name, transform) => {
+      let timer;
+      const unavailable = (reason) => ({ status: 'UNAVAILABLE', reason });
+      let work;
+      try {
+        const getter = global[name];
+        if (typeof getter !== 'function') return Promise.resolve(unavailable('GETTER_MISSING'));
+        const result = getter.call(global);
+        work = result && typeof result.then === 'function' ? Promise.resolve(result).then(transform) : transform(result);
+      } catch { return Promise.resolve(unavailable('GETTER_FAILED')); }
+      return Promise.race([
+        Promise.resolve(work),
+        new Promise((resolve) => { timer = global.setTimeout(() => resolve(unavailable('TIMEOUT')), testMode ? 80 : 3000); })
+      ]).catch(() => unavailable('INVALID_HISTORY')).finally(() => global.clearTimeout(timer));
+    };
+    this.setStatus('Pobieram stan strony i historię HTTP…', 'working');
+    const store = optional('getStoreState', (state) => {
+      if (!state || typeof state !== 'object') throw new Error('Invalid store');
+      const json = JSON.stringify(state, (key, value) =>
+        /(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|api.?key|one[-_ ]?time|otp|cvv|cvc)/i.test(key)
+          ? '[redacted]' : value);
+      return { status: 'AVAILABLE', state: JSON.parse(json) };
+    });
+    const http = optional('getHttpHistory', protocol.prepareHttpHistory);
+    Promise.all([store, http]).then(([store, history]) => {
+      if (this.disposed) return;
+      this.storeState = store.status === 'AVAILABLE' ? store.state : null;
+      this.httpHistory = history;
       void this.sendCapture();
-      return;
-    }
-    this.setStatus('Pobieram stan strony…', 'working');
-    let result;
-    try { result = getter.call(global); }
-    catch { void this.sendCapture(); return; }
-    let timer;
-    Promise.race([
-      Promise.resolve(result),
-      new Promise((_, reject) => {
-        timer = global.setTimeout(() => reject(new Error('store timeout')), testMode ? 80 : 3000);
-      })
-    ]).then((state) => {
-      if (!this.disposed && state && typeof state === 'object') {
-        const json = JSON.stringify(state, (key, value) =>
-          /(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|api.?key|one[-_ ]?time|otp|cvv|cvc)/i.test(key)
-            ? '[redacted]' : value);
-        if (json && (json.startsWith('{') || json.startsWith('['))) this.storeState = JSON.parse(json);
-      }
-    }).catch(() => {
-      this.storeState = null;
-    }).finally(() => {
-      global.clearTimeout(timer);
-      if (!this.disposed) void this.sendCapture();
     });
   };
 

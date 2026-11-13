@@ -42,7 +42,8 @@ class UxInspectorCaptureSnapshotControllerTest {
     void keepsGetSameOriginAndDisablesCaching() throws Exception {
         when(snapshots.get("cap-crm-1")).thenReturn(new UxInspectorCaptureSnapshot("cap-crm-1", null,
                 new UxInspectorCaptureSnapshot.FormFields("NOT_REQUESTED", new com.fasterxml.jackson.databind.ObjectMapper().createArrayNode(), 0, null),
-                new UxInspectorCaptureSnapshot.Store("UNAVAILABLE", null, 0, null)));
+                new UxInspectorCaptureSnapshot.Store("UNAVAILABLE", null, 0, null),
+                pl.mkn.tdw.features.uxinspector.capture.UxInspectorHttpHistoryNormalizer.unavailable("https://crm.example.com", "GETTER_MISSING")));
         mvc.perform(get("/api/ux-inspector/captures/cap-crm-1").header("Origin", "https://crm.example.com"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "no-store"))

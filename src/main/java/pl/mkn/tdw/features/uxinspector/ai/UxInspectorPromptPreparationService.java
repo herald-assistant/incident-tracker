@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureSnapshot;
 import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunHttpHistorySnapshot;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot;
 
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ public class UxInspectorPromptPreparationService {
     public static final String COMPONENT_SOURCE_PACK_ARTIFACT = "ux-inspector/component-source-pack.md";
     public static final String REPOSITORY_TREE_ARTIFACT = "ux-inspector/repository-tree.md";
     public static final String REPOSITORY_GUIDANCE_ARTIFACT = "ux-inspector/repository-guidance.json";
+    public static final String HTTP_HISTORY_ARTIFACT = "ux-inspector/http-history-index.md";
     public static final String REPORT_ARTIFACT = "ux-inspector/report-contract.md";
     private final ObjectMapper objectMapper;
     private final UxInspectorRepositoryTreeArtifactService repositoryTreeArtifactService;
@@ -29,22 +31,23 @@ public class UxInspectorPromptPreparationService {
     private final UxInspectorComponentSourcePackArtifactService componentSourcePackArtifactService;
 
     public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context) {
-        return prepare(request, context, null, null, null);
+        return prepare(request, context, null, null, null, null);
     }
 
     public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context,
             LocalAnalysisRunStoreSnapshot storeSnapshot) {
-        return prepare(request, context, null, storeSnapshot, null);
+        return prepare(request, context, null, storeSnapshot, null, null);
     }
 
     public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context,
             String runId, LocalAnalysisRunStoreSnapshot storeSnapshot) {
-        return prepare(request, context, runId, storeSnapshot, null);
+        return prepare(request, context, runId, storeSnapshot, null, null);
     }
 
     public UxInspectorPromptPreparation prepare(UxInspectorAnalysisRequest request, UxInspectorTargetContext context,
             String runId, LocalAnalysisRunStoreSnapshot storeSnapshot,
-            UxInspectorCaptureSnapshot.FormFields formFields) {
+            UxInspectorCaptureSnapshot.FormFields formFields,
+            LocalAnalysisRunHttpHistorySnapshot httpHistory) {
         var repositoryTree = repositoryTreeArtifactService.prepare(context);
         var artifacts = new LinkedHashMap<String, String>();
         artifacts.put(CAPTURE_ARTIFACT, json(request.capture()));
@@ -313,6 +316,9 @@ public class UxInspectorPromptPreparationService {
                 REPOSITORY_GUIDANCE_ARTIFACT, COMPONENT_SOURCE_PACK_ARTIFACT, REPOSITORY_TREE_ARTIFACT,
                 REPORT_ARTIFACT, artifacts.get(REPORT_ARTIFACT)).trim()
                 + "\n\n" + UxInspectorDurableSystemInstructions.operationalContextGuidance();
+        var httpManifest = UxInspectorHttpHistoryPrompt.manifest(httpHistory);
+        artifacts.put(HTTP_HISTORY_ARTIFACT, httpManifest);
+        prompt += "\n\n## Historia HTTP w chwili capture\n" + httpManifest + "\n\n" + UxInspectorHttpHistoryPrompt.guidance();
         return new UxInspectorPromptPreparation(prompt, artifacts);
     }
 

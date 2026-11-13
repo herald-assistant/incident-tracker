@@ -64,7 +64,8 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 new UxInspectorCopilotToolSessionContextFactory(),
                 new UxInspectorTargetToolSetFactory(),
                 new CopilotRunAuthMapper(),
-                new UxInspectorReportFactory(), mock(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory.class)
+                new UxInspectorReportFactory(), mock(pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory.class),
+                mock(pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryToolSetFactory.class)
         );
 
         var assembly = assembler.assemble(
@@ -104,7 +105,8 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         when(toolFactory.createToolDefinitions(any(), any(), anyList())).thenReturn(storeTools);
         var withStore = new UxInspectorCopilotRunRequestAssembler(toolFactory,
                 new UxInspectorCopilotToolSessionContextFactory(), new UxInspectorTargetToolSetFactory(),
-                new CopilotRunAuthMapper(), new UxInspectorReportFactory(), storeFactory)
+                new CopilotRunAuthMapper(), new UxInspectorReportFactory(), storeFactory,
+                mock(pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryToolSetFactory.class))
                 .assemble("crm-ux-run-with-store", request, targetContext, preparation, AnalysisAiAuthRef.localToken(null));
         assertThat(withStore.runRequest().sessionConfigRequest().skillsEnabled()).isTrue();
         assertThat(withStore.runRequest().sessionConfigRequest().effectiveAvailableToolNames())

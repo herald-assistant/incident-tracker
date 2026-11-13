@@ -12,7 +12,7 @@ import { BrowserToolsSetupModalComponent } from '../../../../components/browser-
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { formatDataDate } from '../../../../core/utils/format-data-date';
-import { UxInspectorCapture, UxInspectorJobStatus, UxInspectorVisibleFormField } from '../../models/ux-inspector.models';
+import { UxInspectorCapture, UxInspectorJobStatus, UxInspectorVisibleFormField, UxInspectorHttpEntry } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
 import { UxInspectorResultComponent } from '../../components/ux-inspector-result/ux-inspector-result';
@@ -57,6 +57,8 @@ export class UxInspectorPageComponent implements OnInit {
     (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'));
   readonly browserToolsModalOpen = signal(false);
   readonly previewExpanded = signal(false);
+  readonly httpExpanded = signal(false);
+  readonly httpEntryExpanded = signal<ReadonlySet<number>>(new Set());
   readonly openMenu = signal<OpenMenu>(null);
   readonly systemSearch = signal('');
   readonly viewSearch = signal('');
@@ -149,6 +151,12 @@ export class UxInspectorPageComponent implements OnInit {
   }
 
   captureJson(): string { return JSON.stringify(this.facade.captureSnapshot()?.capture ?? null, null, 2); }
+  toggleHttpEntry(id: number, event: Event): void {
+    const expanded = new Set(this.httpEntryExpanded());
+    if ((event.target as HTMLDetailsElement).open) expanded.add(id); else expanded.delete(id);
+    this.httpEntryExpanded.set(expanded);
+  }
+  httpEntryJson(entry: UxInspectorHttpEntry): string { return JSON.stringify(entry, null, 2); }
   storeJson(): string { return JSON.stringify(this.facade.captureSnapshot()?.store.state ?? null, null, 2); }
 
   @HostListener('document:click')

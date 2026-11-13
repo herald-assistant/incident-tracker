@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CRM — demo historii HTTP</title>
+  <style>
+    body { font: 16px system-ui; color: #182c45; background: #f5f7fb; max-width: 760px; margin: 4rem auto; padding: 1rem; }
+    section { background: white; padding: 2rem; border-radius: 12px; margin: 1rem 0; }
+    label { display: block; margin: 1rem 0; } input { padding: .5rem; } button { padding: .6rem 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>CRM: edycja kontaktu</h1>
+  <p>Fikcyjne dane demonstracyjne. Strona udostępnia zamrożoną historię czterech wywołań; nie wysyła ich do API.</p>
+  <section>
+    <crm-contact-editor>
+      <label>Nazwa kontaktu <input name="contactName" value="Kontakt CRM"></label>
+      <button type="button" data-testid="crm-save" disabled>Zapisz kontakt</button>
+      <p>Kontakt jest tylko do odczytu. Historia zawiera odpowiedź z polem <code>/customer/permissions/editable</code> i body ponad 100 KB.</p>
+    </crm-contact-editor>
+  </section>
+  <section>
+    <label><input id="include-store" type="checkbox" checked> Udostępniaj także store</label>
+    <p>Uruchom zakładkę Browser Tools swojej instancji TDW i wskaż przycisk zapisu. Aby sprawdzić osobny origin, serwuj ten katalog na innym porcie HTTP.</p>
+    <p id="history-status" role="status">Historia: success / 200, error / 500, pending i cancelled.</p>
+  </section>
+  <script>
+    const at = new Date().toISOString();
+    const request = (method, url, body = null) => ({ method, url, headers: { Accept: ['application/json'] }, body });
+    const history = [
+      { id: 101, startedAt: at, durationMs: 42, state: 'success',
+        request: request('GET', '/api/contacts/crm-101?include=permissions&view=details'),
+        response: { status: 200, headers: { 'Content-Type': ['application/json'] },
+          body: { customer: { id: 'crm-101', permissions: { editable: false, reason: 'Kontakt archiwalny' } }, notes: 'CRM 🙂 '.repeat(18000) } } },
+      { id: 102, startedAt: at, durationMs: 120, state: 'error',
+        request: request('POST', '/api/contacts/crm-101', { name: 'Kontakt CRM', token: 'SYNTHETIC_CRM_SECRET' }),
+        response: { status: 500, headers: {}, body: '{"error":{"code":"CRM_SAVE_FAILED","retryable":false}}' } },
+      { id: 103, startedAt: at, durationMs: null, state: 'pending', request: request('GET', '/api/contact-options'), response: null },
+      { id: 104, startedAt: at, durationMs: 3, state: 'cancelled', request: request('GET', '/api/contacts?query=archived&sort=name'), response: null }
+    ];
+    globalThis.getHttpHistory = () => history;
+    const exposeStore = () => {
+      if (document.querySelector('#include-store').checked) globalThis.getStoreState = () => ({ customer: { id: 'crm-101', editable: false } });
+      else delete globalThis.getStoreState;
+    };
+    document.querySelector('#include-store').addEventListener('change', exposeStore);
+    exposeStore();
+  </script>
+</body>
+</html>

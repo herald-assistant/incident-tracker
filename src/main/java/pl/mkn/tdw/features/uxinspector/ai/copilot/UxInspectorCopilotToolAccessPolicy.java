@@ -6,6 +6,7 @@ import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorToolNames;
+import pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryTools;
 import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreTools;
 
 import java.util.List;
@@ -17,6 +18,9 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             OperationalContextToolNames.SEARCH, OperationalContextToolNames.GET_ENTITY,
             UxInspectorToolNames.LIST_TARGET_CANDIDATES, UxInspectorToolNames.READ_TARGET_SLICE,
             RunStoreTools.LIST, RunStoreTools.READ,
+            RunHttpHistoryTools.LIST,
+            RunHttpHistoryTools.PATHS,
+            RunHttpHistoryTools.READ,
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
             GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
             GitLabToolNames.LIST_REPOSITORY_TREE,

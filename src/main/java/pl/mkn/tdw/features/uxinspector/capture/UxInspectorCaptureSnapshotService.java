@@ -7,11 +7,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobException;
+import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunHttpHistorySnapshot;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -21,24 +21,21 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class UxInspectorCaptureSnapshotService {
-    private static final Set<String> FIELD_KEYS = Set.of("tag", "type", "name", "id", "testId", "label",
-            "disabled", "value", "display", "source", "checked", "indeterminate", "invalid", "errors",
-            "descriptions", "nativeInvalid", "nativeValidationMessage");
     private static final Pattern SENSITIVE = Pattern.compile(
             "(?i).*(password|passwd|token|secret|authorization|bearer|cookie|session|csrf|jwt|api.?key|one[-_ ]?time|otp|cvv|cvc).*");
     private static final Pattern JWT = Pattern.compile("^[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}$");
 
     private final ObjectMapper mapper;
+    private final UxInspectorCaptureJson json;
     private final UxInspectorCaptureNormalizer normalizer;
     private final LocalAnalysisRunStore runStore;
+    private final UxInspectorHttpHistoryNormalizer httpHistoryNormalizer;
     private final Map<String, UxInspectorCaptureSnapshot> snapshots = new ConcurrentHashMap<>();
 
     public String save(JsonNode upload, String requestOrigin) {
-        if (upload == null || !upload.isObject() || !keys(upload).equals(Set.of("capture", "formFields", "store"))) {
-            throw new IllegalArgumentException("Invalid UX Inspector capture upload envelope.");
-        }
-        var rawCapture = upload.get("capture");
-        if (!(rawCapture instanceof ObjectNode captureNode) || captureNode.has("captureId")) {
+        var input = json.read(upload, UxInspectorCaptureUpload.class);
+        var captureNode = input.capture();
+        if (captureNode.has("captureId")) {
             throw new IllegalArgumentException("Capture must be an object without captureId.");
         }
         var id = UUID.randomUUID().toString();
@@ -46,16 +43,19 @@ public class UxInspectorCaptureSnapshotService {
         withId.put("captureId", id);
         final UxInspectorCapture capture;
         try {
-            capture = normalizer.normalize(mapper.treeToValue(withId, UxInspectorCapture.class));
+            capture = normalizer.normalize(json.read(withId, UxInspectorCapture.class));
         } catch (Exception exception) {
             throw new IllegalArgumentException("Invalid UX Inspector capture: " + exception.getMessage(), exception);
         }
         if (requestOrigin != null && !requestOrigin.equals(capture.page().origin())) {
             throw new IllegalArgumentException("Request origin does not match capture page origin.");
         }
-        var fields = formFields(upload.get("formFields"), capture.captureProfile());
-        var store = store(upload.get("store"));
-        snapshots.put(id, new UxInspectorCaptureSnapshot(id, capture, fields, store));
+        var fields = formFields(input.formFields(), capture.captureProfile());
+        var store = store(input.store());
+        LocalAnalysisRunHttpHistorySnapshot httpHistory = httpHistoryNormalizer.normalize(
+                input.httpHistory(), capture.page().origin()
+        );
+        snapshots.put(id, new UxInspectorCaptureSnapshot(id, capture, fields, store, httpHistory));
         return id;
     }
 
@@ -70,7 +70,7 @@ public class UxInspectorCaptureSnapshotService {
                         snapshot.formFields().reason()),
                 new UxInspectorCaptureSnapshot.Store(snapshot.store().status(),
                         snapshot.store().state() != null ? snapshot.store().state().deepCopy() : null,
-                        snapshot.store().redactions(), snapshot.store().reason()));
+                        snapshot.store().redactions(), snapshot.store().reason()), snapshot.httpHistory());
     }
 
     public LocalAnalysisRunStoreSnapshot runStoreSnapshot(UxInspectorCaptureSnapshot snapshot) {
@@ -85,23 +85,28 @@ public class UxInspectorCaptureSnapshotService {
         catch (RuntimeException exception) { return java.util.Optional.empty(); }
     }
 
+    public java.util.Optional<pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunHttpHistorySnapshot> findRunHttpHistory(String runId) {
+        if (runId == null || !runId.matches("[A-Za-z0-9._-]+")) return java.util.Optional.empty();
+        try { return runStore.findById(runId).map(record -> record.httpHistorySnapshot()); }
+        catch (RuntimeException exception) { return java.util.Optional.empty(); }
+    }
+
     private UxInspectorCaptureSnapshot.FormFields formFields(JsonNode block, UxInspectorCapture.CaptureProfile profile) {
         if (profile != UxInspectorCapture.CaptureProfile.FORM_DIAGNOSTICS) {
             return new UxInspectorCaptureSnapshot.FormFields("NOT_REQUESTED", mapper.createArrayNode(), 0, null);
         }
-        if (block == null || !block.isObject() || !"AVAILABLE".equals(block.path("status").asText())) {
+        try {
+            var input = json.read(block, UxInspectorCaptureUpload.FormFields.class);
+            var safe = mapper.createArrayNode();
+            int omitted = 0;
+            for (var field : input.fields()) {
+                if (sensitiveField(field)) omitted++;
+                else safe.add(json.tree(field));
+            }
+            return new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", safe, omitted, null);
+        } catch (IllegalArgumentException exception) {
             return unavailableFields();
         }
-        var values = block.get("fields");
-        if (values == null || !values.isArray()) return unavailableFields();
-        var safe = mapper.createArrayNode();
-        int omitted = 0;
-        for (var value : values) {
-            if (!validField(value)) return unavailableFields();
-            if (sensitiveField(value)) omitted++;
-            else safe.add(value.deepCopy());
-        }
-        return new UxInspectorCaptureSnapshot.FormFields("AVAILABLE", safe, omitted, null);
     }
 
     private UxInspectorCaptureSnapshot.FormFields unavailableFields() {
@@ -110,13 +115,13 @@ public class UxInspectorCaptureSnapshotService {
     }
 
     private UxInspectorCaptureSnapshot.Store store(JsonNode block) {
-        if (block == null || !block.isObject() || !"AVAILABLE".equals(block.path("status").asText())) {
+        try {
+            var input = json.read(block, UxInspectorCaptureUpload.Store.class);
+            var safe = input.state().deepCopy();
+            return new UxInspectorCaptureSnapshot.Store("AVAILABLE", safe, redact(safe), null);
+        } catch (IllegalArgumentException exception) {
             return unavailableStore();
         }
-        var state = block.get("state");
-        if (state == null || (!state.isObject() && !state.isArray())) return unavailableStore();
-        var safe = state.deepCopy();
-        return new UxInspectorCaptureSnapshot.Store("AVAILABLE", safe, redact(safe), null);
     }
 
     private UxInspectorCaptureSnapshot.Store unavailableStore() {
@@ -124,31 +129,13 @@ public class UxInspectorCaptureSnapshotService {
                 "Browser store could not be captured or validated.");
     }
 
-    private boolean validField(JsonNode field) {
-        if (field == null || !field.isObject() || !keys(field).equals(FIELD_KEYS)) return false;
-        for (var key : Set.of("tag", "type", "name", "id", "testId", "label", "display", "source", "nativeValidationMessage")) {
-            if (!field.path(key).isTextual()) return false;
+    private boolean sensitiveField(UxInspectorCaptureUpload.FormField field) {
+        for (var value : java.util.List.of(field.type(), field.name(), field.id(), field.testId(), field.label())) {
+            if (SENSITIVE.matcher(value).matches()) return true;
         }
-        if (!Set.of("dom", "display-text").contains(field.path("source").asText())) return false;
-        var value = field.path("value");
-        if (!value.isTextual() && !(value.isArray() && strings(value))) return false;
-        for (var key : Set.of("disabled", "checked", "indeterminate", "invalid", "nativeInvalid")) {
-            if (!field.path(key).isBoolean() && !field.path(key).isNull()) return false;
-        }
-        return field.path("errors").isArray() && strings(field.path("errors"))
-                && field.path("descriptions").isArray() && strings(field.path("descriptions"));
-    }
-
-    private boolean sensitiveField(JsonNode field) {
-        for (var key : Set.of("type", "name", "id", "testId", "label")) {
-            if (SENSITIVE.matcher(field.path(key).asText()).matches()) return true;
-        }
-        if (Set.of("password", "file", "hidden").contains(field.path("type").asText().toLowerCase())) return true;
-        if (secretValue(field.path("value")) || secretValue(field.path("display"))) return true;
-        for (var key : Set.of("errors", "descriptions")) {
-            for (var message : field.path(key)) if (secretValue(message)) return true;
-        }
-        return secretValue(field.path("nativeValidationMessage"));
+        if (Set.of("password", "file", "hidden").contains(field.type().toLowerCase())) return true;
+        return secretValue(field.value()) || secretText(field.display()) || secretText(field.nativeValidationMessage())
+                || field.errors().stream().anyMatch(this::secretText) || field.descriptions().stream().anyMatch(this::secretText);
     }
 
     private boolean secretValue(JsonNode value) {
@@ -156,13 +143,12 @@ public class UxInspectorCaptureSnapshotService {
             for (var child : value) if (secretValue(child)) return true;
             return false;
         }
-        var text = value.asText("").trim();
-        return text.matches("(?i)^Bearer\\s+.*") || JWT.matcher(text).matches();
+        return secretText(value.asText(""));
     }
 
-    private boolean strings(JsonNode values) {
-        for (var value : values) if (!value.isTextual()) return false;
-        return true;
+    private boolean secretText(String value) {
+        var text = value.trim();
+        return text.matches("(?i)^Bearer\\s+.*") || JWT.matcher(text).matches();
     }
 
     private int redact(JsonNode node) {
@@ -182,9 +168,4 @@ public class UxInspectorCaptureSnapshotService {
         return count;
     }
 
-    private Set<String> keys(JsonNode value) {
-        var keys = new HashSet<String>();
-        value.fieldNames().forEachRemaining(keys::add);
-        return keys;
-    }
 }

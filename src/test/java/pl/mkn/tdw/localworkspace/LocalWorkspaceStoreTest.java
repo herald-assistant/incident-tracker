@@ -54,6 +54,47 @@ class LocalWorkspaceStoreTest {
     Path tempDir;
 
     @Test
+    void restoresIndependentPrivateSnapshotsAfterRestartAndPreservesThemAcrossProgressAndReportEdits() throws Exception {
+        var first = fixture(true);
+        var id = "crm-http-run";
+        var index = indexEntry(id, "ux-inspector", "CRM contact");
+        first.runStore.save(index, runRecord(id));
+        var entries = pl.mkn.tdw.common.HttpHistoryTestFixtures.MAPPER.createArrayNode().add(
+                pl.mkn.tdw.common.HttpHistoryTestFixtures.entry(1, objectMapper.createObjectNode().put("notes", "CRM".repeat(40000))));
+        var bytes = new byte[50000];
+        for (int i = 0; i < bytes.length; i++) bytes[i] = (byte) i;
+        entries.add(pl.mkn.tdw.common.HttpHistoryTestFixtures.entry(2, pl.mkn.tdw.common.HttpHistoryTestFixtures.file(bytes)));
+        var history = pl.mkn.tdw.common.HttpHistoryTestFixtures.snapshot(entries);
+        first.runStore.updateHttpHistorySnapshot(id, history);
+        var store = new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStoreSnapshot(
+                objectMapper.createObjectNode().put("customer", "CRM"), CREATED_AT, "https://crm.example.com", 0);
+        first.runStore.updateStoreSnapshot(id, store);
+        first.runStore.save(index, runRecord(id));
+        var restarted = fixture(true);
+        var restored = restarted.runStore.findById(id).orElseThrow();
+        assertTrue(history.entries().toString().equals(restored.httpHistorySnapshot().entries().toString()), "Snapshot content changed after restart");
+        assertEquals(history.capturedAt(), restored.httpHistorySnapshot().capturedAt());
+        assertEquals(store, restored.storeSnapshot());
+        assertFalse(restored.exportEnvelope().toString().contains("httpHistorySnapshot"));
+        assertFalse(restored.exportEnvelope().toString().contains("CRM".repeat(100)));
+        var edited = pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunReportEdit.update(restored, objectMapper, null, null);
+        assertEquals(restored.httpHistorySnapshot(), edited.record().httpHistorySnapshot());
+        assertEquals(store, edited.record().storeSnapshot());
+        var read = new pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryTools(restarted.runStore, id)
+                .readValue(1L, "responseBody", "/notes", null, null, null);
+        assertEquals("ok", read.get("status"));
+        assertEquals(true, read.get("hasMore"));
+        var tools = new pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryTools(restarted.runStore, id);
+        assertEquals("\"crm-contacts.bin\"", tools.readValue(2L, "responseBody", "/name", null, null, null).get("content"));
+        var restoredFile = restored.httpHistorySnapshot().entries().get(1).at("/response/body/value");
+        org.junit.jupiter.api.Assertions.assertArrayEquals(bytes,
+                java.util.Base64.getDecoder().decode(restoredFile.at("/content/data").asText()));
+        assertEquals(123456789, restoredFile.path("lastModified").asInt());
+        restarted.runStore.delete(id);
+        assertTrue(fixture(true).runStore.findById(id).isEmpty());
+    }
+
+    @Test
     void shouldSaveRunRecordAndKeepIndexLightweight() throws Exception {
         var fixture = fixture(true);
 

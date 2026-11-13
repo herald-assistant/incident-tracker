@@ -12,6 +12,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCon
 import pl.mkn.tdw.features.uxinspector.ai.copilot.*;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory;
+import pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryToolSetFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 
@@ -27,6 +28,7 @@ public class UxInspectorFollowUpChatService {
     private final UxInspectorCopilotToolSessionContextFactory contextFactory;
     private final UxInspectorTargetToolSetFactory targetToolSetFactory;
     private final RunStoreToolSetFactory storeToolSetFactory;
+    private final RunHttpHistoryToolSetFactory httpHistoryToolSetFactory;
     private final CopilotSdkToolFactory toolFactory;
     private final CopilotRunAuthMapper authMapper;
     private final CopilotRunPreparationService preparationService;
@@ -43,6 +45,7 @@ public class UxInspectorFollowUpChatService {
         var storeCallbacks = request.storeRunId() != null
                 ? storeToolSetFactory.create(request.storeRunId()) : java.util.List.<org.springframework.ai.tool.ToolCallback>of();
         callbacks.addAll(storeCallbacks);
+        callbacks.addAll(httpHistoryToolSetFactory.create(request.storeRunId()));
         var registered = toolFactory.createToolDefinitions(context, DESCRIPTION_CONTEXT, callbacks);
         var policy = UxInspectorCopilotToolAccessPolicy.from(registered);
         if (!policy.followUpResearchAvailable()) {
@@ -51,7 +54,7 @@ public class UxInspectorFollowUpChatService {
         var config = new CopilotSessionConfigRequest(
                 context.copilotSessionId(), policy.enabledTools(), policy.availableToolNames(),
                 new CopilotModelSelection(request.initialRequest().model(), request.initialRequest().reasoningEffort()),
-                "Use only enabled read-only Operational Context tools, scoped UX Inspector research, store and report tools.", !storeCallbacks.isEmpty()
+                "Use only enabled read-only Operational Context tools, scoped UX Inspector research, store, HTTP history and report tools.", !storeCallbacks.isEmpty()
         ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp(!storeCallbacks.isEmpty(), request.storeRunId()));
         var run = new CopilotRunRequest(
                 context.analysisRunId(), authMapper.toRunAuth(request.authRef()),

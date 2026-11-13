@@ -542,3 +542,6 @@
     left: 0;
   }
 }
+
+.ux-inspector-http-history { overflow-wrap: anywhere; }
+.ux-inspector-http-history pre { white-space: pre-wrap; overflow-wrap: anywhere; }

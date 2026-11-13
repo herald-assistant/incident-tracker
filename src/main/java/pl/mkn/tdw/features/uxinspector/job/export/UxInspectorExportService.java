@@ -1,6 +1,5 @@
 package pl.mkn.tdw.features.uxinspector.job.export;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -16,7 +15,7 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class UxInspectorExportService {
-    private final ObjectMapper objectMapper;
+    private final UxInspectorExportEnvelopeReader envelopeReader;
     private final UxInspectorJobService jobService;
     private final LocalAnalysisRunStore store;
 
@@ -37,7 +36,7 @@ public class UxInspectorExportService {
 
     private UxInspectorJobStateSnapshot parse(String id, com.fasterxml.jackson.databind.JsonNode node) {
         try {
-            var envelope = objectMapper.treeToValue(node, UxInspectorExportEnvelope.class);
+            var envelope = envelopeReader.read(node);
             if (envelope == null || !envelope.supported() || envelope.payload() == null
                     || !UxInspectorExportEnvelope.PAYLOAD_TYPE.equals(envelope.payload().type())
                     || envelope.payload().job() == null || !id.equals(envelope.payload().job().jobId())) throw new IllegalArgumentException();

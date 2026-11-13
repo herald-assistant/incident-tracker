@@ -53,6 +53,24 @@
                     <p>Zredagowane klucze store: {{ redactions }}</p>
                   }
                   @if (facade.captureSnapshot()?.store?.reason; as reason) { <p>{{ reason }}</p> }
+              @if (facade.captureSnapshot()?.httpHistory; as history) {
+                <details class="ux-inspector-http-history" (toggle)="httpExpanded.set($any($event.target).open)">
+                  <summary>Historia HTTP: {{ history.status === 'AVAILABLE' ? history.entries.length + ' wywołań' : 'niedostępna' }}</summary>
+                  @if (httpExpanded()) {
+                    <p>Ostatnie wywołania zachowane w chwili capture. Maksymalnie 50 wpisów; dane nie są odświeżane.</p>
+                    @if (history.reason) { <p role="status">{{ history.reason }}</p> }
+                    @if (history.redactions) { <p>Redakcje sekretów: {{ history.redactions }}</p> }
+                    @if (history.status === 'AVAILABLE' && !history.entries.length) { <p>Historia jest pusta.</p> }
+                    @for (entry of history.entries; track entry.id) {
+                      <details (toggle)="toggleHttpEntry(entry.id, $event)">
+                        <summary>#{{ entry.id }} · {{ entry.request.method }} {{ entry.request.url }} · {{ entry.state }} / {{ entry.response?.status ?? '—' }}</summary>
+                        <p>{{ entry.startedAt }} · {{ entry.durationMs === null ? 'czas niedostępny' : entry.durationMs + ' ms' }}</p>
+                        @if (httpEntryExpanded().has(entry.id)) { <pre>{{ httpEntryJson(entry) }}</pre> }
+                      </details>
+                    }
+                  }
+                </details>
+              }
                 }
               </details>
               }

@@ -65,6 +65,7 @@ function fixture(id: string): UxInspectorCaptureSnapshot {
     captureId: id,
     capture: { captureId: id, target: { tag: 'button' } } as UxInspectorCaptureSnapshot['capture'],
     formFields: { status: 'AVAILABLE', fields: [], omittedSensitiveFields: 0, reason: null },
-    store: { status: 'AVAILABLE', state: {}, redactions: 0, reason: null }
+    store: { status: 'AVAILABLE', state: {}, redactions: 0, reason: null },
+    httpHistory: { status: 'UNAVAILABLE', entries: [], capturedAt: null, source: 'https://crm.example.com', redactions: 0, reason: 'GETTER_MISSING' }
   };
 }
