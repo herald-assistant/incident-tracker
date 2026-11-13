@@ -43,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
+import pl.mkn.tdw.aiplatform.copilot.tools.output.CopilotToolOutputReader;
 import pl.mkn.tdw.testsupport.agenttools.GitLabMcpToolsTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -120,11 +121,11 @@ class CopilotIncidentInitialPreparationServiceTest {
                             "gitlab_read_repository_file_chunks",
                             "gitlab_read_repository_files_by_path",
                             "gitlab_read_repository_file_outline",
-                            "skill"
+                            "skill", CopilotToolOutputReader.TOOL_NAME
                     ),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
-            assertEquals(9, prepared.session().sessionConfig().getTools().size());
+            assertEquals(10, prepared.session().sessionConfig().getTools().size());
             assertPlatformSkillRoot(prepared.session().sessionConfig().getSkillDirectories(), properties);
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.session().sessionConfig().getOnPermissionRequest());
             assertEquals(List.of(), prepared.session().sessionConfig().getDisabledSkills());
@@ -330,8 +331,9 @@ class CopilotIncidentInitialPreparationServiceTest {
                     ),
                     eq(INCIDENT_DESCRIPTION_CONTEXT)
             );
-            assertEquals(expectedTools, prepared.session().sessionConfig().getTools());
-            assertEquals(List.of("gitlab_read_repository_file", "skill"), prepared.session().sessionConfig().getAvailableTools());
+            assertEquals(expectedTools, prepared.session().sessionConfig().getTools().subList(0, 1));
+            assertEquals(List.of("gitlab_read_repository_file", "skill", CopilotToolOutputReader.TOOL_NAME),
+                    prepared.session().sessionConfig().getAvailableTools());
             var allowedToolDecision = prepared.session().sessionConfig().getHooks().getOnPreToolUse()
                     .handle(new PreToolUseHookInput().setToolName("gitlab_read_repository_file"), null)
                     .join();
@@ -379,9 +381,9 @@ class CopilotIncidentInitialPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(List.of(expectedTools.get(0)), prepared.session().sessionConfig().getTools());
+            assertEquals(List.of(expectedTools.get(0)), prepared.session().sessionConfig().getTools().subList(0, 1));
             assertEquals(
-                    Set.of("gitlab_read_repository_file", "skill"),
+                    Set.of("gitlab_read_repository_file", "skill", CopilotToolOutputReader.TOOL_NAME),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
         }
@@ -422,8 +424,9 @@ class CopilotIncidentInitialPreparationServiceTest {
         );
 
         try (var prepared = service.prepare(request)) {
-            assertEquals(List.of(), prepared.session().sessionConfig().getTools());
-            assertEquals(List.of("skill"), prepared.session().sessionConfig().getAvailableTools());
+            assertEquals(List.of(CopilotToolOutputReader.TOOL_NAME),
+                    prepared.session().sessionConfig().getTools().stream().map(ToolDefinition::name).toList());
+            assertEquals(List.of("skill", CopilotToolOutputReader.TOOL_NAME), prepared.session().sessionConfig().getAvailableTools());
             assertFalse(prepared.prompt().contains("Database diagnostics:"));
             assertFalse(prepared.prompt().contains("Elasticsearch logs: fetch additional logs"));
             assertFalse(prepared.prompt().contains("GitLab code: inspect class references/imports"));

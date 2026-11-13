@@ -7,6 +7,8 @@ import com.github.copilot.rpc.PermissionRequestResultKind;
 import com.github.copilot.rpc.PreToolUseHookInput;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import pl.mkn.tdw.aiplatform.copilot.tools.output.CopilotToolOutputReader;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -24,11 +26,44 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotSessionConfigFactoryTest {
 
+    @TempDir
+    Path crmWorkspace;
+
+    @Test
+    void shouldRegisterSharedOutputReaderInCreateAndResumeWithoutSkills() throws Exception {
+        var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+        var request = new CopilotSessionConfigRequest("crm-output-session", List.of(), List.of(),
+                CopilotModelSelection.DEFAULT, null, false).withDurableSystemInstructions("Analyze CRM contacts.");
+        var create = factory.sessionConfig(request);
+        var resume = factory.resumeSessionConfig(request);
+        var name = CopilotToolOutputReader.TOOL_NAME;
+
+        assertEquals(List.of(name), create.getAvailableTools());
+        assertEquals(create.getAvailableTools(), resume.getAvailableTools());
+        assertEquals(name, create.getTools().get(0).name());
+        assertEquals(name, resume.getTools().get(0).name());
+        assertNull(create.getLargeOutput().getMaxSizeBytes());
+        assertNull(resume.getLargeOutput().getMaxSizeBytes());
+        assertNull(create.getLargeOutput().getEnabled());
+        assertNull(resume.getLargeOutput().getEnabled());
+        assertEquals(properties.resolvedToolOutputDirectory().toString(), create.getLargeOutput().getOutputDirectory());
+        assertEquals(create.getLargeOutput().getOutputDirectory(), resume.getLargeOutput().getOutputDirectory());
+        assertEquals("allow", resume.getHooks().getOnPreToolUse()
+                .handle(new PreToolUseHookInput().setToolName(name), null).join().permissionDecision());
+        assertEquals("deny", create.getHooks().getOnPreToolUse()
+                .handle(new PreToolUseHookInput().setToolName("view"), null).join().permissionDecision());
+        assertTrue(create.getSystemMessage().getContent().startsWith("Analyze CRM contacts."));
+        assertTrue(create.getSystemMessage().getContent().contains(name));
+        assertEquals(create.getSystemMessage().getContent(), resume.getSystemMessage().getContent());
+    }
+
     @Test
     void shouldBuildClientOptionsAndSessionConfig() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
-        properties.setCopilotHome("C:\\tdw-data\\copilot");
         properties.setCliPath("C:\\tools\\copilot.exe");
         properties.setGithubHost("crm.ghe.com");
         properties.setClientName("incidenttracker-test");
@@ -53,7 +88,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(true, sessionConfigRequest.skillToolAvailable());
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
-        assertEquals(normalized("C:\\tdw-data\\copilot"), clientOptions.getCopilotHome());
+        assertEquals(crmWorkspace.toString(), clientOptions.getCopilotHome());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
         assertEquals("github_pat_crm_test_token", clientOptions.getGithubToken());
         assertEquals("crm.ghe.com", clientOptions.getEnvironment().get("GH_HOST"));
@@ -69,16 +104,17 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("incidenttracker-test", sessionConfig.getClientName());
         assertEquals("C:\\workspace", sessionConfig.getWorkingDirectory());
         assertFalse(sessionConfig.isStreaming());
-        assertEquals(tools, sessionConfig.getTools());
-        assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfig.getAvailableTools());
+        assertEquals(tools, sessionConfig.getTools().subList(0, tools.size()));
+        assertEquals(List.of("gitlab_find_flow_context", "skill", CopilotToolOutputReader.TOOL_NAME),
+                sessionConfig.getAvailableTools());
         assertEquals(
-                List.of(normalized("C:\\tdw-data\\copilot\\skills")),
+                List.of(properties.resolvedSkillDirectory().toString()),
                 sessionConfig.getSkillDirectories()
         );
         assertEquals(List.of("incident-code-grounding"), sessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", sessionConfig.getModel());
         assertEquals("medium", sessionConfig.getReasoningEffort());
-        assertNull(sessionConfig.getSystemMessage());
+        assertTrue(sessionConfig.getSystemMessage().getContent().contains(CopilotToolOutputReader.TOOL_NAME));
         assertEquals(true, sessionConfig.getInfiniteSessions().getEnabled().orElseThrow());
         assertEquals(0.95D, sessionConfig.getInfiniteSessions()
                 .getBackgroundCompactionThreshold().orElseThrow());
@@ -89,16 +125,16 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("incidenttracker-test", resumeSessionConfig.getClientName());
         assertEquals("C:\\workspace", resumeSessionConfig.getWorkingDirectory());
         assertFalse(resumeSessionConfig.isStreaming());
-        assertEquals(tools, resumeSessionConfig.getTools());
-        assertEquals(List.of("gitlab_find_flow_context", "skill"), resumeSessionConfig.getAvailableTools());
+        assertEquals(tools, resumeSessionConfig.getTools().subList(0, tools.size()));
+        assertEquals(sessionConfig.getAvailableTools(), resumeSessionConfig.getAvailableTools());
         assertEquals(
-                List.of(normalized("C:\\tdw-data\\copilot\\skills")),
+                List.of(properties.resolvedSkillDirectory().toString()),
                 resumeSessionConfig.getSkillDirectories()
         );
         assertEquals(List.of("incident-code-grounding"), resumeSessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", resumeSessionConfig.getModel());
         assertEquals("medium", resumeSessionConfig.getReasoningEffort());
-        assertNull(resumeSessionConfig.getSystemMessage());
+        assertEquals(sessionConfig.getSystemMessage().getContent(), resumeSessionConfig.getSystemMessage().getContent());
         assertEquals(true, resumeSessionConfig.getInfiniteSessions().getEnabled().orElseThrow());
         assertEquals(0.95D, resumeSessionConfig.getInfiniteSessions()
                 .getBackgroundCompactionThreshold().orElseThrow());
@@ -129,6 +165,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldAppendDurableCrmInstructionsToNewAndResumedSession() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
         var instructions = "Synthetic CRM response contract that must survive session compaction.";
@@ -144,14 +181,15 @@ class CopilotSessionConfigFactoryTest {
         var resumeSessionConfig = factory.resumeSessionConfig(request);
 
         assertEquals(SystemMessageMode.APPEND, sessionConfig.getSystemMessage().getMode());
-        assertEquals(instructions, sessionConfig.getSystemMessage().getContent());
+        assertTrue(sessionConfig.getSystemMessage().getContent().startsWith(instructions + "\n\n"));
         assertEquals(SystemMessageMode.APPEND, resumeSessionConfig.getSystemMessage().getMode());
-        assertEquals(instructions, resumeSessionConfig.getSystemMessage().getContent());
+        assertEquals(sessionConfig.getSystemMessage().getContent(), resumeSessionConfig.getSystemMessage().getContent());
     }
 
     @Test
     void shouldDisableSkillDirectoriesWithoutRemovingOtherFeatureTools() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
         var request = new CopilotSessionConfigRequest(
@@ -174,9 +212,9 @@ class CopilotSessionConfigFactoryTest {
 
         assertEquals(List.of("gitlab_read_repository_file"), request.effectiveAvailableToolNames());
         assertFalse(request.skillToolAvailable());
-        assertEquals(List.of("gitlab_read_repository_file"), sessionConfig.getAvailableTools());
+        assertEquals(List.of("gitlab_read_repository_file", CopilotToolOutputReader.TOOL_NAME), sessionConfig.getAvailableTools());
         assertEquals(List.of(), sessionConfig.getSkillDirectories());
-        assertEquals(List.of("gitlab_read_repository_file"), resumeSessionConfig.getAvailableTools());
+        assertEquals(sessionConfig.getAvailableTools(), resumeSessionConfig.getAvailableTools());
         assertEquals(List.of(), resumeSessionConfig.getSkillDirectories());
         assertEquals("deny", deniedSkillDecision.permissionDecision());
         assertEquals("deny", resumeDeniedSkillDecision.permissionDecision());
@@ -195,6 +233,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldRejectCompactionThresholdThatDoesNotLeaveRoomForRuntimeUpgrade() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.getContextTier().setRuntimeUsageThreshold(0.95D);
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
@@ -219,6 +258,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldRejectBufferThresholdThatDoesNotFollowBackgroundCompaction() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.getInfiniteSessions().setBufferExhaustionThreshold(0.95D);
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
@@ -243,6 +283,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldPreferRequestAiOptionsOverConfiguredDefaults() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
@@ -263,6 +304,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldNotApplyConfiguredReasoningEffortToExplicitModelWithoutOverride() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
@@ -287,6 +329,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldUseGithubTokenWhenProvided() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties, "github_pat_crm_selected_token");
 
@@ -299,6 +342,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldConfigureOptInCliOtlpExportWithoutContentCapture() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.getTelemetry().setEnabled(true);
         properties.getTelemetry().setOtlpEndpoint("  http://127.0.0.1:8081  ");
@@ -316,6 +360,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldCaptureContentOnlyWhenExplicitlyEnabled() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.getTelemetry().setEnabled(true);
         properties.getTelemetry().setOtlpEndpoint("http://127.0.0.1:8081");
@@ -331,6 +376,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldRejectMissingOrInvalidOtlpBaseUrlWhenEnabled() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.getTelemetry().setEnabled(true);
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
@@ -350,6 +396,7 @@ class CopilotSessionConfigFactoryTest {
     @Test
     void shouldConfigureDenyAllPermissionHandlerWhenRequested() {
         var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(crmWorkspace.toString());
         properties.setWorkingDirectory("C:\\workspace");
         properties.setPermissionMode(CopilotSdkProperties.PermissionMode.DENY_ALL);
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
@@ -367,7 +414,7 @@ class CopilotSessionConfigFactoryTest {
                 .join();
 
         assertEquals(PermissionRequestResultKind.DENIED_BY_RULES.toString(), decision.getKind());
-        assertEquals(List.of("skill"), sessionConfig.getAvailableTools());
+        assertEquals(List.of("skill", CopilotToolOutputReader.TOOL_NAME), sessionConfig.getAvailableTools());
         assertEquals(
                 List.of(properties.resolvedSkillDirectory().toString()),
                 sessionConfig.getSkillDirectories()
@@ -388,7 +435,4 @@ class CopilotSessionConfigFactoryTest {
         )).toList();
     }
 
-    private String normalized(String value) {
-        return Path.of(value).toAbsolutePath().normalize().toString();
-    }
 }

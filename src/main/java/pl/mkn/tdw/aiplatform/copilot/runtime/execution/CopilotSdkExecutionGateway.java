@@ -42,7 +42,7 @@ public class CopilotSdkExecutionGateway {
 
     private static final String RUNTIME_CONTEXT_TIER_CONTINUATION_PROMPT = """
             Kontynuuj przerwany turn na podstawie zachowanej historii tej samej sesji.
-            Nie zaczynaj analizy od początku i nie powtarzaj zakończonych wywołań tools.
+            Nie zaczynaj analizy od początku.
             Dokończ pierwotne zadanie i zwróć finalną odpowiedź zgodną z obowiązującym kontraktem.
             """;
     private static final int MAX_CAPTURED_SKILL_CONTENT_LENGTH = 300_000;

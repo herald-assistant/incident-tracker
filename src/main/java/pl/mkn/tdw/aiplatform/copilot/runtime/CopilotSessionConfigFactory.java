@@ -3,6 +3,7 @@ package pl.mkn.tdw.aiplatform.copilot.runtime;
 import com.github.copilot.SystemMessageMode;
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.InfiniteSessionConfig;
+import com.github.copilot.rpc.LargeToolOutputConfig;
 import com.github.copilot.rpc.PermissionHandler;
 import com.github.copilot.rpc.PermissionRequestResult;
 import com.github.copilot.rpc.PermissionRequestResultKind;
@@ -17,7 +18,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+import pl.mkn.tdw.aiplatform.copilot.tools.output.CopilotToolOutputReader;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +33,7 @@ public class CopilotSessionConfigFactory {
     private final CopilotAccessTokenResolver accessTokenResolver;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
     private final CopilotCliExecutableResolver cliExecutableResolver;
+    private final CopilotToolOutputReader toolOutputReader;
 
     public CopilotClientOptions clientOptions(CopilotRunAuth auth) {
         var accessToken = accessTokenResolver.resolve(auth);
@@ -66,13 +70,15 @@ public class CopilotSessionConfigFactory {
     }
 
     public SessionConfig sessionConfig(CopilotSessionConfigRequest request) {
-        var availableToolNames = request.effectiveAvailableToolNames();
+        var availableToolNames = availableTools(request);
         var sessionConfig = new SessionConfig()
                 .setSessionId(request.sessionId())
                 .setClientName(properties.getClientName())
                 .setWorkingDirectory(properties.getWorkingDirectory())
                 .setStreaming(false)
-                .setTools(request.tools())
+                .setTools(toolOutputReader.withDefinition(request.tools()))
+                .setLargeOutput(largeOutput())
+                .setSystemMessage(systemMessage(CopilotToolOutputReader.instructions(request.durableSystemInstructions())))
                 .setAvailableTools(availableToolNames)
                 .setSkillDirectories(effectiveSkillDirectories(request))
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
@@ -89,20 +95,18 @@ public class CopilotSessionConfigFactory {
         if (StringUtils.hasText(reasoningEffort)) {
             sessionConfig.setReasoningEffort(reasoningEffort);
         }
-        if (StringUtils.hasText(request.durableSystemInstructions())) {
-            sessionConfig.setSystemMessage(systemMessage(request.durableSystemInstructions()));
-        }
-
         return sessionConfig;
     }
 
     public ResumeSessionConfig resumeSessionConfig(CopilotSessionConfigRequest request) {
-        var availableToolNames = request.effectiveAvailableToolNames();
+        var availableToolNames = availableTools(request);
         var resumeSessionConfig = new ResumeSessionConfig()
                 .setClientName(properties.getClientName())
                 .setWorkingDirectory(properties.getWorkingDirectory())
                 .setStreaming(false)
-                .setTools(request.tools())
+                .setTools(toolOutputReader.withDefinition(request.tools()))
+                .setLargeOutput(largeOutput())
+                .setSystemMessage(systemMessage(CopilotToolOutputReader.instructions(request.durableSystemInstructions())))
                 .setAvailableTools(availableToolNames)
                 .setSkillDirectories(effectiveSkillDirectories(request))
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
@@ -119,11 +123,23 @@ public class CopilotSessionConfigFactory {
         if (StringUtils.hasText(reasoningEffort)) {
             resumeSessionConfig.setReasoningEffort(reasoningEffort);
         }
-        if (StringUtils.hasText(request.durableSystemInstructions())) {
-            resumeSessionConfig.setSystemMessage(systemMessage(request.durableSystemInstructions()));
-        }
-
         return resumeSessionConfig;
+    }
+
+    private List<String> availableTools(CopilotSessionConfigRequest request) {
+        var names = request.effectiveAvailableToolNames();
+        if (names.contains(CopilotToolOutputReader.TOOL_NAME)
+                || request.tools().stream().anyMatch(tool -> CopilotToolOutputReader.TOOL_NAME.equals(tool.name()))) {
+            throw new IllegalArgumentException("The tool output reader is reserved by the Copilot platform.");
+        }
+        var effective = new ArrayList<>(names);
+        effective.add(CopilotToolOutputReader.TOOL_NAME);
+        return List.copyOf(effective);
+    }
+
+    private LargeToolOutputConfig largeOutput() {
+        return new LargeToolOutputConfig()
+                .setOutputDirectory(toolOutputReader.prepareDirectory().toString());
     }
 
     private SystemMessageConfig systemMessage(String instructions) {

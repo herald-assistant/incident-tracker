@@ -113,6 +113,10 @@ public class CopilotSdkProperties {
         return resolvedCopilotHome().resolve("skills");
     }
 
+    public Path resolvedToolOutputDirectory() {
+        return resolvedCopilotHome().resolve("tool-outputs");
+    }
+
     public void validateContextManagementConfiguration() {
         if (contextTier == null) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier must be configured");

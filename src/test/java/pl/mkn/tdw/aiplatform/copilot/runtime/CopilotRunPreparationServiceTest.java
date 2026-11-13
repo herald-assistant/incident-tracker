@@ -1,12 +1,15 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
+import pl.mkn.tdw.aiplatform.copilot.tools.output.CopilotToolOutputReader;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -18,11 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 class CopilotRunPreparationServiceTest {
 
+    @TempDir
+    Path crmWorkspace;
+
     @Test
     void shouldPrepareSessionFromNeutralRunRequest() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
-        properties.setCopilotHome("C:\\tdw-data\\copilot");
+        properties.setCopilotHome(crmWorkspace.toString());
         Consumer<AnalysisEvidenceSection> evidenceSink = section -> {
         };
         var service = new CopilotRunPreparationService(
@@ -56,7 +62,7 @@ class CopilotRunPreparationServiceTest {
             assertEquals("gpt-5.4", prepared.sessionConfig().getModel());
             assertEquals("medium", prepared.sessionConfig().getReasoningEffort());
             assertEquals(CopilotContextTierPreference.AUTO, prepared.contextTierPreference());
-            assertEquals(List.of("tool-a", "skill"), prepared.sessionConfig().getAvailableTools());
+            assertEquals(List.of("tool-a", "skill", CopilotToolOutputReader.TOOL_NAME), prepared.sessionConfig().getAvailableTools());
             assertEquals(
                     List.of(properties.resolvedSkillDirectory().toString()),
                     prepared.sessionConfig().getSkillDirectories()
@@ -68,7 +74,7 @@ class CopilotRunPreparationServiceTest {
     void shouldPrepareExistingSessionTargetForResume() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
-        properties.setCopilotHome("C:\\tdw-data\\copilot");
+        properties.setCopilotHome(crmWorkspace.toString());
         Consumer<AnalysisEvidenceSection> evidenceSink = section -> {
         };
         var service = new CopilotRunPreparationService(
@@ -104,7 +110,8 @@ class CopilotRunPreparationServiceTest {
             );
             assertSame(evidenceSink, prepared.evidenceSink());
             assertNotNull(prepared.resumeSessionConfig());
-            assertEquals(List.of("tool-a", "skill"), prepared.resumeSessionConfig().getAvailableTools());
+            assertEquals(List.of("tool-a", "skill", CopilotToolOutputReader.TOOL_NAME),
+                    prepared.resumeSessionConfig().getAvailableTools());
             assertEquals(
                     List.of(properties.resolvedSkillDirectory().toString()),
                     prepared.resumeSessionConfig().getSkillDirectories()

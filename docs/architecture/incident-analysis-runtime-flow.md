@@ -460,6 +460,34 @@ ani listy wybranych skilli. Ten sam effective zestaw tools trafia do hooks
 `onPreToolUse` i manifestu, zeby prompt/debug/export nie rozjezdzal sie z tym,
 co realnie widzi Copilot SDK.
 
+Platforma rejestruje `tool_output_read_chunk` w każdej sesji Copilota, przy
+create i resume, również przy wyłączonych skillach. W `largeOutput` TDW
+wskazuje katalog `${analysis.ai.copilot.copilot-home}/tool-outputs`. CLI
+stosuje domyślny próg 20 KiB, zapisuje większe wyniki w tym katalogu i podaje
+modelowi ścieżkę.
+
+Tool przyjmuje `path` i opcjonalny `cursor` albo `jsonPointer`. Limit całej
+odpowiedzi po serializacji wynosi 8192 B UTF-8. Model może doczytywać kolejne
+strony przez `nextCursor` bez sztywnego limitu na turę. `jsonPointer` wybiera
+pojedynczą wartość JSON. Przy błędzie parsowania lub zbyt dużej wartości
+model może wrócić do odczytu tekstowego przez kursor.
+
+Wspólny katalog jest granicą dostępu. Zwykły plik
+w tym katalogu jest dostępny po podaniu ścieżki, także między sesjami. Odczyt
+spoza katalogu, przez symlink lub Windows junction jest odrzucany.
+CLI zarządza cyklem życia plików. Gdy plik jest niedostępny po wznowieniu,
+odpowiedź `OUTPUT_UNAVAILABLE` pozwala modelowi ponowić potrzebne, dozwolone
+wywołanie odczytowe u źródła.
+
+TDW rejestruje odczyt zgodnie z ogólnymi zasadami activity i logowania tooli.
+Aktywność, logi, transkrypt Copilota i jawny OTLP z `capture-content=true`
+mogą zawierać ścieżkę i podgląd wyniku.
+Test `CopilotToolOutputCliTest` uruchamia rzeczywiste CLI i deterministyczny
+provider na loopback z fikcyjnymi danymi CRM. Przy
+`TDW_COPILOT_OUTPUT_CLI_TEST=true` uruchom
+`mvn -q '-Dtest=CopilotToolOutputCliTest' test`. Opcjonalny `COPILOT_CLI_PATH`
+pozwala wskazać binarkę wdrożeniową.
+
 Execution gateway subskrybuje `session.on(...)` i mapuje SDK events na
 neutralne `shared.ai.AnalysisAiActivityEvent`. Te eventy sa user-visible:
 pokazuja turny, usage/context/cache snapshots, tool execution lifecycle,

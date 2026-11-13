@@ -1,10 +1,12 @@
 package pl.mkn.tdw.testsupport.copilot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotCliExecutableResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigFactory;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
+import pl.mkn.tdw.aiplatform.copilot.tools.output.CopilotToolOutputReader;
 
 import java.util.List;
 
@@ -32,7 +34,8 @@ public final class CopilotSessionConfigFactoryTestCreator {
                 properties,
                 auth -> new CopilotAccessToken(token, null, null, true),
                 skillRuntimeLoader,
-                cliExecutableResolver
+                cliExecutableResolver,
+                new CopilotToolOutputReader(properties, new ObjectMapper())
         );
     }
 

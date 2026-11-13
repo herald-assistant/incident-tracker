@@ -1,5 +1,14 @@
 # Key Decisions
 
+## Odczyt dużych wyników narzędzi Copilota
+
+Platforma udostępnia `tool_output_read_chunk` w create i resume. CLI
+obsługuje zapis dużych wyników i zwraca ścieżkę. Odczyt jest ograniczony do
+wspólnego katalogu `tool-outputs` pod `copilot-home`. Platforma kontroluje
+rzeczywistą ścieżkę i limit całej odpowiedzi 8192 B UTF-8. Kursor pozwala
+doczytać dalszy tekst, a `jsonPointer` wybrać wartość. Po usunięciu pliku
+model może ponowić dozwolony odczyt u źródła. [Przebieg i konfiguracja](incident-analysis-runtime-flow.md#8-session-config-i-blokady-lokalne)
+
 ## Jedna allowlista per feature i opisy narzędzi historii kodu
 
 Incident Analysis, Flow Explorer, UI Explorer, UX Inspector i Release summary
