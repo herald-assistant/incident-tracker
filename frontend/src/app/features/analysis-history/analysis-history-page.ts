@@ -16,7 +16,6 @@ import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-h
 import {
   formatDateTime,
   formatStatus,
-  isTerminalStatus,
   statusClassName
 } from '../../core/utils/analysis-display.utils';
 import {
@@ -301,7 +300,7 @@ export class AnalysisHistoryPageComponent {
   }
 
   protected canExportRun(run: LocalAnalysisRunListItemResponse): boolean {
-    return isTerminalStatus(run.status);
+    return Boolean(run.completedAt);
   }
 
   protected trackRun(_: number, run: LocalAnalysisRunListItemResponse): string {

@@ -406,6 +406,37 @@ describe('AnalysisHistoryPageComponent', () => {
   });
 
 
+  it('enables export for completed runs across feature statuses', async () => {
+    const { fixture, historyApi } = await createComponent();
+    const [run] = listRuns();
+    const completedRuns = [
+      ['delivery-complexity-assessment', 'COMPLETED_WITH_WARNINGS'],
+      ['config-drift-viewer', 'COMPLETED_WITH_LIMITATIONS'],
+      ['ui-explorer', 'PARTIAL'],
+      ['ux-inspector', 'BLOCKED'],
+      ['release-summary', 'NO_CHANGES'],
+      ['release-summary', 'INTERRUPTED']
+    ].map(([feature, status]) => ({
+      ...run,
+      analysisId: `crm-${status}`,
+      name: `CRM ${status}`,
+      feature,
+      status
+    }));
+    const activeRun = listRuns()[2];
+    historyApi.listRuns.mockReturnValueOnce(of({ runs: [...completedRuns, activeRun] }));
+    fixture.componentInstance.loadRuns();
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    const exportButton = (name: string) =>
+      page.querySelector<HTMLButtonElement>(`button[aria-label="Export local run ${name}"]`);
+    for (const entry of completedRuns) {
+      expect(exportButton(entry.name)?.disabled, entry.status).toBe(false);
+    }
+    expect(exportButton(activeRun.name)?.disabled).toBe(true);
+  });
+
   it('should export the stored envelope without rebuilding the payload', async () => {
     const { fixture, historyApi } = await createComponent();
     const run = listRuns()[0]!;
