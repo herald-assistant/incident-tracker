@@ -43,24 +43,43 @@
     </div>
 
     <nav class="app-shell__nav" aria-label="Workspace sections">
-      @for (group of navGroups; track group.label) {
+      @for (group of navGroups; track group.id) {
+        @let collapsed = collapsedNavGroups()[group.id];
         <section class="app-shell__nav-group">
-          <p class="app-shell__nav-heading">{{ group.label }}</p>
+          <button
+            class="app-shell__nav-heading"
+            type="button"
+            [attr.aria-expanded]="!collapsed"
+            [attr.aria-controls]="'sidebar-group-' + group.id"
+            (click)="toggleNavGroup(group.id)"
+          >
+            {{ group.label }}
+            <span class="app-shell__nav-chevron" aria-hidden="true"></span>
+          </button>
 
-          <div class="app-shell__nav-list">
+          <div
+            class="app-shell__nav-list"
+            [hidden]="collapsed"
+            [id]="'sidebar-group-' + group.id"
+          >
             @for (item of group.items; track item.label) {
               @if (item.disabled) {
-                <button
-                  class="app-shell__nav-item app-shell__nav-item--disabled"
-                  type="button"
-                  disabled
-                  [attr.aria-label]="item.label + ' coming soon'"
-                  [attr.title]="item.label + ' - coming soon'"
+                <div
+                  class="app-shell__disabled-nav-tooltip"
+                  [matTooltip]="item.label + ' - coming soon'"
+                  matTooltipPosition="right"
                 >
-                  <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
-                  <span class="app-shell__nav-label">{{ item.label }}</span>
-                  <small class="app-shell__nav-badge">Soon</small>
-                </button>
+                  <button
+                    class="app-shell__nav-item app-shell__nav-item--disabled"
+                    type="button"
+                    disabled
+                    [attr.aria-label]="item.label + ' coming soon'"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+                    <span class="app-shell__nav-label">{{ item.label }}</span>
+                    <small class="app-shell__nav-badge">Soon</small>
+                  </button>
+                </div>
               } @else {
                 <a
                   class="app-shell__nav-item"
@@ -68,7 +87,8 @@
                   [attr.href]="item.route"
                   [attr.aria-label]="item.label"
                   [attr.aria-current]="isNavItemActive(item) ? 'page' : null"
-                  [attr.title]="sidebarRailMode() ? item.label : null"
+                  [matTooltip]="sidebarRailMode() ? item.label : ''"
+                  matTooltipPosition="right"
                   (click)="navigateFromSidebar($event, item)"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>

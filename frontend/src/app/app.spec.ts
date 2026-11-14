@@ -9,15 +9,19 @@ import { Router, provideRouter } from '@angular/router';
 
 import { App } from './app';
 import { routes } from './app.routes';
+import { AppShellComponent } from './components/app-shell/app-shell';
 import { FlowExplorerPageComponent } from './features/flow-explorer/pages/flow-explorer-page/flow-explorer-page';
 import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerSystemOption
 } from './features/flow-explorer/models/flow-explorer.models';
 
+const ANALYSIS_GROUP_STORAGE_KEY = 'team-delivery-workspace.sidebar.group.analysis-features.collapsed';
+
 describe('App', () => {
   beforeEach(async () => {
     window.localStorage.removeItem('team-delivery-workspace.sidebar.collapsed');
+    window.localStorage.removeItem(ANALYSIS_GROUP_STORAGE_KEY);
 
     await TestBed.configureTestingModule({
       imports: [App],
@@ -51,6 +55,12 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const landing = compiled.querySelector<HTMLElement>('app-platform-landing-page');
 
+    const navHeadings = [...compiled.querySelectorAll('.app-shell__nav-heading')];
+    expect(navHeadings.map(heading => heading.textContent?.trim())).toEqual([
+      'Analysis Features',
+      'Platform',
+      'Tool Workbench'
+    ]);
     expect(landing).not.toBeNull();
     expect(landing?.querySelector('#platformLandingTitle')).not.toBeNull();
     expect(landing?.querySelector('.platform-landing__feature-grid')).not.toBeNull();
@@ -508,7 +518,42 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Settings saved.');
   });
 
+  it('should remember a navigation group independently when the shell is recreated', () => {
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+
+    const current = navigationGroups(fixture);
+    expect(current.analysis.getAttribute('aria-expanded')).toBe('true');
+    expect(current.workbench.getAttribute('aria-expanded')).toBe('true');
+    expect(current.analysisList.hidden).toBe(false);
+
+    current.analysis.click();
+    fixture.detectChanges();
+
+    expect(current.analysis.getAttribute('aria-expanded')).toBe('false');
+    expect(current.analysisList.hidden).toBe(true);
+    expect(current.workbench.getAttribute('aria-expanded')).toBe('true');
+    expect(window.localStorage.getItem(ANALYSIS_GROUP_STORAGE_KEY)).toBe('true');
+    fixture.destroy();
+
+    const reopenedFixture = TestBed.createComponent(AppShellComponent);
+    reopenedFixture.detectChanges();
+
+    const reopened = navigationGroups(reopenedFixture);
+    expect(reopened.analysis.getAttribute('aria-expanded')).toBe('false');
+    expect(reopened.analysisList.hidden).toBe(true);
+    expect(reopened.workbench.getAttribute('aria-expanded')).toBe('true');
+
+    reopened.analysis.click();
+    reopenedFixture.detectChanges();
+
+    expect(reopened.analysis.getAttribute('aria-expanded')).toBe('true');
+    expect(reopened.analysisList.hidden).toBe(false);
+    expect(window.localStorage.getItem(ANALYSIS_GROUP_STORAGE_KEY)).toBe('false');
+  });
+
   it('should collapse the left navigation into an icon rail', async () => {
+    window.localStorage.setItem(ANALYSIS_GROUP_STORAGE_KEY, 'true');
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
 
@@ -523,14 +568,19 @@ describe('App', () => {
       '.app-shell__sidebar-toggle'
     ) as HTMLButtonElement | null;
     const toggleIcon = toggle?.querySelector('.material-symbols-outlined');
-    const homeLink = compiled.querySelector(
-      'a.app-shell__nav-item[aria-label="Workspace Overview"]'
+    const homeLink = fixture.debugElement.query(
+      By.css('a.app-shell__nav-item[aria-label="Workspace Overview"]')
     );
+    const homeTooltip = homeLink.injector.get(MatTooltip);
+    const disabledItem = fixture.debugElement.query(By.css('.app-shell__disabled-nav-tooltip'));
+    const disabledTooltip = disabledItem.injector.get(MatTooltip);
 
     expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
     expect(toggle?.getAttribute('aria-label')).toBe('Zwiń panel nawigacji');
     expect(toggleIcon?.textContent?.trim()).toBe('dock_to_right');
-    expect(homeLink?.getAttribute('title')).toBeNull();
+    expect(homeTooltip.message).toBe('');
+    expect(disabledTooltip.message).toBe('Data Diagnostics - coming soon');
+    expect(disabledTooltip.position).toBe('right');
 
     toggle?.click();
     fixture.detectChanges();
@@ -538,6 +588,8 @@ describe('App', () => {
     fixture.detectChanges();
 
     expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(true);
+    expect(compiled.querySelector<HTMLElement>('#sidebar-group-analysis-features')?.hidden).toBe(true);
+    expect(compiled.querySelector<HTMLElement>('#sidebar-group-platform')?.hidden).toBe(false);
     expect(compiled.querySelector('.app-shell__sidebar-toggle')).toBeNull();
     const brandToggle = compiled.querySelector(
       '.app-shell__brand-toggle'
@@ -547,7 +599,8 @@ describe('App', () => {
     expect(brandToggle?.querySelector('.app-shell__brand-toggle-icon')?.textContent?.trim()).toBe(
       'dock_to_right'
     );
-    expect(homeLink?.getAttribute('title')).toBe('Workspace Overview');
+    expect(homeTooltip.message).toBe('Workspace Overview');
+    expect(homeTooltip.position).toBe('right');
     expect(window.localStorage.getItem('team-delivery-workspace.sidebar.collapsed')).toBe('true');
 
     brandToggle?.click();
@@ -948,6 +1001,16 @@ describe('App', () => {
     expect(fixture.nativeElement.textContent).toContain('Select application');
   });
 });
+
+function navigationGroups(fixture: ComponentFixture<AppShellComponent>) {
+  const shell = fixture.nativeElement as HTMLElement;
+
+  return {
+    analysis: shell.querySelector<HTMLButtonElement>('[aria-controls="sidebar-group-analysis-features"]')!,
+    analysisList: shell.querySelector<HTMLElement>('#sidebar-group-analysis-features')!,
+    workbench: shell.querySelector<HTMLButtonElement>('[aria-controls="sidebar-group-tool-workbench"]')!
+  };
+}
 
 function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Workspace', releaseSummaryEnabled = false): void {
   http.expectOne('/api/ui/config').flush({

@@ -40,6 +40,20 @@ drugiego standardu tej samej kontrolki.
 - Czytelnosc opiera sie na hierarchii tekstu i odstepach. Nie dodawaj
   dekoracyjnych gradientow ani nowych paneli tylko dla efektu wizualnego.
 
+## Lewy panel nawigacji
+
+- Kolejnosc kategorii to Analysis Features, Platform i Tool Workbench.
+  Przy pierwszym otwarciu wszystkie sa rozwiniete. Kazda zapisuje swoj stan
+  osobno w `localStorage`. Po zwinieciu calego panelu tryb ikonowy pokazuje
+  pozycje tylko z rozwinietych kategorii.
+- Chevron po prawej stronie naglowka pojawia sie na hover i przy fokusie
+  klawiatury. Na urzadzeniach bez hovera jest stale widoczny.
+- Tooltipy pozycji uzywaja domyslnego wygladu Angular Material i otwieraja
+  sie po prawej stronie. Dostepne pozycje pokazuja nazwe w trybie ikonowym,
+  a pozycje niedostepne pokazuja komunikat „coming soon”.
+- Pionowy pasek przewijania jest widoczny tylko na hover panelu.
+  Przewijanie i szerokosc zawartosci sa niezalezne od widocznosci paska.
+
 ## Dobor komponentu
 
 | Potrzeba | Komponent i sposob uzycia |

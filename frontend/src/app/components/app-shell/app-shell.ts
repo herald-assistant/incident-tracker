@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   ActivatedRoute,
   NavigationEnd,
@@ -22,6 +23,7 @@ type NavItem = {
 };
 
 type NavGroup = {
+  id: string;
   label: string;
   items: NavItem[];
 };
@@ -60,6 +62,7 @@ const SIDEBAR_EXPAND_CONTENT_DELAY_MS = 170;
 
 const NAV_GROUPS: NavGroup[] = [
   {
+    id: 'analysis-features',
     label: 'Analysis Features',
     items: [
       {
@@ -126,6 +129,20 @@ const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
+    id: 'platform',
+    label: 'Platform',
+    items: [
+      { label: 'Workspace Overview', route: '/', icon: 'space_dashboard', exact: true },
+      { label: 'Analysis History', route: '/analysis-history', icon: 'history' },
+      { label: 'Workspace Settings', route: '/workspace-settings', icon: 'tune' },
+      { label: 'AI Skills', route: '/ai-skills', icon: 'auto_stories' },
+      { label: 'AI Models', route: '/ai-models', icon: 'model_training' },
+      { label: 'Personalization', icon: 'palette', disabled: true },
+      { label: 'Authentication', icon: 'admin_panel_settings', disabled: true }
+    ]
+  },
+  {
+    id: 'tool-workbench',
     label: 'Tool Workbench',
     items: [
       { label: 'Elastic Logs', route: '/elastic', icon: 'manage_search' },
@@ -140,24 +157,12 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Database Tools', route: '/database', icon: 'database' },
       { label: 'Operational Context', route: '/operational-context', icon: 'hub' }
     ]
-  },
-  {
-    label: 'Platform',
-    items: [
-      { label: 'Workspace Overview', route: '/', icon: 'space_dashboard', exact: true },
-      { label: 'Analysis History', route: '/analysis-history', icon: 'history' },
-      { label: 'Workspace Settings', route: '/workspace-settings', icon: 'tune' },
-      { label: 'AI Skills', route: '/ai-skills', icon: 'auto_stories' },
-      { label: 'AI Models', route: '/ai-models', icon: 'model_training' },
-      { label: 'Personalization', icon: 'palette', disabled: true },
-      { label: 'Authentication', icon: 'admin_panel_settings', disabled: true }
-    ]
   }
 ];
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, AppBrandComponent],
+  imports: [RouterOutlet, RouterLink, AppBrandComponent, MatTooltipModule],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss'
 })
@@ -172,7 +177,12 @@ export class AppShellComponent {
   get navGroups(): NavGroup[] {
     return NAV_GROUPS.map(group => ({...group, items: group.items.filter(item => item.route !== '/release-summary' || this.uiConfig.config().releaseSummaryEnabled)}));
   }
-  readonly sidebarCollapsed = signal(readSidebarCollapsedPreference());
+  protected readonly collapsedNavGroups = signal(
+    Object.fromEntries(
+      NAV_GROUPS.map(({ id }) => [id, readCollapsedPreference(navGroupStorageKey(id))])
+    )
+  );
+  readonly sidebarCollapsed = signal(readCollapsedPreference(SIDEBAR_COLLAPSED_STORAGE_KEY));
   readonly sidebarExpanding = signal(false);
   readonly sidebarRailMode = computed(() => this.sidebarCollapsed() || this.sidebarExpanding());
   readonly section = computed(() => this.routeContext().section);
@@ -215,17 +225,23 @@ export class AppShellComponent {
     if (collapsed) {
       this.sidebarExpanding.set(false);
       this.sidebarCollapsed.set(true);
-      writeSidebarCollapsedPreference(true);
+      writeCollapsedPreference(SIDEBAR_COLLAPSED_STORAGE_KEY, true);
       return;
     }
 
     this.sidebarExpanding.set(true);
     this.sidebarCollapsed.set(false);
-    writeSidebarCollapsedPreference(false);
+    writeCollapsedPreference(SIDEBAR_COLLAPSED_STORAGE_KEY, false);
     this.sidebarExpandTimer = setTimeout(() => {
       this.sidebarExpanding.set(false);
       this.sidebarExpandTimer = null;
     }, SIDEBAR_EXPAND_CONTENT_DELAY_MS);
+  }
+
+  protected toggleNavGroup(id: string): void {
+    const collapsed = !this.collapsedNavGroups()[id];
+    this.collapsedNavGroups.update(groups => ({ ...groups, [id]: collapsed }));
+    writeCollapsedPreference(navGroupStorageKey(id), collapsed);
   }
 
   protected navigateFromSidebar(event: MouseEvent, item: NavItem): void {
@@ -364,17 +380,21 @@ function normalizeCapabilityInfo(value: unknown): RouteCapabilityInfo | null {
   return { description, badges, meta };
 }
 
-function readSidebarCollapsedPreference(): boolean {
+function navGroupStorageKey(id: string): string {
+  return `team-delivery-workspace.sidebar.group.${id}.collapsed`;
+}
+
+function readCollapsedPreference(key: string): boolean {
   try {
-    return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
+    return window.localStorage.getItem(key) === 'true';
   } catch {
     return false;
   }
 }
 
-function writeSidebarCollapsedPreference(collapsed: boolean): void {
+function writeCollapsedPreference(key: string, collapsed: boolean): void {
   try {
-    window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
+    window.localStorage.setItem(key, String(collapsed));
   } catch {
     // Layout preference persistence is optional.
   }
