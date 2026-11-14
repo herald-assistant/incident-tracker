@@ -140,16 +140,8 @@
 }
 
 .analysis-start-grid__problem-description {
+  --field-min-height: 72px;
   grid-column: 1 / -1;
-}
-
-.analysis-start-grid__problem-description .text-input {
-  min-height: 72px;
-  resize: vertical;
-}
-
-.analysis-start-grid__problem-description .field-hint {
-  margin-top: 6px;
 }
 
 .analysis-file-control {
@@ -261,33 +253,6 @@
   margin: 4px 0 0;
   color: var(--text-muted);
   font-size: 0.9rem;
-}
-
-.select-loading-control {
-  position: relative;
-  display: block;
-}
-
-.select-loading-control .select-input {
-  padding-right: 58px;
-}
-
-.select-input--loading {
-  color: var(--text-muted);
-}
-
-.select-loader {
-  position: absolute;
-  top: 50%;
-  right: 36px;
-  width: 14px;
-  height: 14px;
-  margin-top: -7px;
-  border: 2px solid rgba(12, 102, 228, 0.24);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: spin 0.9s linear infinite;
 }
 
 .incident-workspace__body {

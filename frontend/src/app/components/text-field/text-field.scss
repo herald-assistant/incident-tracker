@@ -1,0 +1,27 @@
+:host { display: block; min-width: 0; }
+:host([hidden]) { display: none; }
+.text-input {
+  display: block;
+  min-height: var(--field-min-height, 44px);
+  height: var(--field-height, auto);
+  max-height: var(--field-max-height, none);
+  padding: var(--field-padding-block, 10px) var(--field-padding-inline, 12px);
+  padding-inline-start: var(--field-padding-start, var(--field-padding-inline, 12px));
+  font-size: var(--field-font-size, inherit);
+  font-weight: var(--control-value-weight);
+  line-height: var(--field-line-height, normal);
+  tab-size: var(--field-tab-size, 8);
+}
+textarea.text-input { resize: var(--field-resize, vertical); }
+.text-field--code { font-family: var(--font-mono); }
+textarea.text-field--autosize {
+  box-sizing: content-box;
+  // CDK measures a one-row clone before setting the requested row limits.
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  width: calc(100% - 2px - 2 * var(--field-padding-inline, 12px));
+  overflow: hidden;
+  resize: none;
+}
+.text-field--descriptive { height: 58px; }

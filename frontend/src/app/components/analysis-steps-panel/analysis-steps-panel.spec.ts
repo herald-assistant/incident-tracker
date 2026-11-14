@@ -35,9 +35,9 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(root.querySelector('.source-diff .is-removed')?.textContent).toContain('varchar(40)');
     expect(root.querySelector('.source-diff .is-added')?.textContent).toContain('varchar(80)');
     expect(root.querySelector('.source-diff .is-added column')).toBeNull();
-    expect(root.querySelectorAll('.stepper-detail')[0].querySelector('.prepared-prompt__textarea')).toBeNull();
+    expect(root.querySelectorAll('.stepper-detail')[0].querySelector('.prepared-prompt__textarea textarea')).toBeNull();
     headers[1].click();fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
-    expect((root.querySelector('.prepared-prompt__textarea') as HTMLTextAreaElement).value)
+    expect((root.querySelector('.prepared-prompt__textarea textarea') as HTMLTextAreaElement).value)
       .toBe('Pełny prompt CRM\n<evidence>Źródła</evidence>');
     expect(root.textContent).toContain('Kopiuj prompt');
     headers[2].click();fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
@@ -49,7 +49,7 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.componentRef.setInput('steps',[buildOperationalContextStep()]);
     fixture.componentRef.setInput('preparedPrompt','CRM prompt');
     fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.prepared-prompt__textarea')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.prepared-prompt__textarea textarea')).toBeNull();
   });
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -239,7 +239,7 @@ describe('AnalysisStepsPanelComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const promptTextarea = compiled.querySelector(
-      '.prepared-prompt__textarea'
+      '.prepared-prompt__textarea textarea'
     ) as HTMLTextAreaElement | null;
 
     expect(compiled.textContent).toContain('Inicjalny prompt AI');
@@ -266,7 +266,7 @@ describe('AnalysisStepsPanelComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Inicjalny prompt AI');
-    expect((compiled.querySelector('.prepared-prompt__textarea') as HTMLTextAreaElement)?.value)
+    expect((compiled.querySelector('.prepared-prompt__textarea textarea') as HTMLTextAreaElement)?.value)
       .toBe('Sanitizowany prompt asysty');
   });
 
@@ -282,7 +282,7 @@ describe('AnalysisStepsPanelComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const promptTextarea = compiled.querySelector(
-      '.prepared-prompt__textarea'
+      '.prepared-prompt__textarea textarea'
     ) as HTMLTextAreaElement | null;
 
     expect(compiled.textContent).toContain('Inicjalny prompt AI');
@@ -304,7 +304,7 @@ describe('AnalysisStepsPanelComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const promptTextarea = compiled.querySelector(
-      '.prepared-prompt__textarea'
+      '.prepared-prompt__textarea textarea'
     ) as HTMLTextAreaElement | null;
 
     expect(compiled.textContent).toContain('Inicjalny prompt AI');
@@ -418,7 +418,7 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const promptTextarea = compiled.querySelector(
-      '.prepared-prompt__textarea'
+      '.prepared-prompt__textarea textarea'
     ) as HTMLTextAreaElement | null;
     expect(
       (fixture.componentInstance as unknown as { selectedIndex(): number }).selectedIndex()
@@ -470,7 +470,7 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const promptTextarea = compiled.querySelector('.prepared-prompt__textarea');
+    const promptTextarea = compiled.querySelector('.prepared-prompt__textarea textarea');
 
     expect(compiled.textContent).toContain('Najbardziej prawdopodobny problem');
     expect(compiled.textContent).toContain('Gateway timeout on backend');
@@ -1050,7 +1050,7 @@ describe('AnalysisStepsPanelComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const promptTextarea = compiled.querySelector('.prepared-prompt__textarea');
+    const promptTextarea = compiled.querySelector('.prepared-prompt__textarea textarea');
 
     expect(compiled.textContent).toContain('Krok zakończył się błędem, więc nie udało się zebrać szczegółów.');
     expect(compiled.textContent).not.toContain('Prompt przygotowany do wysłania do Copilota');

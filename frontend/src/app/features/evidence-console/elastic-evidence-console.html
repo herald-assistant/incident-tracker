@@ -11,40 +11,34 @@
           </div>
 
           <div class="elastic-scope-grid">
-            <label class="form-field">
-              <span class="field-label">Correlation ID</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. timeout-123"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.correlationId"
-              />
-            </label>
+            <app-text-field
+              type="text"
+              placeholder="np. timeout-123"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.correlationId"
+              label="Correlation ID"
+              class="form-field"
+            />
 
-            <label class="form-field">
-              <span class="field-label">Time window days</span>
-              <input
-                class="text-input"
-                type="number"
-                min="1"
-                max="30"
-                [formControl]="scopeForm.controls.timeWindowDays"
-              />
-            </label>
+            <app-text-field
+              type="number"
+              min="1"
+              max="30"
+              [formControl]="scopeForm.controls.timeWindowDays"
+              label="Time window days"
+              class="form-field"
+            />
 
-            <label class="form-field">
-              <span class="field-label">Service</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="opcjonalnie, np. backend"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.serviceName"
-              />
-            </label>
+            <app-text-field
+              type="text"
+              placeholder="opcjonalnie, np. backend"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.serviceName"
+              label="Service"
+              class="form-field"
+            />
           </div>
 
           @if (correlationIdMissingForSelectedTool()) {
@@ -115,40 +109,34 @@
 
             @case ('httpSummary') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Path prefix / pattern</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. /external/path/"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="httpSummaryForm.controls.pathPattern"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. /external/path/"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="httpSummaryForm.controls.pathPattern"
+                  label="Path prefix / pattern"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Method</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie, np. GET"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="httpSummaryForm.controls.method"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie, np. GET"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="httpSummaryForm.controls.method"
+                  label="Method"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Sample size</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="1000"
-                    [formControl]="httpSummaryForm.controls.sampleSize"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="1000"
+                  [formControl]="httpSummaryForm.controls.sampleSize"
+                  label="Sample size"
+                  class="form-field"
+                />
               </div>
 
               @if (controlInvalid(httpSummaryForm.controls.pathPattern)) {
@@ -158,61 +146,54 @@
 
             @case ('httpLogs') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie, np. /external/path/125"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="httpLogsForm.controls.path"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie, np. /external/path/125"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="httpLogsForm.controls.path"
+                  label="Path"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Status</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="100"
-                    max="599"
-                    placeholder="opcjonalnie, np. 200"
-                    [formControl]="httpLogsForm.controls.status"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="100"
+                  max="599"
+                  placeholder="opcjonalnie, np. 200"
+                  [formControl]="httpLogsForm.controls.status"
+                  label="Status"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Method</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie, np. GET"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="httpLogsForm.controls.method"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie, np. GET"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="httpLogsForm.controls.method"
+                  label="Method"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Size</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="200"
-                    [formControl]="httpLogsForm.controls.size"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="200"
+                  [formControl]="httpLogsForm.controls.size"
+                  label="Size"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Detail level</span>
-                  <select class="text-input" [formControl]="httpLogsForm.controls.detailLevel">
-                    <option value="SUMMARY">SUMMARY</option>
-                    <option value="COMPACT">COMPACT</option>
-                    <option value="FULL">FULL</option>
-                  </select>
-                </label>
+                <app-choice-select
+                  [formControl]="httpLogsForm.controls.detailLevel"
+                  label="Detail level"
+                  class="form-field form-field--wide"
+                >
+                    <app-choice-option value="SUMMARY" label="SUMMARY" />
+                    <app-choice-option value="COMPACT" label="COMPACT" />
+                    <app-choice-option value="FULL" label="FULL" />
+                  </app-choice-select>
               </div>
 
               @if (httpLogsMissingInputForSelectedTool()) {
@@ -296,14 +277,17 @@
                     </button>
                   </div>
                 </summary>
-                <textarea
-                  id="elasticRequestPreview"
+                <app-text-field
+                  type="textarea"
+                  inputId="elasticRequestPreview"
                   class="json-output"
-                  aria-label="Request preview"
+                  ariaLabel="Request preview"
                   readonly
                   spellcheck="false"
                   [value]="state().requestJson"
-                ></textarea>
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
 
@@ -340,14 +324,17 @@
                   </button>
                 </div>
               </summary>
-              <textarea
-                id="elasticJsonResponse"
+              <app-text-field
+                type="textarea"
+                inputId="elasticJsonResponse"
                 class="json-output"
-                aria-label="JSON response"
+                ariaLabel="JSON response"
                 readonly
                 spellcheck="false"
                 [value]="state().responseJson"
-              ></textarea>
+                appearance="code"
+                wrap="off"
+              />
             </details>
           </article>
         }

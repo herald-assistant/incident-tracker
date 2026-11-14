@@ -1,3 +1,5 @@
+import { AiExecutionControlsComponent } from '../../components/ai-execution-controls/ai-execution-controls';
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize, Observable } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -65,11 +67,6 @@ import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-pan
 
 const POLL_INTERVAL_MS = 1500;
 const PROBLEM_DESCRIPTION_MAX_LENGTH = 4000;
-type SelectOption = {
-  value: string;
-  label: string;
-  disabled?: boolean;
-};
 type RunContextItem = {
   label: string;
   value: string;
@@ -100,7 +97,7 @@ const DEFAULT_ANALYSIS_INPUT_OPTIONS: AnalysisJobInputOptionsResponse = {
 
 @Component({
   selector: 'app-analysis-console',
-  imports: [
+  imports: [AiExecutionControlsComponent, TextFieldComponent,
     ReactiveFormsModule,
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
@@ -155,41 +152,6 @@ export class AnalysisConsoleComponent {
   readonly chatNeedsGithubAuth = signal(false);
   readonly copiedPreparedPrompt = signal(false);
 
-  readonly aiModelOptions = computed<SelectOption[]>(() => {
-    if (this.isAiModelOptionsLoading()) {
-      return [
-        {
-          value: this.aiModelControl.value.trim(),
-          label: 'Ładowanie modeli AI...',
-          disabled: true
-        }
-      ];
-    }
-
-    return this.aiModelCatalog().models.map((model) => ({
-      value: model.id,
-      label: this.modelLabel(model.id, model.name)
-    }));
-  });
-  readonly availableReasoningEfforts = computed(() =>
-    this.reasoningEffortsForModel(this.selectedAiModel())
-  );
-  readonly reasoningEffortOptions = computed<SelectOption[]>(() => {
-    if (this.isAiModelOptionsLoading()) {
-      return [
-        {
-          value: this.reasoningEffortControl.value.trim(),
-          label: 'Ładowanie reasoning effort...',
-          disabled: true
-        }
-      ];
-    }
-
-    return this.availableReasoningEfforts().map((effort) => ({
-      value: effort,
-      label: this.reasoningEffortLabel(effort)
-    }));
-  });
   readonly canUseElasticsearchInput = computed(() => this.inputOptions().elasticsearch.enabled);
   readonly canUseCsvUploadInput = computed(() => this.inputOptions().csvUpload.enabled);
   readonly selectedLogFileLabel = computed(() => {
@@ -507,6 +469,18 @@ export class AnalysisConsoleComponent {
   onAiModelChanged(): void {
     this.selectedAiModel.set(this.aiModelControl.value.trim());
     this.syncReasoningEffortSelection();
+    this.clearFormError();
+  }
+
+  selectAiModel(value: string): void {
+    this.aiModelControl.markAsDirty();
+    this.aiModelControl.setValue(value);
+    this.onAiModelChanged();
+  }
+
+  selectReasoningEffort(value: string): void {
+    this.reasoningEffortControl.markAsDirty();
+    this.reasoningEffortControl.setValue(value);
     this.clearFormError();
   }
 
@@ -1038,22 +1012,6 @@ export class AnalysisConsoleComponent {
 
   private preparedPromptText(job: AnalysisJobStateSnapshot | null): string {
     return job?.preparedPrompt || job?.result?.prompt || '';
-  }
-
-  private reasoningEffortsForModel(modelId: string): string[] {
-    return reasoningEffortsForAiModel(this.aiModelCatalog(), modelId);
-  }
-
-  private modelLabel(id: string, name: string): string {
-    if (!name || name === id) {
-      return id;
-    }
-
-    return `${name} (${id})`;
-  }
-
-  private reasoningEffortLabel(effort: string): string {
-    return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
   }
 
   private applyJob(job: AnalysisJobStateSnapshot, metadata: ExportMetadata): void {

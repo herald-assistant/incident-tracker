@@ -254,7 +254,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('7200 saved');
     expect(compiled.textContent).toContain('3 routes omitted');
     expect(compiled.textContent).toContain('Child route frontier');
-    expect(compiled.querySelector<HTMLTextAreaElement>('.source-output')?.value)
+    expect(compiled.querySelector<HTMLTextAreaElement>('.source-output textarea')?.value)
       .toContain('sibling route entry omitted');
   });
 
@@ -299,7 +299,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('Entry symbols');
     expect(compiled.textContent).toContain('Downstream frontier');
     expect(compiled.textContent).toContain('BACKEND_OPERATION');
-    expect(compiled.querySelector<HTMLTextAreaElement>('.source-output')?.value)
+    expect(compiled.querySelector<HTMLTextAreaElement>('.source-output textarea')?.value)
       .toContain('saveCustomer');
   });
 
@@ -524,7 +524,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('CustomerService.java');
     expect(compiled.textContent).toContain('loadCustomer');
 
-    const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice');
+    const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice textarea');
     expect(sourceOutput?.value).toContain('public CustomerModel getCustomer(CustomerId customerId)');
     expect(sourceOutput?.value).toContain('// ... omitted');
   });
@@ -548,7 +548,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('createCustomerCase');
     expect(compiled.textContent).toContain('Create CRM customer case');
 
-    const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice');
+    const sourceOutput = compiled.querySelector<HTMLTextAreaElement>('.source-output--slice textarea');
     expect(sourceOutput?.value).toContain('"operationId" : "createCustomerCase"');
     expect(sourceOutput?.value).toContain('"CreateCustomerCaseRequest"');
   });
@@ -1359,4 +1359,3 @@ function buildTypeScriptSymbolSliceResponse(): GitLabTypeScriptSymbolSliceRespon
     limitations: []
   };
 }
-

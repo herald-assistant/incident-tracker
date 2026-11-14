@@ -426,26 +426,30 @@
                             {{ copiedPromptKey() === preparedPromptCopyKey(step, prompt) ? 'Skopiowano' : 'Kopiuj prompt' }}
                           </button>
                         </div>
-                        <textarea
+                        <app-text-field
+                          type="textarea"
                           class="prepared-prompt__textarea"
                           readonly
                           spellcheck="false"
                           wrap="off"
                           [value]="prompt.prompt"
-                          [attr.aria-label]="'Prompt przygotowany dla ' + prompt.title"
-                        ></textarea>
+                          [ariaLabel]="'Prompt przygotowany dla ' + prompt.title"
+                          appearance="code"
+                        />
                       </details>
                     }
                   </div>
                 } @else {
-                  <textarea
+                  <app-text-field
+                    type="textarea"
                     class="prepared-prompt__textarea"
                     readonly
                     spellcheck="false"
                     wrap="off"
                     [value]="step.preparedPrompt"
-                    aria-label="Prompt przygotowany do wysłania do AI"
-                  ></textarea>
+                    ariaLabel="Prompt przygotowany do wysłania do AI"
+                    appearance="code"
+                  />
                 }
               </section>
             }

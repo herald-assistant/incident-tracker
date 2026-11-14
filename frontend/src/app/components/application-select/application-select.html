@@ -1,13 +1,6 @@
 <div class="application-select" (click)="$event.stopPropagation()">
-  <span class="application-select__label">
-    <span class="field-label">Application</span>
-    <span class="application-select__help" tabindex="0" aria-label="Informacje o wyborze aplikacji"
-      matTooltip="Aplikacja z Operational Context. Jej wybór określa repozytoria dostępne w analizie."
-      matTooltipPosition="right">
-      <span class="material-symbols-outlined" aria-hidden="true">info</span>
-    </span>
-  </span>
-  <button type="button" class="application-select__control" aria-haspopup="listbox" aria-label="Application"
+  <app-form-field [controlId]="controlId" [label]="label()" [tooltip]="tooltip()" (focusRequested)="trigger.focus()">
+  <button #trigger [id]="controlId" type="button" class="application-select__control" aria-haspopup="listbox" [attr.aria-label]="label()"
     [attr.aria-expanded]="open()" [attr.aria-busy]="loading()" [disabled]="disabled()" (click)="open.set(!open())">
     <span class="application-select__value">
       <strong [title]="selectedLabel()">{{ selectedLabel() }}</strong>
@@ -21,11 +14,15 @@
   </button>
   @if (open()) {
     <div class="application-select__menu">
-      <label class="application-select__search">
-        <span class="field-label">Find application</span>
-        <input type="search" class="text-input" autocomplete="off" [value]="search()"
-          (input)="search.set($any($event.target).value)" (keydown.arrowdown)="focusFirst($event)" />
-      </label>
+      <app-text-field
+        type="search"
+        autocomplete="off"
+        [value]="search()"
+        (valueChange)="search.set($event)"
+        (keydown.arrowdown)="focusFirst($event)"
+        label="Find application"
+        class="application-select__search"
+      />
       @if (loading()) { <p role="status">Pobieranie aplikacji…</p> }
       @if (error()) {
         <p role="alert">{{ error() }}</p>
@@ -50,4 +47,5 @@
       </div>
     </div>
   }
+  </app-form-field>
 </div>

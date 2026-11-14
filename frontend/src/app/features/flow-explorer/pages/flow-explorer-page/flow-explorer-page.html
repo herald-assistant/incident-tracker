@@ -86,19 +86,17 @@
                     <div class="empty-state">Brak endpointow dla wybranego systemu i branch/ref.</div>
                   }
                   @case ('ready') {
-                    <label class="form-field flow-explorer-select__search">
-                      <span class="field-label">Find endpoint</span>
-                      <input
-                        #endpointSearchInput
-                        class="text-input"
-                        type="search"
-                        placeholder="GET /customers"
-                        autocomplete="off"
-                        spellcheck="false"
-                        [value]="endpointSearch()"
-                        (input)="endpointSearch.set(endpointSearchInput.value)"
-                      />
-                    </label>
+                    <app-text-field
+                      #endpointSearchInput
+                      type="search"
+                      placeholder="GET /customers"
+                      autocomplete="off"
+                      spellcheck="false"
+                      [value]="endpointSearch()"
+                      (valueChange)="endpointSearch.set($event)"
+                      label="Find endpoint"
+                      class="form-field flow-explorer-select__search"
+                    />
 
                     @if (filteredEndpoints().length > 0) {
                       <div class="flow-explorer-select__options">
@@ -242,62 +240,10 @@
         </div>
 
         <div class="flow-explorer-scope-grid">
-          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
-            <span class="flow-explorer-field-label">
-              <span class="field-label">Goal</span>
-              <span
-                class="flow-explorer-label-help"
-                tabindex="0"
-                aria-label="Goal field help"
-                matTooltip="Ustawia cel analizy. Deep Discovery buduje kompleksowe rozpoznanie endpointu."
-                matTooltipPosition="right"
-                [matTooltipShowDelay]="120"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-              </span>
-            </span>
-            <button
-              class="flow-explorer-select__control"
-              type="button"
-              aria-haspopup="listbox"
-              [disabled]="isSubmitting() || isJobActive()"
-              [attr.aria-expanded]="goalSelectOpen()"
-              (click)="toggleGoalSelect($event)"
-            >
-              <span class="flow-explorer-select__value">
-                <strong>{{ selectedGoalLabel() }}</strong>
-                <small>{{ selectedGoalMeta() }}</small>
-              </span>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-            </button>
-
-            @if (goalSelectOpen()) {
-              <div class="flow-explorer-select__menu" role="listbox" aria-label="Goal options">
-                <div class="flow-explorer-select__options">
-                  @for (goal of analysisGoals; track goal.value) {
-                    <button
-                      [class]="goalOptionClass(goal.value)"
-                      type="button"
-                      role="option"
-                      [disabled]="goal.disabled || isSubmitting() || isJobActive()"
-                      [attr.aria-selected]="analysisGoal() === goal.value"
-                      [attr.aria-label]="goal.disabled ? goal.label + ' — wkrótce' : null"
-                      [attr.title]="goal.disabled ? goal.label + ' — wkrótce' : null"
-                      (click)="selectGoalFromDropdown(goal.value, $event)"
-                    >
-                      <span class="flow-explorer-select-option__body">
-                        <strong>{{ goal.label }}</strong>
-                        <small>{{ goal.hint }}</small>
-                      </span>
-                      @if (goal.disabled) {
-                        <small class="flow-explorer-select-option__badge">Soon</small>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          </div>
+          <app-choice-select label="Goal" size="descriptive" [options]="goalChoices"
+            tooltip="Ustawia cel analizy. Deep Discovery buduje kompleksowe rozpoznanie endpointu."
+            [value]="analysisGoal()" [description]="selectedGoalMeta()" [disabled]="isSubmitting() || isJobActive()"
+            (opened)="closeCustomSelects()" (valueChange)="selectGoal($event)" />
 
           <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">
@@ -367,143 +313,10 @@
             }
           </div>
 
-          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
-            <span class="flow-explorer-field-label">
-              <span class="field-label">Model AI</span>
-              <span
-                class="flow-explorer-label-help"
-                tabindex="0"
-                aria-label="AI model field help"
-                matTooltip="Model uzyty do analizy Flow Explorera. Lista pochodzi z tego samego katalogu co w Team Delivery Workspace."
-                matTooltipPosition="right"
-                [matTooltipShowDelay]="120"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-              </span>
-            </span>
-            <button
-              class="flow-explorer-select__control"
-              [class.flow-explorer-select__control--loading]="isAiModelOptionsLoading()"
-              type="button"
-              aria-haspopup="listbox"
-              [disabled]="isSubmitting() || isJobActive()"
-              [attr.aria-expanded]="aiModelSelectOpen()"
-              [attr.aria-busy]="isAiModelOptionsLoading()"
-              (click)="toggleAiModelSelect($event)"
-            >
-              <span class="flow-explorer-select__value">
-                <strong>{{ selectedAiModelLabel() }}</strong>
-                <small>{{ selectedAiModelMeta() }}</small>
-              </span>
-              @if (isAiModelOptionsLoading()) {
-                <span class="flow-explorer-select__indicator flow-explorer-select-loader" aria-hidden="true"></span>
-              } @else {
-                <span class="material-symbols-outlined flow-explorer-select__indicator" aria-hidden="true">
-                  expand_more
-                </span>
-              }
-            </button>
-
-            @if (aiModelOptionsError()) {
-              <span class="field-hint flow-explorer-warning">{{ aiModelOptionsError() }}</span>
-            }
-
-            @if (aiModelSelectOpen()) {
-              <div class="flow-explorer-select__menu" role="listbox" aria-label="AI model options">
-                <div class="flow-explorer-select__options">
-                  @for (option of aiModelOptions(); track option.value + option.label) {
-                    <button
-                      [class]="aiModelOptionClass(option.value)"
-                      type="button"
-                      role="option"
-                      [disabled]="option.disabled || isSubmitting() || isJobActive()"
-                      [attr.aria-selected]="selectedAiModel() === option.value"
-                      (click)="selectAiModelFromDropdown(option.value, $event)"
-                    >
-                      <span class="flow-explorer-select-option__body">
-                        <strong>{{ option.label }}</strong>
-                        <small>{{ option.hint }}</small>
-                      </span>
-                      @if (selectedAiModel() === option.value) {
-                        <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
-                          check
-                        </span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-
-          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
-            <span class="flow-explorer-field-label">
-              <span class="field-label">Reasoning effort</span>
-              <span
-                class="flow-explorer-label-help"
-                tabindex="0"
-                aria-label="Reasoning effort field help"
-                matTooltip="Steruje glebokoscia eksploracji: low bazuje glownie na artefaktach, medium uzupelnia primary flow, high moze zejsc glebiej w edge case'y."
-                matTooltipPosition="right"
-                [matTooltipShowDelay]="120"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-              </span>
-            </span>
-            <button
-              class="flow-explorer-select__control"
-              [class.flow-explorer-select__control--loading]="isAiModelOptionsLoading()"
-              type="button"
-              aria-haspopup="listbox"
-              [disabled]="isSubmitting() || isJobActive()"
-              [attr.aria-expanded]="reasoningEffortSelectOpen()"
-              [attr.aria-busy]="isAiModelOptionsLoading()"
-              (click)="toggleReasoningEffortSelect($event)"
-            >
-              <span class="flow-explorer-select__value">
-                <strong>{{ selectedReasoningEffortLabel() }}</strong>
-                <small>{{ selectedReasoningEffortMeta() }}</small>
-              </span>
-              @if (isAiModelOptionsLoading()) {
-                <span class="flow-explorer-select__indicator flow-explorer-select-loader" aria-hidden="true"></span>
-              } @else {
-                <span class="material-symbols-outlined flow-explorer-select__indicator" aria-hidden="true">
-                  expand_more
-                </span>
-              }
-            </button>
-
-            @if (reasoningEffortSelectOpen()) {
-              <div
-                class="flow-explorer-select__menu"
-                role="listbox"
-                aria-label="Reasoning effort options"
-              >
-                <div class="flow-explorer-select__options">
-                  @for (option of reasoningEffortOptions(); track option.value + option.label) {
-                    <button
-                      [class]="reasoningEffortOptionClass(option.value)"
-                      type="button"
-                      role="option"
-                      [disabled]="option.disabled || isSubmitting() || isJobActive()"
-                      [attr.aria-selected]="selectedReasoningEffort() === option.value"
-                      (click)="selectReasoningEffortFromDropdown(option.value, $event)"
-                    >
-                      <span class="flow-explorer-select-option__body">
-                        <strong>{{ option.label }}</strong>
-                        <small>{{ option.hint }}</small>
-                      </span>
-                      @if (selectedReasoningEffort() === option.value) {
-                        <span class="material-symbols-outlined flow-explorer-select-option__check" aria-hidden="true">
-                          check
-                        </span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          </div>
+          <app-ai-execution-controls
+            [catalog]="aiModelCatalog()" [model]="selectedAiModel()" [reasoningEffort]="selectedReasoningEffort()"
+            [loading]="isAiModelOptionsLoading()" [disabled]="isSubmitting() || isJobActive()" [error]="aiModelOptionsError()"
+            (opened)="closeCustomSelects()" (modelChange)="selectAiModel($event)" (reasoningEffortChange)="selectReasoningEffort($event)" />
         </div>
 
         @if (endpointState() === 'error') {
@@ -535,31 +348,11 @@
           </div>
         }
 
-        <label class="form-field">
-          <span class="flow-explorer-field-label">
-            <span class="field-label">Doprecyzuj oczekiwany opis</span>
-            <span
-              class="flow-explorer-label-help"
-              tabindex="0"
-              aria-label="User instructions field help"
-              matTooltip="Doprecyzowanie oczekiwanego rezultatu. Backend nadal buduje canonical prompt i kontrakt odpowiedzi."
-              matTooltipPosition="right"
-              [matTooltipShowDelay]="120"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            </span>
-          </span>
-          <textarea
-            #instructionsInput
-            class="text-input flow-explorer-textarea"
-            rows="4"
-            placeholder="Np. skup sie na scenariuszach testowych dla walidacji statusu klienta."
-            spellcheck="false"
-            [value]="userInstructions()"
-            [disabled]="isSubmitting() || isJobActive()"
-            (input)="onUserInstructionsChanged(instructionsInput.value)"
-          ></textarea>
-        </label>
+        <app-text-field class="flow-explorer-instructions" label="Doprecyzuj oczekiwany opis" type="textarea" size="descriptive" [rows]="4"
+          tooltip="Doprecyzowanie oczekiwanego rezultatu. Backend nadal buduje canonical prompt i kontrakt odpowiedzi."
+          placeholder="Np. skup sie na scenariuszach testowych dla walidacji statusu klienta."
+          [value]="userInstructions()" [disabled]="isSubmitting() || isJobActive()"
+          (valueChange)="onUserInstructionsChanged($event)" />
 
         <div class="flow-explorer-run-actions">
           <button class="primary-button" type="button" [disabled]="!canStartJob()" (click)="startJob()">

@@ -1,0 +1,16 @@
+@if (label() || tooltip()) {
+  <div class="form-field__label-row">
+    @if (label()) {
+      <label class="field-label" [for]="controlId()" (click)="focusRequested.emit()">{{ label() }}</label>
+    }
+    @if (tooltip()) {
+      <button type="button" class="form-field__help" [attr.aria-label]="(label() || 'Pole') + ' — informacje'"
+        [matTooltip]="tooltip()" [matTooltipClass]="tooltipClass()" matTooltipPosition="right">
+        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+      </button>
+    }
+  </div>
+}
+<ng-content />
+@if (hint()) { <span class="field-hint form-field__hint" [id]="controlId() + '-hint'">{{ hint() }}</span> }
+@if (error()) { <span class="field-hint form-field__error" [id]="controlId() + '-error'" role="alert">{{ error() }}</span> }

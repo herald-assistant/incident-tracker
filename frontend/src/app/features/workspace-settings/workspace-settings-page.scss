@@ -166,9 +166,10 @@
   gap: 6px;
 }
 
-.workspace-settings .text-input {
-  min-height: 38px;
-  padding: 8px 10px;
+.workspace-settings app-text-field {
+  --field-min-height: 38px;
+  --field-padding-block: 8px;
+  --field-padding-inline: 10px;
 }
 
 .workspace-settings-icon-button {

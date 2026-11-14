@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,7 +30,7 @@ const CONFLUENCE_SOURCE_ENDPOINT = '/api/confluence/page/content';
 
 @Component({
   selector: 'app-confluence-source-console',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ReactiveFormsModule],
   templateUrl: './confluence-source-console.html',
   styleUrl: '../source-console-layout.scss'
 })

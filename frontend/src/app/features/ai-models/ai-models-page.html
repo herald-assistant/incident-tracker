@@ -51,11 +51,16 @@
         </div>
       } @else {
         <div class="ai-models-toolbar">
-          <label class="field-control ai-models-search" for="aiModelsSearch">
-            <span class="field-label">Szukaj modelu</span>
-            <input id="aiModelsSearch" class="text-input" type="search" autocomplete="off"
-              placeholder="Nazwa modelu" [value]="query()" (input)="updateSearch($event)" />
-          </label>
+          <app-text-field
+            inputId="aiModelsSearch"
+            type="search"
+            autocomplete="off"
+            placeholder="Nazwa modelu"
+            [value]="query()"
+            (valueChange)="updateSearch($event)"
+            label="Szukaj modelu"
+            class="field-control ai-models-search"
+          />
           <p class="ai-models-unit"><span>Jednostka stawek:</span>
             <strong>AI credits za 1 mln tokenów</strong></p>
         </div>

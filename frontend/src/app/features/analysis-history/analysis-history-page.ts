@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
@@ -26,7 +27,7 @@ import {
 
 @Component({
   selector: 'app-analysis-history-page',
-  imports: [ReactiveFormsModule, RouterLink, MatTooltipModule],
+  imports: [TextFieldComponent, ReactiveFormsModule, RouterLink, MatTooltipModule],
   templateUrl: './analysis-history-page.html',
   styleUrl: './analysis-history-page.scss'
 })

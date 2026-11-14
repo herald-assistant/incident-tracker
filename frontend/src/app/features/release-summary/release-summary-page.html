@@ -14,10 +14,8 @@
           <app-gitlab-branch-select label="Branch" [sourceKey]="systemId()" [branchLoader]="branchLoader"
             [selectedBranch]="branch()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="selectBranch($event)" />
           <div class="release-summary-date">
-            <label class="form-field"><span class="field-label">Od</span>
-              <input type="date" class="text-input" aria-label="Od" [value]="dateFrom()" [max]="dateTo()"
-                [disabled]="busy()" (change)="selectDate('from', $any($event.target).value)" />
-            </label>
+            <app-text-field type="date" size="descriptive" label="Od" [value]="dateFrom()" [max]="dateTo()"
+              [disabled]="busy()" (committed)="selectDate('from', $event)" />
             @if(range(); as selected) {
               <p class="release-summary-commit" data-testid="baseline-commit">
                 <span>{{commitDate(selected.baseline)}}</span>
@@ -26,10 +24,8 @@
             }
           </div>
           <div class="release-summary-date">
-            <label class="form-field"><span class="field-label">Do</span>
-              <input type="date" class="text-input" aria-label="Do" [value]="dateTo()" [min]="dateFrom()"
-                [disabled]="busy()" (change)="selectDate('to', $any($event.target).value)" />
-            </label>
+            <app-text-field type="date" size="descriptive" label="Do" [value]="dateTo()" [min]="dateFrom()"
+              [disabled]="busy()" (committed)="selectDate('to', $event)" />
             @if(range(); as selected) {
               <p class="release-summary-commit" data-testid="target-commit">
                 <span>{{commitDate(selected.target)}}</span>
@@ -46,38 +42,10 @@
           @if(noChanges()) {<p role="status">W wybranym okresie nie było zmian.</p>}
         </div>
         <div class="release-summary-ai-grid">
-          <label class="form-field">
-            <span class="release-summary-field-label">
-              <span class="field-label">Model AI</span>
-              <span class="release-summary-help" tabindex="0" aria-label="Informacje o modelu AI"
-                matTooltip="Model przygotowujący raport zmian bazodanowych." matTooltipPosition="right">
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-              </span>
-            </span>
-            <span class="release-summary-select">
-              <select class="select-input" aria-label="Model AI" [ngModel]="model()" [disabled]="busy() || modelsLoading()" (ngModelChange)="selectModel($event)">
-                <option value="">{{modelCatalog().defaultModel ? 'Domyślny: '+modelCatalog().defaultModel : 'Wybierz model AI'}}</option>
-                @for(option of modelCatalog().models;track option.id) { <option [value]="option.id">{{option.name}}</option> }
-              </select>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-            </span>
-          </label>
-          <label class="form-field">
-            <span class="release-summary-field-label">
-              <span class="field-label">Reasoning effort</span>
-              <span class="release-summary-help" tabindex="0" aria-label="Informacje o reasoning effort"
-                matTooltip="Poziom rozumowania dostępny dla wybranego modelu." matTooltipPosition="right">
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-              </span>
-            </span>
-            <span class="release-summary-select">
-              <select class="select-input" aria-label="Reasoning effort" [ngModel]="reasoning()" [disabled]="busy() || !reasoningOptions().length" (ngModelChange)="reasoning.set($event)">
-                <option value="">Domyślny</option>
-                @for(option of reasoningOptions();track option) { <option [value]="option">{{option}}</option> }
-              </select>
-              <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-            </span>
-          </label>
+          <app-ai-execution-controls
+            [catalog]="modelCatalog()" [model]="model()" [reasoningEffort]="reasoning()"
+            [loading]="modelsLoading()" [unavailable]="!!modelError()" [disabled]="busy()" [allowDefaultSelection]="true"
+            (modelChange)="selectModel($event)" (reasoningEffortChange)="reasoning.set($event)" />
         </div>
         @if(modelError()) {<p role="alert">{{modelError()}}</p>}
       } @else { <p>Nowe analizy Release summary są wyłączone. Zapisane wyniki pozostają dostępne.</p> }
@@ -152,4 +120,3 @@
     }
   </main>
 </div>
-

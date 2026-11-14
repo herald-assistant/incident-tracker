@@ -1,4 +1,5 @@
-import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../components/text-field/text-field';
 import { Component, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -332,7 +333,7 @@ function group(key: string, label: string, type: OperationalContextWritableType)
 
 @Component({
   selector: 'app-context-structured-field-editor',
-  imports: [MatIconModule, MatTooltipModule, CdkTextareaAutosize],
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent, MatIconModule, MatTooltipModule],
   templateUrl: './context-structured-field-editor.html',
   styleUrl: './context-structured-field-editor.scss'
 })
@@ -436,11 +437,10 @@ export class ContextStructuredFieldEditorComponent {
     return this.optionsFor('system').filter((option) => !selected.has(option.id) || this.selectedProcessSystems(role).includes(option.id));
   }
 
-  addProcessSystem(role: ProcessSystemRole, event: Event): void {
-    const id = eventValue(event);
+  addProcessSystem(role: ProcessSystemRole, value: string): void {
+    const id = value.trim();
     if (!id) return;
     this.updateObject(role, unique([...this.selectedProcessSystems(role), id]));
-    resetSelect(event);
   }
 
   removeProcessSystem(role: ProcessSystemRole, id: string): void {
@@ -451,11 +451,10 @@ export class ContextStructuredFieldEditorComponent {
     return this.optionsFor('team').filter((option) => !this.objectList('ownerTeamIds').includes(option.id));
   }
 
-  addOwnerTeam(event: Event): void {
-    const id = eventValue(event);
+  addOwnerTeam(value: string): void {
+    const id = value.trim();
     if (!id) return;
     this.updateObject('ownerTeamIds', unique([...this.objectList('ownerTeamIds'), id]));
-    resetSelect(event);
   }
 
   removeOwnerTeam(id: string): void {
@@ -478,11 +477,10 @@ export class ContextStructuredFieldEditorComponent {
     );
   }
 
-  addReference(referenceGroup: ReferenceGroup, event: Event): void {
-    const id = eventValue(event);
+  addReference(referenceGroup: ReferenceGroup, value: string): void {
+    const id = value.trim();
     if (!id) return;
     this.updateObject(referenceGroup.key, unique([...this.selectedReferences(referenceGroup.key), id]));
-    resetSelect(event);
   }
 
   removeReference(key: string, id: string): void {
@@ -776,22 +774,22 @@ export class ContextStructuredFieldEditorComponent {
     return this.optionsFor(type).filter((option) => !(type === this.entityType() && option.id === this.entityId()));
   }
 
-  updateRelationTargetType(index: number, event: Event): void {
+  updateRelationTargetType(index: number, value: string): void {
     const relations = this.relations().map((relation) => ({ ...relation }));
     const relation = relations[index];
     if (!relation) return;
     delete relation['target'];
     delete relation['externalSystem'];
-    assignOrDelete(relation, 'targetType', eventValue(event));
+    assignOrDelete(relation, 'targetType', value.trim());
     this.valueChange.emit(relations);
   }
 
-  updateRelationTarget(index: number, event: Event): void {
+  updateRelationTarget(index: number, value: string): void {
     const relations = this.relations().map((relation) => ({ ...relation }));
     const relation = relations[index];
     if (!relation) return;
     delete relation['externalSystem'];
-    assignOrDelete(relation, 'target', eventValue(event));
+    assignOrDelete(relation, 'target', value.trim());
     this.valueChange.emit(relations);
   }
 
@@ -819,11 +817,10 @@ export class ContextStructuredFieldEditorComponent {
     );
   }
 
-  addRelationVia(index: number, event: Event): void {
-    const id = eventValue(event);
+  addRelationVia(index: number, value: string): void {
+    const id = value.trim();
     if (!id) return;
     this.updateRelation(index, 'via', unique([...this.selectedRelationVia(index), id]));
-    resetSelect(event);
   }
 
   removeRelationVia(index: number, id: string): void {
@@ -843,8 +840,8 @@ export class ContextStructuredFieldEditorComponent {
     return type === 'system' || type === 'bounded-context' ? this.optionsFor(type) : [];
   }
 
-  updateTargetType(event: Event): void {
-    this.valueChange.emit({ ...this.object(), type: eventValue(event), id: '' });
+  updateTargetType(value: string): void {
+    this.valueChange.emit({ ...this.object(), type: value.trim(), id: '' });
   }
 
   repositories(): JsonObject[] {
@@ -866,8 +863,8 @@ export class ContextStructuredFieldEditorComponent {
     this.valueChange.emit(repositories);
   }
 
-  updateRepositoryNumber(index: number, key: string, event: Event): void {
-    const raw = eventValue(event);
+  updateRepositoryNumber(index: number, key: string, value: string): void {
+    const raw = value.trim();
     this.updateRepository(index, key, raw ? Number(raw) : null);
   }
 
@@ -928,14 +925,13 @@ export class ContextStructuredFieldEditorComponent {
     return this.optionsFor(referenceGroup.type).filter((option) => !selected.includes(option.id));
   }
 
-  addProcessStepReference(index: number, referenceGroup: ReferenceGroup, event: Event): void {
-    const id = eventValue(event);
+  addProcessStepReference(index: number, referenceGroup: ReferenceGroup, value: string): void {
+    const id = value.trim();
     if (!id) return;
     this.updateProcessStepReferenceList(index, referenceGroup.key, unique([
       ...this.selectedProcessStepReferences(index, referenceGroup.key),
       id
     ]));
-    resetSelect(event);
   }
 
   removeProcessStepReference(index: number, key: string, id: string): void {
@@ -1075,13 +1071,4 @@ function assignOrDelete(target: JsonObject, key: string, value: unknown): void {
   const emptyObject = value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
   if (value === '' || value === null || value === undefined || emptyArray || emptyObject) delete target[key];
   else target[key] = value;
-}
-
-function eventValue(event: Event): string {
-  return String((event.target as HTMLInputElement | HTMLSelectElement | null)?.value || '').trim();
-}
-
-function resetSelect(event: Event): void {
-  const select = event.target as HTMLSelectElement | null;
-  if (select) select.value = '';
 }

@@ -11,41 +11,35 @@
           </div>
 
           <div class="gitlab-scope-grid">
-            <label class="form-field">
-              <span class="field-label">Group</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. CRM"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.group"
-              />
-            </label>
+            <app-text-field
+              type="text"
+              placeholder="np. CRM"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.group"
+              label="Group"
+              class="form-field"
+            />
 
-            <label class="form-field">
-              <span class="field-label">Project name</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. crm-customer-service"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.projectName"
-              />
-            </label>
+            <app-text-field
+              type="text"
+              placeholder="np. crm-customer-service"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.projectName"
+              label="Project name"
+              class="form-field"
+            />
 
-            <label class="form-field">
-              <span class="field-label">Branch / Ref</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="HEAD"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.branch"
-              />
-            </label>
+            <app-text-field
+              type="text"
+              placeholder="HEAD"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.branch"
+              label="Branch / Ref"
+              class="form-field"
+            />
 
           </div>
 
@@ -109,37 +103,40 @@
               <div class="form-grid form-grid--stacked">
                 <label class="form-field">
                   <span class="field-label">Project Hints</span>
-                  <textarea
-                    class="text-input text-input--textarea"
+                  <app-text-field
+                    ariaLabel="Project hints"
+                    type="textarea"
+                    class="text-input--textarea"
                     rows="4"
                     placeholder="np. crm-customer-service"
                     spellcheck="false"
                     [formControl]="gitLabRepositoryForm.controls.projectHints"
-                  ></textarea>
+                    appearance="code"
+                  />
                   <span class="field-hint">Oddzielaj wartości przecinkiem albo nową linią.</span>
                 </label>
 
-                <label class="form-field">
-                  <span class="field-label">Operation Names</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="4"
-                    placeholder="np. GET /crm/customers/{customerId}"
-                    spellcheck="false"
-                    [formControl]="gitLabRepositoryForm.controls.operationNames"
-                  ></textarea>
-                </label>
+                <app-text-field
+                  type="textarea"
+                  rows="4"
+                  placeholder="np. GET /crm/customers/{customerId}"
+                  spellcheck="false"
+                  [formControl]="gitLabRepositoryForm.controls.operationNames"
+                  appearance="code"
+                  label="Operation Names"
+                  class="text-input--textarea form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Keywords</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="4"
-                    placeholder="np. customer, segment"
-                    spellcheck="false"
-                    [formControl]="gitLabRepositoryForm.controls.keywords"
-                  ></textarea>
-                </label>
+                <app-text-field
+                  type="textarea"
+                  rows="4"
+                  placeholder="np. customer, segment"
+                  spellcheck="false"
+                  [formControl]="gitLabRepositoryForm.controls.keywords"
+                  appearance="code"
+                  label="Keywords"
+                  class="text-input--textarea form-field"
+                />
               </div>
 
               @if (controlInvalid(gitLabRepositoryForm.controls.projectHints)) {
@@ -151,13 +148,16 @@
               <div class="form-grid form-grid--stacked">
                 <label class="form-field">
                   <span class="field-label">Changed files</span>
-                  <textarea
-                    class="text-input text-input--textarea"
+                  <app-text-field
+                    ariaLabel="Changed file paths"
+                    type="textarea"
+                    class="text-input--textarea"
                     rows="6"
                     placeholder="np. src/main/java/com/example/customer/CustomerController.java"
                     spellcheck="false"
                     [formControl]="gitLabInstructionForm.controls.changedFilePaths"
-                  ></textarea>
+                    appearance="code"
+                  />
                   <span class="field-hint">
                     Tool użyje wspólnego scope jako `repositoryKey = group/projectName` oraz `branch/ref`.
                     Changed files są opcjonalne, ale pozwalają znaleźć lokalne AGENTS.md.
@@ -170,8 +170,8 @@
               <div class="form-grid">
                 <label class="form-field form-field--wide">
                   <span class="field-label">Jira issue key</span>
-                  <input
-                    class="text-input"
+                  <app-text-field
+                    ariaLabel="Jira issue key"
                     type="text"
                     placeholder="np. CRM-123"
                     autocomplete="off"
@@ -181,16 +181,14 @@
                   <span class="field-hint">Tool użyje `group` ze wspólnego scope, a gdy go nie podasz, backend użyje konfiguracji GitLaba.</span>
                 </label>
 
-                <label class="form-field">
-                  <span class="field-label">Max results</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="100"
-                    [formControl]="gitLabMergeRequestForm.controls.maxResults"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="100"
+                  [formControl]="gitLabMergeRequestForm.controls.maxResults"
+                  label="Max results"
+                  class="form-field"
+                />
               </div>
 
               @if (
@@ -203,40 +201,34 @@
 
             @case ('endpoint-inventory') {
               <div class="form-grid">
-                <label class="form-field">
-                  <span class="field-label">Endpoint path prefix</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie, np. /crm/customers"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabEndpointForm.controls.endpointPathPrefix"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie, np. /crm/customers"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabEndpointForm.controls.endpointPathPrefix"
+                  label="Endpoint path prefix"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">HTTP method</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie, np. GET"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabEndpointForm.controls.httpMethod"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie, np. GET"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabEndpointForm.controls.httpMethod"
+                  label="HTTP method"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max scanned files</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="250"
-                    [formControl]="gitLabEndpointForm.controls.maxScannedFiles"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="250"
+                  [formControl]="gitLabEndpointForm.controls.maxScannedFiles"
+                  label="Max scanned files"
+                  class="form-field"
+                />
               </div>
 
               @if (controlInvalid(gitLabEndpointForm.controls.maxScannedFiles)) {
@@ -246,160 +238,136 @@
 
             @case ('endpoint-use-case-context') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Endpoint ID</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. GET /crm/customers/{customerId} -> CustomerController#getCustomer"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointId"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. GET /crm/customers/{customerId} -> CustomerController#getCustomer"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointId"
+                  label="Endpoint ID"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">HTTP method</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. GET"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabEndpointUseCaseContextForm.controls.httpMethod"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. GET"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabEndpointUseCaseContextForm.controls.httpMethod"
+                  label="HTTP method"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Endpoint path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. /crm/customers/{customerId}"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointPath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. /crm/customers/{customerId}"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabEndpointUseCaseContextForm.controls.endpointPath"
+                  label="Endpoint path"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max depth</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="8"
-                    [formControl]="gitLabEndpointUseCaseContextForm.controls.maxDepth"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="8"
+                  [formControl]="gitLabEndpointUseCaseContextForm.controls.maxDepth"
+                  label="Max depth"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max files</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="100"
-                    [formControl]="gitLabEndpointUseCaseContextForm.controls.maxFiles"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="100"
+                  [formControl]="gitLabEndpointUseCaseContextForm.controls.maxFiles"
+                  label="Max files"
+                  class="form-field"
+                />
 
               </div>
             }
 
             @case ('java-method-use-case-context') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Class name</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. com.example.crm.customer.application.CustomerService"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.className"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. com.example.crm.customer.application.CustomerService"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.className"
+                  label="Class name"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Method name</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. getCustomer"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.methodName"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. getCustomer"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.methodName"
+                  label="Method name"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">File path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie: src/main/java/com/example/crm/customer/application/CustomerService.java"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.filePath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie: src/main/java/com/example/crm/customer/application/CustomerService.java"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.filePath"
+                  label="File path"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Line number</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    placeholder="opcjonalnie"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.lineNumber"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  placeholder="opcjonalnie"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.lineNumber"
+                  label="Line number"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Parameter count</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="0"
-                    max="50"
-                    placeholder="opcjonalnie"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.parameterCount"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="0"
+                  max="50"
+                  placeholder="opcjonalnie"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.parameterCount"
+                  label="Parameter count"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Parameter types</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="3"
-                    placeholder="opcjonalnie, np. CustomerId"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.parameterTypes"
-                  ></textarea>
-                </label>
+                <app-text-field
+                  type="textarea"
+                  rows="3"
+                  placeholder="opcjonalnie, np. CustomerId"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.parameterTypes"
+                  appearance="code"
+                  label="Parameter types"
+                  class="text-input--textarea form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max depth</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="8"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.maxDepth"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="8"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.maxDepth"
+                  label="Max depth"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max results</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="100"
-                    [formControl]="gitLabJavaMethodUseCaseContextForm.controls.maxResults"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="100"
+                  [formControl]="gitLabJavaMethodUseCaseContextForm.controls.maxResults"
+                  label="Max results"
+                  class="form-field"
+                />
               </div>
 
               @if (
@@ -412,88 +380,78 @@
 
             @case ('repository-files-by-path') {
               <div class="form-grid">
-                <label class="form-field">
-                  <span class="field-label">Max chars / file</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="120000"
-                    [formControl]="gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="120000"
+                  [formControl]="gitLabRepositoryFilesByPathForm.controls.maxCharactersPerFile"
+                  label="Max chars / file"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max total chars</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="500000"
-                    [formControl]="gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="500000"
+                  [formControl]="gitLabRepositoryFilesByPathForm.controls.maxTotalCharacters"
+                  label="Max total chars"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">File paths</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="8"
-                    placeholder="src/main/java/com/example/crm/customer/CustomerController.java"
-                    spellcheck="false"
+                <app-text-field
+                  type="textarea"
+                  rows="8"
+                  placeholder="src/main/java/com/example/crm/customer/CustomerController.java"
+                  spellcheck="false"
                   [formControl]="gitLabRepositoryFilesByPathForm.controls.filePaths"
-                ></textarea>
-              </label>
+                  appearance="code"
+                  label="File paths"
+                  class="text-input--textarea form-field form-field--wide"
+                />
             </div>
           }
 
             @case ('java-method-slice') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">File path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="src/main/java/com/example/crm/customer/CustomerService.java"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodSliceForm.controls.filePath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="src/main/java/com/example/crm/customer/CustomerService.java"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodSliceForm.controls.filePath"
+                  label="File path"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Declaring type</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="opcjonalnie, np. CustomerService"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodSliceForm.controls.declaringTypeName"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="opcjonalnie, np. CustomerService"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodSliceForm.controls.declaringTypeName"
+                  label="Declaring type"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max chars</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="40000"
-                    [formControl]="gitLabJavaMethodSliceForm.controls.maxCharacters"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="40000"
+                  [formControl]="gitLabJavaMethodSliceForm.controls.maxCharacters"
+                  label="Max chars"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Methods</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="5"
-                    placeholder="getCustomer&#10;validateAccess@42&#10;mapResponse L91"
-                    spellcheck="false"
-                    [formControl]="gitLabJavaMethodSliceForm.controls.methodSelectors"
-                  ></textarea>
-                </label>
+                <app-text-field
+                  type="textarea"
+                  rows="5"
+                  placeholder="getCustomer&#10;validateAccess@42&#10;mapResponse L91"
+                  spellcheck="false"
+                  [formControl]="gitLabJavaMethodSliceForm.controls.methodSelectors"
+                  appearance="code"
+                  label="Methods"
+                  class="text-input--textarea form-field form-field--wide"
+                />
               </div>
 
               <div class="toggle-grid">
@@ -527,63 +485,53 @@
 
             @case ('openapi-endpoint-slice') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">OpenAPI file path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="src/main/resources/openapi/customer-api.yml"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.filePath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="src/main/resources/openapi/customer-api.yml"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabOpenApiEndpointSliceForm.controls.filePath"
+                  label="OpenAPI file path"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">HTTP method</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. POST"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.httpMethod"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. POST"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabOpenApiEndpointSliceForm.controls.httpMethod"
+                  label="HTTP method"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Endpoint path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. /api/customers/{customerId}/cases"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.endpointPath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. /api/customers/{customerId}/cases"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabOpenApiEndpointSliceForm.controls.endpointPath"
+                  label="Endpoint path"
+                  class="form-field form-field--wide"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Schema depth</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="0"
-                    max="4"
-                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.schemaDepth"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="0"
+                  max="4"
+                  [formControl]="gitLabOpenApiEndpointSliceForm.controls.schemaDepth"
+                  label="Schema depth"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Max chars</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1"
-                    max="50000"
-                    [formControl]="gitLabOpenApiEndpointSliceForm.controls.maxCharacters"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1"
+                  max="50000"
+                  [formControl]="gitLabOpenApiEndpointSliceForm.controls.maxCharacters"
+                  label="Max chars"
+                  class="form-field"
+                />
               </div>
 
               <label class="toggle-row">
@@ -609,13 +557,16 @@
               <div class="form-grid form-grid--stacked">
                 <label class="form-field">
                   <span class="field-label">Path prefixes</span>
-                  <textarea
-                    class="text-input text-input--textarea"
+                  <app-text-field
+                    ariaLabel="Path prefixes"
+                    type="textarea"
+                    class="text-input--textarea"
                     rows="4"
                     placeholder="apps/crm-agent"
                     spellcheck="false"
                     [formControl]="gitLabFrontendCatalogForm.controls.pathPrefixes"
-                  ></textarea>
+                    appearance="code"
+                  />
                   <span class="field-hint">
                     Opcjonalne ścieżki workspace, po jednej w linii. Limity skanu narzuca backend.
                   </span>
@@ -625,38 +576,34 @@
 
             @case ('frontend-screen-reachability') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Screen ID</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="screen-crm-customer-profile"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabFrontendScreenReachabilityForm.controls.screenId"
-                  />
-                </label>
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Path prefixes</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="3"
-                    placeholder="apps/crm-agent"
-                    spellcheck="false"
-                    [formControl]="gitLabFrontendScreenReachabilityForm.controls.pathPrefixes"
-                  ></textarea>
-                </label>
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Expected revision</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="optional commit id"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabFrontendScreenReachabilityForm.controls.expectedRevision"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="screen-crm-customer-profile"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabFrontendScreenReachabilityForm.controls.screenId"
+                  label="Screen ID"
+                  class="form-field form-field--wide"
+                />
+                <app-text-field
+                  type="textarea"
+                  rows="3"
+                  placeholder="apps/crm-agent"
+                  spellcheck="false"
+                  [formControl]="gitLabFrontendScreenReachabilityForm.controls.pathPrefixes"
+                  appearance="code"
+                  label="Path prefixes"
+                  class="text-input--textarea form-field form-field--wide"
+                />
+                <app-text-field
+                  type="text"
+                  placeholder="optional commit id"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabFrontendScreenReachabilityForm.controls.expectedRevision"
+                  label="Expected revision"
+                  class="form-field form-field--wide"
+                />
               </div>
               @if (controlInvalid(gitLabFrontendScreenReachabilityForm.controls.screenId)) {
                 <p class="form-error">Pole `screenId` jest wymagane.</p>
@@ -665,48 +612,42 @@
 
             @case ('frontend-route-branch-slice') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Screen ID</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="screen-crm-customer-profile"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.screenId"
-                  />
-                </label>
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Path prefixes</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="3"
-                    placeholder="apps/crm-agent"
-                    spellcheck="false"
-                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.pathPrefixes"
-                  ></textarea>
-                </label>
-                <label class="form-field">
-                  <span class="field-label">Expected revision</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="optional commit id"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.expectedRevision"
-                  />
-                </label>
-                <label class="form-field">
-                  <span class="field-label">Max chars</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1000"
-                    max="80000"
-                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.maxCharacters"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="screen-crm-customer-profile"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabAngularRouteBranchSliceForm.controls.screenId"
+                  label="Screen ID"
+                  class="form-field form-field--wide"
+                />
+                <app-text-field
+                  type="textarea"
+                  rows="3"
+                  placeholder="apps/crm-agent"
+                  spellcheck="false"
+                  [formControl]="gitLabAngularRouteBranchSliceForm.controls.pathPrefixes"
+                  appearance="code"
+                  label="Path prefixes"
+                  class="text-input--textarea form-field form-field--wide"
+                />
+                <app-text-field
+                  type="text"
+                  placeholder="optional commit id"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabAngularRouteBranchSliceForm.controls.expectedRevision"
+                  label="Expected revision"
+                  class="form-field"
+                />
+                <app-text-field
+                  type="number"
+                  min="1000"
+                  max="80000"
+                  [formControl]="gitLabAngularRouteBranchSliceForm.controls.maxCharacters"
+                  label="Max chars"
+                  class="form-field"
+                />
               </div>
               <label class="toggle-row">
                 <input
@@ -725,32 +666,27 @@
 
             @case ('frontend-typescript-symbol-slice') {
               <div class="form-grid">
-                <label class="form-field form-field--wide">
-                  <span class="field-label">File path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="apps/crm-agent/src/app/customer/customer-profile.component.ts"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.filePath"
-                  />
-                </label>
-                <label class="form-field">
-                  <span class="field-label">Declaring type</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="CrmCustomerProfileComponent"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.declaringTypeName"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="apps/crm-agent/src/app/customer/customer-profile.component.ts"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabTypeScriptSymbolSliceForm.controls.filePath"
+                  label="File path"
+                  class="form-field form-field--wide"
+                />
+                <app-text-field
+                  type="text"
+                  placeholder="CrmCustomerProfileComponent"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabTypeScriptSymbolSliceForm.controls.declaringTypeName"
+                  label="Declaring type"
+                  class="form-field"
+                />
                 <label class="form-field form-field--wide">
                   <span class="field-label">Template path (optional)</span>
-                  <input
-                    class="text-input"
+                  <app-text-field
                     type="text"
                     placeholder="apps/crm-agent/src/app/customer/customer-profile.component.html"
                     autocomplete="off"
@@ -759,37 +695,38 @@
                   />
                   <span class="field-hint">Pozostaw puste, aby odczytać statyczne templateUrl albo inline template z komponentu.</span>
                 </label>
-                <label class="form-field">
-                  <span class="field-label">Max chars</span>
-                  <input
-                    class="text-input"
-                    type="number"
-                    min="1000"
-                    max="40000"
-                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.maxCharacters"
-                  />
-                </label>
+                <app-text-field
+                  type="number"
+                  min="1000"
+                  max="40000"
+                  [formControl]="gitLabTypeScriptSymbolSliceForm.controls.maxCharacters"
+                  label="Max chars"
+                  class="form-field"
+                />
                 <label class="form-field form-field--wide">
                   <span class="field-label">Symbol selectors</span>
-                  <textarea
-                    class="text-input text-input--textarea"
+                  <app-text-field
+                    ariaLabel="Symbols"
+                    type="textarea"
+                    class="text-input--textarea"
                     rows="5"
                     placeholder="METHOD:saveCustomer@120&#10;PROPERTY:customerEffect&#10;refreshSummary"
                     spellcheck="false"
                     [formControl]="gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors"
-                  ></textarea>
+                    appearance="code"
+                  />
                   <span class="field-hint">Opcjonalne przy odkrywaniu z template. Jeden selector w linii: KIND:name&#64;line; bez kind używane jest AUTO.</span>
                 </label>
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Path prefixes</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="3"
-                    placeholder="apps/crm-agent"
-                    spellcheck="false"
-                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.pathPrefixes"
-                  ></textarea>
-                </label>
+                <app-text-field
+                  type="textarea"
+                  rows="3"
+                  placeholder="apps/crm-agent"
+                  spellcheck="false"
+                  [formControl]="gitLabTypeScriptSymbolSliceForm.controls.pathPrefixes"
+                  appearance="code"
+                  label="Path prefixes"
+                  class="text-input--textarea form-field form-field--wide"
+                />
               </div>
               <label class="toggle-row">
                 <input type="checkbox" [formControl]="gitLabTypeScriptSymbolSliceForm.controls.includeTemplateBindings" />
@@ -817,53 +754,45 @@
 
             @case ('source-resolve') {
               <div class="form-grid">
-                <label class="form-field">
-                  <span class="field-label">Group Path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. CRM/CUSTOMER"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabSourceForm.controls.groupPath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. CRM/CUSTOMER"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabSourceForm.controls.groupPath"
+                  label="Group Path"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Project Path</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. crm-customer-service"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabSourceForm.controls.projectPath"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. crm-customer-service"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabSourceForm.controls.projectPath"
+                  label="Project Path"
+                  class="form-field"
+                />
 
-                <label class="form-field">
-                  <span class="field-label">Ref</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="HEAD"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabSourceForm.controls.ref"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="HEAD"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabSourceForm.controls.ref"
+                  label="Ref"
+                  class="form-field"
+                />
 
-                <label class="form-field form-field--wide">
-                  <span class="field-label">Symbol</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="np. com.example.crm.customer.CustomerService"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabSourceForm.controls.symbol"
-                  />
-                </label>
+                <app-text-field
+                  type="text"
+                  placeholder="np. com.example.crm.customer.CustomerService"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="gitLabSourceForm.controls.symbol"
+                  label="Symbol"
+                  class="form-field form-field--wide"
+                />
               </div>
 
               <label class="toggle-row">
@@ -1020,7 +949,16 @@
 
                 <details class="context-subsection context-subsection--collapsible" open>
                   <summary><span>Human-readable BFS outline</span><span class="panel-chip">{{ graph.outlineCharacters }} chars</span></summary>
-                  <textarea class="json-output source-output" readonly spellcheck="false" [value]="graph.readableOutline"></textarea>
+                  <app-text-field
+                    ariaLabel="Source content"
+                    type="textarea"
+                    class="json-output source-output"
+                    readonly
+                    spellcheck="false"
+                    [value]="graph.readableOutline"
+                    appearance="code"
+                    wrap="off"
+                  />
                 </details>
 
                 @for (level of graph.componentLevels; track level.depth) {
@@ -1042,7 +980,16 @@
                             </div>
                           </summary>
                           <div class="endpoint-card__details">
-                            <textarea class="json-output source-output" readonly spellcheck="false" [value]="component.sliceContent"></textarea>
+                            <app-text-field
+                              ariaLabel="Source content"
+                              type="textarea"
+                              class="json-output source-output"
+                              readonly
+                              spellcheck="false"
+                              [value]="component.sliceContent"
+                              appearance="code"
+                              wrap="off"
+                            />
                           </div>
                         </details>
                       }
@@ -1070,7 +1017,16 @@
                           </summary>
                           <div class="endpoint-card__details">
                             <p>{{ dependency.sourcePath || dependency.moduleSpecifier || 'source unresolved' }}</p>
-                            <textarea class="json-output source-output" readonly spellcheck="false" [value]="dependency.sliceContent"></textarea>
+                            <app-text-field
+                              ariaLabel="Source content"
+                              type="textarea"
+                              class="json-output source-output"
+                              readonly
+                              spellcheck="false"
+                              [value]="dependency.sliceContent"
+                              appearance="code"
+                              wrap="off"
+                            />
                           </div>
                         </details>
                       }
@@ -1136,7 +1092,16 @@
                         </div>
                       </summary>
                       <div class="endpoint-card__details">
-                        <textarea class="json-output source-output" readonly spellcheck="false" [value]="file.content"></textarea>
+                        <app-text-field
+                          ariaLabel="Source content"
+                          type="textarea"
+                          class="json-output source-output"
+                          readonly
+                          spellcheck="false"
+                          [value]="file.content"
+                          appearance="code"
+                          wrap="off"
+                        />
                       </div>
                     </details>
                   }
@@ -1194,7 +1159,16 @@
                   </div>
                 </div>
                 @if (symbolSlice.content) {
-                  <textarea class="json-output source-output" readonly spellcheck="false" [value]="symbolSlice.content"></textarea>
+                  <app-text-field
+                    ariaLabel="Source content"
+                    type="textarea"
+                    class="json-output source-output"
+                    readonly
+                    spellcheck="false"
+                    [value]="symbolSlice.content"
+                    appearance="code"
+                    wrap="off"
+                  />
                 }
                 @if (symbolSlice.templateBindings.length > 0) {
                   <details class="context-subsection context-subsection--collapsible" open>
@@ -1882,7 +1856,16 @@
                           @if (file.error) {
                             <p class="form-error">{{ file.error }}</p>
                           } @else if (file.content) {
-                            <textarea class="json-output source-output" readonly spellcheck="false" [value]="file.content"></textarea>
+                            <app-text-field
+                              ariaLabel="Source content"
+                              type="textarea"
+                              class="json-output source-output"
+                              readonly
+                              spellcheck="false"
+                              [value]="file.content"
+                              appearance="code"
+                              wrap="off"
+                            />
                           }
                         </div>
                       </details>
@@ -1954,12 +1937,16 @@
                 }
 
                 @if (sliceResult.content) {
-                  <textarea
+                  <app-text-field
+                    ariaLabel="Source content"
+                    type="textarea"
                     class="json-output source-output source-output--slice"
                     readonly
                     spellcheck="false"
                     [value]="sliceResult.content"
-                  ></textarea>
+                    appearance="code"
+                    wrap="off"
+                  />
                 }
 
                 @if (sliceResult.limitations.length > 0) {
@@ -2018,12 +2005,16 @@
                 }
 
                 @if (openApiResult.content) {
-                  <textarea
+                  <app-text-field
+                    ariaLabel="Source content"
+                    type="textarea"
                     class="json-output source-output source-output--slice"
                     readonly
                     spellcheck="false"
                     [value]="openApiResult.content"
-                  ></textarea>
+                    appearance="code"
+                    wrap="off"
+                  />
                 }
 
                 @if (openApiResult.limitations.length > 0) {
@@ -2070,14 +2061,17 @@
                     </button>
                   </div>
                 </summary>
-                <textarea
-                  id="gitlabRequestPreview"
+                <app-text-field
+                  type="textarea"
+                  inputId="gitlabRequestPreview"
                   class="json-output"
-                  aria-label="Request preview"
+                  ariaLabel="Request preview"
                   readonly
                   spellcheck="false"
                   [value]="state().requestJson"
-                ></textarea>
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
 
@@ -2130,14 +2124,17 @@
                   />
                 </div>
               </summary>
-              <textarea
-                id="gitlabJsonResponse"
+              <app-text-field
+                type="textarea"
+                inputId="gitlabJsonResponse"
                 class="json-output"
-                aria-label="JSON response"
+                ariaLabel="JSON response"
                 readonly
                 spellcheck="false"
                 [value]="state().responseJson"
-              ></textarea>
+                appearance="code"
+                wrap="off"
+              />
             </details>
           </article>
         }

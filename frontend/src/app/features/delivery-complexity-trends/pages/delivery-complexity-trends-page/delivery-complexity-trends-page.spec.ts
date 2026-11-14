@@ -1,3 +1,5 @@
+import { choice, choiceLabels } from '../../../../../testing/form-controls';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { buildExcelCsv } from '../../../../core/utils/csv-file.utils';
@@ -32,7 +34,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
   let fixture: ComponentFixture<DeliveryComplexityTrendsPageComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()],
       imports: [DeliveryComplexityTrendsPageComponent]
     }).compileComponents();
     fixture = TestBed.createComponent(DeliveryComplexityTrendsPageComponent);
@@ -98,9 +100,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
       .map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
     expect(qualityValues).toContain('Ocenione2');
     expect(compiled.textContent).not.toContain('Wynik został policzony deterministycznie');
-    expect(Array.from(
-      compiled.querySelector<HTMLSelectElement>('.trend-field select')!.options
-    ).map((option) => option.text.trim())).toEqual([
+    expect(await choiceLabels(fixture, 'app-choice-select.trend-field:first-child mat-select')).toEqual([
       'Dzień', 'Tydzień', 'Miesiąc', 'Kwartał'
     ]);
 
@@ -134,9 +134,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
       })
     ])]);
 
-    const teamSelect = Array.from(element().querySelectorAll<HTMLSelectElement>('.trend-field select'))[1];
-    teamSelect.value = 'id:team-b';
-    teamSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    await (await choice(fixture, 'app-choice-select.trend-field:nth-child(2) mat-select')).clickOptions({ text: /Team B/ });
     fixture.detectChanges();
 
     expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('5');

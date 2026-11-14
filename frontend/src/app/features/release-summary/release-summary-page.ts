@@ -1,8 +1,8 @@
+import { AiExecutionControlsComponent } from '../../components/ai-execution-controls/ai-execution-controls';
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription, timer, switchMap } from 'rxjs';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
@@ -22,11 +22,11 @@ import { AiOptionsApiService } from '../../core/services/ai-options-api.service'
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { buildReportShareDocument } from '../../core/utils/analysis-share.utils';
 import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, listedDefaultAiModel,
-  reasoningEffortsForAiModel, defaultReasoningEffortForAiModel } from '../../core/utils/analysis-ai-model-options.utils';
+  defaultReasoningEffortForAiModel } from '../../core/utils/analysis-ai-model-options.utils';
 
 @Component({
   selector: 'app-release-summary-page',
-  imports: [FormsModule, MatTooltipModule, ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
+  imports: [AiExecutionControlsComponent, TextFieldComponent, ApplicationSelectComponent, GitLabBranchSelectComponent, AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent, AnalysisReportPanelComponent, AnalysisResultHeaderComponent,
     AnalysisFollowUpChatComponent, AnalysisReportEditorComponent],
   templateUrl: './release-summary-page.html',
@@ -60,7 +60,6 @@ export class ReleaseSummaryPageComponent {
     !!this.job()?.report && ['COMPLETED','PARTIAL','NO_CHANGES'].includes(this.job()!.status));
   readonly model = signal(''); readonly reasoning = signal('');
   readonly modelCatalog = signal(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
-  readonly reasoningOptions = computed(() => reasoningEffortsForAiModel(this.modelCatalog(), this.model()));
   readonly modelsLoading = signal(false);
   readonly modelError = signal('');
   readonly effectiveModel = computed(() => this.model() || this.modelCatalog().defaultModel);
@@ -209,4 +208,3 @@ export class ReleaseSummaryPageComponent {
       });
   }
 }
-

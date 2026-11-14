@@ -1,6 +1,7 @@
 <div class="branch-select" (click)="$event.stopPropagation()">
-  <span class="branch-select__label">{{ label() }}</span>
+  <app-form-field [controlId]="controlId" [label]="label()" [tooltip]="tooltip()" (focusRequested)="trigger.focus()">
   <button
+    #trigger [id]="controlId"
     class="branch-select__control"
     type="button"
     aria-haspopup="listbox"
@@ -16,19 +17,17 @@
 
   @if (open()) {
     <div class="branch-select__menu">
-      <label class="branch-select__search">
-        <span>{{ filterLabel() }}</span>
-        <input
-          class="text-input"
-          type="search"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="master, release/2026"
-          [value]="filter()"
-          (input)="changeFilter($any($event.target).value)"
-          (keydown.arrowdown)="focusOption(0); $event.preventDefault()"
-        />
-      </label>
+      <app-text-field
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="master, release/2026"
+        [value]="filter()"
+        (valueChange)="changeFilter($event)"
+        (keydown.arrowdown)="focusOption(0); $event.preventDefault()"
+        label="{{ filterLabel() }}"
+        class="branch-select__search"
+      />
 
       @if (loading()) {
         <p class="branch-select__status" role="status">Pobieranie gałęzi…</p>
@@ -77,4 +76,5 @@
       }
     </div>
   }
+  </app-form-field>
 </div>

@@ -202,11 +202,9 @@
 .form-grid--stacked {
   grid-template-columns: 1fr;
 }
-
 .text-input--textarea {
-  min-height: 104px;
-  resize: vertical;
-  font-family: var(--font-mono);
+  --field-min-height: 104px;
+  --field-resize: vertical;
 }
 
 .gitlab-tool-group {
@@ -480,8 +478,7 @@
     align-items: flex-start;
     flex-direction: column;
   }
-
-  .json-output {
-    min-height: 260px;
-  }
+.json-output {
+  --field-min-height: 260px;
+}
 }

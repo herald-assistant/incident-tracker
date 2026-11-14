@@ -1,3 +1,5 @@
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
@@ -42,7 +44,7 @@ type FilterOption = { value: string; label: string; issueCount: number; delivere
 
 @Component({
   selector: 'app-delivery-complexity-assessment-page',
-  imports: [
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent,
     ReactiveFormsModule,
     DecimalPipe,
     MatTooltipModule,

@@ -1,3 +1,5 @@
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -89,7 +91,7 @@ const ELASTIC_TOOL_GROUPS = ELASTIC_TOOLS.reduce<ElasticToolGroup[]>((groups, to
 
 @Component({
   selector: 'app-elastic-evidence-console',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent, ReactiveFormsModule],
   templateUrl: './elastic-evidence-console.html',
   styleUrl: './elastic-evidence-console.scss'
 })

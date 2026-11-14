@@ -33,6 +33,17 @@ Ekran powinien pozostac roboczy i gesty informacyjnie:
 
 Nie dodawaj lokalnego hero ani `workbench-header`.
 
+## Kontrolki i edycja
+
+Obowiazuje [wspolny standard UI](../../../../docs/architecture/frontend-ui-standards.md),
+takze w filtrach, drawerach, edytorze strukturalnym i review asysty AI.
+Uzywaj `app-text-field` i `app-choice-select`; gestosc edytora ustawiaj
+zmiennymi `--field-*`, bez lokalnych kopii ramek i fokusu.
+Pickery dodajace relacje/referencje korzystaja z `resetAfterSelection`.
+Zachowaj typy wartosci, walidacje, readonly oraz dotychczasowe zdarzenia
+zatwierdzania. Zamiana kontrolki nie zmienia wyboru pol, potwierdzen,
+uniewazniania podgladu ani warunkow zapisu katalogu.
+
 ## Validation i Open Questions
 
 Maintenance inbox ma priorytetowac:

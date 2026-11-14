@@ -210,26 +210,19 @@
 .json-icon-button .material-symbols-outlined {
   font-size: 19px;
 }
-
 .json-output {
   width: 100%;
-  min-height: 360px;
-  padding: 14px;
-  border: 0;
-  background: #f8fbff;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  line-height: 1.55;
-  resize: vertical;
-  white-space: pre;
+  --field-min-height: 360px;
+  --field-padding-block: 14px;
+  --field-padding-inline: 14px;
+  --field-font-size: 0.84rem;
+  --field-line-height: 1.55;
+  --field-resize: vertical;
 }
-
 .gitlab-json-panel--request .json-output,
 .source-output {
-  min-height: 220px;
+  --field-min-height: 220px;
 }
-
 .source-output {
-  max-height: 360px;
+  --field-max-height: 360px;
 }

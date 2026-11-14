@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, WritableSignal, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -263,7 +264,7 @@ const GITLAB_TOOL_GROUPS = GITLAB_TOOLS.reduce<GitLabToolGroup[]>((groups, tool)
 
 @Component({
   selector: 'app-gitlab-evidence-console',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ReactiveFormsModule],
   templateUrl: './gitlab-evidence-console.html',
   styleUrls: ['./gitlab-evidence-console.scss', './gitlab-evidence-result.scss']
 })
@@ -3167,4 +3168,3 @@ export class GitLabEvidenceConsoleComponent {
   }
 
 }
-

@@ -1,4 +1,8 @@
+@use '../../../styles/form-controls' as controls;
+
 :host {
+  --field-label-gap: 6px;
+  --field-label-height: 18px;
   display: block;
   min-width: 0;
 }
@@ -10,23 +14,16 @@
   min-width: 0;
 }
 
-.branch-select__label,
 .branch-select__search span {
   color: var(--text-muted);
   font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.branch-select__label {
-  display: flex;
-  align-items: center;
-  min-height: 18px;
-  line-height: 1;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .branch-select__control {
+  @include controls.trigger;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -34,16 +31,8 @@
   width: 100%;
   min-height: 58px;
   padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  font-weight: 800;
   line-height: 1.3;
-  text-align: left;
   cursor: pointer;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .branch-select__control > span:first-child,
@@ -58,20 +47,8 @@
   font-size: 21px;
 }
 
-.branch-select__control:hover:not(:disabled),
-.branch-select__control:focus-visible {
-  border-color: var(--primary);
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-
-.branch-select__control:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-  box-shadow: none;
-}
-
 .branch-select__menu {
+  @include controls.menu;
   position: absolute;
   z-index: 70;
   top: calc(100% + 8px);
@@ -79,15 +56,9 @@
   right: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   min-width: min(16rem, calc(100vw - 32px));
   max-height: min(28rem, 60vh);
   overflow: hidden;
-  padding: 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
 }
 
 .branch-select__search {
@@ -101,13 +72,14 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: 4px;
+  gap: 2px;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 .branch-select__option {
+  @include controls.option;
   display: grid;
   flex: 0 0 auto;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -116,13 +88,7 @@
   min-width: 0;
   min-height: 44px;
   padding: 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-main);
-  font: inherit;
   line-height: 1.4;
-  text-align: left;
   cursor: pointer;
 }
 
@@ -132,7 +98,7 @@
 }
 
 .branch-select__option-name {
-  font-weight: 700;
+  font-weight: var(--control-value-weight);
   line-height: 1.4;
 }
 
@@ -148,15 +114,6 @@
   padding-top: 2px;
   white-space: nowrap;
   line-height: 1.4;
-}
-
-.branch-select__option:hover,
-.branch-select__option:focus-visible {
-  background: var(--surface-soft);
-}
-
-.branch-select__option[aria-selected='true'] {
-  background: var(--primary-soft);
 }
 
 .branch-select__option small,

@@ -70,10 +70,7 @@
   gap: 12px;
 }
 
-.change-verification-textarea {
-  min-height: 108px;
-  resize: vertical;
-}
+.change-verification-notes { --field-min-height: 108px; }
 
 .change-verification-options {
   display: grid;

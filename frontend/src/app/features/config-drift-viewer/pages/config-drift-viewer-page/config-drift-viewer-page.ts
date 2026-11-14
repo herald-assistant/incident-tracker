@@ -1,3 +1,6 @@
+import { AiExecutionControlsComponent } from '../../../../components/ai-execution-controls/ai-execution-controls';
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -61,7 +64,7 @@ const EMPTY_INPUT_OPTIONS: ConfigDriftViewerInputOptions = {
 
 @Component({
   selector: 'app-config-drift-viewer-page',
-  imports: [
+  imports: [AiExecutionControlsComponent, ChoiceOptionComponent, ChoiceSelectComponent, TextFieldComponent,
     ReactiveFormsModule,
     AnalysisFeatureAsideComponent,
     AnalysisReportPanelComponent,
@@ -125,20 +128,14 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       label: option.label
     }))
   );
+  readonly branchOptions = computed<SelectOption[]>(() =>
+    this.inputOptions().branches.map(value => ({ value, label: value }))
+  );
   readonly systemOptions = computed<SelectOption[]>(() =>
     this.inputOptions().systems.map((option) => ({
       value: option.id,
       label: `${option.label} · ${option.configurationDirectory}`
     }))
-  );
-  readonly aiModelOptions = computed<SelectOption[]>(() =>
-    this.aiModelCatalog().models.map((model) => ({
-      value: model.id,
-      label: model.name && model.name !== model.id ? `${model.name} (${model.id})` : model.id
-    }))
-  );
-  readonly reasoningEffortOptions = computed(() =>
-    reasoningEffortsForAiModel(this.aiModelCatalog(), this.aiModelControl.value)
   );
   readonly selectedSystemIds = computed(() => {
     this.formRevision();
@@ -813,6 +810,16 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
         { emitEvent: false }
       );
     }
+  }
+
+  selectAiModel(value: string): void {
+    this.aiModelControl.markAsDirty();
+    this.aiModelControl.setValue(value);
+  }
+
+  selectReasoningEffort(value: string): void {
+    this.reasoningEffortControl.markAsDirty();
+    this.reasoningEffortControl.setValue(value);
   }
 
   private isTerminal(status: string | null | undefined): boolean {

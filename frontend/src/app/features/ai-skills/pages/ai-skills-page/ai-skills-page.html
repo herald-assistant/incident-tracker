@@ -49,39 +49,34 @@
             <span class="field-label">Search</span>
             <span class="ai-skills-search-control">
               <span class="material-symbols-outlined" aria-hidden="true">search</span>
-              <input
-                id="aiSkillsSearch"
-                class="text-input"
+              <app-text-field
+                inputId="aiSkillsSearch"
                 type="search"
                 placeholder="Name or description"
                 autocomplete="off"
                 [formControl]="searchControl"
+                ariaLabel="Search"
               />
             </span>
           </label>
 
-          <label class="field-control" for="aiSkillsWorkflow">
-            <span class="field-label">Workflow</span>
-            <select id="aiSkillsWorkflow" class="select-input" [formControl]="familyControl">
+          <app-choice-select inputId="aiSkillsWorkflow" [formControl]="familyControl" label="Workflow" class="field-control">
               @for (family of familyFilters(); track family.id) {
-                <option [value]="family.id">{{ family.label }} ({{ family.count }})</option>
+                <app-choice-option [value]="family.id" label="{{ family.label }} ({{ family.count }})" />
               }
-            </select>
-          </label>
+            </app-choice-select>
 
-          <label class="field-control" for="aiSkillsResponsibility">
-            <span class="field-label">Responsibility</span>
-            <select
-              id="aiSkillsResponsibility"
-              class="select-input"
-              [formControl]="responsibilityControl"
-            >
-              <option value="all">All responsibilities</option>
+          <app-choice-select
+            inputId="aiSkillsResponsibility"
+            [formControl]="responsibilityControl"
+            label="Responsibility"
+            class="field-control"
+          >
+              <app-choice-option value="all" label="All responsibilities" />
               @for (responsibility of responsibilities(); track responsibility) {
-                <option [value]="responsibility">{{ responsibility }}</option>
+                <app-choice-option [value]="responsibility" label="{{ responsibility }}" />
               }
-            </select>
-          </label>
+            </app-choice-select>
 
           <div class="ai-skills-count" aria-live="polite">{{ resultCountLabel() }}</div>
         </div>
@@ -239,15 +234,15 @@
 
           <div class="ai-skills-detail__content">
             @if (isEditing() && !editorPreview()) {
-              <label class="field-control" for="aiSkillEditor">
-                <span class="field-label">SKILL.md</span>
-                <textarea
-                  id="aiSkillEditor"
-                  class="ai-skills-editor"
-                  spellcheck="false"
-                  [formControl]="editorControl"
-                ></textarea>
-              </label>
+              <app-text-field
+                type="textarea"
+                inputId="aiSkillEditor"
+                spellcheck="false"
+                [formControl]="editorControl"
+                appearance="code"
+                label="SKILL.md"
+                class="ai-skills-editor field-control"
+              />
             } @else if (isEditing() && editorPreview()) {
               <app-markdown-content [content]="previewMarkdown()" />
             } @else if (rawView()) {

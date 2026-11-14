@@ -294,48 +294,26 @@
 .json-icon-button .material-symbols-outlined {
   font-size: 19px;
 }
-
 .json-editor,
 .json-output {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #f8fbff;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  line-height: 1.55;
-  white-space: pre;
+  --field-font-size: 0.84rem;
+  --field-line-height: 1.55;
 }
-
 .json-editor,
 .json-output {
-  padding: 14px;
-  resize: vertical;
+  --field-padding-block: 14px;
+  --field-padding-inline: 14px;
+  --field-resize: vertical;
 }
-
 .json-editor {
-  min-height: 420px;
+  --field-min-height: 420px;
 }
-
 .json-output {
-  min-height: 360px;
+  --field-min-height: 360px;
 }
-
-.database-json-panel .json-output {
-  border: 0;
-  border-radius: 0;
-}
-
 .database-json-panel--request .json-output {
-  min-height: 220px;
-}
-
-.json-editor:focus,
-.json-output:focus {
-  outline: none;
-  border-color: rgba(12, 102, 228, 0.36);
-  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.08);
+  --field-min-height: 220px;
 }
 
 .tool-status {
@@ -447,9 +425,8 @@
     align-items: flex-start;
     flex-direction: column;
   }
-
   .json-editor,
   .json-output {
-    min-height: 260px;
+    --field-min-height: 260px;
   }
 }

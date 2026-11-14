@@ -1,3 +1,5 @@
+@use '../../../../../styles/form-controls' as controls;
+
 :host {
   display: block;
 }
@@ -195,9 +197,7 @@
   outline: none;
 }
 
-.flow-explorer-target-grid .text-input {
-  min-height: 58px;
-}
+
 
 .flow-explorer-control-actions .secondary-button {
   width: 100%;
@@ -205,6 +205,7 @@
 }
 
 .flow-explorer-select__control {
+  @include controls.trigger;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -212,31 +213,8 @@
   width: 100%;
   height: 58px;
   padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  text-align: left;
   overflow: hidden;
   cursor: pointer;
-  transition:
-    border-color 140ms ease,
-    background-color 140ms ease,
-    box-shadow 140ms ease;
-}
-
-.flow-explorer-select__control:hover,
-.flow-explorer-select__control:focus-visible {
-  border-color: rgba(12, 102, 228, 0.34);
-  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
-  outline: none;
-}
-
-.flow-explorer-select__control:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-  box-shadow: none;
 }
 
 .flow-explorer-select__control--loading {
@@ -283,7 +261,7 @@
 .flow-explorer-target-preview strong {
   min-width: 0;
   color: var(--text-main);
-  font-weight: 800;
+  font-weight: var(--control-value-weight);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -306,20 +284,15 @@
 }
 
 .flow-explorer-select__menu {
+  @include controls.menu;
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   left: 0;
   z-index: 40;
   display: grid;
-  gap: 10px;
   max-height: min(520px, calc(100vh - 180px));
   overflow: auto;
-  padding: 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
 }
 
 .flow-explorer-select__menu--applications {
@@ -337,7 +310,7 @@
 
 .flow-explorer-select__options {
   display: grid;
-  gap: 7px;
+  gap: 2px;
 }
 
 .flow-explorer-section-mode-menu {
@@ -403,63 +376,26 @@
 }
 
 .flow-explorer-select-option {
+  @include controls.option;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  text-align: left;
-  transition:
-    border-color 140ms ease,
-    background-color 140ms ease,
-    box-shadow 140ms ease;
 }
 
 button.flow-explorer-select-option {
-  min-height: 58px;
+  min-height: 44px;
   padding: 10px;
   cursor: pointer;
 }
 
 article.flow-explorer-select-option {
-  min-height: 60px;
+  min-height: 44px;
 }
 
-.flow-explorer-select-option:hover,
-.flow-explorer-select-option:focus-within {
-  border-color: rgba(12, 102, 228, 0.34);
-  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
-  outline: none;
-}
-
-.flow-explorer-select-option--selected {
-  border-color: rgba(12, 102, 228, 0.48);
-  background: #eff6ff;
-}
-
-.flow-explorer-select-option:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
-  box-shadow: none;
-}
-
-.flow-explorer-select-option__badge {
-  align-self: start;
-  padding: 3px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-muted);
-  color: var(--text-soft);
-  font-size: 0.64rem;
-  font-weight: 800;
-  line-height: normal;
-  text-transform: uppercase;
-}
+.flow-explorer-select-option--selected { background: var(--primary-soft); border-color: transparent; }
 
 .flow-explorer-select-option__check {
   color: var(--primary-dark);
@@ -478,11 +414,6 @@ article.flow-explorer-select-option {
 
 .flow-explorer-system-info > .material-symbols-outlined {
   font-size: 19px;
-}
-
-.flow-explorer-select-option:hover .flow-explorer-system-info,
-.flow-explorer-select-option:focus-visible .flow-explorer-system-info {
-  color: var(--primary-dark);
 }
 
 .flow-explorer-select-option__select {
@@ -681,11 +612,7 @@ article.flow-explorer-select-option {
   gap: 12px;
 }
 
-.flow-explorer-textarea {
-  min-height: 96px;
-  resize: vertical;
-  line-height: 1.5;
-}
+.flow-explorer-instructions { --field-min-height: 96px; --field-line-height: 1.5; }
 
 .flow-explorer-run-actions {
   display: flex;

@@ -40,9 +40,21 @@ Glowny shell ma trzy grupy nawigacji:
 
 ## Styl i UX
 
+- Przed zmiana prezentacji przeczytaj
+  [standard UI i kontrolek](../docs/architecture/frontend-ui-standards.md).
+  To kanoniczny opis tokenow, wymiarow, stanow i odpowiedzialnosci kontrolek.
 - V1 jest jasnym motywem, ale style maja byc oparte o tokeny CSS i gotowe na
   przyszle warianty.
 - UI ma byc spokojne, korporacyjne, czytelne i gesto informacyjne.
+- Utrzymuj neutralne powierzchnie i lzejsze etykiety/sidebar. AI Skills
+  pozostaje lista z separatorami, bez obramowanych kart i ikon w kazdym wierszu.
+- Pola formularzy, filtrow, chatu i edytorow korzystaja ze wspolnych
+  `form-field`, `choice-select`, `text-field` oraz mixinow
+  `src/styles/_form-controls.scss`. Model/reasoning prezentuje zawsze
+  `ai-execution-controls`; oba pola maja 58 px, takze bez opisu i disabled.
+- Zachowaj pojedynczy wewnetrzny focus formularza. Nie nadpisuj lokalnie
+  ramek, typografii ani komunikatow wspolnych kontrolek; gestosc ustawiaj
+  przez udostepnione warianty i zmienne CSS.
 - Powtarzalne elementy pracy analitycznej musza byc spojne miedzy feature'ami:
   przebieg runu, tok pracy AI, tool evidence, follow-up chat, import/export,
   usage/cost, empty/error/loading states i drobne elementy prezentacji wyniku.

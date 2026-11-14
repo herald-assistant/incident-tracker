@@ -291,29 +291,17 @@
 .json-icon-button .material-symbols-outlined {
   font-size: 19px;
 }
-
 .json-output {
   width: 100%;
-  min-height: 360px;
-  padding: 14px;
-  border: 0;
-  border-radius: 0;
-  background: #f8fbff;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  line-height: 1.55;
-  resize: vertical;
-  white-space: pre;
+  --field-min-height: 360px;
+  --field-padding-block: 14px;
+  --field-padding-inline: 14px;
+  --field-font-size: 0.84rem;
+  --field-line-height: 1.55;
+  --field-resize: vertical;
 }
-
 .source-json-panel--request .json-output {
-  min-height: 220px;
-}
-
-.json-output:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 3px rgba(12, 102, 228, 0.08);
+  --field-min-height: 220px;
 }
 
 .route-chip {
@@ -363,8 +351,7 @@
     align-items: flex-start;
     flex-direction: column;
   }
-
   .json-output {
-    min-height: 260px;
+    --field-min-height: 260px;
   }
 }

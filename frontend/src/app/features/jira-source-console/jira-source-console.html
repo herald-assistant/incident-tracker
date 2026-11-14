@@ -10,18 +10,16 @@
             </div>
           </div>
 
-          <label class="form-field" for="jiraIssueRef">
-            <span class="field-label">Issue key or link</span>
-            <input
-              id="jiraIssueRef"
-              class="text-input"
-              type="text"
-              placeholder="CRM-123 albo https://jira.example.com/browse/CRM-123"
-              autocomplete="off"
-              spellcheck="false"
-              [formControl]="scopeForm.controls.issueRef"
-            />
-          </label>
+          <app-text-field
+            inputId="jiraIssueRef"
+            type="text"
+            placeholder="CRM-123 albo https://jira.example.com/browse/CRM-123"
+            autocomplete="off"
+            spellcheck="false"
+            [formControl]="scopeForm.controls.issueRef"
+            label="Issue key or link"
+            class="form-field"
+          />
 
           @if (controlInvalid(scopeForm.controls.issueRef)) {
             <p class="form-error">Pole `issueRef` jest wymagane.</p>
@@ -165,14 +163,17 @@
                     </button>
                   </div>
                 </summary>
-                <textarea
-                  id="jiraRequestPreview"
+                <app-text-field
+                  type="textarea"
+                  inputId="jiraRequestPreview"
                   class="json-output"
-                  aria-label="Request preview"
+                  ariaLabel="Request preview"
                   readonly
                   spellcheck="false"
                   [value]="state().requestJson"
-                ></textarea>
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
 
@@ -209,14 +210,17 @@
                   </button>
                 </div>
               </summary>
-              <textarea
-                id="jiraJsonResponse"
+              <app-text-field
+                type="textarea"
+                inputId="jiraJsonResponse"
                 class="json-output"
-                aria-label="JSON response"
+                ariaLabel="JSON response"
                 readonly
                 spellcheck="false"
                 [value]="state().responseJson"
-              ></textarea>
+                appearance="code"
+                wrap="off"
+              />
             </details>
           </article>
         }

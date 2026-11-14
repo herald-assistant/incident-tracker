@@ -1,3 +1,5 @@
+import { choice, choiceLabels } from '../../../../../testing/form-controls';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
@@ -27,16 +29,12 @@ describe('AiSkillsPageComponent', () => {
     expect(compiled.textContent).toContain('Technical Change Assessment');
     expect(compiled.textContent).toContain('UI Explorer');
     expect(compiled.textContent).toContain('Operational Context Assistance');
-    const workflowSelect = compiled.querySelector<HTMLSelectElement>('#aiSkillsWorkflow');
-    expect(workflowSelect).not.toBeNull();
+    expect(await choiceLabels(fixture, '#aiSkillsWorkflow')).toContain('UI Explorer (1)');
     expect(compiled.querySelector('.ai-skills-family-filters')).toBeNull();
-    expect(Array.from(workflowSelect!.options).map((option) => option.textContent)).toContain(
-      'UI Explorer (1)'
-    );
 
     fixture.componentInstance.searchControl.setValue('follow-up');
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
-
     expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(1);
     expect(compiled.textContent).toContain('flow-explorer-follow-up-chat');
     expect(compiled.textContent).not.toContain('incident-analysis-orchestrator');
@@ -44,13 +42,7 @@ describe('AiSkillsPageComponent', () => {
 
   it('should combine workflow and responsibility filters', async () => {
     const { fixture } = await createComponent();
-    fixture.detectChanges();
-
-    const workflowSelect = (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>(
-      '#aiSkillsWorkflow'
-    )!;
-    workflowSelect.value = 'flow-explorer';
-    workflowSelect.dispatchEvent(new Event('change'));
+    await (await choice(fixture, '#aiSkillsWorkflow')).clickOptions({ text: /Flow Explorer/ });
     fixture.componentInstance.responsibilityControl.setValue('Orchestration');
     fixture.detectChanges();
 
@@ -226,7 +218,7 @@ async function createComponent(
 
   await TestBed.configureTestingModule({
     imports: [AiSkillsPageComponent],
-    providers: [
+    providers: [provideNoopAnimations(),
       provideRouter([]),
       { provide: ActivatedRoute, useValue: { paramMap } },
       { provide: AiSkillsApiService, useValue: api }

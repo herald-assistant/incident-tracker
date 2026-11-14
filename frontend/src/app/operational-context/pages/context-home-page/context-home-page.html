@@ -132,8 +132,8 @@
           </div>
 
           <form class="signal-search" (submit)="runSignalSearch($event)">
-            <input
-              class="text-input"
+            <app-text-field
+              ariaLabel="Search operational context"
               type="search"
               placeholder="Search by system, repository, process, integration, team, term, handoff clue or business signal"
               [formControl]="searchControl"
@@ -204,42 +204,30 @@
           </div>
           <ng-container *ngTemplateOutlet="filters"></ng-container>
           <div class="maintenance-filters" aria-label="Validation maintenance filters">
-            <label>
-              <span>Severity</span>
-              <select [formControl]="validationSeverityControl">
-                <option value="">All severities</option>
+            <app-choice-select [formControl]="validationSeverityControl" label="Severity">
+                <app-choice-option value="" label="All severities" />
                 @for (severity of validationSeverityOptions(); track severity) {
-                  <option [value]="severity">{{ severity }}</option>
+                  <app-choice-option [value]="severity" label="{{ severity }}" />
                 }
-              </select>
-            </label>
-            <label>
-              <span>Category</span>
-              <select [formControl]="validationCategoryControl">
-                <option value="">All categories</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="validationCategoryControl" label="Category">
+                <app-choice-option value="" label="All categories" />
                 @for (category of validationCategoryOptions(); track category) {
-                  <option [value]="category">{{ category }}</option>
+                  <app-choice-option [value]="category" label="{{ category }}" />
                 }
-              </select>
-            </label>
-            <label>
-              <span>Entity type</span>
-              <select [formControl]="validationEntityTypeControl">
-                <option value="">All types</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="validationEntityTypeControl" label="Entity type">
+                <app-choice-option value="" label="All types" />
                 @for (type of validationEntityTypeOptions(); track type) {
-                  <option [value]="type">{{ type }}</option>
+                  <app-choice-option [value]="type" label="{{ type }}" />
                 }
-              </select>
-            </label>
-            <label>
-              <span>Source file</span>
-              <select [formControl]="validationSourceFileControl">
-                <option value="">All files</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="validationSourceFileControl" label="Source file">
+                <app-choice-option value="" label="All files" />
                 @for (sourceFile of validationSourceFileOptions(); track sourceFile) {
-                  <option [value]="sourceFile">{{ sourceFile }}</option>
+                  <app-choice-option [value]="sourceFile" label="{{ sourceFile }}" />
                 }
-              </select>
-            </label>
+              </app-choice-select>
           </div>
           <div class="maintenance-inbox" aria-label="Validation findings inbox">
             @if (!validationRows().length) {
@@ -321,42 +309,30 @@
           </div>
           <ng-container *ngTemplateOutlet="filters"></ng-container>
           <div class="maintenance-filters" aria-label="Open questions maintenance filters">
-            <label>
-              <span>Severity</span>
-              <select [formControl]="questionSeverityControl">
-                <option value="">All severities</option>
+            <app-choice-select [formControl]="questionSeverityControl" label="Severity">
+                <app-choice-option value="" label="All severities" />
                 @for (severity of questionSeverityOptions(); track severity) {
-                  <option [value]="severity">{{ severity }}</option>
+                  <app-choice-option [value]="severity" label="{{ severity }}" />
                 }
-              </select>
-            </label>
-            <label>
-              <span>Entity type</span>
-              <select [formControl]="questionEntityTypeControl">
-                <option value="">All types</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="questionEntityTypeControl" label="Entity type">
+                <app-choice-option value="" label="All types" />
                 @for (type of questionEntityTypeOptions(); track type) {
-                  <option [value]="type">{{ type }}</option>
+                  <app-choice-option [value]="type" label="{{ type }}" />
                 }
-              </select>
-            </label>
-            <label>
-              <span>Source file</span>
-              <select [formControl]="questionSourceFileControl">
-                <option value="">All files</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="questionSourceFileControl" label="Source file">
+                <app-choice-option value="" label="All files" />
                 @for (sourceFile of questionSourceFileOptions(); track sourceFile) {
-                  <option [value]="sourceFile">{{ sourceFile }}</option>
+                  <app-choice-option [value]="sourceFile" label="{{ sourceFile }}" />
                 }
-              </select>
-            </label>
-            <label>
-              <span>Status</span>
-              <select [formControl]="questionStatusControl">
-                <option value="">All statuses</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="questionStatusControl" label="Status">
+                <app-choice-option value="" label="All statuses" />
                 @for (status of questionStatusOptions; track status) {
-                  <option [value]="status">{{ status }}</option>
+                  <app-choice-option [value]="status" label="{{ status }}" />
                 }
-              </select>
-            </label>
+              </app-choice-select>
           </div>
           <div class="maintenance-inbox" aria-label="Open questions inbox">
             @if (!openQuestionRows().length) {
@@ -510,8 +486,8 @@
 
 <ng-template #filters>
   <div class="context-filters">
-    <input
-      class="text-input"
+    <app-text-field
+      ariaLabel="Quick filter current view"
       type="search"
       placeholder="Quick filter current view"
       [formControl]="localFilterControl"

@@ -57,41 +57,29 @@
         <p class="section-eyebrow trend-filter-context">Zakres widoku</p>
 
         <div class="trend-filter-grid">
-          <label class="trend-field">
-            <span>Okres</span>
-            <select [formControl]="granularityControl">
-              <option value="DAY">Dzień</option>
-              <option value="WEEK">Tydzień</option>
-              <option value="MONTH">Miesiąc</option>
-              <option value="QUARTER">Kwartał</option>
-            </select>
-          </label>
+          <app-choice-select [formControl]="granularityControl" label="Okres" class="trend-field">
+              <app-choice-option value="DAY" label="Dzień" />
+              <app-choice-option value="WEEK" label="Tydzień" />
+              <app-choice-option value="MONTH" label="Miesiąc" />
+              <app-choice-option value="QUARTER" label="Kwartał" />
+            </app-choice-select>
 
-          <label class="trend-field">
-            <span>Zespół</span>
-            <select [formControl]="teamControl">
-              <option value="">Wszystkie zespoły</option>
+          <app-choice-select [formControl]="teamControl" label="Zespół" class="trend-field">
+              <app-choice-option value="" label="Wszystkie zespoły" />
               @for (option of currentTrend.teamOptions; track option.key) {
-                <option [value]="option.key">
-                  {{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})
-                </option>
+                <app-choice-option [value]="option.key" label="{{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})" />
               }
-            </select>
-          </label>
+            </app-choice-select>
 
-          <label class="trend-field">
-            <span>Autor MR</span>
-            <select [formControl]="authorControl">
-              <option value="">
-                {{ currentTrend.authorOptions.length ? 'Wszyscy autorzy' : 'Brak danych o autorach' }}
-              </option>
+          <app-choice-select [formControl]="authorControl" label="Autor MR" class="trend-field">
+              <app-choice-option
+                value=""
+                label="{{ currentTrend.authorOptions.length ? &#x27;Wszyscy autorzy&#x27; : &#x27;Brak danych o autorach&#x27; }}"
+              />
               @for (option of currentTrend.authorOptions; track option.key) {
-                <option [value]="option.key">
-                  {{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})
-                </option>
+                <app-choice-option [value]="option.key" label="{{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})" />
               }
-            </select>
-          </label>
+            </app-choice-select>
 
           @if (currentTrend.issueTypeOptions.length > 0) {
             <div class="trend-field trend-field--issue-types">
@@ -119,15 +107,9 @@
             </div>
           }
 
-          <label class="trend-field">
-            <span>Od</span>
-            <input type="date" [formControl]="fromDateControl" />
-          </label>
+          <app-text-field type="date" [formControl]="fromDateControl" label="Od" class="trend-field" />
 
-          <label class="trend-field">
-            <span>Do</span>
-            <input type="date" [formControl]="toDateControl" />
-          </label>
+          <app-text-field type="date" [formControl]="toDateControl" label="Do" class="trend-field" />
 
           <button
             class="trend-filter-reset"

@@ -1,3 +1,5 @@
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -30,7 +32,7 @@ type FamilyFilter = {
 
 @Component({
   selector: 'app-ai-skills-page',
-  imports: [
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent,
     ReactiveFormsModule,
     RouterLink,
     MarkdownContentComponent,

@@ -33,43 +33,29 @@
             </button>
           </div>
 
-          <label class="form-field">
-            <span class="field-label">Configuration repository</span>
-            <select class="select-input" [formControl]="form.controls.repositoryId">
+          <app-choice-select [formControl]="form.controls.repositoryId" label="Configuration repository" class="form-field">
               @for (repository of options().repositories; track repository.id) {
-                <option [value]="repository.id">
-                  {{ repository.label }} · {{ repository.id }}
-                </option>
+                <app-choice-option [value]="repository.id" label="{{ repository.label }} · {{ repository.id }}" />
               }
-            </select>
-          </label>
+            </app-choice-select>
 
-          <label class="form-field">
-            <span class="field-label">Internal system</span>
-            <select class="select-input" [formControl]="form.controls.systemId">
+          <app-choice-select [formControl]="form.controls.systemId" label="Internal system" class="form-field">
               @for (system of options().systems; track system.id) {
-                <option [value]="system.id">{{ system.label }} · {{ system.id }}</option>
+                <app-choice-option [value]="system.id" label="{{ system.label }} · {{ system.id }}" />
               }
-            </select>
-          </label>
+            </app-choice-select>
 
           <div class="scope-pair">
-            <label class="form-field">
-              <span class="field-label">Source branch</span>
-              <select class="select-input" [formControl]="form.controls.sourceBranch">
+            <app-choice-select [formControl]="form.controls.sourceBranch" label="Source branch" class="form-field">
                 @for (branch of options().branches; track branch) {
-                  <option [value]="branch">{{ branch }}</option>
+                  <app-choice-option [value]="branch" label="{{ branch }}" />
                 }
-              </select>
-            </label>
-            <label class="form-field">
-              <span class="field-label">Target branch</span>
-              <select class="select-input" [formControl]="form.controls.targetBranch">
+              </app-choice-select>
+            <app-choice-select [formControl]="form.controls.targetBranch" label="Target branch" class="form-field">
                 @for (branch of options().branches; track branch) {
-                  <option [value]="branch">{{ branch }}</option>
+                  <app-choice-option [value]="branch" label="{{ branch }}" />
                 }
-              </select>
-            </label>
+              </app-choice-select>
           </div>
           @if (branchPairInvalid()) {
             <p class="form-error">Wybierz dwa różne branche środowiskowe.</p>
@@ -80,8 +66,8 @@
               <span class="field-label">
                 Code ref <span class="optional-label">(opcjonalnie)</span>
               </span>
-              <input
-                class="text-input"
+              <app-text-field
+                ariaLabel="Code ref"
                 autocomplete="off"
                 spellcheck="false"
                 placeholder="np. release/42"
@@ -277,12 +263,15 @@
                           {{ preview.sourceBranch }} → {{ preview.targetBranch }}
                         </span>
                       </div>
-                      <textarea
+                      <app-text-field
+                        type="textarea"
                         readonly
                         spellcheck="false"
-                        aria-label="Operator configuration diff"
+                        ariaLabel="Operator configuration diff"
                         [value]="configurationDiffJson()"
-                      ></textarea>
+                        appearance="code"
+                        wrap="off"
+                      />
                     </div>
                   }
                 } @else if (selectedPerspective() === 'mapping') {
@@ -512,7 +501,15 @@
                               </span>
                             </button>
                           </div>
-                          <textarea readonly spellcheck="false" aria-label="Prepared prompt" [value]="input.prompt"></textarea>
+                          <app-text-field
+                            type="textarea"
+                            readonly
+                            spellcheck="false"
+                            ariaLabel="Prepared prompt"
+                            [value]="input.prompt"
+                            appearance="code"
+                            wrap="off"
+                          />
                         </div>
                       }
                     }
@@ -534,7 +531,15 @@
                             </span>
                           </button>
                         </div>
-                        <textarea readonly spellcheck="false" aria-label="Wybrany AI artifact" [value]="selectedArtifact.content"></textarea>
+                        <app-text-field
+                          type="textarea"
+                          readonly
+                          spellcheck="false"
+                          ariaLabel="Wybrany AI artifact"
+                          [value]="selectedArtifact.content"
+                          appearance="code"
+                          wrap="off"
+                        />
                       </div>
                     }
                   }
@@ -626,7 +631,16 @@
                     </span>
                   </button>
                 </summary>
-                <textarea class="json-output" readonly spellcheck="false" aria-label="Request preview" [value]="requestJson()"></textarea>
+                <app-text-field
+                  type="textarea"
+                  class="json-output"
+                  readonly
+                  spellcheck="false"
+                  ariaLabel="Request preview"
+                  [value]="requestJson()"
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
             @if (responseJson()) {
@@ -647,7 +661,16 @@
                     </span>
                   </button>
                 </summary>
-                <textarea class="json-output" readonly spellcheck="false" aria-label="JSON response" [value]="responseJson()"></textarea>
+                <app-text-field
+                  type="textarea"
+                  class="json-output"
+                  readonly
+                  spellcheck="false"
+                  ariaLabel="JSON response"
+                  [value]="responseJson()"
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
           </article>

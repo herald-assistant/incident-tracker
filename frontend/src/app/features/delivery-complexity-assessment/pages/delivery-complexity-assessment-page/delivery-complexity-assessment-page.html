@@ -49,27 +49,19 @@
       </div>
 
       <div class="assessment-form-grid">
-        <label class="field-control">
-          <span class="field-label">Projekt Jira</span>
-          <input
-            class="text-input"
-            type="text"
-            maxlength="50"
-            spellcheck="false"
-            placeholder="np. CRM"
-            [formControl]="jiraProjectControl"
-          />
-        </label>
+        <app-text-field
+          type="text"
+          maxLength="50"
+          spellcheck="false"
+          placeholder="np. CRM"
+          [formControl]="jiraProjectControl"
+          label="Projekt Jira"
+          class="field-control"
+        />
 
-        <label class="field-control">
-          <span class="field-label">Od</span>
-          <input class="text-input" type="date" [formControl]="fromDateControl" />
-        </label>
+        <app-text-field type="date" [formControl]="fromDateControl" label="Od" class="field-control" />
 
-        <label class="field-control">
-          <span class="field-label">Do</span>
-          <input class="text-input" type="date" [formControl]="toDateControl" />
-        </label>
+        <app-text-field type="date" [formControl]="toDateControl" label="Do" class="field-control" />
 
         <div class="composer-action">
           <button
@@ -200,24 +192,18 @@
 
         @if (teamFilterOptions().length || authorFilterOptions().length) {
           <div class="unit-filters" aria-label="Filtry Delivery Units">
-            <label class="field-control">
-              <span class="field-label">Team</span>
-              <select class="select-input" [formControl]="teamFilterControl">
-                <option value="">Wszystkie teamy</option>
+            <app-choice-select [formControl]="teamFilterControl" label="Team" class="field-control">
+                <app-choice-option value="" label="Wszystkie teamy" />
                 @for (option of teamFilterOptions(); track option.value) {
-                  <option [value]="option.value">{{ filterOptionLabel(option) }}</option>
+                  <app-choice-option [value]="option.value" label="{{ filterOptionLabel(option) }}" />
                 }
-              </select>
-            </label>
-            <label class="field-control">
-              <span class="field-label">Autor MR</span>
-              <select class="select-input" [formControl]="authorFilterControl">
-                <option value="">Wszyscy autorzy</option>
+              </app-choice-select>
+            <app-choice-select [formControl]="authorFilterControl" label="Autor MR" class="field-control">
+                <app-choice-option value="" label="Wszyscy autorzy" />
                 @for (option of authorFilterOptions(); track option.value) {
-                  <option [value]="option.value">{{ filterOptionLabel(option) }}</option>
+                  <app-choice-option [value]="option.value" label="{{ filterOptionLabel(option) }}" />
                 }
-              </select>
-            </label>
+              </app-choice-select>
             @if (filtersActive()) {
               <button
                 type="button"

@@ -63,20 +63,9 @@
           [class.analysis-start-grid--both-sources]="canUseElasticsearchInput() && canUseCsvUploadInput()"
         >
           @if (canUseElasticsearchInput()) {
-            <label class="field-control analysis-start-grid__log-input" for="correlationId">
-              <span class="field-label">Correlation ID</span>
-              <input
-                id="correlationId"
-                class="text-input"
-                type="text"
-                placeholder="np. timeout-123"
-                autocomplete="off"
-                spellcheck="false"
-                required
-                [formControl]="correlationIdControl"
-                (input)="clearFormError()"
-              />
-            </label>
+            <app-text-field class="analysis-start-grid__log-input" inputId="correlationId" label="Correlation ID"
+              placeholder="np. timeout-123" [required]="true" [formControl]="correlationIdControl"
+              (valueChange)="clearFormError()" />
           }
 
           @if (canUseCsvUploadInput()) {
@@ -117,70 +106,19 @@
             </div>
           }
 
-          <label class="field-control" for="aiModel">
-            <span class="field-label">Model AI</span>
-            <span class="select-loading-control">
-              <select
-                id="aiModel"
-                class="select-input"
-                [class.select-input--loading]="isAiModelOptionsLoading()"
-                [formControl]="aiModelControl"
-                [attr.aria-busy]="isAiModelOptionsLoading()"
-                (change)="onAiModelChanged()"
-              >
-                @for (option of aiModelOptions(); track option.value) {
-                  <option [value]="option.value" [disabled]="option.disabled">
-                    {{ option.label }}
-                  </option>
-                }
-              </select>
-              @if (isAiModelOptionsLoading()) {
-                <span class="select-loader" aria-hidden="true"></span>
-              }
-            </span>
-          </label>
+          <app-ai-execution-controls
+            modelInputId="aiModel" reasoningInputId="reasoningEffort"
+            [catalog]="aiModelCatalog()" [model]="aiModelControl.value" [reasoningEffort]="reasoningEffortControl.value"
+            [loading]="isAiModelOptionsLoading()" [unavailable]="!!githubAuthError()"
+            [modelDisabled]="aiModelControl.disabled" [reasoningDisabled]="reasoningEffortControl.disabled"
+            (modelChange)="selectAiModel($event)" (reasoningEffortChange)="selectReasoningEffort($event)"
+            (modelTouched)="aiModelControl.markAsTouched()" (reasoningTouched)="reasoningEffortControl.markAsTouched()" />
 
-          <label class="field-control" for="reasoningEffort">
-            <span class="field-label">Reasoning effort</span>
-            <span class="select-loading-control">
-              <select
-                id="reasoningEffort"
-                class="select-input"
-                [class.select-input--loading]="isAiModelOptionsLoading()"
-                [formControl]="reasoningEffortControl"
-                [attr.aria-busy]="isAiModelOptionsLoading()"
-                (change)="clearFormError()"
-              >
-                @for (option of reasoningEffortOptions(); track option.value) {
-                  <option [value]="option.value" [disabled]="option.disabled">
-                    {{ option.label }}
-                  </option>
-                }
-              </select>
-              @if (isAiModelOptionsLoading()) {
-                <span class="select-loader" aria-hidden="true"></span>
-              }
-            </span>
-          </label>
-
-          <label
-            class="field-control analysis-start-grid__problem-description"
-            for="problemDescription"
-          >
-            <span class="field-label">Problem description (optional)</span>
-            <textarea
-              id="problemDescription"
-              class="text-input"
-              rows="2"
-              [attr.maxlength]="problemDescriptionMaxLength"
-              [formControl]="problemDescriptionControl"
-              placeholder="For example: the response contains incorrect data or the request is too slow."
-              (input)="clearFormError()"
-            ></textarea>
-            <span class="field-hint">
-              Describe the observed issue or what AI should focus on, even if logs show no error.
-            </span>
-          </label>
+          <app-text-field class="analysis-start-grid__problem-description" inputId="problemDescription"
+            label="Problem description (optional)" type="textarea" [rows]="2" [maxLength]="problemDescriptionMaxLength" [spellcheck]="true"
+            [formControl]="problemDescriptionControl" (valueChange)="clearFormError()"
+            placeholder="For example: the response contains incorrect data or the request is too slow."
+            hint="Describe the observed issue or what AI should focus on, even if logs show no error." />
 
           <div class="analysis-start-actions">
             <button

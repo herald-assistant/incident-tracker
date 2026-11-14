@@ -141,16 +141,17 @@
     </div>
 
     <form class="analysis-chat__form" novalidate (submit)="submit($event)">
-      <label class="field-label" for="analysisFollowUpChatMessage">{{ inputLabel() }}</label>
-      <textarea
-        id="analysisFollowUpChatMessage"
+      <app-text-field
+        label="{{ inputLabel() }}"
+        type="textarea"
+        inputId="analysisFollowUpChatMessage"
         class="chat-input"
         rows="4"
         [placeholder]="placeholder()"
         [value]="messageText()"
         [disabled]="!canUseChat() || isSubmitting() || hasActiveAssistantMessage()"
-        (input)="onMessageChanged($any($event.target).value)"
-      ></textarea>
+        (valueChange)="onMessageChanged($event)"
+      />
 
       <div class="analysis-chat__actions">
         <button

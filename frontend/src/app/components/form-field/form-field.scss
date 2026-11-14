@@ -1,0 +1,20 @@
+:host { display: block; min-width: 0; }
+.form-field__label-row { display: flex; align-items: center; gap: 5px; min-height: var(--field-label-height, 0); margin-bottom: var(--field-label-gap, 8px); }
+.form-field__label-row .field-label { margin: 0; line-height: 1; }
+.form-field__help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: help;
+}
+.form-field__help .material-symbols-outlined { font-size: 16px; }
+.form-field__help:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.form-field__hint, .form-field__error { display: block; margin-top: 6px; }
+.form-field__error { color: var(--danger-text); }

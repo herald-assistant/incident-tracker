@@ -1,3 +1,5 @@
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../components/text-field/text-field';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
@@ -672,7 +674,7 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
 
 @Component({
   selector: 'app-context-home-page',
-  imports: [
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent,
     ReactiveFormsModule,
     NgTemplateOutlet,
     MatIconModule,

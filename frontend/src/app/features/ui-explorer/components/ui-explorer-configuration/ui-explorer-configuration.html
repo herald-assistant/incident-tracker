@@ -77,17 +77,15 @@
 
           @if (openMenu() === 'system') {
             <div class="ui-explorer-select__menu ui-explorer-select__menu--applications" role="listbox" aria-label="Application options">
-              <label class="ui-explorer-select__search">
-                <span class="field-label">Find application</span>
-                <input
-                  class="text-input"
-                  type="search"
-                  autocomplete="off"
-                  placeholder="crm, portal"
-                  [value]="systemSearch()"
-                  (input)="systemSearch.set($any($event.target).value)"
-                />
-              </label>
+              <app-text-field
+                type="search"
+                autocomplete="off"
+                placeholder="crm, portal"
+                [value]="systemSearch()"
+                (valueChange)="systemSearch.set($event)"
+                label="Find application"
+                class="ui-explorer-select__search"
+              />
               <div class="ui-explorer-select__options">
                 @for (system of filteredSystems(); track system.systemId) {
                   <button
@@ -209,106 +207,11 @@
           }
         </div>
 
-        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
-          <span class="ui-explorer-field-label">
-            <span class="field-label">Model AI</span>
-            <span
-              class="ui-explorer-label-help"
-              tabindex="0"
-              aria-label="AI model help"
-              matTooltip="Model użyty do opracowania dokumentacji UI Explorera."
-              matTooltipPosition="right"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            </span>
-          </span>
-          <button
-            class="ui-explorer-select__control"
-            [class.ui-explorer-select__control--loading]="facade.aiOptionsState() === 'loading'"
-            type="button"
-            aria-haspopup="listbox"
-            [disabled]="facade.controlsLocked() || facade.aiOptionsState() === 'loading' || facade.aiOptions().models.length === 0"
-            [attr.aria-expanded]="openMenu() === 'model'"
-            (click)="toggleMenu('model', $event)"
-          >
-            <span class="ui-explorer-select__value">
-              <strong>{{ selectedModelLabel() }}</strong>
-              <small>{{ facade.aiOptions().models.length ? facade.selectedModel() : 'no model choices' }}</small>
-            </span>
-            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-          </button>
-          @if (openMenu() === 'model') {
-            <div class="ui-explorer-select__menu" role="listbox" aria-label="AI model options">
-              <div class="ui-explorer-select__options">
-                @for (model of facade.aiOptions().models; track model.id) {
-                  <button
-                    class="ui-explorer-select-option"
-                    [class.ui-explorer-select-option--selected]="model.id === facade.selectedModel()"
-                    type="button"
-                    role="option"
-                    [attr.aria-selected]="model.id === facade.selectedModel()"
-                    (click)="selectModel(model.id, $event)"
-                  >
-                    <span class="ui-explorer-select-option__body">
-                      <strong>{{ model.name }}</strong>
-                      <small>{{ model.id }}</small>
-                    </span>
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
-
-        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
-          <span class="ui-explorer-field-label">
-            <span class="field-label">Reasoning effort</span>
-            <span
-              class="ui-explorer-label-help"
-              tabindex="0"
-              aria-label="Reasoning effort help"
-              matTooltip="Steruje głębokością analizy i eksploracji kodu."
-              matTooltipPosition="right"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            </span>
-          </span>
-          <button
-            class="ui-explorer-select__control"
-            type="button"
-            aria-haspopup="listbox"
-            [disabled]="facade.controlsLocked() || facade.reasoningEfforts().length === 0"
-            [attr.aria-expanded]="openMenu() === 'reasoning'"
-            (click)="toggleMenu('reasoning', $event)"
-          >
-            <span class="ui-explorer-select__value">
-              <strong>{{ selectedReasoningLabel() }}</strong>
-              <small>{{ facade.reasoningEfforts().length ? (facade.reasoningEfforts().length + ' effort choices') : 'no effort choices' }}</small>
-            </span>
-            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-          </button>
-          @if (openMenu() === 'reasoning') {
-            <div class="ui-explorer-select__menu" role="listbox" aria-label="Reasoning effort options">
-              <div class="ui-explorer-select__options">
-                @for (effort of facade.reasoningEfforts(); track effort) {
-                  <button
-                    class="ui-explorer-select-option"
-                    [class.ui-explorer-select-option--selected]="effort === facade.selectedReasoningEffort()"
-                    type="button"
-                    role="option"
-                    [attr.aria-selected]="effort === facade.selectedReasoningEffort()"
-                    (click)="selectReasoning(effort, $event)"
-                  >
-                    <span class="ui-explorer-select-option__body">
-                      <strong>{{ effort }}</strong>
-                      <small>Reasoning effort</small>
-                    </span>
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
+        <app-ai-execution-controls
+          [catalog]="facade.aiOptions()" [model]="facade.selectedModel()" [reasoningEffort]="facade.selectedReasoningEffort()"
+          [loading]="facade.aiOptionsState() === 'loading'" [unavailable]="facade.aiOptionsState() === 'error'"
+          [disabled]="facade.controlsLocked()" (opened)="closeMenus()"
+          (modelChange)="selectModel($event)" (reasoningEffortChange)="selectReasoning($event)" />
       </div>
 
       @if (facade.screenState() === 'error') {
@@ -334,30 +237,11 @@
         }
       }
 
-      <label class="form-field">
-        <span class="ui-explorer-field-label">
-          <span class="field-label">Doprecyzuj oczekiwany opis</span>
-          <span
-            class="ui-explorer-label-help"
-            tabindex="0"
-            aria-label="Scenario description help"
-            matTooltip="Opcjonalny scenariusz zawęża dokumentację do konkretnego celu użytkownika lub planowanej zmiany."
-            matTooltipPosition="right"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          </span>
-        </span>
-        <textarea
-          class="text-input ui-explorer-textarea"
-          rows="4"
-          maxlength="4000"
-          spellcheck="false"
-          [disabled]="facade.controlsLocked()"
-          placeholder="Np. opisz utworzenie kontaktu, reguły walidacji oraz zachowanie po zapisaniu formularza."
-          [value]="facade.scenarioDescription()"
-          (input)="facade.updateScenarioDescription($any($event.target).value)"
-        ></textarea>
-      </label>
+      <app-text-field class="ui-explorer-instructions" label="Doprecyzuj oczekiwany opis" type="textarea" size="descriptive" [rows]="4" [maxLength]="4000"
+        tooltip="Opcjonalny scenariusz zawęża dokumentację do konkretnego celu użytkownika lub planowanej zmiany."
+        [disabled]="facade.controlsLocked()" [value]="facade.scenarioDescription()"
+        placeholder="Np. opisz utworzenie kontaktu, reguły walidacji oraz zachowanie po zapisaniu formularza."
+        (valueChange)="facade.updateScenarioDescription($event)" />
 
       @if (options.executionAvailability.status === 'BLOCKED') {
         <div class="ui-explorer-message ui-explorer-message--warning" role="status">

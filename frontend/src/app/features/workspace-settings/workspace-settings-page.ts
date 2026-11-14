@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -19,7 +20,7 @@ import { WorkspaceSettingsApiService } from '../../core/services/workspace-setti
 
 @Component({
   selector: 'app-workspace-settings-page',
-  imports: [ReactiveFormsModule, MatTooltipModule, SourceStatePillComponent],
+  imports: [TextFieldComponent, ReactiveFormsModule, MatTooltipModule, SourceStatePillComponent],
   templateUrl: './workspace-settings-page.html',
   styleUrl: './workspace-settings-page.scss'
 })

@@ -1,11 +1,13 @@
+@use './styles/form-controls' as controls;
+
 :root,
 :root[data-theme='light'] {
-  --color-bg: #f5f7fb;
+  --color-bg: #f6f7f9;
   --color-surface: #ffffff;
-  --color-surface-alt: #f8fbff;
-  --color-surface-muted: #eef4fb;
-  --color-border: #d8e0eb;
-  --color-border-strong: #b8c6d8;
+  --color-surface-alt: #f8f9fa;
+  --color-surface-muted: #f0f2f4;
+  --color-border: #dfe3e8;
+  --color-border-strong: #c2c8d0;
   --color-text: #172b4d;
   --color-muted: #5e6c84;
   --color-muted-strong: #44546f;
@@ -21,7 +23,12 @@
   --color-danger-soft: #ffebe6;
   --color-ai: #6554c0;
   --color-ai-soft: #f5f3ff;
-  --focus-ring: 0 0 0 3px rgba(12, 102, 228, 0.14);
+  --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
+  --control-border: var(--color-border-strong);
+  --control-border-hover: #8d98a8;
+  --control-hover: var(--color-surface-alt);
+  --control-radius: 8px;
+  --control-value-weight: 500;
   --scrollbar-thumb: rgba(94, 108, 132, 0.28);
   --scrollbar-thumb-hover: rgba(94, 108, 132, 0.44);
   --scrollbar-track: transparent;
@@ -47,8 +54,8 @@
   --ai-soft: var(--color-ai-soft);
   --ai-text: var(--color-ai);
 
-  --shadow-soft: 0 10px 28px rgba(9, 30, 66, 0.06);
-  --shadow-card: 0 4px 14px rgba(9, 30, 66, 0.08);
+  --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
+  --shadow-card: 0 2px 4px rgba(15, 23, 42, 0.05), 0 6px 16px rgba(15, 23, 42, 0.06);
   --radius-xl: 8px;
   --radius-lg: 8px;
   --radius-md: 8px;
@@ -164,6 +171,88 @@ textarea {
   border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-card);
+}
+
+// MatSelect overlays render outside the component tree; keep these rules scoped.
+.mat-mdc-select-panel.choice-select-panel {
+  @include controls.menu;
+  max-height: min(360px, 60vh);
+  margin-top: 8px;
+  --mat-option-label-text-font: var(--font-sans);
+  --mat-option-label-text-size: 1rem;
+  --mat-option-label-text-weight: var(--control-value-weight);
+  --mat-option-label-text-tracking: normal;
+}
+
+.mat-mdc-select-panel-above .choice-select-panel { margin-top: 0; margin-bottom: 8px; }
+
+.choice-select-panel .mat-mdc-option {
+  @include controls.option;
+  min-height: 40px;
+  padding: 9px 10px;
+  margin: 0;
+}
+
+.choice-select-panel .mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+  background: var(--primary-soft);
+}
+
+.choice-select-panel .mat-mdc-option.mat-mdc-option-active {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+// The row owns disabled opacity; avoid dimming its text a second time in MDC.
+.mat-mdc-select-panel.choice-select-panel .mat-mdc-option.mdc-list-item--disabled .mdc-list-item__primary-text { opacity: 1; }
+
+.choice-select-panel .mdc-list-item__primary-text {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.choice-option__body { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.choice-option__label { @include controls.value; }
+.choice-option__description { @include controls.description; }
+.choice-option__badge {
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-size: 0.64rem;
+  font-weight: 500;
+}
+
+.choice-select .mat-mdc-select-trigger {
+  min-width: 0;
+  height: 100%;
+  padding: var(--choice-select-padding);
+}
+.choice-select .mat-mdc-select-value { min-width: 0; }
+.choice-select .mat-mdc-select-arrow-wrapper { width: 24px; justify-content: center; }
+.choice-select .mat-mdc-select-arrow { width: 22px; height: 22px; }
+.choice-select .mat-mdc-select-arrow svg { display: none; }
+.choice-select .mat-mdc-select-arrow::after {
+  content: 'expand_more' / '';
+  font: 400 22px / 1 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.choice-select[aria-expanded='true'] .mat-mdc-select-arrow::after { content: 'expand_less' / ''; }
+.choice-select.choice-select--loading .mat-mdc-select-arrow {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: choiceSelectLoading 0.9s linear infinite;
+}
+.choice-select--loading .mat-mdc-select-arrow::after { display: none; }
+@keyframes choiceSelectLoading { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .choice-select.choice-select--loading .mat-mdc-select-arrow { animation: none; }
+  .mat-mdc-select-panel.choice-select-panel { animation: none; }
 }
 
 .analysis-share-menu-panel .mat-mdc-menu-item {
@@ -319,8 +408,8 @@ app-root {
 .placeholder-kicker {
   margin: 0 0 4px;
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--primary);
 }
@@ -1022,9 +1111,9 @@ body .flow-tree-node__badges .confidence-pill,
   display: block;
   margin-bottom: 8px;
   font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--text-muted);
 }
 
@@ -1035,27 +1124,18 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .text-input {
+  @include controls.surface;
+  @include controls.interactive;
   width: 100%;
   min-height: 44px;
   padding: 10px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .select-input {
+  @include controls.trigger;
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .text-input::placeholder {
@@ -1064,9 +1144,7 @@ body .flow-tree-node__badges .confidence-pill,
 
 .text-input:focus,
 .select-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--focus-ring);
+  @include controls.focus;
 }
 
 .primary-button {
@@ -1122,9 +1200,9 @@ body .flow-tree-node__badges .confidence-pill,
     color 140ms ease;
 }
 
-.secondary-button:hover {
-  border-color: rgba(12, 102, 228, 0.38);
-  background: var(--surface-alt);
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-soft);
 }
 
 .secondary-button:focus-visible {
@@ -1137,6 +1215,11 @@ body .flow-tree-node__badges .confidence-pill,
   border-color: rgba(12, 102, 228, 0.28);
   background: var(--primary-soft);
   color: var(--primary-dark);
+}
+
+.secondary-button--accent:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
 }
 
 .primary-button.is-loading .button-spinner {
@@ -1583,26 +1666,13 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .chat-input {
-  width: 100%;
-  min-height: 116px;
-  resize: vertical;
-  padding: 13px 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  line-height: 1.5;
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease;
+  --field-min-height: 116px;
+  --field-padding-block: 13px;
+  --field-padding-inline: 14px;
+  --field-line-height: 1.5;
 }
 
-.chat-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.16);
-}
+
 
 .analysis-chat__actions {
   display: flex;

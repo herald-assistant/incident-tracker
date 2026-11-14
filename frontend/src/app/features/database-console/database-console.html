@@ -11,17 +11,15 @@
           </div>
 
           <div class="database-scope-grid">
-            <label class="form-field">
-              <span class="field-label">Environment</span>
-              <input
-                class="text-input"
-                type="text"
-                placeholder="np. sandbox-1"
-                autocomplete="off"
-                spellcheck="false"
-                [formControl]="scopeForm.controls.environment"
-              />
-            </label>
+            <app-text-field
+              type="text"
+              placeholder="np. sandbox-1"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.environment"
+              label="Environment"
+              class="form-field"
+            />
 
           </div>
 
@@ -79,15 +77,16 @@
           </div>
 
           @if (selectedTool().payloadRequired) {
-            <label class="form-field" for="databasePayload">
-              <span class="field-label">Request payload JSON</span>
-              <textarea
-                id="databasePayload"
-                class="json-editor"
-                spellcheck="false"
-                [formControl]="payloadControl"
-              ></textarea>
-            </label>
+            <app-text-field
+              type="textarea"
+              inputId="databasePayload"
+              spellcheck="false"
+              [formControl]="payloadControl"
+              appearance="code"
+              label="Request payload JSON"
+              class="json-editor form-field"
+              wrap="off"
+            />
           } @else {
             <div class="payload-placeholder">
               <span class="material-symbols-outlined" aria-hidden="true">rule_settings</span>
@@ -170,14 +169,17 @@
                     </button>
                   </div>
                 </summary>
-                <textarea
-                  id="databaseRequestPreview"
+                <app-text-field
+                  type="textarea"
+                  inputId="databaseRequestPreview"
                   class="json-output"
-                  aria-label="Request preview"
+                  ariaLabel="Request preview"
                   readonly
                   spellcheck="false"
                   [value]="state().requestJson"
-                ></textarea>
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
 
@@ -214,14 +216,17 @@
                   </button>
                 </div>
               </summary>
-              <textarea
-                id="databaseJsonResponse"
+              <app-text-field
+                type="textarea"
+                inputId="databaseJsonResponse"
                 class="json-output"
-                aria-label="JSON response"
+                ariaLabel="JSON response"
                 readonly
                 spellcheck="false"
                 [value]="state().responseJson"
-              ></textarea>
+                appearance="code"
+                wrap="off"
+              />
             </details>
           </article>
         }

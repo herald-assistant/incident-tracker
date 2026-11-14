@@ -1,0 +1,42 @@
+<ng-content select="app-choice-option" />
+<app-form-field [controlId]="inputId()" [label]="label()" [tooltip]="tooltip()" [hint]="hint()" [error]="error()"
+  [tooltipClass]="tooltipClass()" (focusRequested)="selectControl()?.focus()">
+<mat-select
+  class="choice-select"
+  [class.choice-select--descriptive]="size() === 'descriptive'"
+  [class.choice-select--loading]="loading()"
+  [id]="inputId()"
+  [aria-label]="ariaLabel() || label()"
+  [aria-labelledby]="labelledBy()"
+  [attr.aria-describedby]="descriptionIds() || null"
+  [attr.aria-invalid]="error() ? true : null"
+  [attr.aria-busy]="loading()"
+  [value]="selectedValue()"
+  [disabled]="isDisabled()"
+  [placeholder]="selectedLabel()"
+  [disableRipple]="true"
+  [disableOptionCentering]="true"
+  panelClass="choice-select-panel"
+  (selectionChange)="select($event.value)"
+  (openedChange)="onOpenedChange($event)"
+  (blur)="touch()"
+>
+  <mat-select-trigger>
+    <span class="choice-select__value" [title]="selectedTooltip()">
+      <span class="choice-select__label">{{ selectedLabel() }}</span>
+      @if (selectedDescription()) {
+        <span class="choice-select__description" [title]="selectedDescription()">{{ selectedDescription() }}</span>
+      }
+    </span>
+  </mat-select-trigger>
+  @for (option of displayOptions(); track option.value) {
+    <mat-option [value]="option.value" [disabled]="option.disabled ?? false" [title]="option.tooltip || option.label">
+      <span class="choice-option__body">
+        <span class="choice-option__label">{{ option.label }}</span>
+        @if (option.hint) { <span class="choice-option__description">{{ option.hint }}</span> }
+      </span>
+      @if (option.badge) { <span class="choice-option__badge">{{ option.badge }}</span> }
+    </mat-option>
+  }
+</mat-select>
+</app-form-field>

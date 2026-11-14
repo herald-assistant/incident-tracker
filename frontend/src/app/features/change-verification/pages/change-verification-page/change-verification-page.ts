@@ -1,3 +1,5 @@
+import { AiExecutionControlsComponent } from '../../../../components/ai-execution-controls/ai-execution-controls';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -38,15 +40,9 @@ import {
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
 
-type SelectOption = {
-  value: string;
-  label: string;
-  disabled?: boolean;
-};
-
 @Component({
   selector: 'app-change-verification-page',
-  imports: [
+  imports: [AiExecutionControlsComponent, TextFieldComponent,
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
     AnalysisResultHeaderComponent,
@@ -101,41 +97,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       return `Local run: ${exportState.localRunName || exportState.localRunId || exportState.job.jobId}`;
     }
     return '';
-  });
-  readonly aiModelOptions = computed<SelectOption[]>(() => {
-    if (this.isAiModelOptionsLoading()) {
-      return [
-        {
-          value: this.selectedAiModel(),
-          label: 'Ładowanie modeli AI...',
-          disabled: true
-        }
-      ];
-    }
-
-    return this.aiModelCatalog().models.map((model) => ({
-      value: model.id,
-      label: this.modelLabel(model.id, model.name)
-    }));
-  });
-  readonly availableReasoningEfforts = computed(() =>
-    this.reasoningEffortsForModel(this.selectedAiModel())
-  );
-  readonly reasoningEffortOptions = computed<SelectOption[]>(() => {
-    if (this.isAiModelOptionsLoading()) {
-      return [
-        {
-          value: this.selectedReasoningEffort(),
-          label: 'Ładowanie reasoning effort...',
-          disabled: true
-        }
-      ];
-    }
-
-    return this.availableReasoningEfforts().map((effort) => ({
-      value: effort,
-      label: this.reasoningEffortLabel(effort)
-    }));
   });
   readonly composerCollapsed = computed(() => {
     const currentJob = this.job();
@@ -203,12 +164,13 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   }
 
   protected selectAiModel(value: string): void {
-    this.selectedAiModel.set((value || '').trim());
-    this.syncReasoningEffortSelection();
+    this.aiModelControl.markAsDirty();
+    this.aiModelControl.setValue(value);
   }
 
   protected selectReasoningEffort(value: string): void {
-    this.selectedReasoningEffort.set((value || '').trim());
+    this.reasoningEffortControl.markAsDirty();
+    this.reasoningEffortControl.setValue(value);
   }
 
   protected expandComposer(): void {
@@ -297,7 +259,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.pollingSubscription?.unsubscribe();
   }
-
 
   private jobStartRequest(): ChangeVerificationJobStartRequest {
     const issue = this.issueInput().trim();
@@ -520,21 +481,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     this.selectedReasoningEffort.set(defaultReasoningEffort);
   }
 
-  private reasoningEffortsForModel(modelId: string): string[] {
-    return reasoningEffortsForAiModel(this.aiModelCatalog(), modelId);
-  }
-
-  private modelLabel(id: string, name: string): string {
-    if (!name || name === id) {
-      return id;
-    }
-
-    return `${name} (${id})`;
-  }
-
-  private reasoningEffortLabel(effort: string): string {
-    return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
-  }
 }
 
 function looksLikeUrl(value: string): boolean {

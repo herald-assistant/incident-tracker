@@ -10,18 +10,16 @@
             </div>
           </div>
 
-          <label class="form-field" for="confluencePageUrl">
-            <span class="field-label">Page URL</span>
-            <input
-              id="confluencePageUrl"
-              class="text-input"
-              type="url"
-              placeholder="https://confluence.example.com/pages/viewpage.action?pageId=123"
-              autocomplete="off"
-              spellcheck="false"
-              [formControl]="scopeForm.controls.pageUrl"
-            />
-          </label>
+          <app-text-field
+            inputId="confluencePageUrl"
+            type="url"
+            placeholder="https://confluence.example.com/pages/viewpage.action?pageId=123"
+            autocomplete="off"
+            spellcheck="false"
+            [formControl]="scopeForm.controls.pageUrl"
+            label="Page URL"
+            class="form-field"
+          />
 
           @if (controlInvalid(scopeForm.controls.pageUrl)) {
             <p class="form-error">Pole `pageUrl` jest wymagane.</p>
@@ -167,14 +165,17 @@
                     </button>
                   </div>
                 </summary>
-                <textarea
-                  id="confluenceRequestPreview"
+                <app-text-field
+                  type="textarea"
+                  inputId="confluenceRequestPreview"
                   class="json-output"
-                  aria-label="Request preview"
+                  ariaLabel="Request preview"
                   readonly
                   spellcheck="false"
                   [value]="state().requestJson"
-                ></textarea>
+                  appearance="code"
+                  wrap="off"
+                />
               </details>
             }
 
@@ -211,14 +212,17 @@
                   </button>
                 </div>
               </summary>
-              <textarea
-                id="confluenceJsonResponse"
+              <app-text-field
+                type="textarea"
+                inputId="confluenceJsonResponse"
                 class="json-output"
-                aria-label="JSON response"
+                ariaLabel="JSON response"
                 readonly
                 spellcheck="false"
                 [value]="state().responseJson"
-              ></textarea>
+                appearance="code"
+                wrap="off"
+              />
             </details>
           </article>
         }

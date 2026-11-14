@@ -1,3 +1,5 @@
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { Component, computed, ElementRef, OnDestroy, signal, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -25,7 +27,7 @@ import {
 
 @Component({
   selector: 'app-delivery-complexity-trends-page',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent, ReactiveFormsModule],
   templateUrl: './delivery-complexity-trends-page.html',
   styleUrl: './delivery-complexity-trends-page.scss'
 })

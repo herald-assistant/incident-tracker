@@ -1,0 +1,31 @@
+@use '../../../styles/form-controls' as controls;
+
+:host { display: block; min-width: 0; width: 100%; }
+:host([hidden]) { display: none; }
+
+.choice-select {
+  @include controls.trigger;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  height: var(--field-min-height, 44px);
+  padding: 0;
+  --choice-select-padding: 0 12px;
+  --mat-select-trigger-text-font: var(--font-sans);
+  --mat-select-trigger-text-size: var(--field-font-size, 1rem);
+  --mat-select-trigger-text-weight: var(--control-value-weight);
+  --mat-select-trigger-text-tracking: normal;
+  --mat-select-enabled-trigger-text-color: var(--text-main);
+  --mat-select-enabled-arrow-color: var(--text-muted);
+}
+
+.choice-select--descriptive { height: 58px; --choice-select-padding: 9px 11px; }
+.choice-select__value { display: grid; gap: 3px; min-width: 0; }
+.choice-select__label { @include controls.value; }
+.choice-select__description { @include controls.description; }
+.choice-select__label, .choice-select__description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

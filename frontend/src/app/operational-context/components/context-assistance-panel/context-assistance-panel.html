@@ -28,8 +28,16 @@
     </div>
   } @else {
   <form class="assistance-form" (submit)="start($event)">
-    <label class="field-label" for="assistance-description">Opis dla AI</label>
-    <textarea cdkTextareaAutosize class="text-input" id="assistance-description" [formControl]="descriptionControl" maxlength="4000" cdkAutosizeMinRows="5" placeholder="Co wiadomo o systemie, procesie lub brakującym fakcie?"></textarea>
+    <app-text-field
+      label="Opis dla AI"
+      type="textarea"
+      autosize="true"
+      inputId="assistance-description"
+      [formControl]="descriptionControl"
+      maxLength="4000"
+      minRows="5"
+      placeholder="Co wiadomo o systemie, procesie lub brakującym fakcie?"
+    />
     <small>{{ descriptionControl.value.length }}/4000 znaków</small>
 
     <label class="assistance-form__checkbox" for="assistance-use-gitlab">
@@ -49,18 +57,28 @@
             @if (options.projects.length && !manualProject()) {
               <label class="field-label" for="assistance-catalogue-project">Projekt z katalogu</label>
               <div class="assistance-form__select">
-                <select class="select-input" id="assistance-catalogue-project" [formControl]="catalogueProjectControl">
-                  <option value="">Wybierz projekt</option>
+                <app-choice-select
+                  inputId="assistance-catalogue-project"
+                  [formControl]="catalogueProjectControl"
+                  ariaLabel="Projekt z katalogu"
+                >
+                  <app-choice-option value="" label="Wybierz projekt" />
                   @for (project of options.projects; track project.project) {
-                    <option [value]="project.project">{{ project.projectPath }}</option>
+                    <app-choice-option [value]="project.project" label="{{ project.projectPath }}" />
                   }
-                </select>
-                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                </app-choice-select>
               </div>
               <button type="button" class="assistance-form__switch" (click)="useManualProject()">Nie ma tu mojego projektu — wkleję jego adres</button>
             } @else {
-              <label class="field-label" for="assistance-project">Pełny adres URL projektu GitLab</label>
-              <input class="text-input" id="assistance-project" type="text" inputmode="url" [formControl]="projectUrlControl" placeholder="{{ options.configuredBaseUrl }}/{{ options.configuredGroup }}/moj-projekt" autocomplete="url" />
+              <app-text-field
+                label="Pełny adres URL projektu GitLab"
+                inputId="assistance-project"
+                type="text"
+                inputmode="url"
+                [formControl]="projectUrlControl"
+                placeholder="{{ options.configuredBaseUrl }}/{{ options.configuredGroup }}/moj-projekt"
+                autocomplete="url"
+              />
               <small>Wklej adres strony projektu z GitLaba. Aplikacja sprawdzi instancję i grupę, a następnie sama ustali ścieżkę projektu. Podgrupy mogą być częścią adresu.</small>
               <small>Przykład dla tej instalacji: <code>{{ options.configuredBaseUrl }}/{{ options.configuredGroup }}/podgrupa/projekt</code></small>
               @if (options.projects.length) {
@@ -68,8 +86,7 @@
               }
             }
             @if (manualRef()) {
-              <label class="field-label" for="assistance-ref">Gałąź</label>
-              <input class="text-input" id="assistance-ref" type="text" [formControl]="refControl" placeholder="np. main" />
+              <app-text-field label="Gałąź" inputId="assistance-ref" type="text" [formControl]="refControl" placeholder="np. main" />
               <button type="button" class="assistance-form__switch" (click)="useBranchList()">Wybiorę gałąź z listy</button>
             } @else {
               <app-gitlab-branch-select
@@ -89,47 +106,68 @@
               <div class="assistance-form__repository-facts">
                 <label class="field-label" for="assistance-repository-usage">Jak używany jest ten projekt?</label>
                 <div class="assistance-form__select">
-                  <select class="select-input" id="assistance-repository-usage" [formControl]="repositoryUsageControl">
-                    <option value="UNKNOWN">Nie wiem</option>
-                    <option value="DEPLOYED_SYSTEM">Nowy wdrażany system</option>
-                    <option value="SHARED_LIBRARY">Niewdrażana biblioteka</option>
-                    <option value="EXISTING_SYSTEM">Kod istniejącego systemu</option>
-                  </select>
-                  <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                  <app-choice-select
+                    inputId="assistance-repository-usage"
+                    [formControl]="repositoryUsageControl"
+                    ariaLabel="Jak używany jest ten projekt?"
+                  >
+                    <app-choice-option value="UNKNOWN" label="Nie wiem" />
+                    <app-choice-option value="DEPLOYED_SYSTEM" label="Nowy wdrażany system" />
+                    <app-choice-option value="SHARED_LIBRARY" label="Niewdrażana biblioteka" />
+                    <app-choice-option value="EXISTING_SYSTEM" label="Kod istniejącego systemu" />
+                  </app-choice-select>
                 </div>
                 @switch (repositoryUsageControl.value) {
                   @case ('DEPLOYED_SYSTEM') {
-                    <label class="field-label" for="assistance-system-name">Nazwa nowego systemu (jeśli znana)</label>
-                    <input class="text-input" id="assistance-system-name" type="text" [formControl]="systemNameControl" maxlength="160" placeholder="np. Obsługa profili klientów" />
+                    <app-text-field
+                      label="Nazwa nowego systemu (jeśli znana)"
+                      inputId="assistance-system-name"
+                      type="text"
+                      [formControl]="systemNameControl"
+                      maxLength="160"
+                      placeholder="np. Obsługa profili klientów"
+                    />
                     <label class="field-label" for="assistance-system-subtype">Jaka jest rola systemu?</label>
                     <div class="assistance-form__select">
-                      <select class="select-input" id="assistance-system-subtype" [formControl]="systemSubtypeControl">
-                        <option value="unknown">Nie wiem</option>
-                        <option value="frontend">Interfejs użytkownika (frontend)</option>
-                        <option value="backend">Zaplecze (backend)</option>
-                        <option value="worker">Proces w tle (worker)</option>
-                        <option value="mixed">Połączone role (mixed)</option>
-                      </select>
-                      <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                      <app-choice-select
+                        inputId="assistance-system-subtype"
+                        [formControl]="systemSubtypeControl"
+                        ariaLabel="Jaka jest rola systemu?"
+                      >
+                        <app-choice-option value="unknown" label="Nie wiem" />
+                        <app-choice-option value="frontend" label="Interfejs użytkownika (frontend)" />
+                        <app-choice-option value="backend" label="Zaplecze (backend)" />
+                        <app-choice-option value="worker" label="Proces w tle (worker)" />
+                        <app-choice-option value="mixed" label="Połączone role (mixed)" />
+                      </app-choice-select>
                     </div>
                     <small>To Twoja klasyfikacja katalogowa. Asysta nie ustala jej na podstawie frameworka.</small>
                     <details>
                       <summary>Dodaj nazwę usługi widoczną w logach (opcjonalnie)</summary>
-                      <label class="field-label" for="assistance-runtime-service">Nazwa usługi w logach</label>
-                      <input class="text-input" id="assistance-runtime-service" type="text" [formControl]="runtimeServiceNameControl" maxlength="160" placeholder="np. customer-profile-service" />
+                      <app-text-field
+                        label="Nazwa usługi w logach"
+                        inputId="assistance-runtime-service"
+                        type="text"
+                        [formControl]="runtimeServiceNameControl"
+                        maxLength="160"
+                        placeholder="np. customer-profile-service"
+                      />
                     </details>
                   }
                   @case ('EXISTING_SYSTEM') {
                     <label class="field-label" for="assistance-existing-system">Którego systemu dotyczy ten kod?</label>
                     @if (systemOptions().length) {
                       <div class="assistance-form__select">
-                        <select class="select-input" id="assistance-existing-system" [formControl]="existingSystemControl">
-                          <option value="">Wybierz system z katalogu</option>
+                        <app-choice-select
+                          inputId="assistance-existing-system"
+                          [formControl]="existingSystemControl"
+                          ariaLabel="Którego systemu dotyczy ten kod?"
+                        >
+                          <app-choice-option value="" label="Wybierz system z katalogu" />
                           @for (system of systemOptions(); track system.id) {
-                            <option [value]="system.id">{{ system.label }} · {{ system.id }}</option>
+                            <app-choice-option [value]="system.id" label="{{ system.label }} · {{ system.id }}" />
                           }
-                        </select>
-                        <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                        </app-choice-select>
                       </div>
                     } @else {
                       <p class="assistance-form__hint">W katalogu nie ma jeszcze systemów. Wybierz „Nie wiem” lub „Nowy wdrażany system” i opisz projekt.</p>
@@ -330,8 +368,15 @@
                     @if (isEditing(activeProposalIndex(), change.path)) {
                       <div class="assistance-change__editor">
                         <label class="field-label" [for]="'assistance-edit-' + activeProposalIndex() + '-' + change.path">Poprawiona wartość @if (typeof change.after !== 'string') { (JSON) }</label>
-                        <textarea cdkTextareaAutosize class="text-input" [id]="'assistance-edit-' + activeProposalIndex() + '-' + change.path" [formControl]="editValueControl"
-                          [cdkAutosizeMinRows]="typeof change.after === 'string' ? 3 : 7" spellcheck="false"></textarea>
+                        <app-text-field
+                          type="textarea"
+                          autosize="true"
+                          [inputId]="'assistance-edit-' + activeProposalIndex() + '-' + change.path"
+                          [formControl]="editValueControl"
+                          [minRows]="typeof change.after === 'string' ? 3 : 7"
+                          spellcheck="false"
+                          ariaLabel="Poprawiona wartość"
+                        />
                         @if (editError()) { <p class="assistance-panel__error" role="alert">{{ editError() }}</p> }
                         <div class="assistance-change__actions">
                           <button type="button" class="primary-button" (click)="saveFieldEdit(activeProposalIndex(), proposal, change)">Zastosuj poprawkę</button>

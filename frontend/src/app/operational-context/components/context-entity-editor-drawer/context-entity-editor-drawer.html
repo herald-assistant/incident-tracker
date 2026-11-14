@@ -36,7 +36,8 @@
         <div class="editor-grid">
           @for (field of section.fields; track field.path) {
             <div class="editor-field" [attr.data-field-path]="field.path" [class.editor-field--wide]="field.kind !== 'text' && field.kind !== 'select'" [hidden]="readonly() && field.kind === 'select' && !form.controls[controlName(field)].value.trim()">
-              <div class="editor-field__label-row">
+              @if (isStructuredField(field)) {
+                <div class="editor-field__label-row">
                 <label [for]="controlName(field)">{{ field.label }} @if (field.required) { <strong>*</strong> }</label>
                 <button
                   type="button"
@@ -48,7 +49,6 @@
                   [matTooltipShowDelay]="100"
                 ><mat-icon fontSet="material-symbols-outlined">help</mat-icon></button>
               </div>
-              @if (isStructuredField(field)) {
                 <app-context-structured-field-editor
                   [field]="field"
                   [entityType]="state().type"
@@ -59,16 +59,46 @@
                   (valueChange)="updateStructuredField(field, $event)"
                 ></app-context-structured-field-editor>
               } @else if (field.kind === 'textarea' || field.kind === 'list') {
-                <textarea cdkTextareaAutosize [id]="controlName(field)" cdkAutosizeMinRows="3" [formControlName]="controlName(field)" [attr.readonly]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null"></textarea>
+                <app-text-field
+                  [label]="field.label + (field.required ? ' *' : '')"
+                  [tooltip]="fieldTooltip(field)"
+                  tooltipClass="operational-context-field-tooltip"
+                  [ariaLabel]="field.label"
+                  type="textarea"
+                  autosize="true"
+                  [inputId]="controlName(field)"
+                  minRows="3"
+                  [formControlName]="controlName(field)"
+                  [readonly]="readonly() ? true : null"
+                  [describedBy]="controlError(field) ? controlName(field) + '-error' : null"
+                />
               } @else if (field.kind === 'select') {
-                <select [id]="controlName(field)" [formControlName]="controlName(field)" [attr.disabled]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null">
-                  <option value="">Not applicable</option>
+                <app-choice-select
+                  [label]="field.label + (field.required ? ' *' : '')"
+                  [tooltip]="fieldTooltip(field)"
+                  tooltipClass="operational-context-field-tooltip"
+                  [ariaLabel]="field.label"
+                  [inputId]="controlName(field)"
+                  [formControlName]="controlName(field)"
+                  [disabled]="readonly()"
+                  [describedBy]="controlError(field) ? controlName(field) + '-error' : null"
+                >
+                  <app-choice-option value="" label="Not applicable" />
                   @for (choice of field.choices || []; track choice) {
-                    <option [value]="choice">{{ choice }}</option>
+                    <app-choice-option [value]="choice" label="{{ choice }}" />
                   }
-                </select>
+                </app-choice-select>
               } @else {
-                <input [id]="controlName(field)" type="text" [formControlName]="controlName(field)" [attr.readonly]="readonly() || (state().mode === 'edit' && field.path === 'id') ? true : null" />
+                <app-text-field
+                  [label]="field.label + (field.required ? ' *' : '')"
+                  [tooltip]="fieldTooltip(field)"
+                  tooltipClass="operational-context-field-tooltip"
+                  [ariaLabel]="field.label"
+                  [inputId]="controlName(field)"
+                  type="text"
+                  [formControlName]="controlName(field)"
+                  [readonly]="readonly() || (state().mode === 'edit' && field.path === 'id') ? true : null"
+                />
               }
               @if (field.help) { <small>{{ field.help }}</small> }
               @if (!readonly() && controlError(field); as message) { <small class="field-error" [id]="controlName(field) + '-error'">{{ message }}</small> }

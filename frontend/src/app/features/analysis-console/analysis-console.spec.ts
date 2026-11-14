@@ -1,3 +1,5 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatSelectHarness } from '@angular/material/select/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
@@ -82,9 +84,9 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Ładowanie modeli AI...');
-    expect(fixture.nativeElement.textContent).toContain('Ładowanie reasoning effort...');
-    expect(fixture.nativeElement.querySelectorAll('.select-loader')).toHaveLength(2);
+    expect(fixture.nativeElement.textContent).toContain('Ładowanie modeli…');
+    expect(fixture.nativeElement.textContent).toContain('Ładowanie poziomów…');
+    expect(fixture.nativeElement.querySelectorAll('.choice-select--loading')).toHaveLength(2);
 
     aiModelOptions.next(modelOptions());
     aiModelOptions.complete();
@@ -92,9 +94,9 @@ describe('AnalysisConsoleComponent auth flow', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Ładowanie modeli AI...');
-    expect(fixture.nativeElement.textContent).not.toContain('Ładowanie reasoning effort...');
-    expect(fixture.nativeElement.querySelectorAll('.select-loader')).toHaveLength(0);
+    expect(fixture.nativeElement.textContent).not.toContain('Ładowanie modeli…');
+    expect(fixture.nativeElement.textContent).not.toContain('Ładowanie poziomów…');
+    expect(fixture.nativeElement.querySelectorAll('.choice-select--loading')).toHaveLength(0);
     expect(fixture.componentInstance.aiModelControl.value).toBe('');
     expect(fixture.componentInstance.reasoningEffortControl.value).toBe('medium');
     expect(fixture.nativeElement.textContent).not.toContain('Domyślny backend (gpt-5.4)');
@@ -179,17 +181,16 @@ describe('AnalysisConsoleComponent auth flow', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const aiModelOptions = Array.from(
-      fixture.nativeElement.querySelectorAll('#aiModel option')
-    ) as HTMLOptionElement[];
-    const reasoningOptions = Array.from(
-      fixture.nativeElement.querySelectorAll('#reasoningEffort option')
-    ) as HTMLOptionElement[];
-
+    const loader = TestbedHarnessEnvironment.loader(fixture);
+    const modelSelect = await loader.getHarness(MatSelectHarness.with({ selector: '#aiModel' }));
+    const effortSelect = await loader.getHarness(MatSelectHarness.with({ selector: '#reasoningEffort' }));
     expect(component.aiModelControl.value).toBe('gpt-5.4');
     expect(component.reasoningEffortControl.value).toBe('high');
-    expect(aiModelOptions.some((option) => option.value === '')).toBe(false);
-    expect(reasoningOptions.filter((option) => option.value === 'high')).toHaveLength(1);
+    expect(await modelSelect.getValueText()).toContain('GPT-5.4');
+    await effortSelect.open();
+    expect(await effortSelect.getOptions({ text: 'Wysoki' })).toHaveLength(1);
+    await effortSelect.close();
+
     expect(fixture.nativeElement.textContent).not.toContain('Domyślny backend (high)');
 
     component.correlationIdControl.setValue('corr-123');

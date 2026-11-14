@@ -1,3 +1,5 @@
+@use '../../../../../styles/form-controls' as controls;
+
 :host {
   display: block;
   min-width: 0;
@@ -57,6 +59,7 @@
 }
 
 .ui-explorer-screen-select__control {
+  @include controls.trigger;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -65,27 +68,18 @@
   height: 58px;
   padding: 9px 11px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+
+
+
+
+
+
+
 }
 
-.ui-explorer-screen-select__control:hover,
-.ui-explorer-screen-select__control:focus-visible {
-  border-color: rgba(12, 102, 228, 0.34);
-  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
-  outline: none;
-}
 
-.ui-explorer-screen-select__control:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-  box-shadow: none;
-}
+
+
 
 .ui-explorer-screen-select__control > .material-symbols-outlined {
   color: var(--text-muted);
@@ -112,7 +106,7 @@
 .ui-explorer-screen-select__value strong,
 .ui-explorer-screen-option__body strong {
   color: var(--text-main);
-  font-weight: 800;
+  font-weight: var(--control-value-weight);
   line-height: 1.3;
 }
 
@@ -139,21 +133,22 @@
 }
 
 .ui-explorer-screen-select__menu {
+  @include controls.menu;
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   left: 0;
   z-index: 70;
   display: grid;
-  gap: 9px;
+  gap: 2px;
   width: min(620px, calc(100vw - 32px));
   max-height: min(520px, calc(100vh - 180px));
   overflow: auto;
   padding: 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
+
+
+
+
 }
 
 .ui-explorer-screen-select__search,
@@ -182,6 +177,7 @@
 }
 
 .ui-explorer-screen-option {
+  @include controls.option;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
@@ -189,26 +185,18 @@
   width: 100%;
   min-height: 58px;
   padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+
+
+
+
+
+
+
 }
 
-.ui-explorer-screen-option:hover,
-.ui-explorer-screen-option:focus-visible {
-  border-color: rgba(12, 102, 228, 0.34);
-  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
-  outline: none;
-}
 
-.ui-explorer-screen-option--selected {
-  border-color: rgba(12, 102, 228, 0.48);
-  background: #eff6ff;
-}
+
+
 
 .ui-explorer-screen-option__badge {
   padding: 4px 6px;
@@ -216,7 +204,7 @@
   background: var(--surface-soft);
   color: var(--text-soft);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: var(--control-value-weight);
   white-space: nowrap;
 }
 
@@ -234,3 +222,6 @@
     justify-self: start;
   }
 }
+
+.ui-explorer-screen-option__body strong,
+.ui-explorer-screen-option__body small { white-space: normal; overflow-wrap: anywhere; }

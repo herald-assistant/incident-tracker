@@ -1,4 +1,5 @@
-import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../components/text-field/text-field';
 import { Component, ElementRef, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,7 +20,7 @@ import {
 
 @Component({
   selector: 'app-context-entity-editor-drawer',
-  imports: [ReactiveFormsModule, MatIconModule, MatTooltipModule, CdkTextareaAutosize, ContextStructuredFieldEditorComponent],
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent, ReactiveFormsModule, MatIconModule, MatTooltipModule, ContextStructuredFieldEditorComponent],
   templateUrl: './context-entity-editor-drawer.html',
   styleUrl: './context-entity-editor-drawer.scss'
 })
@@ -135,7 +136,7 @@ export class ContextEntityEditorDrawerComponent {
   private focusField(path: string): void {
     const field = Array.from(this.elementRef.nativeElement.querySelectorAll<HTMLElement>('[data-field-path]'))
       .find((element) => element.dataset['fieldPath'] === path);
-    const control = field?.querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea, button:not(.editor-field__help)');
+    const control = field?.querySelector<HTMLElement>('input:not([type="hidden"]), [role="combobox"], textarea, button:not(.editor-field__help):not(.form-field__help)');
     control?.focus();
   }
 

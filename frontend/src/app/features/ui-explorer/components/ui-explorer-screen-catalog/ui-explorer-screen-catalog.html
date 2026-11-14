@@ -41,17 +41,15 @@
 
   @if (open() && facade.screenCatalog(); as catalog) {
     <div class="ui-explorer-screen-select__menu" role="listbox" aria-label="View options">
-      <label class="ui-explorer-screen-select__search">
-        <span class="field-label">Find view</span>
-        <input
-          class="text-input"
-          type="search"
-          autocomplete="off"
-          placeholder="contact, schedule, /route"
-          [value]="search()"
-          (input)="search.set($any($event.target).value)"
-        />
-      </label>
+      <app-text-field
+        type="search"
+        autocomplete="off"
+        placeholder="contact, schedule, /route"
+        [value]="search()"
+        (valueChange)="search.set($event)"
+        label="Find view"
+        class="ui-explorer-screen-select__search"
+      />
 
       <div class="ui-explorer-screen-select__options">
         @for (screen of filteredScreens(); track screen.screenId) {

@@ -1,3 +1,5 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatSelectHarness } from '@angular/material/select/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
@@ -111,9 +113,11 @@ describe('FlowExplorerPageComponent', () => {
     }).compileComponents();
   });
 
-  it('should load configured default branch and system catalog on init', () => {
+  it('should load configured default branch and system catalog on init', async () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -126,9 +130,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Endpoint documentation workspace');
     expect(compiled.textContent).toContain('Select application');
     expect(compiled.textContent).toContain('2 applications');
-    expect(compiled.textContent).toContain('No model selected');
-    expect(compiled.textContent).toContain('backend default not listed');
-    expect(compiled.textContent).toContain('Medium');
+    expect(compiled.textContent).toContain('Domyślny: gpt-5.4');
+    expect(compiled.textContent).toContain('Średni');
     expect(compiled.textContent).not.toContain('Customer relationship core API.');
   });
 
@@ -146,9 +149,9 @@ describe('FlowExplorerPageComponent', () => {
     let controls = selectControls(fixture.nativeElement);
     expect(controls[0]?.querySelector('.application-select-loader')).not.toBeNull();
     expect(controls[0]?.getAttribute('aria-busy')).toBe('true');
-    expect(controls[4]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
-    expect(controls[5]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader')).toHaveLength(3);
+    expect(controls[4]?.getAttribute('aria-busy')).toBe('true');
+    expect(controls[5]?.getAttribute('aria-busy')).toBe('true');
+    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader, .choice-select--loading')).toHaveLength(3);
 
     systems.next([systemOption('crm-service'), systemOption('crm-analytics')]);
     systems.complete();
@@ -159,7 +162,7 @@ describe('FlowExplorerPageComponent', () => {
     expect(controls[0]?.querySelector('.application-select-loader')).toBeNull();
     expect(controls[1]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
     expect(controls[1]?.getAttribute('aria-busy')).toBe('true');
-    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader')).toHaveLength(3);
+    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader, .choice-select--loading')).toHaveLength(3);
 
     endpointInventoryResponse.next(endpointInventory());
     endpointInventoryResponse.complete();
@@ -169,7 +172,7 @@ describe('FlowExplorerPageComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader')).toHaveLength(0);
+    expect(fixture.nativeElement.querySelectorAll('.application-select-loader, .flow-explorer-select-loader, .choice-select--loading')).toHaveLength(0);
   });
 
   it('should filter systems locally', () => {
@@ -319,15 +322,15 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.querySelector('[role="alert"]')?.textContent).toContain('GitLab unavailable.');
   });
 
-  it('should start a job from selected endpoint, scope controls and user instructions', () => {
+  it('should start a job from selected endpoint, scope controls and user instructions', async () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
     selectSectionMode(fixture, 'Validations', 'Deep');
-    selectAiModel(fixture, 'GPT-5.4 mini');
-    selectReasoningEffort(fixture, 'High');
+    await selectAiModel(fixture, 'GPT-5.4 mini');
+    await selectReasoningEffort(fixture, 'Wysoki');
     setTextareaValue(
       fixture.nativeElement,
       'Skup sie na negatywnych scenariuszach walidacji statusu klienta.'
@@ -369,32 +372,26 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.querySelector('details.flow-explorer-prompt-preview')).toBeNull();
   });
 
-  it('should show future goals as disabled Soon options and keep Deep Discovery selected', () => {
+  it('should show future goals as disabled Soon options and keep Deep Discovery selected', async () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    const nativeElement = fixture.nativeElement as HTMLElement;
-    openGoalSelect(nativeElement);
-    fixture.detectChanges();
+    const goal = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSelectHarness.with({selector: '[aria-label="Goal"]'}));
+    await goal.open();
 
     for (const label of ['Test scenarios', 'Risk detection']) {
-      const option = Array.from(
-        nativeElement.querySelectorAll<HTMLButtonElement>('[role="option"]')
-      ).find((candidate) => candidate.textContent?.includes(label));
-
-      expect(option).toBeTruthy();
-      expect(option?.disabled).toBe(true);
-      expect(option?.getAttribute('aria-label')).toBe(label + ' — wkrótce');
-      expect(option?.getAttribute('title')).toBe(label + ' — wkrótce');
-      expect(option?.querySelector('.flow-explorer-select-option__badge')?.textContent?.trim()).toBe('Soon');
-      option?.click();
+      const option = (await goal.getOptions({text: new RegExp(label)}))[0];
+      expect(await option.isDisabled()).toBe(true);
+      expect(await (await option.host()).getAttribute('title')).toBe(label + ' — wkrótce');
+      expect(await option.getText()).toContain('Soon');
+      await option.click();
     }
 
     expect(fixture.componentInstance.analysisGoal()).toBe('DEEP_DISCOVERY');
     expect(flowExplorerApi.startJob).not.toHaveBeenCalled();
   });
 
-  it('should use listed backend defaults without adding duplicate dropdown options', () => {
+  it('should use listed backend defaults without adding duplicate dropdown options', async () => {
     vi.mocked(aiOptionsApi.getOptions).mockReturnValue(of(aiModelOptionsWithListedDefault()));
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -402,17 +399,15 @@ describe('FlowExplorerPageComponent', () => {
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
     const nativeElement = fixture.nativeElement as HTMLElement;
-    openReasoningEffortSelect(nativeElement);
+    await fixture.whenStable();
     fixture.detectChanges();
-
-    const reasoningOptions = Array.from(
-      nativeElement.querySelectorAll<HTMLButtonElement>(
-        '.flow-explorer-select__menu [role="option"]'
-      )
+    const effortSelect = await TestbedHarnessEnvironment.loader(fixture).getHarness(
+      MatSelectHarness.with({ selector: '[aria-label="Reasoning effort"]' })
     );
-
-    expect(nativeElement.textContent).toContain('GPT-5.4 (gpt-5.4)');
-    expect(reasoningOptions.filter((button) => button.textContent?.includes('High'))).toHaveLength(1);
+    await effortSelect.open();
+    expect(nativeElement.textContent).toContain('GPT-5.4');
+    expect(await effortSelect.getOptions({ text: /Wysoki/ })).toHaveLength(1);
+    await effortSelect.close();
     expect(nativeElement.textContent).not.toContain('Default backend (high)');
 
     clickButtonContaining(nativeElement, 'Run Flow Explorer');
@@ -593,7 +588,7 @@ describe('FlowExplorerPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const chatInput = compiled.querySelector(
-      '.chat-input'
+      '.chat-input textarea'
     ) as HTMLTextAreaElement;
     const topLevelSections = Array.from(
       compiled.querySelectorAll<HTMLDetailsElement>('details.flow-explorer-collapsible')
@@ -852,7 +847,7 @@ function setInputValue(nativeElement: HTMLElement, selector: string, value: stri
 }
 
 function selectControls(nativeElement: HTMLElement): HTMLButtonElement[] {
-  return Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.application-select__control, .flow-explorer-select__control'));
+  return Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.application-select__control, .flow-explorer-select__control, mat-select'));
 }
 
 function selectSystem(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
@@ -874,21 +869,11 @@ function openEndpointSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[0]?.click();
 }
 
-function openGoalSelect(nativeElement: HTMLElement): void {
+function openFocusAreasSelect(nativeElement: HTMLElement): void {
   nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[1]?.click();
 }
 
-function openFocusAreasSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[2]?.click();
-}
 
-function openAiModelSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[3]?.click();
-}
-
-function openReasoningEffortSelect(nativeElement: HTMLElement): void {
-  nativeElement.querySelectorAll<HTMLButtonElement>('.flow-explorer-select__control')[4]?.click();
-}
 
 function clickLoadEndpoints(nativeElement: HTMLElement): void {
   nativeElement.querySelector<HTMLButtonElement>('.flow-explorer-control-actions button')?.click();
@@ -923,19 +908,21 @@ function selectSectionMode(
   fixture.detectChanges();
 }
 
-function selectAiModel(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
-  const nativeElement = fixture.nativeElement as HTMLElement;
-  openAiModelSelect(nativeElement);
-  fixture.detectChanges();
-  buttonContaining(nativeElement, label)?.click();
+async function selectAiModel(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): Promise<void> {
+  const select = await TestbedHarnessEnvironment.loader(fixture).getHarness(
+    MatSelectHarness.with({ selector: '[aria-label="Model AI"]' })
+  );
+  await select.open();
+  await select.clickOptions({ text: new RegExp(label) });
   fixture.detectChanges();
 }
 
-function selectReasoningEffort(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
-  const nativeElement = fixture.nativeElement as HTMLElement;
-  openReasoningEffortSelect(nativeElement);
-  fixture.detectChanges();
-  buttonContaining(nativeElement, label)?.click();
+async function selectReasoningEffort(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): Promise<void> {
+  const select = await TestbedHarnessEnvironment.loader(fixture).getHarness(
+    MatSelectHarness.with({ selector: '[aria-label="Reasoning effort"]' })
+  );
+  await select.open();
+  await select.clickOptions({ text: new RegExp(label) });
   fixture.detectChanges();
 }
 
@@ -1036,7 +1023,7 @@ function setTextareaValue(nativeElement: HTMLElement, value: string): void {
 
 function setChatTextareaValue(nativeElement: HTMLElement, value: string): void {
   const textarea = nativeElement.querySelector(
-    '.chat-input'
+    '.chat-input textarea'
   ) as HTMLTextAreaElement;
   textarea.value = value;
   textarea.dispatchEvent(new Event('input'));

@@ -1,10 +1,12 @@
+import { choice } from '../../../../testing/form-controls';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TestBed } from '@angular/core/testing';
 
 import { ContextEntityEditorDrawerComponent } from './context-entity-editor-drawer';
 
 describe('ContextEntityEditorDrawerComponent', () => {
   it('points a catalog validation error at the related repository field', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -26,7 +28,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('starts with basic fields, expands optional sections and preserves hidden values when saving', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -59,7 +61,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   }, 15_000);
 
   it('keeps required Git identity visible in the simplified repository form', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'repository',
@@ -72,7 +74,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('keeps preview values visible, hides empty selectors and restores them for editing', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -110,29 +112,30 @@ describe('ContextEntityEditorDrawerComponent', () => {
       expect(getComputedStyle(field).display, selector).toBe('none');
     }
     expect(root.querySelector<HTMLElement>('#ownership-status')!.closest<HTMLElement>('.structured-control')!.hidden).toBe(false);
-    expect(root.querySelector<HTMLSelectElement>('#ownership-status')!.value).toBe('explicit');
+    expect(await (await choice(fixture, '#ownership-status')).getValueText()).toBe('Explicit');
     expect(root.querySelector<HTMLElement>('#reference-processes')!.closest<HTMLElement>('.reference-group')!.hidden).toBe(false);
     expect(root.querySelector('[data-field-path="ownership"] .value-chip')!.textContent).toContain('CRM Contact Team');
     expect(root.querySelector('[data-field-path="references"] .value-chip')!.textContent).toContain('CRM Contact Update');
     for (const selector of ['#ownership-team', '#reference-processes']) {
-      const select = root.querySelector<HTMLSelectElement>(selector)!;
+      const select = root.querySelector<HTMLElement>(selector)!.closest<HTMLElement>('app-choice-select')!;
       expect(select.hidden).toBe(true);
       expect(getComputedStyle(select).display).toBe('none');
     }
 
     fixture.componentInstance.form.controls['systemSubtype'].setValue('backend');
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
     expect(root.querySelector<HTMLElement>('[data-field-path="systemSubtype"]')!.hidden).toBe(false);
-    expect(root.querySelector<HTMLSelectElement>('#systemSubtype')!.value).toBe('backend');
+    expect(await (await choice(fixture, '#systemSubtype')).getValueText()).toBe('backend');
 
     fixture.componentRef.setInput('readonly', false);
     fixture.detectChanges();
-    expect(root.querySelectorAll('.editor-field[hidden], .structured-control[hidden], .reference-group[hidden], select[hidden]').length).toBe(0);
-    expect(root.querySelector<HTMLSelectElement>('#ownership-team')!.disabled).toBe(false);
+    expect(root.querySelectorAll('.editor-field[hidden], .structured-control[hidden], .reference-group[hidden], app-choice-select[hidden]').length).toBe(0);
+    expect(await (await choice(fixture, '#ownership-team')).isDisabled()).toBe(false);
   });
 
   it('opens an advanced section and focuses a nested field requested by maintenance inbox', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -149,7 +152,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('reveals an advanced field when server validation points to it', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -163,7 +166,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('focuses a new server error instead of replaying the inbox focus request', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -183,7 +186,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('reveals invalid advanced input after Save instead of hiding its error', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -202,7 +205,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('keeps the anonymized CRM ID immutable and emits the edited canonical payload', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -219,7 +222,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('retains the form and reports invalid guided CRM process data', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'process',
@@ -237,7 +240,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('renders keyboard-accessible runtime and AI help for every anonymized CRM input', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'code-search-scope',
@@ -246,14 +249,14 @@ describe('ContextEntityEditorDrawerComponent', () => {
     fixture.detectChanges();
 
     const fields = fixture.componentInstance.adapter.fields('code-search-scope');
-    const helpButtons = fixture.nativeElement.querySelectorAll('.editor-field__help');
+    const helpButtons = fixture.nativeElement.querySelectorAll('.editor-field__help, .editor-field > app-text-field .form-field__help, .editor-field > app-choice-select .form-field__help');
     expect(helpButtons.length).toBe(fields.length);
-    expect(helpButtons[0].getAttribute('aria-label')).toContain('Pomoc do pola');
+    expect(Array.from(helpButtons as NodeListOf<HTMLElement>).every(button => button.tabIndex === 0 && !!button.getAttribute('aria-label'))).toBe(true);
     expect(fixture.componentInstance.fieldTooltip(fields.find((field) => field.path === 'target')!)).toContain('system albo obszar domenowy');
   });
 
   it('renders structured CRM selectors instead of raw JSON for code-search target and repositories', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'code-search-scope',
@@ -271,7 +274,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks invalid CRM code-search rows before sending them to the backend', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'code-search-scope',
@@ -287,7 +290,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks duplicate anonymized CRM repositories before saving', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'code-search-scope',
@@ -306,7 +309,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('requires a runtime-resolvable CRM Git identity before saving a repository', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'repository',
@@ -322,7 +325,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('renders guided CRM system and repository metadata instead of raw JSON', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -362,7 +365,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks invalid guided CRM system and repository metadata before save', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -388,7 +391,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks duplicate or incomplete CRM process steps before saving', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'create', type: 'process',
@@ -407,7 +410,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('renders guided CRM recognition signals and relations instead of raw JSON', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -432,7 +435,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks empty CRM recognition signals, duplicate relations and self relations before save', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'system',
@@ -459,7 +462,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('renders guided CRM failure, artifact, coverage and gap controls instead of raw JSON', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'process',
@@ -515,7 +518,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks invalid structured CRM failure modes, coverage and gaps before save', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'process',
@@ -560,7 +563,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('renders guided CRM boundary, lifecycle and completion fields instead of raw JSON', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'process',
@@ -590,7 +593,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
   });
 
   it('blocks invalid guided CRM boundary, lifecycle and completion structures before save', async () => {
-    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
       mode: 'edit', type: 'process',

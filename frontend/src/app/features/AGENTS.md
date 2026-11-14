@@ -36,6 +36,20 @@ granatowo-niebieskiej kolorystyki logo `assets/brand/main-logo.png`; nie
 wprowadzaj osobnych zielonych, czerwonych, fioletowych ani innych
 semantycznych akcentow tylko po to, zeby rozroznic feature.
 
+## Formularze ekranow
+
+- Reuse'uj `app-choice-select` i `app-text-field` takze w filtrach Platform,
+  Tool Workbench i Delivery; etykiety, tooltipy, hinty i bledy przekazuj jako
+  parametry. Wyszukiwalne lookupy zachowuja swoje zachowanie i wspolna oprawe.
+- Model AI i reasoning renderuj przez `app-ai-execution-controls`, bez
+  lokalnych mapperow opcji/komunikatow i bez zmniejszania wysokosci 58 px.
+  Katalog, defaulty, reset reasoning i request pozostaja w feature.
+- Oba assessmenty Delivery nadal korzystaja z konfiguracji AI backendu;
+  wspolny komponent nie jest powodem dodania im wyboru modelu.
+- Zachowaj istniejaca siatke i semantyke formularza. Zasady wymiarow, fokusu,
+  dostepnosci i testow opisuje
+  [standard UI](../../../../docs/architecture/frontend-ui-standards.md).
+
 ## Release summary
 
 W Analysis Features i Workspace Overview Release summary występuje bezpośrednio

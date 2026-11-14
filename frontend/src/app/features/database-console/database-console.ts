@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -389,7 +390,7 @@ const DATABASE_TOOL_GROUPS = DATABASE_TOOLS.reduce<DatabaseToolGroup[]>((groups,
 
 @Component({
   selector: 'app-database-console',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ReactiveFormsModule],
   templateUrl: './database-console.html',
   styleUrl: './database-console.scss'
 })

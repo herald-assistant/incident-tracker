@@ -19,6 +19,18 @@ Najwazniejsze granice:
 - `operational-context` trzyma ekran katalogu Operational Context i jego
   komponenty pomocnicze.
 
+## Formularze i preferencje AI
+
+Obowiazuje [standard UI](../../../docs/architecture/frontend-ui-standards.md).
+`components/{form-field,choice-select,text-field,ai-execution-controls}`
+posiadaja oprawe i zachowanie wspolnych kontrolek; ekran posiada siatke,
+wartosci, defaulty, walidacje biznesowa i HTTP. Nie przenos pobierania katalogu
+modeli ani resetowania reasoning do komponentu prezentacyjnego.
+
+Przy migracji pola zachowaj FormControl/valueChange, dirty/touched, disabled,
+typ wartosci, odtworzenie historii i moment zatwierdzenia zmiany. Wspolny
+wyglad nie moze zmienic requestu ani obslugi dat i liczb.
+
 ## Route metadata
 
 Kazdy nowy route w shellu powinien dostarczyc:

@@ -1,16 +1,22 @@
+import { TextFieldComponent } from '../text-field/text-field';
 import { Component, computed, HostListener, input, output, signal } from '@angular/core';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { FormFieldComponent } from '../form-field/form-field';
+
+let nextApplicationId = 0;
 
 export interface ApplicationOption {
   systemId: string; name: string | null; summary?: string | null; aliases?: string[]; searchTerms?: string[];
 }
 @Component({
   selector: 'app-application-select',
-  imports: [MatTooltipModule],
+  imports: [TextFieldComponent, FormFieldComponent],
   templateUrl: './application-select.html',
   styleUrl: './application-select.scss'
 })
 export class ApplicationSelectComponent {
+  readonly controlId = `application-select-${nextApplicationId++}`;
+  readonly label = input('Application');
+  readonly tooltip = input('Aplikacja z Operational Context. Jej wybór określa repozytoria dostępne w analizie.');
   readonly options=input<ApplicationOption[]>([]);
   readonly selectedId=input('');
   readonly disabled=input(false);
@@ -41,4 +47,3 @@ export class ApplicationSelectComponent {
     options?.[Math.max(0, Math.min(options.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
   }
 }
-

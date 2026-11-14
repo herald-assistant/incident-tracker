@@ -1,6 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatSelectHarness } from '@angular/material/select/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
@@ -8,6 +10,53 @@ import { UxInspectorCaptureSnapshot } from '../../models/ux-inspector.models';
 import { UxInspectorPageComponent } from './ux-inspector-page';
 
 describe('UxInspectorPageComponent', () => {
+  it('synchronizes shared model and reasoning controls with the feature selection', async () => {
+    const params = convertToParamMap({});
+    await TestBed.configureTestingModule({
+      imports: [UxInspectorPageComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { queryParamMap: new BehaviorSubject(params), snapshot: { queryParamMap: params } } },
+        { provide: Router, useValue: { navigate: vi.fn(() => Promise.resolve(true)) } }
+      ]
+    }).compileComponents();
+    const fixture = TestBed.createComponent(UxInspectorPageComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/ux-inspector/input-options').flush({
+      featureId: 'ux-inspector', systems: [], configurationFindings: []
+    });
+    http.expectOne('/api/analysis/ai/options').flush({
+      defaultModel: 'crm-analysis', defaultReasoningEffort: 'low', defaultReasoningEfforts: ['low', 'high'],
+      models: [
+        { id: 'crm-analysis', name: 'CRM Analysis', supportsReasoningEffort: true,
+          reasoningEfforts: ['low', 'high'], defaultReasoningEffort: 'low' },
+        { id: 'auto', name: 'Auto', supportsReasoningEffort: false,
+          reasoningEfforts: [], defaultReasoningEffort: '' }
+      ]
+    });
+    fixture.detectChanges();
+    const selects = await TestbedHarnessEnvironment.loader(fixture).getAllHarnesses(
+      MatSelectHarness.with({ ancestor: 'app-ai-execution-controls' })
+    );
+    const [model, effort] = selects;
+    expect(await model.getValueText()).toBe('CRM Analysis');
+    expect(await effort.getValueText()).toBe('Niski');
+    await model.open();
+    await model.clickOptions({ text: 'Auto' });
+    expect(fixture.componentInstance.facade.selectedModel()).toBe('auto');
+    expect(fixture.componentInstance.facade.selectedReasoningEffort()).toBe('');
+    expect(await effort.getValueText()).toBe('Model nie udostępnia reasoning');
+    expect(await effort.isDisabled()).toBe(true);
+    await model.open();
+    await model.clickOptions({ text: 'CRM Analysis' });
+    expect(await effort.getValueText()).toBe('Niski');
+    await effort.open();
+    await effort.clickOptions({ text: 'Wysoki' });
+    expect(fixture.componentInstance.facade.selectedReasoningEffort()).toBe('high');
+    http.verify();
+  });
+
   it.each(['unavailable', 'empty', 'available'])('loads capture and lazily previews HTTP history: %s', async (mode) => {
     const params = convertToParamMap({ captureId: 'cap_crm_contact_save' });
     const queryParamMap = new BehaviorSubject(params);

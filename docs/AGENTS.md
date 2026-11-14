@@ -14,6 +14,12 @@ Dokumentacja ma rozdzielac trzy rozne odpowiedzialnosci:
 Nie lacz tych odpowiedzialnosci w jednym pliku. Git jest historia zmian;
 kanoniczna dokumentacja nie powinna byc kronika dochodzenia do obecnego stanu.
 
+Standard prezentacji frontendu utrzymuj w
+[architecture/frontend-ui-standards.md](architecture/frontend-ui-standards.md).
+`product-direction.md` opisuje kierunek produktu, a lokalne frontendowe
+`AGENTS.md` wskazuja reguly stosowania standardu. Nie kopiuj pelnego katalogu
+parametrow do opisow kazdego feature'a; linkuj do wspolnego kontraktu.
+
 ## `architecture/`
 
 Dokument architektoniczny moze zawierac:

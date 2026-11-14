@@ -1,3 +1,5 @@
+import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../../components/choice-select/choice-select';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -47,7 +49,7 @@ const EMPTY_OPTIONS: ConfigDriftViewerInputOptions = {
 
 @Component({
   selector: 'app-config-drift-viewer-workbench-page',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ChoiceSelectComponent, ChoiceOptionComponent, ReactiveFormsModule],
   templateUrl: './config-drift-viewer-workbench-page.html',
   styleUrls: [
     '../../../source-console-layout.scss',

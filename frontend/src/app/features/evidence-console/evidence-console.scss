@@ -76,11 +76,9 @@
 .form-field--wide {
   grid-column: 1 / -1;
 }
-
 .text-input--textarea {
-  min-height: 104px;
-  resize: vertical;
-  font-family: var(--font-mono);
+  --field-min-height: 104px;
+  --field-resize: vertical;
 }
 
 .text-input--compact-textarea {
@@ -216,35 +214,20 @@
 .json-icon-button .material-symbols-outlined {
   font-size: 19px;
 }
-
 .json-output {
   width: 100%;
-  min-height: 260px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(247, 250, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-size: 0.84rem;
-  line-height: 1.55;
-  resize: vertical;
-  white-space: pre;
+  --field-min-height: 260px;
+  --field-padding-block: 16px;
+  --field-padding-inline: 16px;
+  --field-font-size: 0.84rem;
+  --field-line-height: 1.55;
+  --field-resize: vertical;
 }
-
-.json-output:focus {
-  outline: none;
-  border-color: rgba(12, 102, 228, 0.32);
-  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.08);
-}
-
 .source-output {
-  min-height: 0;
-  max-height: 360px;
+  --field-min-height: 0;
+  --field-max-height: 360px;
   margin: 0;
-  overflow: auto;
-  resize: none;
-  white-space: pre;
+  --field-resize: none;
 }
 
 .toggle-row {
@@ -508,12 +491,10 @@
   .route-chip {
     white-space: normal;
   }
-
-  .json-output {
-    min-height: 220px;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
+.json-output {
+  --field-min-height: 220px;
+  overflow-wrap: anywhere;
+}
 
   .context-endpoint {
     flex-direction: column;

@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { formatDataDate } from '../../../../core/utils/format-data-date';
@@ -7,7 +8,7 @@ import { UiExplorerFacade } from '../../state/ui-explorer.facade';
 
 @Component({
   selector: 'app-ui-explorer-screen-catalog',
-  imports: [MatTooltipModule],
+  imports: [TextFieldComponent, MatTooltipModule],
   templateUrl: './ui-explorer-screen-catalog.html',
   styleUrl: './ui-explorer-screen-catalog.scss'
 })

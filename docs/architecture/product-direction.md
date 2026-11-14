@@ -39,9 +39,9 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
   zebrania inputu; nie sa osobnymi feature'ami produktowymi ani nie powinny
   niesc logiki incydentu.
 - `Platform` - startowy overview Team Delivery Workspace, customizacja oraz
-  podglad platformowych zasobow: parametryzacja workspace'u, read-only katalog
-  `AI Skills`, personalizacja, autentykacja, konfiguracja modeli i inne
-  ustawienia platformy.
+  podglad platformowych zasobow: parametryzacja workspace'u, efektywny katalog
+  `AI Skills` z edycja pojedynczego skilla, personalizacja, autentykacja,
+  konfiguracja modeli i inne ustawienia platformy.
 
 Topbar jest kontekstowy: pokazuje aktualny widok, breadcrumb i ewentualny
 skompresowany `capabilityInfo` pod ikona info. Nie jest glowna nawigacja.
@@ -57,6 +57,33 @@ V1 UI ma byc jasny, prosty, korporacyjny i roboczy. Nie projektujemy
 marketingowych hero, dekoracyjnych gradientow ani duzych kart opisowych jako
 dominujacej kompozycji. Funkcjonalnosc i czytelnosc zlozonych analiz sa
 wazniejsze niz efekt "cool".
+
+Powierzchnie strony i pomocniczych paneli korzystaja ze wspolnych neutralnych
+tokenow szarosci; niebieski pozostaje akcentem marki i interakcji. Sidebar i
+etykiety uzywaja lzejszej wagi tekstu, a aktywna pozycja nawigacji zachowuje
+wyrazne zaznaczenie. Etykiety formularzy zachowuja wielkosc liter z tresci.
+Katalog AI Skills prezentuje wiersze oddzielone subtelnymi separatorami,
+bez osobnych obrysow kazdego wiersza i ikony; focus klawiatury jest jawny.
+
+Glowne panele korzystaja z krotkich, subtelnych cieni. Hover nieaktywnej
+nawigacji ma neutralne tlo, biezacy ekran zachowuje niebieskie zaznaczenie,
+a focus klawiatury ma osobny, kontrastowy obrys. Pozycje disabled nie
+otrzymuja hoveru dostepnej akcji. Karty Overview zmieniaja powierzchnie
+przy najechaniu bez przesuwania; logo i ikony maja delikatne cienie.
+
+Formularze i filtry wszystkich ekranow analitycznych, Platform, Tool
+Workbench oraz Operational Context korzystaja z neutralnych komponentow
+`choice-select`, `text-field` i oprawy `form-field`. Standard obejmuje tez
+wyszukiwarki, chat i tekstowe podglady kodu. Preferencje AI prezentuje
+`ai-execution-controls`, ze wspolnym wygladem i komunikatami. Feature nadal
+posiada dane, defaulty, walidacje biznesowa i request; komponent posiada
+prezentacje i interakcje kontrolki. Oba assessmenty Delivery zachowuja
+konfiguracje AI po stronie backendu.
+
+Kanoniczny [standard UI i kontrolek](frontend-ui-standards.md) okresla
+ownership, dobor komponentow, parametry, wysokosci 44/58 px, pojedynczy
+wewnetrzny focus, stany pary model/reasoning i weryfikacje konsumentow.
+Zmiana wygladu zachowuje istniejaca siatke i funkcjonalnosc ekranu.
 
 ## Spojnosc Feature UX
 

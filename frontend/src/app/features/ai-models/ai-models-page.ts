@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -19,7 +20,7 @@ type PriceRow = {
 
 @Component({
   selector: 'app-ai-models-page',
-  imports: [RouterLink],
+  imports: [TextFieldComponent, RouterLink],
   templateUrl: './ai-models-page.html',
   styleUrl: './ai-models-page.scss'
 })
@@ -81,8 +82,8 @@ export class AiModelsPageComponent {
     });
   }
 
-  updateSearch(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+  updateSearch(value: string): void {
+    this.query.set(value);
   }
 
   category(model: AnalysisAiModelOption): string {

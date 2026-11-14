@@ -26,17 +26,15 @@
       </div>
 
       <div class="analysis-history-filter-row">
-        <label class="field-control" for="analysisHistoryFilter">
-          <span class="field-label">Filter</span>
-          <input
-            id="analysisHistoryFilter"
-            class="text-input"
-            type="search"
-            placeholder="Name or feature"
-            autocomplete="off"
-            [formControl]="filterControl"
-          />
-        </label>
+        <app-text-field
+          inputId="analysisHistoryFilter"
+          type="search"
+          placeholder="Name or feature"
+          autocomplete="off"
+          [formControl]="filterControl"
+          label="Filter"
+          class="field-control"
+        />
         <div class="analysis-history-count" aria-live="polite">
           {{ resultCountLabel() }}
         </div>
@@ -85,16 +83,14 @@
             <article class="analysis-history-run">
               @if (renamingAnalysisId() === run.analysisId) {
                 <form class="analysis-history-rename" (submit)="saveRename($event, run)">
-                  <label class="field-control" [attr.for]="'rename-' + run.analysisId">
-                    <span class="field-label">Name</span>
-                    <input
-                      [id]="'rename-' + run.analysisId"
-                      class="text-input"
-                      type="text"
-                      [formControl]="renameControl"
-                      autocomplete="off"
-                    />
-                  </label>
+                  <app-text-field
+                    [inputId]="'rename-' + run.analysisId"
+                    type="text"
+                    [formControl]="renameControl"
+                    autocomplete="off"
+                    label="Name"
+                    class="field-control"
+                  />
                   <div class="analysis-history-rename__actions">
                     <button
                       class="primary-button"

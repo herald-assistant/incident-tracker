@@ -1,3 +1,5 @@
+import { choice } from '../../../../../testing/form-controls';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -370,9 +372,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     const completed = snapshot('COMPLETED', 11, [first, second]);
     const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
 
-    const selects = fixture.nativeElement.querySelectorAll('.unit-filters select') as NodeListOf<HTMLSelectElement>;
-    selects[0].value = optionValue(selects[0], 'Team A');
-    selects[0].dispatchEvent(new Event('change'));
+    await (await choice(fixture, '.unit-filters app-choice-select:first-child mat-select')).clickOptions({ text: /Team A/ });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.units-count').textContent).toContain('1 / 2');
@@ -385,9 +385,7 @@ describe('DeliveryScopeComplexityPageComponent', () => {
     ) as HTMLButtonElement;
     clearButton.click();
     fixture.detectChanges();
-    const refreshedSelects = fixture.nativeElement.querySelectorAll('.unit-filters select') as NodeListOf<HTMLSelectElement>;
-    refreshedSelects[1].value = optionValue(refreshedSelects[1], 'mr-author-202');
-    refreshedSelects[1].dispatchEvent(new Event('change'));
+    await (await choice(fixture, '.unit-filters app-choice-select:nth-child(2) mat-select')).clickOptions({ text: /mr-author-202/ });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.units-count').textContent).toContain('1 / 2');
@@ -552,7 +550,7 @@ async function createComponent(options: {
 
   await TestBed.configureTestingModule({
     imports: [DeliveryScopeComplexityPageComponent],
-    providers: [
+    providers: [provideNoopAnimations(),
       { provide: DeliveryScopeComplexityApiService, useValue: api },
       { provide: AiOptionsApiService, useValue: aiOptions },
       { provide: GithubAuthService, useValue: auth },
@@ -692,12 +690,4 @@ function dimensionScore(score: number, scopeSignal: number, weight: number, poin
     points,
     evidence: [`dimension | artifact#section | evidence for score ${score}`]
   };
-}
-
-function optionValue(select: HTMLSelectElement, labelPart: string): string {
-  const option = Array.from(select.options).find((candidate) =>
-    candidate.textContent?.includes(labelPart)
-  );
-  expect(option).toBeDefined();
-  return option!.value;
 }

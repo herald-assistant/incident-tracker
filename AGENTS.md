@@ -80,6 +80,8 @@ Przed wieksza zmiana zacznij od:
     dla zmian UX Inspectora albo TDW Browser Tools
 17. `docs/architecture/release-summary-runtime-flow.md`
     dla zmian Release summary, discovery Liquibase i raportu wdrożeniowego
+18. [Standard UI i kontrolek](docs/architecture/frontend-ui-standards.md)
+    dla zmian frontendu, formularzy i wspolnych komponentow
 
 ## Najwazniejsze niezmienniki
 
@@ -435,6 +437,22 @@ Zasady granic:
 
 ## Zasady rozwoju
 
+### Spojnosc frontendu
+
+- Obowiazujacy standard opisuje
+  [frontend-ui-standards.md](docs/architecture/frontend-ui-standards.md).
+  Sprawdz go oraz lokalne `frontend/**/AGENTS.md` przed zmiana UI.
+- Formularze, filtry i edytory reuse'uja `form-field`, `choice-select`
+  i `text-field`; para model/reasoning uzywa `ai-execution-controls`.
+  Wspolne komponenty posiadaja prezentacje, ekran posiada dane, walidacje
+  biznesowa i request. Nie tworz lokalnego wariantu znanej kontrolki.
+- Utrzymuj neutralne powierzchnie, lzejsza typografie oraz wspolne tokeny
+  i mixiny. Para AI ma wysokosc 58 px, a focus formularza jeden wewnetrzny
+  obrys. Szczegoly i wyjatki sa w kanonicznym standardzie.
+- Zmiana ostylowania nie upowaznia do zmiany ukladu, funkcjonalnosci ani
+  konfiguracji AI feature'a. Propozycje kolejnych widokow nie sa stanem
+  wdrozonym, dopoki nie zostana zaimplementowane i zweryfikowane.
+
 ### Kompatybilnosc przed pierwszym wdrozeniem
 
 - Do pierwszego wdrozenia domyslnie nie zachowuj kompatybilnosci wstecznej.
@@ -612,3 +630,8 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/tdw/shared/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/ai/AGENTS.md`
 - `operational-context-maintenance/AGENTS.md`
+- `frontend/AGENTS.md`
+- `frontend/src/app/AGENTS.md`
+- `frontend/src/app/components/AGENTS.md`
+- `frontend/src/app/features/AGENTS.md`
+- `frontend/src/app/operational-context/AGENTS.md`

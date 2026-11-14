@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -13,6 +14,7 @@ import {
   untracked
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormFieldComponent } from '../form-field/form-field';
 import { Observable, Subject, catchError, debounce, map, of, switchMap, timer } from 'rxjs';
 
 import {
@@ -20,6 +22,8 @@ import {
   GitLabBranchesResponse,
   GitLabSystemBranchesApiService,
 } from '../../core/services/gitlab-system-branches-api.service';
+
+let nextBranchId = 0;
 
 interface BranchQuery {
   sourceKey: string;
@@ -30,10 +34,13 @@ interface BranchQuery {
 
 @Component({
   selector: 'app-gitlab-branch-select',
+  imports: [TextFieldComponent, FormFieldComponent],
   templateUrl: './gitlab-branch-select.html',
   styleUrl: './gitlab-branch-select.scss'
 })
 export class GitLabBranchSelectComponent {
+  readonly controlId = `branch-select-${nextBranchId++}`;
+  readonly tooltip = input('');
   readonly systemId = input('');
   readonly sourceKey = input('');
   readonly branchLoader = input<((sourceKey: string, search: string, page?: number) => Observable<GitLabBranchesResponse>) | null>(null);

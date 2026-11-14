@@ -1,0 +1,27 @@
+<app-form-field [controlId]="inputId()" [label]="label()" [tooltip]="tooltip()" [hint]="hint()" [error]="error()"
+  [tooltipClass]="tooltipClass()" (focusRequested)="focus()">
+  @if (type() === 'textarea') {
+    <textarea #control class="text-input" [class.text-field--code]="appearance() === 'code'"
+      [id]="inputId()" [value]="currentValue()" [rows]="autosize() ? 1 : rows()" [wrap]="wrap()"
+      [cdkTextareaAutosize]="autosize()" [cdkAutosizeMinRows]="minRows()" [cdkAutosizeMaxRows]="maxRows()"
+      [class.text-field--autosize]="autosize()"
+      [placeholder]="placeholder()" [attr.maxlength]="maxLength()" [required]="required()" [readOnly]="readonly()"
+      [disabled]="isDisabled()" [spellcheck]="spellcheck()" [attr.aria-label]="ariaLabel() || label() || null"
+      [attr.aria-describedby]="descriptionIds()" [attr.aria-invalid]="error() ? true : null"
+      [attr.aria-labelledby]="labelledBy() || null"
+      (compositionstart)="startComposition()" (compositionend)="endComposition($event)"
+      (input)="update($event)" (change)="commit($event)" (blur)="touch()"></textarea>
+  } @else {
+    <input #control class="text-input" [class.text-field--descriptive]="size() === 'descriptive'"
+      [class.text-field--code]="appearance() === 'code'"
+      [type]="type()" [id]="inputId()" [value]="currentValue()" [placeholder]="placeholder()"
+      [attr.min]="min()" [attr.max]="max()" [attr.maxlength]="maxLength()" [required]="required()"
+      [attr.step]="step()" [attr.pattern]="pattern()" [attr.list]="list()" [attr.inputmode]="inputmode() || null"
+      [readOnly]="readonly()" [disabled]="isDisabled()" [autocomplete]="autocomplete()" [spellcheck]="spellcheck()"
+      [attr.aria-label]="ariaLabel() || label() || null" [attr.aria-describedby]="descriptionIds()"
+      [attr.aria-labelledby]="labelledBy() || null"
+      [attr.aria-invalid]="error() ? true : null"
+      (compositionstart)="startComposition()" (compositionend)="endComposition($event)"
+      (input)="update($event)" (change)="commit($event)" (blur)="touch()" />
+  }
+</app-form-field>

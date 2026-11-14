@@ -82,13 +82,13 @@
                 }
               </span>
             </span>
-            <input
-              id="workspaceTitle"
-              class="text-input"
+            <app-text-field
+              inputId="workspaceTitle"
               type="text"
               autocomplete="off"
               spellcheck="false"
               [formControl]="form.controls.appUi.controls.title"
+              ariaLabel="Workspace title"
             />
           </label>
         } @else {
@@ -144,13 +144,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="copilotGithubToken"
-                  class="text-input"
+                <app-text-field
+                  inputId="copilotGithubToken"
                   [type]="showCopilotGithubToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.copilot.controls.localGithubToken"
+                  ariaLabel="Fine-grained PAT"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
@@ -219,13 +219,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="jiraBaseUrl"
-                class="text-input"
+              <app-text-field
+                inputId="jiraBaseUrl"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.jira.controls.baseUrl"
+                ariaLabel="Base URL"
               />
             </label>
 
@@ -263,13 +263,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="jiraToken"
-                  class="text-input"
+                <app-text-field
+                  inputId="jiraToken"
                   [type]="showJiraToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.jira.controls.token"
+                  ariaLabel="Personal access token"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
@@ -338,13 +338,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="confluenceBaseUrl"
-                class="text-input"
+              <app-text-field
+                inputId="confluenceBaseUrl"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.confluence.controls.baseUrl"
+                ariaLabel="Base URL"
               />
             </label>
 
@@ -382,13 +382,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="confluenceToken"
-                  class="text-input"
+                <app-text-field
+                  inputId="confluenceToken"
                   [type]="showConfluenceToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.confluence.controls.token"
+                  ariaLabel="Personal access token"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
@@ -457,13 +457,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="gitlabBaseUrl"
-                class="text-input"
+              <app-text-field
+                inputId="gitlabBaseUrl"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.gitLab.controls.baseUrl"
+                ariaLabel="Base URL"
               />
             </label>
 
@@ -500,13 +500,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="gitlabGroup"
-                class="text-input"
+              <app-text-field
+                inputId="gitlabGroup"
                 type="text"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.gitLab.controls.group"
+                ariaLabel="Group"
               />
             </label>
 
@@ -544,13 +544,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="gitlabToken"
-                  class="text-input"
+                <app-text-field
+                  inputId="gitlabToken"
                   [type]="showToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.gitLab.controls.token"
+                  ariaLabel="Token"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
@@ -619,13 +619,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="configDriftViewerGitLabBaseUrl"
-                class="text-input"
+              <app-text-field
+                inputId="configDriftViewerGitLabBaseUrl"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.configDriftViewerGitLab.controls.baseUrl"
+                ariaLabel="Base URL"
               />
             </label>
 
@@ -663,13 +663,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="configDriftViewerGitLabToken"
-                  class="text-input"
+                <app-text-field
+                  inputId="configDriftViewerGitLabToken"
                   [type]="showConfigDriftViewerGitLabToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.configDriftViewerGitLab.controls.token"
+                  ariaLabel="Token"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
@@ -738,13 +738,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="elasticsearchBaseUrl"
-                class="text-input"
+              <app-text-field
+                inputId="elasticsearchBaseUrl"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.elasticsearch.controls.baseUrl"
+                ariaLabel="Base URL"
               />
             </label>
 
@@ -781,13 +781,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="elasticsearchKibanaSpace"
-                class="text-input"
+              <app-text-field
+                inputId="elasticsearchKibanaSpace"
                 type="text"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.elasticsearch.controls.kibanaSpaceId"
+                ariaLabel="Kibana space"
               />
             </label>
 
@@ -824,13 +824,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="elasticsearchIndexPattern"
-                class="text-input"
+              <app-text-field
+                inputId="elasticsearchIndexPattern"
                 type="text"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.elasticsearch.controls.indexPattern"
+                ariaLabel="Index pattern"
               />
             </label>
 
@@ -868,13 +868,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="elasticsearchAuthorizationHeader"
-                  class="text-input"
+                <app-text-field
+                  inputId="elasticsearchAuthorizationHeader"
                   [type]="showElasticsearchAuthorizationHeader() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.elasticsearch.controls.authorizationHeader"
+                  ariaLabel="Authorization header"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
@@ -943,13 +943,13 @@
                   }
                 </span>
               </span>
-              <input
-                id="dynatraceBaseUrl"
-                class="text-input"
+              <app-text-field
+                inputId="dynatraceBaseUrl"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
                 [formControl]="form.controls.dynatrace.controls.baseUrl"
+                ariaLabel="Base URL"
               />
             </label>
 
@@ -987,13 +987,13 @@
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
-                <input
-                  id="dynatraceApiToken"
-                  class="text-input"
+                <app-text-field
+                  inputId="dynatraceApiToken"
                   [type]="showDynatraceApiToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
                   [formControl]="form.controls.dynatrace.controls.apiToken"
+                  ariaLabel="API token"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"

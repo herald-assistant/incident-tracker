@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../text-field/text-field';
 import { Component, DestroyRef, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
 
 import {
@@ -22,7 +23,7 @@ interface ReportChangeGroup {
 
 @Component({
   selector: 'app-analysis-follow-up-chat',
-  imports: [MarkdownContentComponent, AttributeNamePipe],
+  imports: [TextFieldComponent, MarkdownContentComponent, AttributeNamePipe],
   templateUrl: './analysis-follow-up-chat.html',
   styleUrl: './analysis-follow-up-chat.scss'
 })

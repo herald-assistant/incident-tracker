@@ -1,3 +1,5 @@
+import { choice, choiceLabels } from '../../../../testing/form-controls';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TestBed } from '@angular/core/testing';
 
 import { OperationalContextWritableType } from '../../models/operational-context-maintenance.models';
@@ -11,11 +13,11 @@ describe('ContextStructuredFieldEditorComponent', () => {
     }]);
     const id = fixture.nativeElement.querySelector('#gap-id-0') as HTMLInputElement;
     const summary = fixture.nativeElement.querySelector('#gap-summary-0') as HTMLTextAreaElement;
-    const severity = fixture.nativeElement.querySelector('#gap-severity-0') as HTMLSelectElement;
+    const severity = await choice(fixture, '#gap-severity-0');
     expect(id.required).toBe(true);
     expect(summary.required).toBe(true);
     expect(summary.value).toBe('Confirm CRM owner.');
-    expect(severity.selectedOptions[0].textContent).toContain('Default: info');
+    expect(await severity.getValueText()).toContain('Default: info');
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
     fixture.componentInstance.updateGap(0, 'summary', 'Confirm CRM retry owner.');
@@ -51,11 +53,9 @@ describe('ContextStructuredFieldEditorComponent', () => {
 
     expect(fixture.componentInstance.targetType()).toBe('system');
     expect(fixture.componentInstance.targetOptions()).toEqual([{ id: 'crm-contact-core', label: 'CRM Contact Core' }]);
-    const targetTypeOptions = Array.from(fixture.nativeElement.querySelectorAll('#code-target-type option')) as Element[];
-    expect(targetTypeOptions.map((option) => option.getAttribute('value'))).toEqual(['', 'system', 'bounded-context']);
-    const targetSelect = fixture.nativeElement.querySelector('#code-target-id') as HTMLSelectElement;
-    expect(targetSelect.value).toBe('crm-contact-core');
-    expect(targetSelect.selectedOptions[0]?.textContent).toContain('CRM Contact Core');
+    expect(await choiceLabels(fixture, '#code-target-type')).toEqual(['Choose target type…', 'System', 'Bounded context']);
+    const targetSelect = await choice(fixture, '#code-target-id');
+    expect(await targetSelect.getValueText()).toContain('CRM Contact Core');
   });
 
   it('builds anonymized CRM repository rows without asking for JSON', async () => {
@@ -85,9 +85,8 @@ describe('ContextStructuredFieldEditorComponent', () => {
     });
     fixture.detectChanges();
 
-    const repositorySelect = fixture.nativeElement.querySelector('#repo-id-0') as HTMLSelectElement;
-    expect(repositorySelect.value).toBe('crm-contact-repository');
-    expect(repositorySelect.selectedOptions[0]?.textContent).toContain('CRM Contact Repository');
+    const repositorySelect = await choice(fixture, '#repo-id-0');
+    expect(await repositorySelect.getValueText()).toContain('CRM Contact Repository');
   });
 
   it('preserves unknown CRM ownership extensions while editing canonical controls', async () => {
@@ -356,7 +355,7 @@ describe('ContextStructuredFieldEditorComponent', () => {
 
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
-    fixture.componentInstance.updateRelationTargetType(0, { target: { value: 'process' } } as unknown as Event);
+    fixture.componentInstance.updateRelationTargetType(0, 'process');
     expect(emitted).toHaveBeenLastCalledWith([expect.objectContaining({
       type: 'hands-off-to',
       targetType: 'process',
@@ -582,14 +581,14 @@ describe('ContextStructuredFieldEditorComponent', () => {
     ['bounded-context', 'gaps', [{ id: 'crm-gap', summary: 'Confirm CRM boundary.' }]]
   ] as Array<[OperationalContextWritableType, string, unknown]>)('keeps CRM %s.%s guidance tooltip on the help icon only', async (type, path, value) => {
     const fixture = await createFixture(type, path, value);
-    const labels = Array.from(fixture.nativeElement.querySelectorAll('.structured-label')) as HTMLElement[];
-    const helpIcons = Array.from(fixture.nativeElement.querySelectorAll('.structured-label__help')) as HTMLElement[];
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('.structured-label, .form-field__label-row label')) as HTMLElement[];
+    const helpIcons = Array.from(fixture.nativeElement.querySelectorAll('.structured-label__help, .form-field__help')) as HTMLElement[];
     expect(labels.length).toBeGreaterThan(0);
     expect(helpIcons.length).toBe(labels.length);
     expect(labels.every((label) => label.getAttribute('tabindex') === null)).toBe(true);
-    expect(helpIcons.every((icon) => icon.getAttribute('tabindex') === '0')).toBe(true);
-      expect(helpIcons.every((icon) => icon.getAttribute('aria-label') === 'Objaśnienie pola')).toBe(true);
-    expect(helpIcons.every((icon) => icon.textContent?.includes('help'))).toBe(true);
+    expect(helpIcons.every((icon) => icon.tabIndex === 0)).toBe(true);
+      expect(helpIcons.every((icon) => !!icon.getAttribute('aria-label'))).toBe(true);
+    expect(helpIcons.every((icon) => /help|info/.test(icon.textContent || ''))).toBe(true);
   });
 
   it('edits the CRM Git identity while preserving server-owned and future fields in component state', async () => {
@@ -674,7 +673,7 @@ describe('ContextStructuredFieldEditorComponent', () => {
     value: unknown,
     entityId = ''
   ) {
-    await TestBed.configureTestingModule({ imports: [ContextStructuredFieldEditorComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ providers: [provideNoopAnimations()], imports: [ContextStructuredFieldEditorComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextStructuredFieldEditorComponent);
     fixture.componentRef.setInput('field', adapter.fields(type).find((field) => field.path === path)!);
     fixture.componentRef.setInput('entityType', type);

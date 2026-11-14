@@ -1,3 +1,5 @@
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatSelectHarness } from '@angular/material/select/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
@@ -147,8 +149,9 @@ describe('ReleaseSummary workspace',()=>{
     catalog.next({defaultModel:'',defaultReasoningEffort:'',defaultReasoningEfforts:[],models:[
       {id:'crm-model',name:'CRM model',supportsReasoningEffort:true,reasoningEfforts:['low','high'],defaultReasoningEffort:'low'}]});
     fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('select[aria-label="Model AI"]').value).toBe('crm-model');
-    expect(fixture.nativeElement.querySelector('select[aria-label="Reasoning effort"]').value).toBe('high');
+    const loader = TestbedHarnessEnvironment.loader(fixture);
+    expect(await (await loader.getHarness(MatSelectHarness.with({ selector: '[aria-label="Model AI"]' }))).getValueText()).toBe('CRM model');
+    expect(await (await loader.getHarness(MatSelectHarness.with({ selector: '[aria-label="Reasoning effort"]' }))).getValueText()).toBe('Wysoki');
   });
   it('keeps imported files read-only even if the exported availability allowed continuation',()=>{
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);const page=fixture.componentInstance;
@@ -215,4 +218,3 @@ describe('ReleaseSummary workspace',()=>{
     fixture.componentInstance.start();expect(api.start).not.toHaveBeenCalled();
   });
 });
-

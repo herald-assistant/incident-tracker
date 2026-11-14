@@ -129,8 +129,6 @@
 .trend-primary-button:focus-visible,
 .trend-secondary-button:focus-visible,
 .trend-link-button:focus-visible,
-.trend-field select:focus-visible,
-.trend-field input:focus-visible,
 .trend-multiselect summary:focus-visible,
 .trend-efficiency-details summary:focus-visible,
 .trend-multiselect input:focus-visible,
@@ -230,17 +228,12 @@
   font-weight: 750;
 }
 
-.trend-field select,
-.trend-field input {
-  width: 100%;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  font-size: 0.84rem;
+app-text-field.trend-field,
+app-choice-select.trend-field {
+  --field-min-height: 40px;
+  --field-font-size: .84rem;
+  --field-padding-block: 0px;
+  --field-padding-inline: 10px;
 }
 
 .trend-field-error {

@@ -1,3 +1,5 @@
+@use '../../../../../styles/form-controls' as controls;
+
 :host {
   display: block;
 }
@@ -125,7 +127,6 @@
   outline: none;
 }
 
-.ui-explorer-target-grid .text-input,
 .ui-explorer-control-actions .secondary-button {
   width: 100%;
   min-height: 58px;
@@ -136,6 +137,7 @@
 }
 
 .ui-explorer-select__control {
+  @include controls.trigger;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -144,27 +146,7 @@
   height: 58px;
   padding: 9px 11px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  text-align: left;
   cursor: pointer;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
-}
-
-.ui-explorer-select__control:hover,
-.ui-explorer-select__control:focus-visible {
-  border-color: rgba(12, 102, 228, 0.34);
-  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
-  outline: none;
-}
-
-.ui-explorer-select__control:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-  box-shadow: none;
 }
 
 .ui-explorer-select__control > .material-symbols-outlined,
@@ -189,7 +171,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--text-main);
-  font-weight: 800;
+  font-weight: var(--control-value-weight);
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -207,20 +189,21 @@
 }
 
 .ui-explorer-select__menu {
+  @include controls.menu;
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   left: 0;
   z-index: 50;
   display: grid;
-  gap: 10px;
   max-height: min(520px, calc(100vh - 180px));
   overflow: auto;
-  padding: 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
+}
+
+.ui-explorer-select-option__body strong,
+.ui-explorer-select-option__body small {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .ui-explorer-select__menu--applications {
@@ -236,37 +219,22 @@
 .ui-explorer-select__options,
 .ui-explorer-section-mode-menu {
   display: grid;
-  gap: 7px;
+  gap: 2px;
 }
 
 .ui-explorer-select-option {
+  @include controls.option;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   width: 100%;
-  min-height: 58px;
+  min-height: 44px;
   padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-main);
-  font: inherit;
-  text-align: left;
   cursor: pointer;
 }
 
-.ui-explorer-select-option:hover,
-.ui-explorer-select-option:focus-visible {
-  border-color: rgba(12, 102, 228, 0.34);
-  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
-  outline: none;
-}
-
-.ui-explorer-select-option--selected {
-  border-color: rgba(12, 102, 228, 0.48);
-  background: #eff6ff;
-}
+.ui-explorer-select-option--selected { background: var(--primary-soft); border-color: transparent; }
 
 .ui-explorer-section-mode-row {
   display: grid;
@@ -326,11 +294,7 @@
   color: var(--primary-dark);
 }
 
-.ui-explorer-textarea {
-  min-height: 96px;
-  resize: vertical;
-  line-height: 1.5;
-}
+.ui-explorer-instructions { --field-min-height: 96px; --field-line-height: 1.5; }
 
 .ui-explorer-message {
   display: flex;

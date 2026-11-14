@@ -58,14 +58,8 @@
       </fieldset>
 
       <div class="runtime-form-grid">
-        <label class="field-control">
-          <span class="field-label">Repozytorium konfiguracji</span>
-          <select class="select-input" [formControl]="repositoryControl">
-            @for (option of repositoryOptions(); track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-        </label>
+        <app-choice-select label="Repozytorium konfiguracji" [options]="repositoryOptions()"
+          [formControl]="repositoryControl" />
 
         <div class="field-control">
           <span class="field-label">Komponent / internal-service</span>
@@ -129,64 +123,24 @@
           }
         </div>
 
-        <label class="field-control">
-          <span class="field-label">Środowisko źródłowe</span>
-          <select class="select-input" [formControl]="sourceBranchControl">
-            @for (branch of inputOptions().branches; track branch) {
-              <option [value]="branch">{{ branch }}</option>
-            }
-          </select>
-        </label>
-
-        <label class="field-control">
-          <span class="field-label">Środowisko docelowe</span>
-          <select class="select-input" [formControl]="targetBranchControl">
-            @for (branch of inputOptions().branches; track branch) {
-              <option [value]="branch">{{ branch }}</option>
-            }
-          </select>
-          @if (branchPairInvalid()) {
-            <span class="field-error">Wybierz dwa różne środowiska.</span>
-          }
-        </label>
+        <app-choice-select label="Środowisko źródłowe" [options]="branchOptions()"
+          [formControl]="sourceBranchControl" />
+        <app-choice-select label="Środowisko docelowe" [options]="branchOptions()"
+          [formControl]="targetBranchControl" [error]="branchPairInvalid() ? 'Wybierz dwa różne środowiska.' : ''" />
 
         @if (modeControl.value === 'DEEP') {
-          <label class="field-control">
-            <span class="field-label">Preferowany ref kodu</span>
-            <input
-              class="text-input"
-              type="text"
-              [formControl]="codeRefControl"
-              placeholder="Opcjonalnie, np. release/2026.07"
-              spellcheck="false"
-            />
-            <span class="field-hint">Bez refu backend może użyć default branch z jawnym limitem.</span>
-          </label>
+          <app-text-field label="Preferowany ref kodu" [formControl]="codeRefControl"
+            placeholder="Opcjonalnie, np. release/2026.07"
+            hint="Bez refu backend może użyć default branch z jawnym limitem." />
         }
 
         @if (modeControl.value === 'DEEP') {
-          <label class="field-control">
-            <span class="field-label">Model AI</span>
-            <span class="select-loading-control">
-              <select class="select-input" [formControl]="aiModelControl">
-                @for (option of aiModelOptions(); track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-              @if (aiOptionsLoading()) {
-                <span class="runtime-spinner" aria-hidden="true"></span>
-              }
-            </span>
-          </label>
-
-          <label class="field-control">
-            <span class="field-label">Reasoning effort</span>
-            <select class="select-input" [formControl]="reasoningEffortControl">
-              @for (effort of reasoningEffortOptions(); track effort) {
-                <option [value]="effort">{{ statusLabel(effort) }}</option>
-              }
-            </select>
-          </label>
+          <app-ai-execution-controls
+            [catalog]="aiModelCatalog()" [model]="aiModelControl.value" [reasoningEffort]="reasoningEffortControl.value"
+            [loading]="aiOptionsLoading()" [unavailable]="!!aiOptionsError()"
+            [modelDisabled]="aiModelControl.disabled" [reasoningDisabled]="reasoningEffortControl.disabled"
+            (modelChange)="selectAiModel($event)" (reasoningEffortChange)="selectReasoningEffort($event)"
+            (modelTouched)="aiModelControl.markAsTouched()" (reasoningTouched)="reasoningEffortControl.markAsTouched()" />
         }
       </div>
 
@@ -405,17 +359,17 @@
                   <h3>Deterministic findings</h3>
                   <p>{{ filteredFindings().length }} z {{ result.deterministicResult.findings.length }}</p>
                 </div>
-                <select
+                <app-choice-select
                   class="compact-select"
-                  aria-label="Filtr ważności findingów"
+                  ariaLabel="Filtr ważności findingów"
                   [value]="findingSeverityFilter()"
-                  (change)="setFindingSeverityFilter($any($event.target).value)"
+                  (valueChange)="setFindingSeverityFilter($event)"
                 >
-                  <option value="ALL">Wszystkie poziomy</option>
+                  <app-choice-option value="ALL" label="Wszystkie poziomy" />
                   @for (severity of findingSeverities(); track severity) {
-                    <option [value]="severity">{{ statusLabel(severity) }}</option>
+                    <app-choice-option [value]="severity" label="{{ statusLabel(severity) }}" />
                   }
-                </select>
+                </app-choice-select>
               </div>
               <div class="finding-list">
                 @for (finding of filteredFindings(); track trackFinding($index, finding)) {

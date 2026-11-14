@@ -1,3 +1,5 @@
+import { AiExecutionControlsComponent } from '../../../../components/ai-execution-controls/ai-execution-controls';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -17,11 +19,11 @@ import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-ca
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
 import { UxInspectorResultComponent } from '../../components/ux-inspector-result/ux-inspector-result';
 
-type OpenMenu = 'system' | 'view' | 'model' | 'reasoning' | null;
+type OpenMenu = 'system' | 'view' | null;
 
 @Component({
   selector: 'app-ux-inspector-page',
-  imports: [
+  imports: [AiExecutionControlsComponent, TextFieldComponent,
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
     AnalysisRunStateComponent,
@@ -86,14 +88,6 @@ export class UxInspectorPageComponent implements OnInit {
         )
       : views;
   });
-  readonly selectedModelLabel = computed(
-    () =>
-      this.facade.aiOptions().models.find((model) => model.id === this.facade.selectedModel())
-        ?.name ?? 'No model selected'
-  );
-  readonly selectedReasoningLabel = computed(
-    () => this.facade.selectedReasoningEffort() || 'No effort selected'
-  );
   readonly viewControlLabel = computed(() => {
     const selected = this.facade.selectedView();
     if (selected) return selected.routePattern || selected.label;
@@ -192,14 +186,12 @@ export class UxInspectorPageComponent implements OnInit {
     this.openMenu.set(null);
   }
 
-  selectModel(model: string, event: Event): void {
-    event.stopPropagation();
+  selectModel(model: string): void {
     this.facade.selectModel(model);
     this.openMenu.set(null);
   }
 
-  selectReasoning(effort: string, event: Event): void {
-    event.stopPropagation();
+  selectReasoning(effort: string): void {
     this.facade.selectReasoningEffort(effort);
     this.openMenu.set(null);
   }

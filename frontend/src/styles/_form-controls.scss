@@ -1,0 +1,112 @@
+// Shared presentation for simple selects and feature-owned searchable pickers.
+@mixin surface {
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+// A single stroke inside the control preserves its size and visible keyboard focus.
+@mixin focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+@mixin interactive {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
+    border-color: var(--control-border-hover);
+    background: var(--control-hover);
+  }
+
+  &[aria-expanded='true'] {
+    border-color: var(--primary);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--danger-text);
+  }
+
+  &:focus-visible {
+    @include focus;
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    background: var(--surface-alt);
+    color: var(--text-soft);
+    border-color: var(--border);
+    opacity: 0.62;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+@mixin trigger {
+  @include surface;
+  @include interactive;
+  font-weight: var(--control-value-weight);
+  cursor: pointer;
+  text-align: left;
+}
+
+@mixin menu {
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: 6px;
+  gap: 2px;
+}
+
+@mixin option {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  transition: background-color 140ms ease;
+
+  &:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--control-hover);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  &:focus-visible,
+  &:has(:focus-visible) {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  &[aria-selected='true'] {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    border-color: transparent;
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.52;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+@mixin value {
+  color: var(--text-main);
+  font-weight: var(--control-value-weight);
+  line-height: 1.3;
+}
+
+@mixin description {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.4;
+}

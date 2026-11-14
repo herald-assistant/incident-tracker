@@ -1,3 +1,5 @@
+import { AiExecutionControlsComponent } from '../../../../components/ai-execution-controls/ai-execution-controls';
+import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { Component, HostListener, computed, inject, output, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
@@ -6,11 +8,11 @@ import { UiExplorerSectionId, UiExplorerSectionMode } from '../../models/ui-expl
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
 import { UiExplorerScreenCatalogComponent } from '../ui-explorer-screen-catalog/ui-explorer-screen-catalog';
 
-type OpenMenu = 'system' | 'sections' | 'model' | 'reasoning' | null;
+type OpenMenu = 'system' | 'sections' | null;
 
 @Component({
   selector: 'app-ui-explorer-configuration',
-  imports: [MatTooltipModule, UiExplorerScreenCatalogComponent, GitLabBranchSelectComponent],
+  imports: [AiExecutionControlsComponent, TextFieldComponent, MatTooltipModule, UiExplorerScreenCatalogComponent, GitLabBranchSelectComponent],
   templateUrl: './ui-explorer-configuration.html',
   styleUrl: './ui-explorer-configuration.scss'
 })
@@ -65,18 +67,6 @@ export class UiExplorerConfigurationComponent {
       .join(' · ')
   );
 
-  readonly selectedModelLabel = computed(() => {
-    const modelId = this.facade.selectedModel();
-    return (
-      this.facade.aiOptions().models.find((model) => model.id === modelId)?.name ??
-      'No model selected'
-    );
-  });
-
-  readonly selectedReasoningLabel = computed(
-    () => this.facade.selectedReasoningEffort() || 'No effort selected'
-  );
-
   @HostListener('document:click')
   closeMenus(): void {
     this.openMenu.set(null);
@@ -114,14 +104,12 @@ export class UiExplorerConfigurationComponent {
     this.facade.selectSectionMode(sectionId, mode);
   }
 
-  selectModel(model: string, event: Event): void {
-    event.stopPropagation();
+  selectModel(model: string): void {
     this.facade.selectModel(model);
     this.openMenu.set(null);
   }
 
-  selectReasoning(effort: string, event: Event): void {
-    event.stopPropagation();
+  selectReasoning(effort: string): void {
     this.facade.selectReasoningEffort(effort);
     this.openMenu.set(null);
   }

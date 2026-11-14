@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,7 +30,7 @@ const JIRA_SOURCE_ENDPOINT = '/api/jira/issue/material';
 
 @Component({
   selector: 'app-jira-source-console',
-  imports: [ReactiveFormsModule],
+  imports: [TextFieldComponent, ReactiveFormsModule],
   templateUrl: './jira-source-console.html',
   styleUrl: '../source-console-layout.scss'
 })

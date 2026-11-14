@@ -4,7 +4,7 @@ describe('ApplicationSelectComponent',()=>{
  it('filters full options and emits the selected system',()=>{
   const f=TestBed.createComponent(ApplicationSelectComponent);f.componentRef.setInput('options',[{systemId:'crm',name:'CRM Customers',summary:'Contact management'}]);
   let id='';f.componentInstance.selected.subscribe(v=>{id=v;f.componentRef.setInput('selectedId',v);});f.detectChanges();
-  f.nativeElement.querySelector('button').click();f.detectChanges();
+  f.nativeElement.querySelector('.application-select__control').click();f.detectChanges();
   f.componentInstance.search.set('contact');f.detectChanges();
   f.nativeElement.querySelector('[role=option]').click();expect(id).toBe('crm');expect(f.componentInstance.open()).toBe(false);
   f.detectChanges();
@@ -25,4 +25,3 @@ describe('ApplicationSelectComponent',()=>{
   expect(document.activeElement).toBe(options[0]);
  });
 });
-

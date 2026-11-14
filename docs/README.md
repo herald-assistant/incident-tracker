@@ -53,6 +53,10 @@ mechanizmu wspolnego przeczytaj dodatkowo:
 
 17. `architecture/analysis-feature-delivery-playbook.md`
 
+Przy zmianach frontendu przeczytaj
+[standard UI i kontrolek](architecture/frontend-ui-standards.md) oraz lokalne
+instrukcje `frontend/**/AGENTS.md`.
+
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
 implementacje niezatwierdzonego planu.
@@ -114,6 +118,9 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 
 - `architecture/product-direction.md`
   definiuje oferte produktu i model rozszerzalnosci.
+- [Standard UI i kontrolek](architecture/frontend-ui-standards.md)
+  opisuje obowiazujacy wyglad, wspolne pola formularzy i pare model/reasoning,
+  ownership, dostepnosc, gestosc oraz weryfikacje konsumentow.
 - `architecture/system-overview.md`
   opisuje elementy systemu, publiczne wejscia oraz ownership implementacji.
 - `architecture/key-decisions.md`

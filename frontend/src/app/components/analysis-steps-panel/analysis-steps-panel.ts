@@ -1,3 +1,4 @@
+import { TextFieldComponent } from '../text-field/text-field';
 import { STEPPER_GLOBAL_OPTIONS } from '@angular/cdk/stepper';
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, input, signal } from '@angular/core';
@@ -516,7 +517,7 @@ const LOG_TABLE_COLUMNS: readonly ResizableColumnConfig[] = [
 
 @Component({
   selector: 'app-analysis-steps-panel',
-  imports: [
+  imports: [TextFieldComponent,
     MatExpansionModule,
     MatIconModule,
     MatStepperModule,
@@ -4606,4 +4607,3 @@ function firstDefinedText(...values: Array<string | null | undefined>): string |
 
   return null;
 }
-

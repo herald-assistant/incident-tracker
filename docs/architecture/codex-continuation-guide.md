@@ -22,6 +22,8 @@ kanoniczny opis i kod.
 8. Odszukaj odpowiadajacy dokument w `../needs/` i zatwierdzony plan w
    `../plans/`, jesli zmiana ma aktywny albo wymagany zakres wykonawczy.
 9. Przeczytaj lokalne `AGENTS.md` dla wszystkich dotykanych katalogow.
+10. Dla frontendu przeczytaj [standard UI](frontend-ui-standards.md), zanim
+    dodasz lub zmienisz kontrolki, style albo prezentacje preferencji AI.
 
 Brak planu nie jest zgoda na wyprowadzenie rozwiazania bezposrednio z business
 need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
@@ -30,6 +32,9 @@ need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
 
 - `product-direction.md`
   oferta produktu, rodziny feature'ow i model rozszerzalnosci.
+- [frontend-ui-standards.md](frontend-ui-standards.md)
+  obowiazujacy standard wizualny, wspolne kontrolki, para model/reasoning,
+  wymiary, focus, dostepnosc i podzial odpowiedzialnosci z ekranem.
 - `system-overview.md`
   high-level stan aplikacji, publiczne wejscia oraz mapa ownership.
 - `key-decisions.md`
@@ -148,6 +153,10 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
   neutralne modele, API services, auth i shared state.
 - `frontend/src/app/components`
   reusable komponenty workflow operatora.
+- `frontend/src/app/components/{form-field,choice-select,text-field,ai-execution-controls}`
+  wspolne formularze i preferencje AI; feature przekazuje dane i handler wyboru.
+- `frontend/src/styles.scss` oraz `frontend/src/styles/_form-controls.scss`
+  tokeny wizualne i wspolne mixiny kontrolek; zmieniaj je zamiast kopiowac CSS.
 - `frontend/src/app/features`
   strony i prezentacja specyficzna dla feature'ow.
 - `frontend/public/browser-tools`
@@ -165,11 +174,12 @@ komponentu innego feature'a tylko dlatego, ze wyglada podobnie.
 ## Runtime resources
 
 - `src/main/resources/copilot/skills`
-  zrodlo skilli pakowanych do runtime. Przy starcie platforma odtwarza ich
-  pelny mirror pod `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
-  `tdw-data/copilot/skills`. Tresc procedur pozostaje po polsku. Read-only
-  projekcja dla operatora jest wystawiana przez `api.aiskills`; nie czytaj
-  dowolnej sciezki z requestu i nie dodawaj tutaj mutacji.
+  immutable seed skilli pakowanych do runtime. Przy starcie platforma dopisuje
+  tylko brakujace pliki pod `${analysis.ai.copilot.copilot-home}/skills`,
+  domyslnie `tdw-data/copilot/skills`, bez nadpisywania effective tresci.
+  Procedury pozostaja po polsku. `api.aiskills` udostepnia katalog, walidowany
+  zapis i restore pojedynczego `SKILL.md`; UI nie przekazuje sciezek storage
+  ani nie mutuje packaged seeda. Nie dodawaj selekcji skilli per feature/run.
 - `src/main/resources/operational-context`
   katalog systemow, procesow, bounded contexts, repozytoriow i handoffow.
 - `src/main/resources/static`

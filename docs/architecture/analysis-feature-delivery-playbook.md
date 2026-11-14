@@ -1304,11 +1304,12 @@ Feature-owned serwis:
 - ma testy `HttpTestingController`,
 - korzysta ze wspolnego auth i katalogu opcji AI.
 
-`core/services/analysis-api.service.ts` ma incidentowa nazwe mimo czesci
-wspolnych endpointow. `getAiModelOptions()` ma juz kilku konsumentow. Przed
-dodaniem kolejnego wyciagnij neutralny `AiOptionsApiService` i zmigruj
-istniejacych konsumentow albo zapisz jawne, ograniczone odroczenie. Reuse'uj
-selection logic z `core/utils/analysis-ai-model-options.utils.ts`.
+Katalog modeli pobieraj przez neutralny
+`core/services/ai-options-api.service.ts`: `AiOptionsApiService.getOptions()`
+korzysta ze wspolnego `GET /api/analysis/ai/options`. Nie uzalezniaj nowego
+ekranu od incidentowego `AnalysisApiService`. Reuse'uj selection logic z
+`core/utils/analysis-ai-model-options.utils.ts` i prezentacje
+`ai-execution-controls`.
 
 Status PAT ma juz neutralny `GithubAuthService`; reuse'uj jego `getStatus()`
 i `openSettings()`, nie tworz kolejnego klienta statusu. Historia ma neutralny
@@ -1318,6 +1319,8 @@ i `openSettings()`, nie tworz kolejnego klienta statusu. Historia ma neutralny
 
 Maksymalnie reuse'uj:
 
+- `form-field`, `choice-select`, `text-field` - formularze, filtry i edytory,
+- `ai-execution-controls` - wspolna para model/reasoning,
 - `analysis-feature-aside` - wspolny uklad boczny i projection slots,
 - `analysis-steps-panel` - steps, evidence, AI timeline, feedback i usage,
 - `analysis-follow-up-chat` - chat runu,
@@ -1328,6 +1331,13 @@ Maksymalnie reuse'uj:
 - `analysis-report-meta`,
 - `analysis-evidence-panel`,
 - `markdown-content`.
+
+Dobor kontrolek, ich parametry, warianty wysokosci, focus i komunikaty AI
+opisuje [standard UI](frontend-ui-standards.md). Feature posiada wartosci,
+defaulty, walidacje biznesowa, pobieranie katalogu i request. Kontrolki
+posiadaja prezentacje i interakcje. Zachowaj siatke formularza, dirty/touched,
+disabled, typ wartosci i moment zatwierdzenia zmiany. Nie tworz lokalnego
+dropdownu model/effort ani kopii styli; oba pola pary AI maja 58 px.
 
 `analysis-feature-aside` wystawia sloty `progressPanel`, `aiPanel`,
 `chatPanel` i `feedbackPanel`. Ustaw w nim

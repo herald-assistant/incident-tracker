@@ -235,17 +235,10 @@ code {
   gap: 3px;
 }
 
-.text-preview textarea {
-  width: 100%;
-  min-height: 230px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #f8fbff;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  resize: vertical;
+.text-preview app-text-field {
+  --field-min-height: 230px;
+  --field-font-size: .82rem;
+  --field-line-height: 1.5;
 }
 
 .deep-summary {

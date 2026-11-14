@@ -42,10 +42,8 @@
         </div>
 
         <div class="change-verification-source-grid">
-          <label class="field-control change-verification-field">
-            <span class="field-label">Jira key or link</span>
-            <input class="text-input" type="text" [value]="issueInput()" placeholder="CRM-123 or https://jira.example.com/browse/CRM-123" autocomplete="off" spellcheck="false" (input)="updateIssueInput($any($event.target).value)" />
-          </label>
+          <app-text-field label="Jira key or link" [value]="issueInput()"
+            placeholder="CRM-123 or https://jira.example.com/browse/CRM-123" (valueChange)="updateIssueInput($event)" />
           <fieldset class="change-verification-options">
             <legend class="field-label">Verification scope</legend>
             <div class="change-verification-option-grid">
@@ -56,31 +54,19 @@
         </div>
 
         <div class="change-verification-ai-grid">
-          <label class="field-control change-verification-field" for="changeVerificationAiModel">
-            <span class="field-label">Model AI</span>
-            <span class="select-loading-control">
-              <select id="changeVerificationAiModel" class="select-input" [class.select-input--loading]="isAiModelOptionsLoading()" [formControl]="aiModelControl" [attr.aria-busy]="isAiModelOptionsLoading()">
-                @for (option of aiModelOptions(); track option.value) { <option [value]="option.value" [disabled]="option.disabled">{{ option.label }}</option> }
-              </select>
-              @if (isAiModelOptionsLoading()) { <span class="select-loader" aria-hidden="true"></span> }
-            </span>
-          </label>
-          <label class="field-control change-verification-field" for="changeVerificationReasoningEffort">
-            <span class="field-label">Reasoning effort</span>
-            <span class="select-loading-control">
-              <select id="changeVerificationReasoningEffort" class="select-input" [class.select-input--loading]="isAiModelOptionsLoading()" [formControl]="reasoningEffortControl" [attr.aria-busy]="isAiModelOptionsLoading()">
-                @for (option of reasoningEffortOptions(); track option.value) { <option [value]="option.value" [disabled]="option.disabled">{{ option.label }}</option> }
-              </select>
-              @if (isAiModelOptionsLoading()) { <span class="select-loader" aria-hidden="true"></span> }
-            </span>
-          </label>
+          <app-ai-execution-controls
+            modelInputId="changeVerificationAiModel" reasoningInputId="changeVerificationReasoningEffort"
+            [catalog]="aiModelCatalog()" [model]="aiModelControl.value" [reasoningEffort]="reasoningEffortControl.value"
+            [loading]="isAiModelOptionsLoading()" [unavailable]="!!aiModelOptionsError()"
+            [modelDisabled]="aiModelControl.disabled" [reasoningDisabled]="reasoningEffortControl.disabled"
+            (modelChange)="selectAiModel($event)" (reasoningEffortChange)="selectReasoningEffort($event)"
+            (modelTouched)="aiModelControl.markAsTouched()" (reasoningTouched)="reasoningEffortControl.markAsTouched()" />
         </div>
         @if (aiModelOptionsError()) { <p class="field-hint change-verification-warning">{{ aiModelOptionsError() }}</p> }
 
-        <label class="field-control change-verification-field">
-          <span class="field-label">Operator notes</span>
-          <textarea class="text-input change-verification-textarea" [value]="userInstructions()" rows="4" placeholder="Optional focus, release context or known risk." (input)="updateUserInstructions($any($event.target).value)"></textarea>
-        </label>
+        <app-text-field class="change-verification-notes" label="Operator notes" type="textarea" [rows]="4" [spellcheck]="true"
+          [value]="userInstructions()" placeholder="Optional focus, release context or known risk."
+          (valueChange)="updateUserInstructions($event)" />
 
         <div class="change-verification-run-actions">
           <button type="button" class="secondary-button" [disabled]="isSubmitting() || workflowIsRunning()" (click)="triggerImport(changeVerificationImportFileInput)">

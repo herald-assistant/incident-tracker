@@ -200,10 +200,15 @@
               </button>
               @if (openMenu() === 'system') {
                 <div class="ux-inspector-select__menu ux-inspector-select__menu--applications" role="listbox" aria-label="Application options">
-                  <label class="ux-inspector-select__search">
-                    <span class="field-label">Find application</span>
-                    <input class="text-input" type="search" autocomplete="off" placeholder="crm, portal" [value]="systemSearch()" (input)="systemSearch.set($any($event.target).value)" />
-                  </label>
+                  <app-text-field
+                    type="search"
+                    autocomplete="off"
+                    placeholder="crm, portal"
+                    [value]="systemSearch()"
+                    (valueChange)="systemSearch.set($event)"
+                    label="Find application"
+                    class="ux-inspector-select__search"
+                  />
                   <div class="ux-inspector-select__options">
                     @for (system of filteredSystems(); track system.systemId) {
                       <button
@@ -260,10 +265,15 @@
               </button>
               @if (openMenu() === 'view' && facade.viewCatalog(); as catalog) {
                 <div class="ux-inspector-select__menu ux-inspector-select__menu--views" role="listbox" aria-label="View options">
-                  <label class="ux-inspector-select__search">
-                    <span class="field-label">Find view</span>
-                    <input class="text-input" type="search" autocomplete="off" placeholder="contact, /route" [value]="viewSearch()" (input)="viewSearch.set($any($event.target).value)" />
-                  </label>
+                  <app-text-field
+                    type="search"
+                    autocomplete="off"
+                    placeholder="contact, /route"
+                    [value]="viewSearch()"
+                    (valueChange)="viewSearch.set($event)"
+                    label="Find view"
+                    class="ux-inspector-select__search"
+                  />
                   <div class="ux-inspector-select__options">
                     @for (view of filteredViews(); track view.viewId) {
                       <button
@@ -313,51 +323,22 @@
         }
 
         <div class="ux-inspector-ai-grid">
-          <div class="ux-inspector-select" (click)="keepMenuOpen($event)">
-            <span class="ux-inspector-field-label"><span class="field-label">Model AI</span><span class="ux-inspector-label-help" tabindex="0" aria-label="AI model help" matTooltip="Model użyty do odpowiedzi UX Inspectora." matTooltipPosition="right"><span class="material-symbols-outlined" aria-hidden="true">info</span></span></span>
-            <button class="ux-inspector-select__control" type="button" aria-haspopup="listbox" [disabled]="facade.controlsLocked() || facade.aiOptionsState() === 'loading' || facade.aiOptions().models.length === 0" [attr.aria-expanded]="openMenu() === 'model'" (click)="toggleMenu('model', $event)">
-              <span class="ux-inspector-select__value"><strong>{{ selectedModelLabel() }}</strong><small>{{ facade.aiOptions().models.length ? facade.selectedModel() : 'no model choices' }}</small></span><span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-            </button>
-            @if (openMenu() === 'model') {
-              <div class="ux-inspector-select__menu" role="listbox" aria-label="AI model options"><div class="ux-inspector-select__options">
-                @for (model of facade.aiOptions().models; track model.id) {
-                  <button class="ux-inspector-select-option" [class.ux-inspector-select-option--selected]="model.id === facade.selectedModel()" type="button" role="option" [attr.aria-selected]="model.id === facade.selectedModel()" (click)="selectModel(model.id, $event)"><span class="ux-inspector-select-option__body"><strong>{{ model.name }}</strong><small>{{ model.id }}</small></span></button>
-                }
-              </div></div>
-            }
-          </div>
-          <div class="ux-inspector-select" (click)="keepMenuOpen($event)">
-            <span class="ux-inspector-field-label"><span class="field-label">Reasoning effort</span><span class="ux-inspector-label-help" tabindex="0" aria-label="Reasoning effort help" matTooltip="Steruje głębokością analizy i eksploracji kodu." matTooltipPosition="right"><span class="material-symbols-outlined" aria-hidden="true">info</span></span></span>
-            <button class="ux-inspector-select__control" type="button" aria-haspopup="listbox" [disabled]="facade.controlsLocked() || facade.reasoningEfforts().length === 0" [attr.aria-expanded]="openMenu() === 'reasoning'" (click)="toggleMenu('reasoning', $event)">
-              <span class="ux-inspector-select__value"><strong>{{ selectedReasoningLabel() }}</strong><small>{{ facade.reasoningEfforts().length ? (facade.reasoningEfforts().length + ' effort choices') : 'no effort choices' }}</small></span><span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-            </button>
-            @if (openMenu() === 'reasoning') {
-              <div class="ux-inspector-select__menu" role="listbox" aria-label="Reasoning effort options"><div class="ux-inspector-select__options">
-                @for (effort of facade.reasoningEfforts(); track effort) {
-                  <button class="ux-inspector-select-option" [class.ux-inspector-select-option--selected]="effort === facade.selectedReasoningEffort()" type="button" role="option" [attr.aria-selected]="effort === facade.selectedReasoningEffort()" (click)="selectReasoning(effort, $event)"><span class="ux-inspector-select-option__body"><strong>{{ effort }}</strong><small>Reasoning effort</small></span></button>
-                }
-              </div></div>
-            }
-          </div>
+          <app-ai-execution-controls
+            [catalog]="facade.aiOptions()" [model]="facade.selectedModel()" [reasoningEffort]="facade.selectedReasoningEffort()"
+            [loading]="facade.aiOptionsState() === 'loading'" [unavailable]="facade.aiOptionsState() === 'error'"
+            [disabled]="facade.controlsLocked()" (opened)="closeMenus()"
+            (modelChange)="selectModel($event)" (reasoningEffortChange)="selectReasoning($event)" />
         </div>
 
         @if (facade.aiOptionsError()) {
           <div class="ux-inspector-message ux-inspector-message--error" role="alert"><p>{{ facade.aiOptionsError() }}</p></div>
         }
 
-        <label class="form-field">
-          <span class="field-label">Pytanie lub polecenie</span>
-          <textarea
-            class="text-input ux-inspector-question"
-            rows="5"
-            maxlength="4000"
-            [disabled]="facade.controlsLocked()"
-            [value]="facade.question()"
-            placeholder="Np. Dlaczego ten przycisk jest zablokowany i jakie warunki go odblokowują?"
-            (input)="facade.updateQuestion($any($event.target).value)"
-          ></textarea>
-          <span class="field-hint">Jedno pytanie, jeden element. {{ facade.question().length }}/4000</span>
-        </label>
+        <app-text-field class="ux-inspector-question" label="Pytanie lub polecenie" type="textarea" size="descriptive" [rows]="5" [maxLength]="4000"
+          [disabled]="facade.controlsLocked()" [value]="facade.question()"
+          placeholder="Np. Dlaczego ten przycisk jest zablokowany i jakie warunki go odblokowują?"
+          [hint]="'Jedno pytanie, jeden element. ' + facade.question().length + '/4000'"
+          (valueChange)="facade.updateQuestion($event)" />
 
         <footer class="ux-inspector-actions" aria-live="polite">
           <div>

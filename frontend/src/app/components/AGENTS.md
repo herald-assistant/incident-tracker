@@ -13,6 +13,60 @@ chat, evidence/tool feedback, usage/cost, import/export i powtarzalne fragmenty
 prezentacji wyniku. Feature screen powinien dostarczac dane, copy i handler
 akcji, ale nie duplikowac struktury, zachowan ani styli tych samych elementow.
 
+## Kontrolki formularzy
+
+Kanoniczny kontrakt i mapa konsumentow sa w
+[standardzie UI](../../../../docs/architecture/frontend-ui-standards.md).
+Zmieniaj wspolny komponent/mixin i weryfikuj konsumentow zamiast dodawac
+feature-specific kopie albo nadpisania styli.
+
+- Dla prostego wyboru uzywaj `app-choice-select` z `options` (value, label,
+  opcjonalne hint, disabled, badge, tooltip) albo deklaratywnymi
+  `app-choice-option` dla opcji budowanych w szablonie. Nie tworz osobnego
+  dropdownu model/effort. `resetAfterSelection` sluzy pickerom dodajacym
+  referencje: emituje wybor i przywraca pusta pozycje.
+- Dla pary model AI / reasoning uzywaj `app-ai-execution-controls`.
+  Przekaz katalog, wartosci, loading/error i blokady; komponent posiada
+  etykiety, polskie nazwy poziomow, komunikaty i wariant descriptive 58 px,
+  taki sam jak sasiednie selektory aplikacji, branchy i zakresu.
+  Nazwa modelu zajmuje jeden wiersz, ID jest w tooltipie. Nie tworz lokalnych
+  mapperow nazw ani opisow tych pol. Feature nadal pobiera katalog, wybiera
+  defaulty, synchronizuje reasoning po zmianie modelu i buduje request.
+  Komponent emituje tylko wybor operatora; nie nadpisuje preferencji podczas
+  ladowania lub odtwarzania historii. `allowDefaultSelection` wlaczaj tylko
+  tam, gdzie formularz pozwala wrocic do pustej preferencji backendu.
+  Dla FormControl polacz tez dirty/touched oraz disabled; sama para nie
+  przejmuje ownershipu formularza. Host display:contents zachowuje siatke.
+- Dla tekstu, wyszukiwania, textarea, daty, liczby, hasla i URL uzywaj
+  `app-text-field` z `type`.
+  Oba komponenty obsluguja FormControl albo value/valueChange oraz opcjonalne
+  label, tooltip, hint i error. Tekstowe pole `committed` odpowiada natywnemu
+  change; data pozostaje stringiem YYYY-MM-DD, bez konwersji strefy.
+  Pole number przekazuje do FormControl liczbe albo null; valueChange
+  i committed przekazuja tekst do handlerow feature'a. Natywne ograniczenia
+  i walidatory formularza sa zachowane. `autosize`, `minRows` i `maxRows`
+  wlaczaja wspolna obsluge CDK; `appearance="code"` ustawia font monospace.
+- `app-form-field` odpowiada za wspolna oprawe i identyfikatory opisow/bledow.
+  Dla pola bez widocznej etykiety podaj ariaLabel lub labelledBy. Zewnetrzna
+  etykieta powinna wskazywac inputId; describedBy dolacza istniejace opisy.
+  tooltipClass pozwala zachowac format rozbudowanej pomocy.
+  Feature dostarcza wartosci,
+  opcje i komunikaty; nie przenos do kontrolek requestow ani reguł biznesowych.
+- Wariant standard ma 44 px, descriptive 58 px i moze miec drugi wiersz
+  opisu. Dobieraj wariant do istniejacej gestosci formularza.
+  Gestosc edytorow i wysokosc pol kodowych mozna zachowac przez zmienne
+  --field-min-height, --field-height, --field-max-height, --field-font-size,
+  --field-line-height i --field-padding-*. Nie kopiuj obramowan ani focus ring.
+- Fokus kontrolek formularza korzysta z mixinu `controls.focus`: pojedynczy
+  obrys 2 px wewnatrz pola, bez zewnetrznego pierscienia i bez zmiany wymiarow.
+  Zachowaj jego widocznosc przy obsludze klawiatura.
+- Zlozone lookupy zachowuja wyszukiwanie i paginacje; reuse'uja oprawe oraz
+  mixiny `src/styles/_form-controls.scss`. Style overlay selecta pozostaja
+  ograniczone do klasy `choice-select-panel` w globalnym arkuszu.
+- Standard dotyczy takze Platform, Delivery, Tool Workbench, Operational
+  Context, filtrow, wyszukiwarek i pol chatu. Checkboxy, upload plikow
+  i CodeMirror pozostaja wyspecjalizowanymi kontrolkami.
+
 ## App shell
 
 `app-shell` jest jedynym wlascicielem:

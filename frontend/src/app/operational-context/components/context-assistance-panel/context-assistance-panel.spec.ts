@@ -1,3 +1,5 @@
+import { choiceLabels } from '../../../../testing/form-controls';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideHttpClient } from '@angular/common/http';
@@ -13,7 +15,7 @@ import { ContextAssistancePanelComponent } from './context-assistance-panel';
 
 describe('ContextAssistancePanelComponent', () => {
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
+    TestBed.configureTestingModule({ providers: [provideNoopAnimations(), provideHttpClient()] });
   });
 
   afterEach(() => localStorage.removeItem('tdw.opctx-assistance.review.job-1'));
@@ -36,7 +38,7 @@ describe('ContextAssistancePanelComponent', () => {
     expect(compiled.querySelector('app-analysis-feature-aside [aria-label="Koszt AI"]')).not.toBeNull();
     expect(compiled.querySelector('app-analysis-feature-aside')?.textContent)
       .toContain('Inicjalny prompt AI');
-    expect(compiled.querySelector<HTMLTextAreaElement>('.prepared-prompt__textarea')?.value)
+    expect(compiled.querySelector<HTMLTextAreaElement>('.prepared-prompt__textarea textarea')?.value)
       .toBe('Opis CRM: apiToken=fictional-example');
   });
 
@@ -70,7 +72,7 @@ describe('ContextAssistancePanelComponent', () => {
   it('clears a terminal result when the operator selects another target', async () => {
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: {
           start: vi.fn(), get: vi.fn(),
@@ -108,7 +110,7 @@ describe('ContextAssistancePanelComponent', () => {
     const pollingUpdates = new Subject<OperationalContextAssistanceJob>();
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: { start: vi.fn(), get: vi.fn() } },
         { provide: AnalysisJobPollingService, useValue: { poll: vi.fn(() => pollingUpdates.asObservable()) } },
@@ -143,7 +145,7 @@ describe('ContextAssistancePanelComponent', () => {
     const polling = { poll: vi.fn(() => updates.asObservable()) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: api },
         { provide: AnalysisJobPollingService, useValue: polling },
@@ -180,7 +182,7 @@ describe('ContextAssistancePanelComponent', () => {
       sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM', projects: [] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: api },
         { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
@@ -243,7 +245,7 @@ describe('ContextAssistancePanelComponent', () => {
         projects: [{ project: 'PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS', projectPath: 'CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS' }] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: api },
         { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
@@ -261,8 +263,8 @@ describe('ContextAssistancePanelComponent', () => {
 
     expect(api.sourceOptions).toHaveBeenCalledTimes(1);
     expect(fixture.nativeElement.textContent).toContain('w grupie CRM');
-    expect(fixture.nativeElement.querySelectorAll('#assistance-catalogue-project option').length).toBe(2);
-    expect(fixture.nativeElement.textContent).toContain('CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
+    expect(await choiceLabels(fixture, '#assistance-catalogue-project')).toHaveLength(2);
+    expect((await choiceLabels(fixture, '#assistance-catalogue-project')).join(' ')).toContain('CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
     component.descriptionControl.setValue('Opis obszaru');
     component.catalogueProjectControl.setValue('PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
     fixture.detectChanges();
@@ -280,7 +282,7 @@ describe('ContextAssistancePanelComponent', () => {
       sourceBranches: vi.fn(() => of({ branches: [{ name: 'main', isDefault: true }], truncated: false, warnings: [] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: api },
         { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } }
@@ -313,7 +315,7 @@ describe('ContextAssistancePanelComponent', () => {
       sourceOptions: vi.fn(() => of({ configuredBaseUrl: null, configuredGroup: 'CRM', projects: [] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: api },
         { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
@@ -443,7 +445,7 @@ describe('ContextAssistancePanelComponent', () => {
       .mockReturnValueOnce(of(job('COMPLETED'))) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
-      providers: [
+      providers: [provideNoopAnimations(),
         provideAnimationsAsync('noop'),
         { provide: OperationalContextAssistanceApiService, useValue: api },
         { provide: AnalysisJobPollingService, useValue: polling },
@@ -1006,7 +1008,7 @@ describe('ContextAssistancePanelComponent', () => {
 async function initialJobFixture(initialJob: OperationalContextAssistanceJob) {
   await TestBed.configureTestingModule({
     imports: [ContextAssistancePanelComponent],
-    providers: [
+    providers: [provideNoopAnimations(),
       provideAnimationsAsync('noop'),
       { provide: OperationalContextAssistanceApiService, useValue: { start: vi.fn(), get: vi.fn() } },
       { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
@@ -1023,7 +1025,7 @@ async function initialJobFixture(initialJob: OperationalContextAssistanceJob) {
 async function batchFixture<T extends object>(original: OperationalContextAssistanceJob, api: T) {
   await TestBed.configureTestingModule({
     imports: [ContextAssistancePanelComponent],
-    providers: [
+    providers: [provideNoopAnimations(),
       provideAnimationsAsync('noop'),
       { provide: OperationalContextAssistanceApiService, useValue: {
         saveReview: vi.fn((_jobId: string, reviewDraft: unknown) => of({ ...original, reviewDraft })), ...api
@@ -1044,7 +1046,7 @@ async function onboardingFixture(systems: { id: string; label: string }[] = []) 
     sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM', projects: [] })) };
   await TestBed.configureTestingModule({
     imports: [ContextAssistancePanelComponent],
-    providers: [
+    providers: [provideNoopAnimations(),
       provideAnimationsAsync('noop'),
       { provide: OperationalContextAssistanceApiService, useValue: api },
       { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
