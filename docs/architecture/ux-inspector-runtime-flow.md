@@ -24,7 +24,7 @@ w calym dokumencie strony w chwili capture.
 
 ## Publiczne wejscia i kontrakty
 
-- Modal na /ux-inspector udostepnia przeciagany bookmarklet Browser Tools.
+- Sekcja startowa na /ux-inspector udostepnia przeciagany bookmarklet Browser Tools.
   Menu pozwala wybrac profil UX Inspectora albo uruchomic UI Explorera.
 - POST /api/ux-inspector/captures jest jedynym zapisem obserwacji. Przyjmuje
   jeden JSON z capture, formFields, store i httpHistory, waliduje i redaguje dane,
@@ -63,8 +63,13 @@ lokalnej badanej strony moga zablokowac fetch.
 3. Browser Tools tworzy capture v1 bez ID, czyta opcjonalne widoczne pola
    oraz niezaleznie, jednokrotnie globalThis.getStoreState() i globalThis.getHttpHistory().
 4. Jeden POST z badanej strony zapisuje calosc w TDW i zwraca captureId.
-5. Popup przechodzi na /ux-inspector?captureId=...; formularz wykonuje GET,
-   pokazuje zwijany podglad i startuje joba z samym ID.
+5. Popup przechodzi na /ux-inspector?captureId=...; ekran wykonuje GET
+   i po odczycie pokazuje formularz ze zwijanym podgladem. Start joba uzywa ID.
+
+Wejscie na /ux-inspector bez wskazanego elementu pokazuje instrukcje
+i zakladke TDW Browser Tools do przeciagniecia na pasek zakladek Chrome.
+Trwajacy odczyt pokazuje komunikat o wczytywaniu, a blad odczytu udostepnia
+ponowienie.
 
 Popup about:blank otwiera sie synchronicznie podczas kliku, a po POST jest
 kierowany na URL z ID. Jezeli popup jest zablokowany, link w overlayu
@@ -226,7 +231,7 @@ Backend odrzuca nieznane pola i inna wersje, normalizuje deskryptory DOM
 oraz powtarza redakcje. Nie ma dawnego limitu 128 KiB capture. Browser
 Tools nie czyta cookies, storage ani pelnego HTML. Historie HTTP pobiera
 z aplikacyjnego gettera, bez przechwytywania ruchu sieciowego.
-Po aktualizacji operator ponownie przeciaga bookmarklet z modala.
+Po aktualizacji operator ponownie przeciaga bookmarklet z sekcji startowej.
 
 ### Typowany odczyt i walidacja
 
@@ -543,7 +548,7 @@ Minimalna macierz obejmuje:
 - business-first answer contract: zachowanie `as-is` versus wymaganie,
   frontend/backend, obserwowalne scenariusze oraz zweryfikowane `METHOD path`,
 - `QUEUED` przed dispatch, strict import/export v1 i odrzucenie obcych wersji,
-- modal bookmarkleta, brak alternatywnego launchera i brak osobnej karty
+- bookmarklet w sekcji startowej, brak alternatywnego launchera i brak osobnej karty
   read-only,
 - testy Angulara, build produkcyjny, `FrontendPageTest` i pakiet backend-dev.
 

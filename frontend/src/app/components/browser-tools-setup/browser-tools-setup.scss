@@ -1,0 +1,70 @@
+:host {
+  display: block;
+}
+
+.browser-tools-setup {
+  display: grid;
+  gap: 16px;
+}
+
+.browser-tools-setup h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.browser-tools-setup ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-inline-start: 22px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.browser-tools-setup kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.browser-tools-setup__drag-area {
+  display: grid;
+  justify-items: center;
+  margin-block-start: 8px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary-soft) 65%, var(--surface));
+}
+
+.browser-tools-setup__bookmarklet {
+  gap: 6px;
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary-dark);
+  text-decoration: none;
+  cursor: grab;
+}
+
+.browser-tools-setup__bookmarklet:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.browser-tools-setup__bookmarklet:active {
+  cursor: grabbing;
+}
+
+.browser-tools-setup__note {
+  margin: 0;
+  padding-block-start: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}

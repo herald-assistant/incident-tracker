@@ -10,7 +10,7 @@ import { AnalysisStepsPanelComponent } from '../../../../components/analysis-ste
 import { AnalysisRunStateComponent } from '../../../../components/analysis-run-state/analysis-run-state';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportEditorComponent } from '../../../../components/analysis-report-editor/analysis-report-editor';
-import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
+import { BrowserToolsSetupComponent } from '../../../../components/browser-tools-setup/browser-tools-setup';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { formatDataDate } from '../../../../core/utils/format-data-date';
@@ -29,7 +29,7 @@ type OpenMenu = 'system' | 'view' | null;
     AnalysisRunStateComponent,
     AnalysisFollowUpChatComponent,
     AnalysisReportEditorComponent,
-    BrowserToolsSetupModalComponent,
+    BrowserToolsSetupComponent,
     GitLabBranchSelectComponent,
     MatTooltipModule,
     UxInspectorResultComponent
@@ -57,7 +57,6 @@ export class UxInspectorPageComponent implements OnInit {
   readonly chatCount = computed(() => this.facade.chatMessages().length);
   readonly chatActive = computed(() => this.facade.chatMessages().some(
     (message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS'));
-  readonly browserToolsModalOpen = signal(false);
   readonly previewExpanded = signal(false);
   readonly httpExpanded = signal(false);
   readonly httpEntryExpanded = signal<ReadonlySet<number>>(new Set());

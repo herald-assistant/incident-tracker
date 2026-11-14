@@ -10,13 +10,14 @@ import { UxInspectorCaptureSnapshot } from '../../models/ux-inspector.models';
 import { UxInspectorPageComponent } from './ux-inspector-page';
 
 describe('UxInspectorPageComponent', () => {
-  it('synchronizes shared model and reasoning controls with the feature selection', async () => {
-    const params = convertToParamMap({});
+  it('shows the form only after capture and synchronizes shared model and reasoning controls', async () => {
+    const params = convertToParamMap({ captureId: 'cap_crm_contact_save' });
+    const queryParamMap = new BehaviorSubject(convertToParamMap({}));
     await TestBed.configureTestingModule({
       imports: [UxInspectorPageComponent],
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { queryParamMap: new BehaviorSubject(params), snapshot: { queryParamMap: params } } },
+        { provide: ActivatedRoute, useValue: { queryParamMap, snapshot: { queryParamMap: params } } },
         { provide: Router, useValue: { navigate: vi.fn(() => Promise.resolve(true)) } }
       ]
     }).compileComponents();
@@ -36,6 +37,33 @@ describe('UxInspectorPageComponent', () => {
       ]
     });
     fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('Wskaż element na badanej stronie');
+    const bookmarklet = page.querySelector<HTMLAnchorElement>('app-browser-tools-setup a');
+    expect(bookmarklet?.textContent?.trim()).toContain('TDW Browser Tools');
+    expect(bookmarklet?.draggable).toBe(true);
+    expect(bookmarklet?.getAttribute('href')).toMatch(/^javascript:/);
+    expect(page.querySelector('.ux-inspector-composer')).toBeNull();
+
+    queryParamMap.next(params);
+    const captureUrl = '/api/ux-inspector/captures/cap_crm_contact_save';
+    const captureRequest = http.expectOne(captureUrl);
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Wczytywanie wskazanego elementu');
+    expect(page.querySelector('.ux-inspector-composer')).toBeNull();
+
+    captureRequest.flush({}, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(page.querySelector('.ux-inspector-composer')).toBeNull();
+    const retry = page.querySelector<HTMLButtonElement>('.ux-inspector-message[role="alert"] button');
+    expect(retry?.textContent?.trim()).toBe('Ponów');
+
+    retry!.click();
+    http.expectOne(captureUrl).flush(captureSnapshot());
+    fixture.detectChanges();
+    expect(page.querySelector('.ux-inspector-composer')).not.toBeNull();
+    expect(page.querySelector('app-browser-tools-setup')).toBeNull();
+
     const selects = await TestbedHarnessEnvironment.loader(fixture).getAllHarnesses(
       MatSelectHarness.with({ ancestor: 'app-ai-execution-controls' })
     );

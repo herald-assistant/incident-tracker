@@ -9,150 +9,113 @@
       (change)="importResult($event)"
     />
 
-    @if (!facade.isReadOnlyResult()) {
+    @if (!facade.isReadOnlyResult() && facade.capture(); as capture) {
       <section class="analysis-card ux-inspector-composer">
         <header class="ux-inspector-heading">
           <div>
             <p class="section-eyebrow">UX Inspector</p>
             <h2 id="uxInspectorTitle">Zapytaj o wskazany element</h2>
-            <p>Wskaż element przez Browser Tools, potwierdź kod źródłowy i zadaj jedno konkretne pytanie.</p>
+            <p>Potwierdź kod źródłowy i zadaj jedno konkretne pytanie.</p>
           </div>
           <div class="ux-inspector-heading__actions">
-            <button
-              class="secondary-button secondary-button--compact"
-              type="button"
-              (click)="browserToolsModalOpen.set(true)"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">bookmark_add</span>
-              Browser Tools
-            </button>
             <span [class]="facade.configurationReady() ? 'status-pill status-pill--done' : 'status-pill status-pill--queued'">
               {{ facade.configurationReady() ? 'configured' : 'setup' }}
             </span>
           </div>
         </header>
 
-        @if (facade.capture(); as capture) {
-          <article class="ux-inspector-capture" aria-label="Przejęty element">
-            <span class="ux-inspector-capture__icon material-symbols-outlined" aria-hidden="true">select_check_box</span>
-            <div class="ux-inspector-capture__body">
-              <span class="field-label">Element z Browser Tools</span>
-              <h3>{{ targetLabel() }}</h3>
-              <p><code>&lt;{{ capture.target.tag }}&gt;</code> · {{ capture.page.origin }}{{ capture.page.path }}</p>
-              @if (facade.captureSnapshot()) {
-              <p>Store: {{ facade.storeStatus() === 'available' ? 'dostępny dla tej analizy' : 'niedostępny w tej sesji' }}</p>
-              <details class="ux-inspector-capture-preview" (toggle)="previewExpanded.set($any($event.target).open)">
-                <summary>Sprawdź dane capture przed wysłaniem pytania</summary>
-                @if (previewExpanded()) {
-                  <p>ID: <code>{{ facade.captureSnapshot()?.captureId ?? capture.captureId }}</code></p>
-                  <h4>Obserwacja elementu</h4>
-                  <pre>{{ captureJson() }}</pre>
-                  <h4>Store: {{ facade.storeStatus() === 'available' ? 'dostępny' : 'niedostępny' }}</h4>
-                  @if (facade.storeStatus() === 'available') { <pre>{{ storeJson() }}</pre> }
-                  @if (facade.captureSnapshot()?.store?.redactions; as redactions) {
-                    <p>Zredagowane klucze store: {{ redactions }}</p>
+        <article class="ux-inspector-capture" aria-label="Przejęty element">
+          <span class="ux-inspector-capture__icon material-symbols-outlined" aria-hidden="true">select_check_box</span>
+          <div class="ux-inspector-capture__body">
+            <span class="field-label">Element z Browser Tools</span>
+            <h3>{{ targetLabel() }}</h3>
+            <p><code>&lt;{{ capture.target.tag }}&gt;</code> · {{ capture.page.origin }}{{ capture.page.path }}</p>
+            @if (facade.captureSnapshot()) {
+            <p>Store: {{ facade.storeStatus() === 'available' ? 'dostępny dla tej analizy' : 'niedostępny w tej sesji' }}</p>
+            <details class="ux-inspector-capture-preview" (toggle)="previewExpanded.set($any($event.target).open)">
+              <summary>Sprawdź dane capture przed wysłaniem pytania</summary>
+              @if (previewExpanded()) {
+                <p>ID: <code>{{ facade.captureSnapshot()?.captureId ?? capture.captureId }}</code></p>
+                <h4>Obserwacja elementu</h4>
+                <pre>{{ captureJson() }}</pre>
+                <h4>Store: {{ facade.storeStatus() === 'available' ? 'dostępny' : 'niedostępny' }}</h4>
+                @if (facade.storeStatus() === 'available') { <pre>{{ storeJson() }}</pre> }
+                @if (facade.captureSnapshot()?.store?.redactions; as redactions) {
+                  <p>Zredagowane klucze store: {{ redactions }}</p>
+                }
+                @if (facade.captureSnapshot()?.store?.reason; as reason) { <p>{{ reason }}</p> }
+            @if (facade.captureSnapshot()?.httpHistory; as history) {
+              <details class="ux-inspector-http-history" (toggle)="httpExpanded.set($any($event.target).open)">
+                <summary>Historia HTTP: {{ history.status === 'AVAILABLE' ? history.entries.length + ' wywołań' : 'niedostępna' }}</summary>
+                @if (httpExpanded()) {
+                  <p>Ostatnie wywołania zachowane w chwili capture. Maksymalnie 50 wpisów; dane nie są odświeżane.</p>
+                  @if (history.reason) { <p role="status">{{ history.reason }}</p> }
+                  @if (history.redactions) { <p>Redakcje sekretów: {{ history.redactions }}</p> }
+                  @if (history.status === 'AVAILABLE' && !history.entries.length) { <p>Historia jest pusta.</p> }
+                  @for (entry of history.entries; track entry.id) {
+                    <details (toggle)="toggleHttpEntry(entry.id, $event)">
+                      <summary>#{{ entry.id }} · {{ entry.request.method }} {{ entry.request.url }} · {{ entry.state }} / {{ entry.response?.status ?? '—' }}</summary>
+                      <p>{{ entry.startedAt }} · {{ entry.durationMs === null ? 'czas niedostępny' : entry.durationMs + ' ms' }}</p>
+                      @if (httpEntryExpanded().has(entry.id)) { <pre>{{ httpEntryJson(entry) }}</pre> }
+                    </details>
                   }
-                  @if (facade.captureSnapshot()?.store?.reason; as reason) { <p>{{ reason }}</p> }
-              @if (facade.captureSnapshot()?.httpHistory; as history) {
-                <details class="ux-inspector-http-history" (toggle)="httpExpanded.set($any($event.target).open)">
-                  <summary>Historia HTTP: {{ history.status === 'AVAILABLE' ? history.entries.length + ' wywołań' : 'niedostępna' }}</summary>
-                  @if (httpExpanded()) {
-                    <p>Ostatnie wywołania zachowane w chwili capture. Maksymalnie 50 wpisów; dane nie są odświeżane.</p>
-                    @if (history.reason) { <p role="status">{{ history.reason }}</p> }
-                    @if (history.redactions) { <p>Redakcje sekretów: {{ history.redactions }}</p> }
-                    @if (history.status === 'AVAILABLE' && !history.entries.length) { <p>Historia jest pusta.</p> }
-                    @for (entry of history.entries; track entry.id) {
-                      <details (toggle)="toggleHttpEntry(entry.id, $event)">
-                        <summary>#{{ entry.id }} · {{ entry.request.method }} {{ entry.request.url }} · {{ entry.state }} / {{ entry.response?.status ?? '—' }}</summary>
-                        <p>{{ entry.startedAt }} · {{ entry.durationMs === null ? 'czas niedostępny' : entry.durationMs + ' ms' }}</p>
-                        @if (httpEntryExpanded().has(entry.id)) { <pre>{{ httpEntryJson(entry) }}</pre> }
-                      </details>
-                    }
-                  }
-                </details>
-              }
                 }
               </details>
+            }
               }
-              <div class="ux-inspector-capture__chips">
-                <span class="panel-chip">
-                  {{ capture.captureProfile === 'FORM_DIAGNOSTICS' ? 'diagnostyka formularza' : 'kontekst elementu' }}
-                </span>
-                @if (capture.target.role) { <span class="panel-chip">role: {{ capture.target.role }}</span> }
-                @if (capture.target.state.disabled || capture.target.state.ariaDisabled) { <span class="panel-chip">disabled</span> }
-                @if (capture.target.state.required) { <span class="panel-chip">required</span> }
-                @if (capture.signals.shadowBoundaryCount) { <span class="panel-chip">shadow DOM</span> }
-                @for (entry of stableAttributeEntries(); track entry[0]) {
-                  <span class="panel-chip">{{ entry[0] }}={{ entry[1] }}</span>
+            </details>
+            }
+            <div class="ux-inspector-capture__chips">
+              <span class="panel-chip">
+                {{ capture.captureProfile === 'FORM_DIAGNOSTICS' ? 'diagnostyka formularza' : 'kontekst elementu' }}
+              </span>
+              @if (capture.target.role) { <span class="panel-chip">role: {{ capture.target.role }}</span> }
+              @if (capture.target.state.disabled || capture.target.state.ariaDisabled) { <span class="panel-chip">disabled</span> }
+              @if (capture.target.state.required) { <span class="panel-chip">required</span> }
+              @if (capture.signals.shadowBoundaryCount) { <span class="panel-chip">shadow DOM</span> }
+              @for (entry of stableAttributeEntries(); track entry[0]) {
+                <span class="panel-chip">{{ entry[0] }}={{ entry[1] }}</span>
+              }
+            </div>
+            @if (capture.captureProfile === 'FORM_DIAGNOSTICS' && facade.captureSnapshot()) {
+              <details class="ux-inspector-form-snapshot">
+                <summary>
+                  Pola widoczne przy capture:
+                  {{ facade.formStatus() === 'available' ? facade.formFields()?.length + ' ' + (facade.formFields()?.length === 1 ? 'pole' : 'pól') :
+                     'niedostępne' }}
+                </summary>
+                <p>Obserwacja pól widocznych na stronie w chwili capture.</p>
+                @if (facade.captureSnapshot()?.formFields?.omittedSensitiveFields; as omitted) {
+                  <p>Pominięte pola wrażliwe: {{ omitted }}</p>
                 }
-              </div>
-              @if (capture.captureProfile === 'FORM_DIAGNOSTICS' && facade.captureSnapshot()) {
-                <details class="ux-inspector-form-snapshot">
-                  <summary>
-                    Pola widoczne przy capture:
-                    {{ facade.formStatus() === 'available' ? facade.formFields()?.length + ' ' + (facade.formFields()?.length === 1 ? 'pole' : 'pól') :
-                       'niedostępne' }}
-                  </summary>
-                  <p>Obserwacja pól widocznych na stronie w chwili capture.</p>
-                  @if (facade.captureSnapshot()?.formFields?.omittedSensitiveFields; as omitted) {
-                    <p>Pominięte pola wrażliwe: {{ omitted }}</p>
-                  }
-                  @if (facade.captureSnapshot()?.formFields?.reason; as reason) { <p>{{ reason }}</p> }
-                  @if (facade.formFields(); as fields) {
-                    <dl>
-                      @for (field of fields; track $index) {
-                        <div>
-                          <dt>{{ field.label || field.name || field.testId || field.id || '<' + field.tag + '>' }}</dt>
-                          <dd><code>{{ formFieldValue(field) }}</code>
-                            @if (field.invalid === true && field.errors.length) {
-                              <span> · {{ field.errors.join(' | ') }}</span>
-                            }
-                          </dd>
-                        </div>
-                      }
-                    </dl>
-                  }
-                </details>
-              }
-              @if (capture.limits.length || capture.signals.redactions.length) {
-                <details>
-                  <summary>Redakcje i ograniczenia ({{ capture.limits.length + capture.signals.redactions.length }})</summary>
-                  <ul>
-                    @for (limit of capture.limits; track limit) { <li>{{ limit }}</li> }
-                    @for (redaction of capture.signals.redactions; track redaction) { <li>{{ redaction }}</li> }
-                  </ul>
-                </details>
-              }
-            </div>
-          </article>
-        } @else {
-          <div class="ux-inspector-message ux-inspector-message--warning" role="status">
-            <span class="material-symbols-outlined" aria-hidden="true">ads_click</span>
-            <div>
-              <strong>Brak wskazanego elementu</strong>
-              <p>Dodaj Browser Tools do zakładek, uruchom je na badanej stronie i wybierz UX Inspector.</p>
-            </div>
-            <button
-              class="secondary-button secondary-button--compact"
-              type="button"
-              (click)="browserToolsModalOpen.set(true)"
-            >
-              Dodaj Browser Tools
-            </button>
+                @if (facade.captureSnapshot()?.formFields?.reason; as reason) { <p>{{ reason }}</p> }
+                @if (facade.formFields(); as fields) {
+                  <dl>
+                    @for (field of fields; track $index) {
+                      <div>
+                        <dt>{{ field.label || field.name || field.testId || field.id || '<' + field.tag + '>' }}</dt>
+                        <dd><code>{{ formFieldValue(field) }}</code>
+                          @if (field.invalid === true && field.errors.length) {
+                            <span> · {{ field.errors.join(' | ') }}</span>
+                          }
+                        </dd>
+                      </div>
+                    }
+                  </dl>
+                }
+              </details>
+            }
+            @if (capture.limits.length || capture.signals.redactions.length) {
+              <details>
+                <summary>Redakcje i ograniczenia ({{ capture.limits.length + capture.signals.redactions.length }})</summary>
+                <ul>
+                  @for (limit of capture.limits; track limit) { <li>{{ limit }}</li> }
+                  @for (redaction of capture.signals.redactions; track redaction) { <li>{{ redaction }}</li> }
+                </ul>
+              </details>
+            }
           </div>
-        }
-
-        @if (facade.captureStatus() === 'loading') {
-          <p class="field-hint" role="status">Pobieranie capture z pamięci TDW…</p>
-        }
-
-        @if (facade.captureError()) {
-          <div class="ux-inspector-message ux-inspector-message--error" role="alert">
-            <span class="material-symbols-outlined" aria-hidden="true">error</span>
-            <p>{{ facade.captureError() }}</p>
-            <button class="secondary-button secondary-button--compact" type="button" (click)="retryCapture()">Ponów</button>
-          </div>
-        }
+        </article>
 
         @switch (facade.inputState()) {
           @case ('loading') { <p class="field-hint">Pobieranie zarejestrowanych frontendów…</p> }
@@ -350,9 +313,21 @@
               <span class="material-symbols-outlined" aria-hidden="true">upload_file</span> Import
             </button>
           </div>
-          <span>{{ facade.configurationReady() ? 'Konfiguracja gotowa.' : 'Wskaż element i uzupełnij wszystkie pola.' }}</span>
+          <span>{{ facade.configurationReady() ? 'Konfiguracja gotowa.' : 'Uzupełnij wszystkie pola.' }}</span>
         </footer>
       </section>
+    } @else if (!facade.isReadOnlyResult()) {
+      @if (facade.captureStatus() === 'loading') {
+        <p class="analysis-card ux-inspector-message" role="status">Wczytywanie wskazanego elementu…</p>
+      } @else if (facade.captureError(); as error) {
+        <div class="analysis-card ux-inspector-message ux-inspector-message--error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <p>{{ error }}</p>
+          <button class="secondary-button secondary-button--compact" type="button" (click)="retryCapture()">Ponów</button>
+        </div>
+      } @else {
+        <app-browser-tools-setup />
+      }
     }
 
     @if (facade.portabilityError()) {
@@ -458,8 +433,4 @@
     }
   </main>
 
-  <app-browser-tools-setup-modal
-    [open]="browserToolsModalOpen()"
-    (closed)="browserToolsModalOpen.set(false)"
-  />
 </div>

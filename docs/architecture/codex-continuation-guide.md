@@ -161,7 +161,7 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
   strony i prezentacja specyficzna dla feature'ow.
 - `frontend/public/browser-tools`
   loader, protocol v1 i efemeryczny runtime dwoch akcji na badanej stronie;
-  bookmarklet jest generowany przez modal UX Inspectora. UX Inspector ma
+  bookmarklet jest dostepny w sekcji startowej UX Inspectora. UX Inspector ma
   wybor zakresu danych i wysyla jeden POST capture przez fetch do TDW.
   UI Explorer otwiera widok bez selekcji elementu, zachowujac handshake
   page-context przez postMessage. Oba transfery nie korzystaja ze storage.

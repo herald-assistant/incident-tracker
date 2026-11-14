@@ -1,0 +1,26 @@
+<section class="analysis-card browser-tools-setup" aria-labelledby="browserToolsSetupTitle">
+  <h2 id="browserToolsSetupTitle">Wskaż element na badanej stronie</h2>
+  <ol>
+    <li>Pokaż pasek zakładek w Chrome skrótem <kbd>Ctrl+Shift+B</kbd>.</li>
+    <li>
+      Przeciągnij TDW Browser Tools na pasek zakładek.
+      <div class="browser-tools-setup__drag-area">
+        <a
+          class="secondary-button browser-tools-setup__bookmarklet"
+          [href]="bookmarkletHref"
+          draggable="true"
+          title="Przeciągnij na pasek zakładek Chrome"
+          (click)="$event.preventDefault()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">drag_indicator</span>
+          TDW Browser Tools
+        </a>
+      </div>
+    </li>
+    <li>Otwórz badaną stronę HTTP(S), kliknij zapisaną zakładkę, wybierz UX Inspector i wskaż element.</li>
+  </ol>
+  <p class="browser-tools-setup__note">
+    Zakładka uruchamia kod z tej instancji TDW na czas użycia narzędzia.
+    Po aktualizacji TDW przeciągnij przycisk ponownie, aby odświeżyć zakładkę.
+  </p>
+</section>
