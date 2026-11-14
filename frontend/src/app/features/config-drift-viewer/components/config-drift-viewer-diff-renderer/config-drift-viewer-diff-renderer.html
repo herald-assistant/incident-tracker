@@ -1,14 +1,13 @@
 <section class="configuration-diff" aria-labelledby="configuration-diff-heading">
   <header class="configuration-diff__header">
-    <div>
-      <h3 id="configuration-diff-heading">Różnice w plikach konfiguracyjnych</h3>
-      <p>
-        {{ totalChanges() }} zmian ·
-        {{ projection().sourceBranch }} →
-        {{ projection().targetBranch }}
-      </p>
+    <div class="configuration-diff__summary">
+      <h2 id="configuration-diff-heading">{{ projection().sourceBranch }} → {{ projection().targetBranch }}</h2>
+      <div class="configuration-diff__metadata">
+        <span class="configuration-diff__counts">{{ comparisonCounts() }}</span>
+        <ng-content select="[comparisonStatus]" />
+      </div>
     </div>
-    @if (projection()) {
+    <div class="configuration-diff__actions">
       <div class="view-switch" role="group" aria-label="Zakres prezentacji konfiguracji">
         <button
           type="button"
@@ -27,7 +26,8 @@
           Cały plik
         </button>
       </div>
-    }
+      <ng-content select="[comparisonActions]" />
+    </div>
   </header>
 
   @if (projection()) {
@@ -35,26 +35,22 @@
       @for (renderFile of files(); track renderFile.key) {
         <details class="configuration-file" open>
           <summary>
-            <span class="material-symbols-outlined" aria-hidden="true">description</span>
-            <span>
-              <strong>{{ fileLabel(renderFile.file) }}</strong>
-              <small>
-                {{ roleLabel(renderFile.file.role) }} · {{ renderFile.file.format }} ·
-                {{ renderFile.changeCount }} zmian
-              </small>
-            </span>
-            <span class="presence">
-              source: {{ renderFile.file.sourcePresent ? 'jest' : 'BRAK' }} ·
-              target: {{ renderFile.file.targetPresent ? 'jest' : 'BRAK' }}
+            <strong
+              class="file-path"
+              [attr.title]="fileLabel(renderFile.file) + ' · ' + renderFile.file.format + ' · ' + renderFile.changeCount + ' zmian'"
+            >{{ fileLabel(renderFile.file) }}</strong>
+            <span class="file-environments">
+              <span class="file-environment">
+                <span class="file-environment__name">{{ projection().sourceBranch }}:</span>
+                <span>{{ renderFile.file.sourcePresent ? 'obecny' : 'brak pliku' }}</span>
+              </span>
+              <span aria-hidden="true">→</span>
+              <span class="file-environment">
+                <span class="file-environment__name">{{ projection().targetBranch }}:</span>
+                <span>{{ renderFile.file.targetPresent ? 'obecny' : 'brak pliku' }}</span>
+              </span>
             </span>
           </summary>
-
-          @if (renderFile.file.sourcePath !== renderFile.file.targetPath) {
-            <div class="path-comparison">
-              <span><small>source</small><code>{{ renderFile.file.sourcePath || 'BRAK' }}</code></span>
-              <span><small>target</small><code>{{ renderFile.file.targetPath || 'BRAK' }}</code></span>
-            </div>
-          }
 
           <div class="document-list">
             @for (renderDocument of renderFile.documents; track renderDocument.key) {
@@ -85,23 +81,15 @@
                         ></span>
                       }
 
+                      @let changeDescription = leaf(row.node) && row.changed ? changeLabel(row.node.changeKind) : null;
                       <div class="configuration-row__line">
-                        @if (leaf(row.node) && marker(row.node.changeKind)) {
-                          <span
-                            class="change-marker"
-                            [class]="markerClass(row.node.changeKind)"
-                            [attr.title]="changeLabel(row.node.changeKind)"
-                          >
-                            <span aria-hidden="true">{{ marker(row.node.changeKind) }}</span>
-                            <span class="sr-only">{{ changeLabel(row.node.changeKind) }}</span>
-                          </span>
-                        } @else {
-                          <span class="change-marker change-marker--empty" aria-hidden="true"></span>
-                        }
                         <code class="syntax-name">{{ syntaxName(renderFile.file, row) }}</code>
+                        @if (changeDescription) {
+                          <span class="sr-only">{{ changeDescription }}</span>
+                        }
 
                         @if (!collection(row.node) && sameSides(row.node)) {
-                          <span class="value-comparison value-comparison--same">
+                          <span class="value-comparison value-comparison--same" [attr.title]="changeDescription">
                             <small>source</small>
                             <span aria-hidden="true">=</span>
                             <small>target</small>
@@ -109,32 +97,32 @@
                           </span>
                         } @else if (!collection(row.node)) {
                           @if (presenceDiff(row.node)) {
-                            <span class="value-comparison value-comparison--presence-diff">
+                            <span class="value-comparison value-comparison--presence-diff" [attr.title]="changeDescription">
                               @if (row.node.source.presence === 'ABSENT') {
-                                <span class="presence-diff__absent" title="source">{{ formatValue(row.node.source) }}</span>
+                                <span class="presence-diff__absent" [attr.title]="changeDescription + ' · source'">{{ formatValue(row.node.source) }}</span>
                               } @else {
                                 <code [class.presence-diff__removed]="row.node.changeKind === 'REMOVED'">{{ formatValue(row.node.source) }}</code>
                               }
                               <span aria-hidden="true">→</span>
                               @if (row.node.target.presence === 'ABSENT') {
-                                <span class="presence-diff__absent" title="target">{{ formatValue(row.node.target) }}</span>
+                                <span class="presence-diff__absent" [attr.title]="changeDescription + ' · target'">{{ formatValue(row.node.target) }}</span>
                               } @else {
                                 <code [class.presence-diff__added]="row.node.changeKind === 'ADDED'">{{ formatValue(row.node.target) }}</code>
                               }
                             </span>
                           } @else {
                             @if (inlineValueDiff(row.node); as inlineDiff) {
-                              <span class="value-comparison value-comparison--inline-diff">
+                              <span class="value-comparison value-comparison--inline-diff" [attr.title]="changeDescription">
                                 <small>source</small>
                                 <span aria-hidden="true">≠</span>
                                 <small>target</small>
                                 <code
                                   class="inline-diff"
                                   [attr.aria-label]="'source ' + inlineDiff.sourceText + ', target ' + inlineDiff.targetText"
-                                >@for (segment of inlineDiff.segments; track $index) {@switch (segment.kind) {@case ('REMOVED') {<del class="inline-diff__removed" title="source">{{ segment.text }}</del>} @case ('ADDED') {<ins class="inline-diff__added" title="target">{{ segment.text }}</ins>} @default {<span>{{ segment.text }}</span>}}}</code>
+                                >@for (segment of inlineDiff.segments; track $index) {@switch (segment.kind) {@case ('REMOVED') {<del class="inline-diff__removed" [attr.title]="changeDescription + ' · source'">{{ segment.text }}</del>} @case ('ADDED') {<ins class="inline-diff__added" [attr.title]="changeDescription + ' · target'">{{ segment.text }}</ins>} @default {<span>{{ segment.text }}</span>}}}</code>
                               </span>
                             } @else {
-                              <span class="value-comparison">
+                              <span class="value-comparison" [attr.title]="changeDescription">
                                 <span>
                                   <small>source</small>
                                   <code>{{ formatValue(row.node.source) }}</code>
@@ -150,7 +138,7 @@
                         }
 
                         @if (effectiveValueDiff(row.node); as effectiveDiff) {
-                          <span class="effective-resolved-diff">
+                          <span class="effective-resolved-diff" [attr.title]="changeDescription">
                             <small>resolved</small>
                             <span class="value-comparison value-comparison--inline-diff">
                               <small>source</small>
@@ -159,7 +147,7 @@
                               <code
                                 class="inline-diff"
                                 [attr.aria-label]="'resolved source ' + effectiveDiff.sourceText + ', target ' + effectiveDiff.targetText"
-                              >@for (segment of effectiveDiff.segments; track $index) {@switch (segment.kind) {@case ('REMOVED') {<del class="inline-diff__removed" title="source">{{ segment.text }}</del>} @case ('ADDED') {<ins class="inline-diff__added" title="target">{{ segment.text }}</ins>} @default {<span>{{ segment.text }}</span>}}}</code>
+                              >@for (segment of effectiveDiff.segments; track $index) {@switch (segment.kind) {@case ('REMOVED') {<del class="inline-diff__removed" [attr.title]="changeDescription + ' · source'">{{ segment.text }}</del>} @case ('ADDED') {<ins class="inline-diff__added" [attr.title]="changeDescription + ' · target'">{{ segment.text }}</ins>} @default {<span>{{ segment.text }}</span>}}}</code>
                             </span>
                           </span>
                         }

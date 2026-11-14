@@ -23,26 +23,20 @@
       [activeTabId]="activeAnalysisTab()"
       ariaLabel="Sekcje finalnej analizy"
       (tabSelected)="selectAnalysisTab($event)"
-    ></app-analysis-result-tabs>
-
-    @for (section of analysisResult.sections; track section.id) {
-      @if (activeAnalysisTab() === section.id) {
-        <div
-          [id]="'analysis-panel-' + section.id"
-          class="analysis-summary analysis-result-tab-panel"
-          role="tabpanel"
-          [attr.aria-labelledby]="'analysis-tab-' + section.id"
-          tabindex="0"
-        >
-          <app-analysis-report-section-content
-            [markdown]="section.markdown"
-            [emptyText]="section.emptyText"
-            [meta]="section.meta"
-            metaAlign="start"
-          ></app-analysis-report-section-content>
-        </div>
+    >
+      @for (section of analysisResult.sections; track section.id) {
+        @if (activeAnalysisTab() === section.id) {
+          <div class="analysis-result-tab-content">
+            <app-analysis-report-section-content
+              [markdown]="section.markdown"
+              [emptyText]="section.emptyText"
+              [meta]="section.meta"
+              metaAlign="start"
+            ></app-analysis-report-section-content>
+          </div>
+        }
       }
-    }
+    </app-analysis-result-tabs>
 
     <section class="final-analysis__appendix" aria-label="Analysis appendix">
       <app-analysis-report-meta

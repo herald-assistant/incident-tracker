@@ -57,10 +57,69 @@ pusty wybor blokuje start. Request zachowuje kolejnosc systemow z katalogu, a
 historia i import odtwarzaja zapisane `systemIds`.
 
 Wynik batcha jest prezentowany przez shared `AnalysisResultTabsComponent`.
-Zakladki zachowuja kolejnosc `systemIds`, pokazuja etykiete i status komponentu,
-a aktywny panel renderuje jego wlasny diff plikowy, findings, report i przebieg
+Naglowek korzysta z paginacji Angular Material: po przekroczeniu szerokosci
+strzalki odslaniaja kolejne nazwy bez scrollbara pod zakladkami. Strzalki
+klawiatury i Home/End przesuwaja focus, Enter/Space wybieraja komponent.
+Zakladki i rezultat sa na jednej powierzchni. Gotowy wynik ma jeden naglowek
+nad plikami: kierunek porownania, liczba zmian/plikow, informacja o ograniczeniach,
+Zmiany/Caly plik i Share. Nie powtarza nazwy aktywnej zakladki, statusow
+technicznych ani osobnych naglowkow Configuration result / Roznice w plikach.
+Kierunek pochodzi ze snapshotu diffu, nie z edytowanego formularza. Liczba plikow
+obejmuje cale porownanie niezaleznie od filtra i liczby dokumentow YAML.
+Kolumny FACT/AI zachowuja podzial merytoryczny bez osobnych kart. Aktywny panel
+projekcji jest powiazany przez ARIA z wybrana zakladka, a shared aside
+pozostaje poza karta i nadal otrzymuje dane tego samego komponentu.
+Zakladki zachowuja kolejnosc `systemIds` i pokazuja nazwe komponentu bez
+tekstowego sufiksu statusu. `QUEUED` i `RUNNING` maja mini loader;
+`COMPLETED` nie ma wskaznika. `COMPLETED_WITH_LIMITATIONS` ma ikone info
+z tooltipem zawierajacym opis stanu i `result.visibilityLimits`, a `FAILED`
+ikone bledu z opisem `errorMessage`. Nazwa dostepna dla czytnika ekranu
+zachowuje opis stanu; tooltip jest dostepny na hover i focus zakladki.
+Aktualizacja snapshotu usuwa loader bez zmiany wybranego komponentu.
+Aktywny panel renderuje jego wlasny diff plikowy, findings, report i przebieg
 pracy. Blad jednego komponentu pozostaje lokalny dla jego zakladki i nie ukrywa
 poprawnych wynikow pozostalych komponentow.
+
+Page mapuje stan porownania i dostarcza go do naglowka renderera przez
+projekcje `comparisonStatus`; `comparisonActions` zawiera shared Share.
+Renderer nadal posiada wybor Zmiany/Caly plik i liczniki diffu. Tooltip
+informacji na hover/focus zawiera komponent, repozytorium, tryb, przebieg,
+ref kodu, liczniki ustalen/dokumentow/referencji, coverage stron i ograniczenia.
+Niepelna lub brakujaca coverage oraz deterministyczny INCOMPLETE pokazuja
+widoczne `Niepelne porownanie` niezaleznie od statusu zakonczenia runu.
+Coverage w JSON zawiera `branch`, `branchExists` i `files`, bez pola
+`complete`. UI wyznacza kompletnosc tak samo jak `BranchCoverage.complete()`:
+branch istnieje, sa trzy oczekiwane pliki i wszystkie maja status AVAILABLE.
+Ta sama ocena obowiazuje w naglowku, tooltipie i udostepnianym podsumowaniu.
+Kompletne odczyty plikow nie uniewazniaja deterministycznego INCOMPLETE,
+np. z powodu bledu parsowania albo nierozwiazanej referencji.
+REVIEW_REQUIRED ma komunikat `Wymaga weryfikacji`. Przy kompletnej coverage
+ograniczenia runu/AI sa opisane jako `Analiza z ograniczeniami`; trwajaca
+analiza zachowuje loader w tabie i etap w tooltipie. Wynik bez ograniczen
+pozostawia sama ikone informacji. Przed wynikiem i przy bledzie pozostaje
+zwiezly kontekst branchy oraz dotychczasowa informacja o etapie lub bledzie.
+Sekcja `Uwagi do porównania` jest widoczna tylko wtedy, gdy aktywny wynik
+zawiera ustalenia. Zero ustalen ukrywa cala sekcje, licznik i filtr, bez zmiany
+komunikatu o kompletnosci porownania. Jezeli ustalenia istnieja, ale filtr
+waznosci nie zwraca dopasowan, sekcja i filtr pozostaja widoczne z komunikatem
+`Brak ustalen dla wybranego filtra.`.
+
+Feature-owned `config-drift-viewer-findings.presentation.ts` mapuje ustalenia
+na czytelne tytuly, opisy, etykiety waznosci i lokalizacje. Ten sam mapper
+zasila karty, BASIC Share i prezentacje sekcji `deterministic-findings`
+raportu DEEP na ekranie oraz przy udostepnianiu. Prezentacja nie uruchamia AI
+i nie modyfikuje zapisanego raportu, kontraktu findings ani eksportu JSON V1.
+Kody i identyfikatory pozostaja w danych diagnostycznych i opcjonalnych
+metadanych; glowna tresc uwag oraz etykiety odnosnikow ich nie pokazuja.
+
+Opis coverage wynika z faktycznego statusu pliku albo brancha, a nie z samego
+statusu INCOMPLETE. Uwaga parsera korzysta z zapisanego pliku, linii i klucza;
+nieobslugiwana skladnia jest ograniczeniem analizatora, nie dowodem bledu
+konfiguracji. Nierozwiazane odwolania i cykle wskazuja dotkniete srodowisko,
+parametr oraz plik odnaleziony przez role i indeks dokumentu. Informacja o
+wartosci wrazliwej nie zawiera jej wartosci ani tokenu. Brak lokalizacji lub
+nieznany kod prowadzi do jawnego, neutralnego komunikatu bez zgadywania
+przyczyny. Opisy wskazuja wplyw na porownanie i co nalezy sprawdzic.
 
 ## Przeplyw wspolny
 
@@ -178,20 +237,33 @@ skalarnych, list i map. Uzycie `:` nie tworzy issue parsera ani unresolved
 reference.
 
 Projekcja operatorska jest prezentowana jako pelne drzewo source/target.
-Kardynalnosc kolekcji nie jest wyswietlana. Sygnal zmiany wystepuje tylko przy
-lisciu: czerwony dla dodania/usuniecia, pomaranczowy dla zmiany lub zmiany typu
-i zolty dla zmiany efektywnej; opis pozostaje w tooltipie. Niezmieniony lisc
-pokazuje jawnie `source = target` oraz wspolna wartosc bez znacznika.
+Zachowuje uklad przypominajacy plik z wcieciami i separatorami dokumentow.
+Kod korzysta ze wspolnego fontu monospace, rozmiaru 14 px i interlinii 1.7;
+klucze maja zwykla wage. Naglowki plikow i pomocnicze etykiety sa spokojniejsze
+od samych wartosci. Naglowek pliku pokazuje po lewej jego sciezke, a po prawej
+nazwy srodowisk z projekcji wyniku i obecnosc pliku, np.
+`dev: obecny → test: brak pliku`. Nie ma osobnego wiersza `path-comparison`
+ani powtorzenia sciezki, roli i formatu pod tytulem. Format i liczba zmian sa
+dostepne w tooltipie sciezki. Gdy obie sciezki istnieja i sa rozne, naglowek
+pokazuje `sciezka zrodlowa → sciezka docelowa`. Na waskim ekranie nazwy
+srodowisk przechodza pod sciezke i pozostaja widoczne.
+Wciecia maja staly krok 20 px z delikatnymi prowadnicami.
+Kardynalnosc kolekcji nie jest wyswietlana. Wiersze nie maja kolorowych kropek
+ani pustej kolumny znacznikow; klucze zaczynaja sie bezposrednio na swoim
+wcieciu. Rodzaj zmiany liscia pozostaje w tooltipie przy wartosci oraz
+w opisie dla czytnikow ekranu. Niezmieniony lisc pokazuje jawnie
+`source = target` oraz wspolna wartosc bez dodatkowego opisu zmiany.
 Rozne wartosci skalarne sa prezentowane jako `source != target` i inline diff:
 dla tekstu z czerwonym fragmentem usunietym oraz zielonym fragmentem dodanym,
 a dla pozostalych typow z cala wartoscia source oznaczona na czerwono i cala
 wartoscia target oznaczona na zielono.
 Dodanie i usuniecie sa prezentowane bez ramek i etykiet source/target:
-strzalka pokazuje kierunek, brakujaca strona jest oznaczona jako czerwone
-`BRAK` z tlem i obramowaniem, dodana wartosc jest zielona, a usuwana wartosc
-jest czerwona i przekreslona.
-Zmiana efektywna zachowuje literalna wartosc w drzewie, a po hover/focus
-pokazuje po prawej resolved source/target inline diff z tym samym kodem
+strzalka pokazuje kierunek, brakujaca strona ma neutralna etykiete `BRAK`
+bez tla i ramki, dodana wartosc jest zielona, a usuwana wartosc
+jest czerwona z cienkim, przygaszonym przekresleniem. Kolory wartosci i tla
+pochodza ze wspolnych tokenow semantycznych.
+Zmiana efektywna zachowuje literalna wartosc w drzewie i
+pokazuje obok resolved source/target inline diff z tym samym kodem
 czerwono-zielonym.
 Wielodokumentowy YAML jest renderowany jako jeden ciagly plik z separatorami
 `---`, bez zagniezdzonych ramek i naglowkow `Dokument N`. Profil
@@ -255,8 +327,10 @@ AI zapisuje tylko feature-owned sekcje reportu. Parser odrzuca niezgodny
 response contract, a agreement evaluator porownuje referencje i wnioski z
 deterministycznym wynikiem. Backend laczy krotkie adnotacje z liniami diffu
 tylko przez direct albo finding-transitive IDs i nie podmienia tokenow w
-swobodnym tekscie AI. UI zawsze etykietuje `FACT`, `DERIVED` i
-`AI INTERPRETATION`.
+swobodnym tekscie AI. UI oddziela wynik deterministyczny od `DERIVED` i
+`AI INTERPRETATION`. Klasyfikacja deterministycznego porownania jako `FACT`
+jest w tooltipie jego kompaktowego naglowka; sekcje i adnotacje AI zachowuja
+widoczne etykiety interpretacji.
 
 ## Bledy i bezpieczenstwo integracji
 

@@ -163,6 +163,56 @@ korzysta z niego Release summary. Pozostale ekrany zachowuja swoje zasady
 wyboru. Wartosci odtworzone z historii/importu spoza katalogu pozostaja
 widoczne jako niedostepna opcja, bez automatycznej zmiany i emisji eventu.
 
+## Zakladki wynikow
+
+`AnalysisResultTabsComponent` uzywa paginowanego naglowka Angular Material
+(`MatTabNav`) i powiazanego `MatTabNavPanel`. Po przekroczeniu szerokosci
+pojawiaja sie strzalki paginacji; nie dodawaj natywnego scrollbara ani
+ujemnych marginesow laczacych zakladki z osobna karta. Naglowek ma 48 px,
+neutralne tlo i jeden niebieski wskaznik aktywnej zakladki. Style korzystaja
+z tokenow przez `mat.tabs-overrides`.
+
+Ekran przekazuje `tabs`, `activeTabId`, `idPrefix`, `ariaLabel`, obsluguje
+`tabSelected` i projektuje tylko aktywna tresc wewnatrz komponentu.
+Material posiada role tablist/tab/tabpanel, roving tabindex i powiazania
+ARIA; nie dodawaj drugiego tabpanel w ekranie. Strzalki i Home/End przesuwaja
+focus, a Enter/Space zatwierdzaja wybor. Panel jest dostepny przez Tab.
+Feature zachowuje stan wyboru i lifecycle tresci; shared nie pobiera danych
+ani nie uruchamia pracy przy nawigacji.
+
+`AnalysisResultTabsComponent` posiada nazwe zakladki i opcjonalny neutralny
+`status` z `kind` (`loading`, `info`, `error`), `label` oraz `tooltip`.
+Feature mapuje status domenowy na ten opis; shared komponent nie interpretuje
+statusow joba. Brak `status` oznacza sama nazwe, bez pustego miejsca na ikone.
+
+`loading` pokazuje loader 14 px i `aria-busy`; `info` i `error` pokazuja
+pojedyncza ikone. Etykieta stanu pozostaje w dostepnej nazwie zakladki,
+a Material Tooltip dziala na hover i focus calej zakladki, takze nad ikona.
+Nie dodawaj zagniezdzonego przycisku do ikony. Loader respektuje
+`prefers-reduced-motion`. Zmiana stanu nie zmienia wyboru ani powiazania
+zakladki z panelem.
+
+Config Drift Viewer uzywa tych wskaznikow dla komponentow batcha.
+Incident Analysis (`AnalysisFinalResultComponent`) przekazuje nazwy sekcji
+bez wskaznikow. W obu przypadkach uzywaj tego samego komponentu.
+
+W Config Drift zakladki, kontekst aktywnego runu i jego wynik maja jedna
+wspolna powierzchnie. Nad plikami jest jeden kompaktowy naglowek: kierunek
+porownania, liczba zmian i plikow calego porownania, istotny komunikat o stanie,
+przelacznik Zmiany/Caly plik i Share. Nie powtarzaj nazwy aktywnej zakladki
+ani naglowkow Configuration result / Roznice w plikach. Metadane runu,
+dokumentow, referencji i coverage pozostaja w tooltipie informacji,
+dostepnym tez na focus. Niepelne dane sa widocznym komunikatem, nawet gdy run
+jest zakonczony albo diff jest pusty. Kolumny FACT/AI nie tworza kolejnych
+kart z cieniem. Przebieg pracy pozostaje w shared aside.
+
+Ustalenia Config Drift sa prezentowane jako `Uwagi do porównania`:
+czytelny tytul, opis i lokalizacja zamiast kodu oraz identyfikatora.
+Karty i udostepniany wynik korzystaja z jednego deterministycznego mappera
+feature'a. Szczegoly interpretacji i diagnostyki opisuje
+[runtime flow](config-drift-viewer-runtime-flow.md). Sekcja znika przy zerowej
+liczbie ustalen; pusty wynik filtra zachowuje naglowek, filtr i komunikat.
+
 ## Weryfikacja zmian
 
 Dla zmiany wspolnej kontrolki sprawdz jej zachowanie i dotknietych konsumentow:

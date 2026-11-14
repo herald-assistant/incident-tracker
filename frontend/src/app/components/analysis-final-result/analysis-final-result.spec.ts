@@ -42,15 +42,24 @@ describe('AnalysisFinalResultComponent', () => {
     expect(compiled.textContent).toContain('Proces biznesowy zatrzymuje się na walidacji.');
     expect(compiled.textContent).not.toContain('References');
     expect(compiled.textContent).toContain('Limits, questions and references');
+    const panel = compiled.querySelector('[role="tabpanel"]')!;
+    expect(panel.textContent).toContain('Proces biznesowy zatrzymuje się na walidacji.');
+    expect(panel.textContent).not.toContain('Timeout powstaje w CustomerClient.');
 
     clickButtonContaining(compiled, 'Rezultat analizy technicznej');
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(compiled.textContent).toContain('Timeout powstaje w CustomerClient.');
     expect(compiled.textContent).toContain('References');
     expect(compiled.textContent).toContain('CustomerClient.call');
     expect(compiled.textContent).toContain('Visibility limits');
     expect(compiled.textContent).not.toContain('Open questions');
+    expect(panel.textContent).toContain('Timeout powstaje w CustomerClient.');
+    expect(panel.textContent).not.toContain('Proces biznesowy zatrzymuje się na walidacji.');
+    const activeTab = compiled.querySelector('[role="tab"][aria-selected="true"]')!;
+    expect(panel.getAttribute('aria-labelledby')).toBe(activeTab.id);
+    expect(activeTab.getAttribute('aria-controls')).toBe(panel.id);
   });
 
   async function renderResult(

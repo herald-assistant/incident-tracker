@@ -1,8 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatTooltipHarness } from '@angular/material/tooltip/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 
+import { choice } from '../../../../../testing/form-controls';
 import {
   AnalysisAiModelOptionsResponse,
   GitHubAuthStatus
@@ -12,6 +17,7 @@ import { AnalysisJobPollingService } from '../../../../core/services/analysis-jo
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { GithubAuthService } from '../../../../core/services/github-auth.service';
 import {
+  ConfigDriftViewerBranchCoverage,
   ConfigDriftViewerDeepPreflight,
   ConfigDriftViewerDiffProjection,
   ConfigDriftViewerComponentRunSnapshot,
@@ -197,24 +203,31 @@ describe('ConfigDriftViewerPageComponent', () => {
       targetBranch: 'test2'
     });
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Configuration result');
-    expect(compiled.textContent).toContain('REVIEW_REQUIRED');
-    expect(compiled.textContent).toContain('różnice: 2');
-    expect(compiled.textContent).toContain('findings: 1');
-    expect(compiled.textContent).toContain('dev1: Complete, 0 plików');
-    expect(compiled.textContent).toContain('test2: Complete, 0 plików');
+    const header = compiled.querySelector('.configuration-diff__header')!;
+    expect(header.querySelector('h2')?.textContent?.trim()).toBe('dev1 → test2');
+    expect(header.textContent).toContain('3 zmiany · 2 pliki');
+    expect(header.textContent).toContain('Wymaga weryfikacji');
+    expect(header.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
+    expect(compiled.querySelector('.run-context')).toBeNull();
+    expect(compiled.textContent).not.toContain('Configuration result');
+    expect(compiled.textContent).not.toContain('Różnice w plikach konfiguracyjnych');
+    expect(compiled.textContent).not.toContain('DETERMINISTYCZNE FAKTY');
+    const tooltip = fixture.debugElement.query(By.css('.comparison-notice')).injector.get(MatTooltip);
+    expect(tooltip.message).toContain('Ustalenia: 1');
+    expect(tooltip.message).toContain('dev1: kompletne dane');
+    expect(tooltip.message).toContain('test2: kompletne dane');
     expect(compiled.querySelector('.metric-grid')).toBeNull();
     expect(compiled.querySelector('.coverage-grid')).toBeNull();
     expect(compiled.textContent).not.toContain('AI second opinion');
     expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Raport operatora');
     expect(compiled.querySelector('button[aria-label="Udostępnij wynik"]')).not.toBeNull();
-    expect(fixture.componentInstance.shareDocument()?.markdown).toContain('## Ustalenia deterministyczne');
+    expect(fixture.componentInstance.shareDocument()?.markdown).toContain('## Uwagi do porównania');
     expect(fixture.componentInstance.shareDocument()?.markdown).not.toContain('Nie potwierdzono runtime.');
     expect(fixture.componentInstance.shareDocument()?.markdownWithMeta).toContain('Nie potwierdzono runtime.');
   });
 
-  it('should render ordered component tabs, switch file results and isolate a failed component', () => {
+  it('should keep context and results in the active tab panel and isolate a failed component', async () => {
     const backendJob = job({
       mode: 'BASIC',
       status: 'COMPLETED',
@@ -269,36 +282,238 @@ describe('ConfigDriftViewerPageComponent', () => {
       components: [backend, customerProfile, notifications]
     });
     fixture.detectChanges();
+    await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
     let tabs = Array.from(
       compiled.querySelectorAll<HTMLButtonElement>('.analysis-result-tab')
     );
-    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
-      'Backend · Zakończona',
-      'Customer Profile · Zakończona',
-      'Notifications · Błąd'
+    expect(tabs.map((tab) => tab.querySelector('.analysis-result-tab__label')?.textContent?.trim())).toEqual([
+      'Backend',
+      'Customer Profile',
+      'Notifications'
     ]);
+    expect(tabs[0]?.querySelector('.analysis-result-tab__status-icon')).toBeNull();
+    expect(tabs[1]?.querySelector('.analysis-result-tab__status-icon')).toBeNull();
+    expect(tabs[2]?.querySelector('.analysis-result-tab__status-icon--error')).not.toBeNull();
+    expect(tabs[2]?.getAttribute('aria-label')).toContain('Analiza zakończona błędem');
+    expect(fixture.componentInstance.componentTabs()[2].status?.tooltip)
+      .toContain('Nie udało się pobrać konfiguracji Notifications.');
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
     expect(fixture.nativeElement.textContent).toContain('backend/application.yml.kv');
+    const panel = compiled.querySelector('[role="tabpanel"]')!;
+    expect(panel.querySelector('.configuration-diff__header h2')?.textContent).toBe('dev1 → test2');
+    expect(fixture.componentInstance.comparisonDetails()).toContain('Komponent: Backend');
+    expect(panel.querySelector('app-config-drift-viewer-diff-renderer')?.textContent)
+      .toContain('backend/application.yml.kv');
+    expect(panel.getAttribute('aria-labelledby')).toBe(tabs[0].id);
 
     tabs[1]?.click();
     fixture.detectChanges();
+    await fixture.whenStable();
     expect(fixture.componentInstance.activeComponent()?.systemId).toBe('customer-profile');
     expect(fixture.nativeElement.textContent).toContain('customer-profile/application.yml.kv');
     expect(fixture.nativeElement.textContent).not.toContain('backend/application.yml.kv');
+    expect(panel.querySelector('.configuration-diff__header h2')?.textContent).toBe('dev1 → test2');
+    expect(fixture.componentInstance.comparisonDetails()).toContain('Komponent: Customer Profile');
+    expect(panel.querySelector('app-config-drift-viewer-diff-renderer')?.textContent)
+      .toContain('customer-profile/application.yml.kv');
+    expect(panel.getAttribute('aria-labelledby')).toBe(tabs[1].id);
 
     tabs = Array.from(
       compiled.querySelectorAll<HTMLButtonElement>('.analysis-result-tab')
     );
     tabs[2]?.click();
     fixture.detectChanges();
+    await fixture.whenStable();
     expect(fixture.componentInstance.activeComponent()?.systemId).toBe('notifications');
     expect(fixture.nativeElement.textContent).toContain(
       'Nie udało się pobrać konfiguracji Notifications.'
     );
     expect(fixture.nativeElement.textContent).toContain('RUNTIME_CONFIG_SOURCE_FAILED');
-    expect(fixture.nativeElement.textContent).not.toContain('Configuration result');
+    expect(panel.querySelector('.configuration-diff__header')).toBeNull();
+    expect(panel.querySelector('.run-context h2')?.textContent).toBe('dev1 → test2');
+    expect(fixture.componentInstance.comparisonDetails()).toContain('Komponent: Notifications');
+    expect(panel.querySelector('[role="alert"]')?.textContent).toContain('RUNTIME_CONFIG_SOURCE_FAILED');
+    expect(panel.querySelector('app-config-drift-viewer-diff-renderer')).toBeNull();
+    expect(panel.getAttribute('aria-labelledby')).toBe(tabs[2].id);
+
+    tabs[0].click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(panel.querySelector('[role="alert"]')).toBeNull();
+    expect(panel.querySelector('app-config-drift-viewer-diff-renderer')?.textContent)
+      .toContain('backend/application.yml.kv');
+    expect(compiled.querySelectorAll('.component-result [role="tabpanel"]')).toHaveLength(1);
+  });
+
+  it('should replace per-component loaders with success or limitations without changing the selected tab', () => {
+    const running = job({ status: 'RUNNING', result: null, completedAt: null });
+    const backend = running.components[0];
+    const profile: ConfigDriftViewerComponentRunSnapshot = {
+      ...backend, componentRunId: 'job-1:1', systemId: 'customer-profile',
+      systemLabel: 'Customer Profile', status: 'QUEUED'
+    };
+    fixture.componentInstance.job.set({ ...running, components: [backend, profile] });
+    fixture.componentInstance.activeComponentId.set('customer-profile');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelectorAll('.analysis-result-tab__spinner')).toHaveLength(2);
+    expect(fixture.componentInstance.componentTabs().map(tab => tab.status?.label))
+      .toEqual(['Analiza w toku', 'Oczekuje na uruchomienie']);
+
+    const limitedResult = basicResult();
+    limitedResult.visibilityLimits = ['Brak pliku w test2.'];
+    fixture.componentInstance.job.set({
+      ...running, status: 'COMPLETED_WITH_LIMITATIONS',
+      components: [
+        { ...backend, status: 'COMPLETED', result: basicResult() },
+        { ...profile, status: 'COMPLETED_WITH_LIMITATIONS', result: limitedResult }
+      ]
+    });
+    fixture.detectChanges();
+
+    const tabs = compiled.querySelectorAll('.analysis-result-tab');
+    expect(compiled.querySelector('.analysis-result-tab__spinner')).toBeNull();
+    expect(tabs[0].textContent?.trim()).toBe('Backend');
+    expect(tabs[0].querySelector('.analysis-result-tab__status-icon')).toBeNull();
+    expect(tabs[1].querySelector('.analysis-result-tab__status-icon')?.textContent?.trim()).toBe('info');
+    expect(tabs[1].getAttribute('aria-label')).toContain('Analiza zakończona z ograniczeniami');
+    expect(fixture.componentInstance.componentTabs()[1].status?.tooltip).toContain('Brak pliku w test2.');
+    expect(fixture.componentInstance.activeComponent()?.systemId).toBe('customer-profile');
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('should retain incomplete coverage warnings for a completed run without differences, independently of edited inputs', async () => {
+    const comparison = basicResult();
+    comparison.deterministicResult.status = 'NO_BLOCKING_ANOMALIES';
+    comparison.deterministicResult.differences = [];
+    comparison.deterministicResult.findings = [];
+    comparison.deterministicResult.targetCoverage = {
+      branch: 'test2', branchExists: true,
+      files: [{
+        role: 'LOCAL_VAR', path: 'crm/local.var', status: 'MISSING',
+        commitId: null, lastCommitId: null, lastModifiedAt: null, sizeBytes: null, errorCode: null
+      }]
+    };
+    comparison.configurationDiff.files = [];
+    fixture.componentInstance.job.set(job({ mode: 'BASIC', status: 'COMPLETED', result: comparison, report: null }));
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const header = compiled.querySelector('.configuration-diff__header')!;
+    expect(header.textContent).toContain('0 zmian · 0 plików');
+    expect(header.textContent).toContain('Niepełne porównanie');
+    expect(compiled.textContent).not.toContain('Uwagi do porównania');
+    expect(compiled.querySelector('[aria-label="Filtr ważności uwag"]')).toBeNull();
+    expect(compiled.querySelector('.finding-list')).toBeNull();
+    const tooltip = await TestbedHarnessEnvironment.loader(fixture).getHarness(
+      MatTooltipHarness.with({ selector: '.comparison-notice' })
+    );
+    await tooltip.show();
+    expect(await tooltip.getTooltipText()).toContain('test2: niepełne dane');
+    expect(await tooltip.getTooltipText()).toContain('crm/local.var: brak pliku');
+    expect(await tooltip.getTooltipText()).toContain('Przebieg: Analiza zakończona');
+    await tooltip.hide();
+
+    fixture.componentInstance.sourceBranchControl.setValue('other-dev');
+    fixture.componentInstance.targetBranchControl.setValue('other-test');
+    fixture.detectChanges();
+    expect(header.querySelector('h2')?.textContent).toBe('dev1 → test2');
+    expect(fixture.componentInstance.comparisonDetails()).toContain('test2: niepełne dane');
+    expect(fixture.componentInstance.comparisonDetails()).not.toContain('other-test');
+  });
+
+  it('should keep the findings section and allow resetting a filter with no matches', async () => {
+    fixture.componentInstance.job.set(job({ status: 'COMPLETED', result: basicResult(), report: null }));
+    fixture.componentInstance.findingSeverityFilter.set('INFO');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const findings = compiled.querySelector('.finding-list')!;
+    const section = findings.closest('section')!;
+    expect(section.querySelector('h3')?.textContent).toBe('Uwagi do porównania');
+    expect(section.querySelector('.result-section__heading p')?.textContent).toBe('0 z 1');
+    expect(findings.querySelector('.finding-card')).toBeNull();
+    expect(findings.textContent).toContain('Brak ustaleń dla wybranego filtra.');
+
+    const filter = await choice(fixture, '[aria-label="Filtr ważności uwag"]');
+    await filter.clickOptions({ text: 'Wszystkie poziomy' });
+    fixture.detectChanges();
+
+    expect(section.querySelector('.result-section__heading p')?.textContent).toBe('1 z 1');
+    expect(findings.querySelectorAll('.finding-card')).toHaveLength(1);
+    expect(findings.querySelector('.empty-inline')).toBeNull();
+  });
+
+  it.each([
+    { scenario: 'missing coverage', coverage: false, status: 'COMPLETED', limitedAi: false, label: 'Niepełne porównanie' },
+    { scenario: 'AI limitations with complete file coverage', coverage: true, status: 'COMPLETED_WITH_LIMITATIONS', limitedAi: true, label: 'Analiza z ograniczeniami' },
+    { scenario: 'ongoing analysis after complete deterministic comparison', coverage: true, status: 'RUNNING', limitedAi: false, label: 'Analiza w toku' },
+    { scenario: 'complete comparison without limitations', coverage: true, status: 'COMPLETED', limitedAi: false, label: '' }
+  ])('should distinguish $scenario in the compact notice', ({ coverage, status, limitedAi, label }) => {
+    const comparison = basicResult();
+    comparison.status = limitedAi ? 'INCOMPLETE' : 'NO_BLOCKING_ANOMALIES';
+    comparison.deterministicResult.status = 'NO_BLOCKING_ANOMALIES';
+    comparison.deterministicResult.findings = [];
+    if (!coverage) comparison.deterministicResult.sourceCoverage = null;
+    if (limitedAi) {
+      comparison.mode = 'DEEP';
+      comparison.aiSecondOpinion = { ...result().aiSecondOpinion!, visibilityLimits: ['Nie zweryfikowano wpływu na proces CRM.'] };
+    }
+    fixture.componentInstance.job.set(job({ status, result: comparison, report: null }));
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const notice = compiled.querySelector('.configuration-diff__header .comparison-notice')!;
+    expect(notice.getAttribute('aria-label')).toBe(label || 'Szczegóły porównania');
+    expect(notice.getAttribute('tabindex')).toBe('0');
+    expect(notice.textContent?.replace('info', '').trim()).toBe(label);
+    if (limitedAi) {
+      expect(fixture.componentInstance.comparisonDetails()).toContain('test2: kompletne dane');
+      expect(fixture.componentInstance.comparisonDetails()).toContain('Nie zweryfikowano wpływu na proces CRM.');
+    }
+  });
+
+  it.each(['MISSING', 'AMBIGUOUS', 'TRUNCATED', 'ERROR', 'BRANCH_MISSING'])(
+    'should preserve the incomplete warning when a required file is %s', (status) => {
+      const comparison = basicResult();
+      comparison.deterministicResult.targetCoverage!.files[2].status = status;
+      fixture.componentInstance.job.set(job({ status: 'COMPLETED', result: comparison, report: null }));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.comparison-notice').textContent).toContain('Niepełne porównanie');
+      expect(fixture.componentInstance.comparisonDetails()).toContain('test2: niepełne dane');
+      expect(fixture.componentInstance.comparisonDetails()).toContain('crm/customer-service/application.yml.kv:');
+    }
+  );
+
+  it.each([
+    { branchExists: false, fileCount: 3, detail: 'branch nie istnieje' },
+    { branchExists: true, fileCount: 0, detail: 'niepełne dane' },
+    { branchExists: true, fileCount: 2, detail: 'niepełne dane' }
+  ])('should reject incomplete coverage with branchExists=$branchExists and $fileCount files', ({ branchExists, fileCount, detail }) => {
+    const comparison = basicResult();
+    const coverage = comparison.deterministicResult.targetCoverage!;
+    coverage.branchExists = branchExists;
+    coverage.files = coverage.files.slice(0, fileCount);
+    fixture.componentInstance.job.set(job({ status: 'COMPLETED', result: comparison, report: null }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.comparison-notice').textContent).toContain('Niepełne porównanie');
+    expect(fixture.componentInstance.comparisonDetails()).toContain(`test2: ${detail}`);
+  });
+
+  it('should retain an incomplete deterministic result even when every file was read', () => {
+    const comparison = basicResult();
+    comparison.deterministicResult.status = 'INCOMPLETE';
+    fixture.componentInstance.job.set(job({ status: 'COMPLETED_WITH_LIMITATIONS', result: comparison, report: null }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.comparison-notice').textContent).toContain('Niepełne porównanie');
+    expect(fixture.componentInstance.comparisonDetails()).toContain('dev1: kompletne dane');
+    expect(fixture.componentInstance.comparisonDetails()).toContain('test2: kompletne dane');
   });
 
   it('should show the DEEP blocker and prevent starting the job', () => {
@@ -372,7 +587,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(polling.poll).toHaveBeenCalledTimes(1);
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Configuration result');
+    expect(compiled.querySelector('.configuration-diff__header')).not.toBeNull();
     expect(compiled.textContent).toContain('notifications.endpoint');
     expect(compiled.textContent).toContain('AI second opinion');
     expect(compiled.textContent).toContain('AI INTERPRETATION');
@@ -395,8 +610,8 @@ describe('ConfigDriftViewerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Configuration result');
-    expect(compiled.textContent).toContain('REVIEW_REQUIRED');
+    expect(compiled.querySelector('.configuration-diff__header')).not.toBeNull();
+    expect(compiled.textContent).toContain('Wymaga weryfikacji');
     expect(compiled.textContent).not.toContain('AI second opinion');
     expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Systemy, kod i ownership');
@@ -404,6 +619,11 @@ describe('ConfigDriftViewerPageComponent', () => {
 
   it('should present parser root cause and hardcoded sensitive additions as critical findings', () => {
     const criticalResult = basicResult();
+    criticalResult.deterministicResult.references = [{
+      referenceId: 'reference-39', sourceRole: 'APPLICATION_YAML', documentIndex: 0,
+      sourcePath: 'customer.parentId', targetPath: 'local.endpoints.crmRecords.customerRecordParentNodeId',
+      referenceKind: 'SPRING_PLACEHOLDER', sourceStatus: 'RESOLVED', targetStatus: 'UNRESOLVED'
+    }];
     criticalResult.deterministicResult.findings = [
       {
         findingId: 'finding-parser',
@@ -433,12 +653,51 @@ describe('ConfigDriftViewerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Błędna składnia blokuje rozwiązanie referencji');
-    expect(compiled.textContent).toContain('Nierozwiązana referencja jest skutkiem tego samego błędu składni.');
+    expect(compiled.textContent).toContain('Analizator nie obsługuje tej składni');
+    expect(compiled.textContent).toContain('Z tym samym problemem powiązano nieustaloną wartość zmiennej.');
     expect(compiled.textContent).toContain('global.var:196');
-    expect(compiled.textContent).toContain('Dodano literalną wartość wrażliwą');
-    expect(compiled.textContent).toContain('Popraw ją przed wdrożeniem.');
-    expect(buttonContaining(compiled, 'Reference · reference-39')).not.toBeNull();
+    expect(compiled.textContent).toContain('Dodano wrażliwą wartość bezpośrednio w konfiguracji');
+    expect(compiled.textContent).toContain('Sprawdź ją i zastąp takim odwołaniem przed wdrożeniem.');
+    expect(compiled.querySelector('.finding-severity')?.textContent).toBe('Błąd');
+    const mainText = compiled.querySelector('.finding-list')!.textContent!;
+    const shared = fixture.componentInstance.shareDocument()!;
+    for (const view of fixture.componentInstance.findingViews()) {
+      expect(mainText).toContain(view.title);
+      expect(mainText).toContain(view.description);
+      expect(shared.markdown).toContain(view.title);
+      expect(shared.markdown).toContain(view.description);
+      for (const location of view.locations) {
+        expect(mainText).toContain(location);
+        expect(shared.markdown).toContain(location);
+      }
+      expect(mainText).not.toContain(view.id);
+      expect(mainText).not.toContain(view.code);
+      expect(shared.markdown).not.toContain(view.code);
+      expect(shared.markdownWithMeta).toContain(view.code);
+    }
+    expect(mainText).not.toContain('reference-39');
+    buttonContaining(compiled, 'Pokaż powiązanie: customer.parentId')!.click();
+    expect(fixture.componentInstance.focusedReferenceId()).toBe('reference-39');
+  });
+
+  it('should present and share readable notes from an existing report without mutating its stored sections', () => {
+    const snapshot = job();
+    const savedReport = snapshot.components[0].report!;
+    savedReport.sections = [{
+      id: 'deterministic-findings', title: 'Deterministic findings', order: 1,
+      markdown: 'finding-1 · UNRESOLVED_REFERENCE', meta: savedReport.meta
+    }];
+    fixture.componentInstance.job.set(snapshot);
+    fixture.detectChanges();
+
+    const view = fixture.componentInstance.findingViews()[0];
+    const report = fixture.componentInstance.presentationReport()!;
+    expect(report.sections[0].title).toBe('Uwagi do porównania');
+    expect(report.sections[0].markdown).toContain(view.title);
+    expect(fixture.componentInstance.shareDocument()?.markdown).toContain(view.title);
+    expect(fixture.componentInstance.shareDocument()?.markdown).not.toContain('UNRESOLVED_REFERENCE');
+    expect(fixture.nativeElement.querySelector('app-analysis-report-panel').textContent).not.toContain('UNRESOLVED_REFERENCE');
+    expect(savedReport.sections[0].markdown).toBe('finding-1 · UNRESOLVED_REFERENCE');
   });
 
   it('should expose unknown ownership and code-grounding navigation without the removed decision bar', () => {
@@ -573,6 +832,39 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1 z 3 wybranych');
     expect(fixture.componentInstance.job()?.imported).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Import read-only');
+  });
+
+  it('restores a completed local comparison using file coverage from JSON without a synthetic complete field', async () => {
+    const comparison = basicResult();
+    comparison.deterministicResult.findings = [];
+    comparison.visibilityLimits = [];
+    const completed = job({ mode: 'BASIC', status: 'COMPLETED', result: comparison, report: null });
+    const envelope = {
+      schema: 'tdw.config-drift-viewer-export', version: 1,
+      payload: { type: 'config-drift-viewer-analysis', resultContract: 'config-drift-viewer-result-v1', job: completed }
+    };
+    historyApi.getRun.mockReturnValue(of({
+      analysisId: completed.jobId, feature: 'config-drift-viewer', exportEnvelope: envelope
+    }));
+    api.importResult.mockReturnValue(of(completed));
+
+    routeParams.next(convertToParamMap({ localRunId: completed.jobId }));
+    fixture.detectChanges();
+
+    expect(api.importResult).toHaveBeenCalledWith(envelope);
+    expect(api.startJob).not.toHaveBeenCalled();
+    const header = fixture.nativeElement.querySelector('.configuration-diff__header');
+    expect(header.textContent).toContain('Wymaga weryfikacji');
+    expect(header.textContent).not.toContain('Niepełne porównanie');
+    const tooltip = await TestbedHarnessEnvironment.loader(fixture).getHarness(
+      MatTooltipHarness.with({ selector: '.comparison-notice' })
+    );
+    await tooltip.show();
+    expect(await tooltip.getTooltipText()).toContain('dev1: kompletne dane. Pliki: 3.');
+    expect(await tooltip.getTooltipText()).toContain('test2: kompletne dane. Pliki: 3.');
+    await tooltip.hide();
+    expect(fixture.componentInstance.shareDocument()?.markdown).toContain('dev1: Complete');
+    expect(fixture.componentInstance.shareDocument()?.markdown).toContain('test2: Complete');
   });
 
   it('restores an active local run and resumes polling without importing a terminal result', () => {
@@ -762,6 +1054,21 @@ function job(
   };
 }
 
+function completeCoverage(branch: string): ConfigDriftViewerBranchCoverage {
+  return {
+    branch,
+    branchExists: true,
+    files: [
+      { role: 'GLOBAL_VAR', path: 'global.var' },
+      { role: 'LOCAL_VAR', path: 'crm/customer-service/local.var' },
+      { role: 'APPLICATION_YAML', path: 'crm/customer-service/application.yml.kv' }
+    ].map(file => ({
+      ...file, status: 'AVAILABLE', commitId: 'crm-revision', lastCommitId: 'crm-revision',
+      lastModifiedAt: '2026-07-30T10:00:00Z', sizeBytes: 128, errorCode: null
+    }))
+  };
+}
+
 function result(): ConfigDriftViewerResult {
   return {
     status: 'INCOMPLETE',
@@ -774,8 +1081,8 @@ function result(): ConfigDriftViewerResult {
       sourceBranch: 'dev1',
       targetBranch: 'test2',
       status: 'REVIEW_REQUIRED',
-      sourceCoverage: { branch: 'dev1', branchExists: true, files: [], complete: true },
-      targetCoverage: { branch: 'test2', branchExists: true, files: [], complete: true },
+      sourceCoverage: completeCoverage('dev1'),
+      targetCoverage: completeCoverage('test2'),
       documents: [],
       references: [],
       differences: [
@@ -806,8 +1113,8 @@ function result(): ConfigDriftViewerResult {
       ],
       findings: [{
         findingId: 'finding-1',
-        code: 'WRONG_ENVIRONMENT_MARKER',
-        severity: 'HIGH',
+        code: 'UNRESOLVED_REFERENCE',
+        severity: 'ERROR',
         path: 'notifications.endpoint',
         differenceIds: ['difference-1'],
         referenceIds: []

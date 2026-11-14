@@ -273,43 +273,36 @@
     @if (job(); as currentJob) {
       @if (activeComponent(); as component) {
       <app-analysis-result-tabs
-        class="component-result-tabs"
+        class="component-result"
         idPrefix="config-drift-viewer-component"
         ariaLabel="Wyniki komponentów"
         [tabs]="componentTabs()"
         [activeTabId]="component.systemId"
         (tabSelected)="selectComponent($event)"
-      ></app-analysis-result-tabs>
-
-      <section
-        class="component-result-panel"
-        role="tabpanel"
-        [id]="'config-drift-viewer-component-panel-' + component.systemId"
-        [attr.aria-labelledby]="'config-drift-viewer-component-tab-' + component.systemId"
       >
-      <section class="run-context analysis-card">
+      <div class="component-result-panel">
+      @if (!component.result || component.status === 'FAILED') {
+      <header class="run-context">
         <div>
-          <p class="section-eyebrow">{{ currentJob.mode }} · {{ currentJob.repositoryId }}</p>
-          <h2>{{ component.systemLabel || component.systemId }} · {{ currentJob.sourceBranch }} → {{ currentJob.targetBranch }}</h2>
+          <h2>{{ currentJob.sourceBranch }} → {{ currentJob.targetBranch }}</h2>
           <p class="field-hint">
-            {{ component.currentStepLabel || currentJob.currentStepLabel || 'Analiza zakończona' }}
-            @if (currentJob.codeRef) {
-              <span> · code ref {{ currentJob.codeRef }}</span>
-            }
+            {{ component.currentStepLabel || currentJob.currentStepLabel }}
           </p>
         </div>
         <div class="runtime-actions">
+          <span class="comparison-notice" tabindex="0" aria-label="Szczegóły porównania"
+            [matTooltip]="comparisonDetails()" matTooltipClass="analysis-rich-tooltip" matTooltipPosition="above">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          </span>
           @if (shareDocument(); as document) {
             <app-analysis-share-menu [document]="document" />
           }
-          <span [attr.class]="statusClass(component.status)">
-            {{ statusLabel(component.status) }}
-          </span>
         </div>
-      </section>
+      </header>
+      }
 
       @if (component.status === 'FAILED') {
-        <section class="runtime-component-error analysis-card" role="alert">
+        <section class="runtime-component-error" role="alert">
           <span class="material-symbols-outlined" aria-hidden="true">error</span>
           <div>
             <p class="section-eyebrow">Błąd komponentu</p>
@@ -321,8 +314,8 @@
           </div>
         </section>
       } @else if (component.result; as result) {
-        @if (component.report; as report) {
-          <app-analysis-report-panel [report]="report"></app-analysis-report-panel>
+        @if (presentationReport(); as report) {
+          <app-analysis-report-panel [report]="report" [showTechnicalIds]="false"></app-analysis-report-panel>
         }
 
         <section
@@ -330,82 +323,75 @@
           [class.result-columns--deterministic-only]="result.mode === 'BASIC' && !result.aiSecondOpinion"
         >
           <article class="result-panel result-panel--deterministic">
-            <header>
-              <div>
-                <p class="section-eyebrow">Deterministyczne fakty · FACT</p>
-                <h2>Configuration result</h2>
-                <small class="deterministic-summary">
-                  {{ deterministicSummary(result.deterministicResult) }}
-                </small>
-              </div>
-              <span [attr.class]="statusClass(result.deterministicResult.status)">
-                {{ statusLabel(result.deterministicResult.status) }}
-              </span>
-            </header>
-
-            <section class="result-section">
               <app-config-drift-viewer-diff-renderer
                 [projection]="result.configurationDiff"
                 [annotations]="result.configurationDiffAnnotations"
                 [mode]="result.mode"
                 [focusedReferenceId]="focusedReferenceId()"
                 (referenceSelected)="focusReference($event)"
-              ></app-config-drift-viewer-diff-renderer>
-            </section>
-
-            <section class="result-section">
-              <div class="result-section__heading">
-                <div>
-                  <h3>Deterministic findings</h3>
-                  <p>{{ filteredFindings().length }} z {{ result.deterministicResult.findings.length }}</p>
-                </div>
-                <app-choice-select
-                  class="compact-select"
-                  ariaLabel="Filtr ważności findingów"
-                  [value]="findingSeverityFilter()"
-                  (valueChange)="setFindingSeverityFilter($event)"
-                >
-                  <app-choice-option value="ALL" label="Wszystkie poziomy" />
-                  @for (severity of findingSeverities(); track severity) {
-                    <app-choice-option [value]="severity" label="{{ statusLabel(severity) }}" />
-                  }
-                </app-choice-select>
-              </div>
-              <div class="finding-list">
-                @for (finding of filteredFindings(); track trackFinding($index, finding)) {
-                  <article
-                    class="finding-card"
-                    [id]="finding.findingId"
-                    [class.reference-focused]="isFocused(finding.findingId)"
-                  >
-                    <div>
-                      <span [attr.class]="statusClass(finding.severity)">{{ statusLabel(finding.severity) }}</span>
-                      <code>{{ finding.path }}</code>
-                    </div>
-                    <h4>{{ findingTitle(finding) }}</h4>
-                    @if (findingDescription(finding); as description) {
-                      <p>{{ description }}</p>
-                    }
-                    @if (findingLocation(finding); as location) {
-                      <small><strong>Lokalizacja:</strong> <code>{{ location }}</code></small>
-                    }
-                    <small>{{ finding.findingId }}</small>
-                    <div class="reference-links">
-                      @for (reference of finding.differenceIds; track reference) {
-                        <button type="button" (click)="focusReference(reference)">{{ reference }}</button>
-                      }
-                      @for (reference of finding.referenceIds; track reference) {
-                        <button type="button" (click)="focusReference(reference)">
-                          Reference · {{ reference }}
-                        </button>
-                      }
-                    </div>
-                  </article>
-                } @empty {
-                  <p class="empty-inline">Brak deterministic findings dla wybranego filtra.</p>
+              >
+                @if (comparisonNotice(); as notice) {
+                  <span comparisonStatus class="comparison-notice" tabindex="0"
+                    [class.comparison-notice--warning]="notice.warning"
+                    [attr.aria-label]="notice.label || 'Szczegóły porównania'"
+                    [matTooltip]="comparisonDetails()" matTooltipClass="analysis-rich-tooltip" matTooltipPosition="above">
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                    @if (notice.label) { <span>{{ notice.label }}</span> }
+                  </span>
                 }
-              </div>
-            </section>
+                @if (shareDocument(); as document) {
+                  <app-analysis-share-menu comparisonActions [document]="document" />
+                }
+              </app-config-drift-viewer-diff-renderer>
+
+            @if (result.deterministicResult.findings.length > 0) {
+              <section class="result-section">
+                <div class="result-section__heading">
+                  <div>
+                    <h3>{{ findingsTitle }}</h3>
+                    <p>{{ filteredFindings().length }} z {{ result.deterministicResult.findings.length }}</p>
+                  </div>
+                  <app-choice-select
+                    class="compact-select"
+                    ariaLabel="Filtr ważności uwag"
+                    [value]="findingSeverityFilter()"
+                    (valueChange)="setFindingSeverityFilter($event)"
+                  >
+                    <app-choice-option value="ALL" label="Wszystkie poziomy" />
+                    @for (severity of findingSeverities(); track severity.value) {
+                      <app-choice-option [value]="severity.value" [label]="severity.label" />
+                    }
+                  </app-choice-select>
+                </div>
+                <div class="finding-list">
+                  @for (finding of filteredFindings(); track trackFinding($index, finding)) {
+                    <article
+                      class="finding-card"
+                      [id]="finding.id"
+                      [class.reference-focused]="isFocused(finding.id)"
+                    >
+                      <div>
+                        <span class="status-pill status-pill--queued finding-severity" [attr.data-severity]="finding.severity">{{ finding.severityLabel }}</span>
+                      </div>
+                      <h4>{{ finding.title }}</h4>
+                      <p>{{ finding.description }}</p>
+                      <div class="finding-locations">
+                        @for (location of finding.locations; track location) {
+                          <small><strong>Lokalizacja:</strong> {{ location }}</small>
+                        }
+                      </div>
+                      <div class="reference-links">
+                        @for (link of finding.links; track link.target) {
+                          <button type="button" (click)="focusReference(link.target)">{{ link.label }}</button>
+                        }
+                      </div>
+                    </article>
+                  } @empty {
+                    <p class="empty-inline">Brak ustaleń dla wybranego filtra.</p>
+                  }
+                </div>
+              </section>
+            }
           </article>
 
           @if (result.mode === 'DEEP' || result.aiSecondOpinion) {
@@ -527,7 +513,7 @@
         </section>
 
         @if (result.mode === 'DEEP' && result.deepAnalysis; as deep) {
-          <section class="deep-result analysis-card">
+          <section class="deep-result">
             <header>
               <div>
                 <p class="section-eyebrow">Deep analysis · DERIVED</p>
@@ -636,7 +622,7 @@
         }
 
         @if (result.visibilityLimits.length || result.aiSecondOpinion?.visibilityLimits?.length) {
-          <section class="visibility-panel analysis-card">
+          <section class="visibility-panel">
             <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
             <div>
               <h2>Visibility limits</h2>
@@ -649,7 +635,7 @@
           </section>
         }
       } @else {
-        <section class="runtime-pending analysis-card">
+        <section class="runtime-pending">
           <span class="runtime-spinner" aria-hidden="true"></span>
           <div>
             <h2>Analiza trwa</h2>
@@ -663,6 +649,9 @@
           </div>
         </section>
       }
+
+      </div>
+      </app-analysis-result-tabs>
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy Config Drift Viewer"
@@ -700,7 +689,6 @@
           ></app-analysis-steps-panel>
         </div>
       </app-analysis-feature-aside>
-      </section>
       }
     } @else {
       <section class="runtime-empty analysis-card analysis-empty-state">

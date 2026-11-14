@@ -55,6 +55,7 @@ interface InlineValueDiff {
 })
 export class ConfigDriftViewerDiffRendererComponent {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly pluralRules = new Intl.PluralRules('pl');
 
   readonly projection = input.required<ConfigDriftViewerDiffProjection>();
   readonly annotations = input<ConfigDriftViewerDiffAnnotation[]>([]);
@@ -89,6 +90,11 @@ export class ConfigDriftViewerDiffRendererComponent {
     this.projection().files.reduce((total, file) => total + this.changeCount(file), 0)
   );
 
+  readonly comparisonCounts = computed(() => [
+    this.countLabel(this.totalChanges(), 'zmiana', 'zmiany', 'zmian'),
+    this.countLabel(this.projection().files.length, 'plik', 'pliki', 'plików')
+  ].join(' · '));
+
   constructor() {
     effect(() => {
       const referenceId = this.focusedReferenceId();
@@ -120,28 +126,13 @@ export class ConfigDriftViewerDiffRendererComponent {
     this.view.set(view);
   }
 
+  private countLabel(count: number, one: string, few: string, many: string): string {
+    const plural = this.pluralRules.select(count);
+    return `${count} ${plural === 'one' ? one : plural === 'few' ? few : many}`;
+  }
+
   protected isFocused(row: ConfigurationRenderRow): boolean {
     return row.node.differenceIds.includes(this.focusedReferenceId());
-  }
-
-  protected markerClass(kind: string): string {
-    return ['ADDED', 'REMOVED'].includes(kind)
-      ? 'change-marker--critical'
-      : ['CHANGED', 'TYPE_CHANGED'].includes(kind)
-        ? 'change-marker--changed'
-        : kind === 'EFFECTIVE_CHANGED'
-          ? 'change-marker--effective'
-          : '';
-  }
-
-  protected marker(kind: string): string {
-    return ['ADDED', 'REMOVED'].includes(kind)
-      ? '🔴'
-      : ['CHANGED', 'TYPE_CHANGED'].includes(kind)
-        ? '🟠'
-        : kind === 'EFFECTIVE_CHANGED'
-          ? '🟡'
-          : '';
   }
 
   protected changeLabel(kind: string): string {
@@ -157,11 +148,10 @@ export class ConfigDriftViewerDiffRendererComponent {
   }
 
   protected fileLabel(file: ConfigDriftViewerDiffFile): string {
+    if (file.sourcePath && file.targetPath && file.sourcePath !== file.targetPath) {
+      return `${file.sourcePath} → ${file.targetPath}`;
+    }
     return file.targetPath ?? file.sourcePath ?? this.changeLabel(file.role);
-  }
-
-  protected roleLabel(role: string): string {
-    return role.toLowerCase().replaceAll('_', ' ');
   }
 
   protected formatValue(value: ConfigDriftViewerDiffValue): string {

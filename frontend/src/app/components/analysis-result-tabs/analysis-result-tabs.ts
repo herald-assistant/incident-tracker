@@ -1,12 +1,22 @@
 import { Component, input, output } from '@angular/core';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+export interface AnalysisResultTabStatus {
+  kind: 'loading' | 'info' | 'error';
+  label: string;
+  tooltip?: string;
+}
 
 export interface AnalysisResultTabItem {
   id: string;
   tabLabel: string;
+  status?: AnalysisResultTabStatus;
 }
 
 @Component({
   selector: 'app-analysis-result-tabs',
+  imports: [MatTabsModule, MatTooltipModule],
   templateUrl: './analysis-result-tabs.html',
   styleUrl: './analysis-result-tabs.scss'
 })

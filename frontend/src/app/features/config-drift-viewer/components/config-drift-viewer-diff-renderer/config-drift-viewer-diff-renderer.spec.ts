@@ -22,7 +22,7 @@ describe('ConfigDriftViewerDiffRendererComponent', () => {
     });
   });
 
-  it('should render leaf-only markers, tooltips and unchanged values without collection counts', () => {
+  it('should describe changes at their values without marker dots or collection counts', () => {
     fixture.componentRef.setInput('projection', projection());
     fixture.componentRef.setInput('mode', 'BASIC');
     fixture.componentRef.setInput('annotations', annotations());
@@ -37,6 +37,13 @@ describe('ConfigDriftViewerDiffRendererComponent', () => {
     compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain('backend/application.yml.kv');
+    const fileHeader = fileContaining(compiled, 'backend/application.yml.kv')?.querySelector('summary');
+    expect(fileHeader?.querySelector('.file-path')?.textContent?.trim()).toBe('backend/application.yml.kv');
+    expect(fileHeader?.querySelector('.file-path')?.getAttribute('title')).toContain('YAML');
+    const environmentLabels = Array.from(fileHeader?.querySelectorAll('.file-environment') ?? [])
+      .map((environment) => environment.textContent?.replace(/\s+/g, ''));
+    expect(environmentLabels).toEqual(['dev1:obecny', 'test2:obecny']);
+    expect(compiled.querySelector('.path-comparison')).toBeNull();
     expect(compiled.textContent).toContain('spring:');
     expect(compiled.textContent).toContain('url:');
     const changedUrl = rowContaining(compiled, 'url:');
@@ -87,13 +94,19 @@ describe('ConfigDriftViewerDiffRendererComponent', () => {
     expect(compiled.textContent).not.toContain('pól');
     expect(compiled.textContent).not.toContain('elementów');
     expect(compiled.textContent).not.toContain('Ryzyko błędnej bazy');
-    expect(compiled.querySelector('[title="zmieniono"]')?.textContent).toContain('🟠');
-    expect(compiled.querySelector('[title="usunięto"]')?.textContent).toContain('🔴');
-    expect(compiled.querySelector('[title="zmiana efektywna"]')?.textContent).toContain('🟡');
+    expect(inlineDiff?.getAttribute('title')).toBe('zmieniono');
+    expect(inlineDiff?.querySelector('.inline-diff__added')?.getAttribute('title')).toBe('zmieniono · target');
+    expect(removedPresenceDiff?.getAttribute('title')).toBe('usunięto');
+    expect(addedPresenceDiff?.getAttribute('title')).toBe('dodano');
+    expect(changedUrl?.querySelector('.sr-only')?.textContent).toBe('zmieniono');
+    expect(removedUsername?.querySelector('.sr-only')?.textContent).toBe('usunięto');
+    expect(compiled.querySelector('.change-marker')).toBeNull();
     const effectiveRow = rowContaining(compiled, 'logging.level:');
     expect(effectiveRow?.querySelector('.value-comparison--same')?.textContent)
       .toContain('"${local.logging_level}"');
     const effectiveResolved = effectiveRow?.querySelector('.effective-resolved-diff');
+    expect(effectiveResolved?.getAttribute('title')).toBe('zmiana efektywna');
+    expect(effectiveRow?.querySelector('.sr-only')?.textContent).toBe('zmiana efektywna');
     expect(effectiveResolved?.textContent).toContain('resolved');
     expect(effectiveResolved?.textContent).toContain('source≠target');
     expect(effectiveResolved?.querySelector('.inline-diff__removed')?.textContent).toBe('DEBUG');
@@ -102,8 +115,8 @@ describe('ConfigDriftViewerDiffRendererComponent', () => {
       'resolved source "DEBUG", target "INFO"'
     );
     expect(compiled.querySelectorAll('.change-label')).toHaveLength(0);
-    expect(rowContaining(compiled, 'spring:')?.querySelector('.change-marker:not(.change-marker--empty)'))
-      .toBeNull();
+    expect(rowContaining(compiled, 'spring:')?.querySelector('.sr-only')).toBeNull();
+    expect(rowContaining(compiled, 'ttl:')?.querySelector('.value-comparison')?.hasAttribute('title')).toBe(false);
     expect(buttonContaining(compiled, 'Zmiany')?.getAttribute('aria-pressed')).toBe('false');
     expect(buttonContaining(compiled, 'Cały plik')?.getAttribute('aria-pressed')).toBe('true');
   });
@@ -153,6 +166,33 @@ describe('ConfigDriftViewerDiffRendererComponent', () => {
     expect(profileRow).not.toBeNull();
     expect(profileRow?.querySelector('.value-comparison--same')?.textContent).toContain('=');
     expect(applicationYaml?.textContent?.match(/on-profile:/g)).toHaveLength(1);
+  });
+
+  it('should count all compared files independently of the visible filter and YAML documents', () => {
+    const comparison = projection();
+    const local = comparison.files[1];
+    const document = local.documents[0];
+    comparison.files.push({
+      ...local, role: 'GLOBAL_VAR', sourcePath: 'global.var', targetPath: 'global.var',
+      documents: [{
+        ...document,
+        root: { ...document.root, changeKind: 'UNCHANGED', differenceIds: [], children: [] }
+      }]
+    });
+    fixture.componentRef.setInput('projection', comparison);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const counts = compiled.querySelector('.configuration-diff__counts')!;
+    const summary = counts.textContent;
+    expect(summary).toContain(' · 3 pliki');
+    expect(compiled.querySelectorAll('.configuration-file')).toHaveLength(2);
+    expect(fileContaining(compiled, 'global.var')).toBeNull();
+
+    buttonContaining(compiled, 'Cały plik')?.click();
+    fixture.detectChanges();
+    expect(compiled.querySelectorAll('.configuration-file')).toHaveLength(3);
+    expect(compiled.querySelectorAll('.configuration-document')).toHaveLength(4);
+    expect(counts.textContent).toBe(summary);
   });
 
   it('should order files from detailed kv configuration through local to global variables', () => {

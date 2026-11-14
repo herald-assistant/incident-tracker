@@ -50,6 +50,54 @@ semantycznych akcentow tylko po to, zeby rozroznic feature.
   dostepnosci i testow opisuje
   [standard UI](../../../../docs/architecture/frontend-ui-standards.md).
 
+## Config Drift Viewer
+
+Kanoniczny opis prezentacji i kontraktow jest w
+[runtime flow](../../../../docs/architecture/config-drift-viewer-runtime-flow.md)
+oraz [standardzie UI](../../../../docs/architecture/frontend-ui-standards.md).
+
+- Zachowaj projekcje przypominajaca plik zrodlowy: monospace, wciecia,
+  prowadnice i inline diff wartosci. Nie przywracaj kolorowych kropek,
+  pustej kolumny znacznikow ani ramek wokol pojedynczych wartosci.
+  Naglowek pliku pokazuje sciezke po lewej, rzeczywiste nazwy srodowisk
+  i obecnosc pliku po prawej. Nie dubluj sciezek w `path-comparison`.
+- Zakladki batcha korzystaja z `app-analysis-result-tabs` i paginacji
+  Material, bez natywnego scrollbara. Zakladki, kontekst i wynik aktywnego
+  komponentu tworza jedna powierzchnie; diff, uwagi, raport, Share i shared
+  aside musza dotyczyc tego samego wybranego komponentu.
+- Nazwa zakladki nie zawiera sufiksu statusu. `QUEUED`/`RUNNING` maja mini
+  loader, `COMPLETED` nie ma wskaznika, `COMPLETED_WITH_LIMITATIONS` ma
+  ikone info, a `FAILED` ikone bledu. Opis stanu i ograniczen przekazuj
+  przez tooltip dostepny na hover/focus oraz dostepna nazwe zakladki.
+- Gotowy wynik ma jeden naglowek nad plikami: kierunek porownania, liczbe
+  zmian i plikow, istotny stan, Zmiany/Caly plik i Share. Kierunek pochodzi
+  ze snapshotu wyniku, a licznik plikow obejmuje cale porownanie. Nie
+  powtarzaj nazwy aktywnej zakladki ani naglowkow Configuration result /
+  Roznice w plikach. Metadane runu i coverage sa w tooltipie informacji.
+  Zachowaj rozdzial faktow i interpretacji AI bez dodatkowych kart z cieniem.
+- Niepelne porownanie pozostaje widoczne niezaleznie od zakonczenia runu
+  i pustego diffu. Coverage wyznaczaj z `branchExists` oraz trzech plikow
+  o statusie `AVAILABLE`, zgodnie z backendem; JSON nie zawiera `complete`.
+  Kompletna coverage nie uniewaznia deterministycznego `INCOMPLETE`.
+- Sekcja ustalen nazywa sie `Uwagi do porównania`. Tytul, opis skutku,
+  wskazowka do weryfikacji, waznosc i lokalizacja pochodza z
+  `config-drift-viewer/utils/config-drift-viewer-findings.presentation.ts`.
+  Reuse'uj ten mapper dla kart, BASIC Share i prezentacji sekcji raportu
+  DEEP; nie tworz osobnych slownikow tekstow ani nie uruchamiaj AI.
+  Prezentacja nie mutuje zapisanego raportu, findings ani eksportu JSON.
+- Uwagi wskazuja rzeczywiste srodowisko, plik, parametr i linie, gdy dane
+  sa dostepne. Nie wywodz braku pliku z samego `INCOMPLETE` i nie nazywaj
+  nieobslugiwanej skladni dowiedzionym bledem konfiguracji. Brak danych
+  albo nieznany kod ma jawny, neutralny opis. Nie ujawniaj wartosci
+  wrazliwych ani ich tokenow w opisach. Kody i identyfikatory pozostaja
+  w diagnostyce i opcjonalnych metadanych; odnosniki maja czytelne etykiety.
+- Zero ustalen ukrywa cala sekcje wraz z filtrem. Gdy ustalenia istnieja,
+  ale filtr nie daje dopasowan, pozostaw sekcje, filtr i komunikat.
+- Przy zmianach weryfikuj zgodnosc tekstow UI/Share, rzeczywista coverage,
+  lokalizacje i brak danych, oba przypadki pustej sekcji oraz przejscie
+  miedzy komponentami. Zmiana prezentacji nie zmienia znaczenia ustalen,
+  statusow, requestu, historii/importu ani granicy BASIC/DEEP.
+
 ## Release summary
 
 W Analysis Features i Workspace Overview Release summary występuje bezpośrednio

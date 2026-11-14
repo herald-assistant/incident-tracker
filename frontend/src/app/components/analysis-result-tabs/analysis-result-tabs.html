@@ -1,17 +1,41 @@
-<div class="analysis-result-tabs" role="tablist" [attr.aria-label]="ariaLabel()">
+<nav
+  mat-tab-nav-bar
+  class="analysis-result-tabs"
+  [tabPanel]="panel"
+  [mat-stretch-tabs]="false"
+  [attr.aria-label]="ariaLabel()"
+>
   @for (tab of tabs(); track tab.id) {
     <button
+      mat-tab-link
       [id]="idPrefix() + '-tab-' + tab.id"
       class="analysis-result-tab"
-      [class.analysis-result-tab--active]="activeTabId() === tab.id"
+      [active]="activeTabId() === tab.id"
       type="button"
-      role="tab"
-      [attr.aria-controls]="idPrefix() + '-panel-' + tab.id"
-      [attr.aria-selected]="activeTabId() === tab.id"
-      [attr.tabindex]="activeTabId() === tab.id ? 0 : -1"
+      [attr.aria-label]="tab.status ? tab.tabLabel + ' · ' + tab.status.label : null"
+      [attr.aria-busy]="tab.status?.kind === 'loading' ? 'true' : null"
+      [matTooltip]="tab.status?.tooltip || tab.status?.label || ''"
+      [matTooltipDisabled]="!tab.status"
+      matTooltipPosition="above"
+      matTooltipClass="analysis-rich-tooltip"
+      [matTooltipShowDelay]="120"
       (click)="tabSelected.emit(tab.id)"
     >
-      {{ tab.tabLabel }}
+      <span class="analysis-result-tab__label">{{ tab.tabLabel }}</span>
+      @if (tab.status; as status) {
+        @if (status.kind === 'loading') {
+          <span class="analysis-result-tab__spinner" aria-hidden="true"></span>
+        } @else {
+          <span
+            class="analysis-result-tab__status-icon material-symbols-outlined"
+            [class.analysis-result-tab__status-icon--error]="status.kind === 'error'"
+            aria-hidden="true"
+          >{{ status.kind === 'error' ? 'error' : 'info' }}</span>
+        }
+      }
     </button>
   }
-</div>
+</nav>
+<mat-tab-nav-panel #panel [id]="idPrefix() + '-panel'" tabindex="0">
+  <ng-content />
+</mat-tab-nav-panel>

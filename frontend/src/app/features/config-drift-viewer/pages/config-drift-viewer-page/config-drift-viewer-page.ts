@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
@@ -12,6 +13,7 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
 import {
   AnalysisResultTabItem,
+  AnalysisResultTabStatus,
   AnalysisResultTabsComponent
 } from '../../../../components/analysis-result-tabs/analysis-result-tabs';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
@@ -41,16 +43,24 @@ import {
   ConfigDriftViewerDiffRendererComponent
 } from '../../components/config-drift-viewer-diff-renderer/config-drift-viewer-diff-renderer';
 import {
+  ConfigDriftViewerComponentRunSnapshot,
   ConfigDriftViewerDeepPreflight,
   ConfigDriftViewerDeterministicContext,
   ConfigDriftViewerExportEnvelope,
-  ConfigDriftViewerFinding,
   ConfigDriftViewerInputOptions,
   ConfigDriftViewerJobStartRequest,
   ConfigDriftViewerJobStateSnapshot,
   ConfigDriftViewerMode
 } from '../../models/config-drift-viewer.models';
 import { ConfigDriftViewerApiService } from '../../services/config-drift-viewer-api.service';
+import {
+  CONFIG_DRIFT_FINDINGS_TITLE,
+  ConfigDriftFindingView,
+  configDriftFindingSeverityLabel,
+  configDriftFindingsMarkdown,
+  presentConfigDriftFindings,
+  presentConfigDriftFindingsReport
+} from '../../utils/config-drift-viewer-findings.presentation';
 
 type ResultOrigin = 'live' | 'local' | 'imported';
 type SelectOption = { value: string; label: string };
@@ -66,6 +76,7 @@ const EMPTY_INPUT_OPTIONS: ConfigDriftViewerInputOptions = {
   selector: 'app-config-drift-viewer-page',
   imports: [AiExecutionControlsComponent, ChoiceOptionComponent, ChoiceSelectComponent, TextFieldComponent,
     ReactiveFormsModule,
+    MatTooltipModule,
     AnalysisFeatureAsideComponent,
     AnalysisReportPanelComponent,
     AnalysisResultTabsComponent,
@@ -191,7 +202,8 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
   readonly componentTabs = computed<AnalysisResultTabItem[]>(() =>
     (this.job()?.components ?? []).map((component) => ({
       id: component.systemId,
-      tabLabel: `${component.systemLabel || component.systemId} · ${formatStatus(component.status)}`
+      tabLabel: component.systemLabel || component.systemId,
+      status: this.componentTabStatus(component)
     }))
   );
   readonly activeComponent = computed(() => {
@@ -214,29 +226,82 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       + component.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0);
   });
   readonly deterministic = computed(() => this.activeComponent()?.result?.deterministicResult ?? null);
+  readonly comparisonNotice = computed(() => {
+    const component = this.activeComponent();
+    const result = component?.result;
+    if (!component || !result) return null;
+    const deterministic = result.deterministicResult;
+    if (deterministic.status === 'INCOMPLETE'
+      || !this.hasCompleteCoverage(deterministic.sourceCoverage)
+      || !this.hasCompleteCoverage(deterministic.targetCoverage)) {
+      return { label: 'Niepełne porównanie', warning: true };
+    }
+    if (deterministic.status === 'REVIEW_REQUIRED') {
+      return { label: 'Wymaga weryfikacji', warning: true };
+    }
+    if (component.status === 'COMPLETED_WITH_LIMITATIONS' || result.status === 'INCOMPLETE'
+      || result.visibilityLimits.length || result.aiSecondOpinion?.visibilityLimits.length) {
+      return { label: 'Analiza z ograniczeniami', warning: true };
+    }
+    return {
+      label: this.isTerminal(component.status) ? '' : 'Analiza w toku',
+      warning: false
+    };
+  });
+  readonly comparisonDetails = computed(() => {
+    const job = this.job();
+    const component = this.activeComponent();
+    if (!job || !component) return '';
+    const result = component.result;
+    const deterministic = result?.deterministicResult;
+    const limits = unique([...(result?.visibilityLimits ?? []), ...(result?.aiSecondOpinion?.visibilityLimits ?? [])]);
+    return [
+      `Komponent: ${component.systemLabel || component.systemId}`,
+      `Repozytorium: ${job.repositoryId}`,
+      `Tryb: ${job.mode}`,
+      `Przebieg: ${this.componentTabStatus(component)?.label ?? 'Analiza zakończona'}`,
+      component.currentStepLabel || job.currentStepLabel
+        ? `Etap: ${component.currentStepLabel || job.currentStepLabel}` : '',
+      job.codeRef ? `Ref kodu: ${job.codeRef}` : '',
+      deterministic ? 'Porównanie deterministyczne (FACT)' : '',
+      deterministic
+        ? `Ustalenia: ${deterministic.findings.length} · dokumenty: ${deterministic.documents.length} · referencje: ${deterministic.references.length}` : '',
+      deterministic ? this.coverageDetails(deterministic.sourceBranch, deterministic.sourceCoverage) : '',
+      deterministic ? this.coverageDetails(deterministic.targetBranch, deterministic.targetCoverage) : '',
+      limits.length ? `Ograniczenia:\n${limits.join('\n')}` : ''
+    ].filter(Boolean).join('\n');
+  });
+  readonly findingsTitle = CONFIG_DRIFT_FINDINGS_TITLE;
+  readonly findingViews = computed(() => {
+    const context = this.deterministic();
+    return context ? presentConfigDriftFindings(context) : [];
+  });
   readonly filteredFindings = computed(() => {
-    const findings = this.deterministic()?.findings ?? [];
-    return findings.filter((finding) =>
+    return this.findingViews().filter((finding) =>
       this.findingSeverityFilter() === 'ALL'
       || finding.severity === this.findingSeverityFilter()
     );
   });
   readonly findingSeverities = computed(() =>
-    unique((this.deterministic()?.findings ?? []).map((finding) => finding.severity))
+    unique(this.findingViews().map(finding => finding.severity))
+      .map(value => ({ value, label: configDriftFindingSeverityLabel(value) }))
   );
+  readonly presentationReport = computed(() => {
+    const report = this.activeComponent()?.report;
+    return report ? presentConfigDriftFindingsReport(report, this.findingViews()) : null;
+  });
   readonly resultAvailable = computed(() => Boolean(this.activeComponent()?.result));
   readonly shareDocument = computed(() => {
     const component = this.activeComponent();
     const result = component?.result;
     if (!component || !result) return null;
     const fileName = `config-drift-viewer-${component.systemId.replace(/[^a-zA-Z0-9_-]/g, '-')}.md`;
-    if (component.report) return buildReportShareDocument(component.report, fileName);
+    const report = this.presentationReport();
+    if (report) return buildReportShareDocument(report, fileName);
     const differences = result.deterministicResult.differences.map((difference) =>
       `- ${difference.path}: ${difference.kind} (${difference.sourceValueToken ?? 'brak'} → ${difference.targetValueToken ?? 'brak'})`
     );
-    const findings = result.deterministicResult.findings.map((finding) =>
-      `- ${finding.path}: ${this.findingTitle(finding)}${this.findingDescription(finding) ? ` — ${this.findingDescription(finding)}` : ''}`
-    );
+    const findingsMarkdown = configDriftFindingsMarkdown(this.findingViews());
     const opinion = result.aiSecondOpinion;
     const content = [
       `# Config Drift Viewer: ${component.systemLabel || component.systemId}`,
@@ -244,8 +309,7 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       this.deterministicSummary(result.deterministicResult),
       '## Różnice konfiguracji',
       differences.join('\n') || 'Brak różnic.',
-      '## Ustalenia deterministyczne',
-      findings.join('\n') || 'Brak ustaleń.',
+      findingsMarkdown ? `## ${this.findingsTitle}\n\n${findingsMarkdown}` : '',
       opinion ? `## Druga opinia AI\n\n${opinion.summary}` : '',
       ...(opinion?.observations ?? []).map((observation) =>
         `### ${observation.summary}\n\n${observation.explanation}`
@@ -253,6 +317,7 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
       opinion ? markdownList('Zalecane kontrole', opinion.recommendedHumanChecks) : ''
     ].filter(Boolean).join('\n\n');
     const meta = [
+      markdownList('Szczegóły techniczne uwag', this.findingViews().map(finding => `${finding.id}: ${finding.code}`)),
       markdownList('Referencje', result.deterministicResult.references.map((reference) =>
         `${reference.referenceId}: ${reference.sourcePath} → ${reference.targetPath}`
       )),
@@ -434,6 +499,42 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
     return formatStatus(value);
   }
 
+  private componentTabStatus(component: ConfigDriftViewerComponentRunSnapshot): AnalysisResultTabStatus | undefined {
+    switch (component.status) {
+      case 'QUEUED':
+        return { kind: 'loading', label: 'Oczekuje na uruchomienie' };
+      case 'RUNNING': {
+        const label = 'Analiza w toku';
+        return {
+          kind: 'loading',
+          label,
+          tooltip: component.currentStepLabel ? `${label}\n${component.currentStepLabel}` : label
+        };
+      }
+      case 'COMPLETED':
+        return undefined;
+      case 'COMPLETED_WITH_LIMITATIONS': {
+        const label = 'Analiza zakończona z ograniczeniami';
+        const limits = unique(component.result?.visibilityLimits ?? []);
+        return {
+          kind: 'info',
+          label,
+          tooltip: [label, ...limits].join('\n')
+        };
+      }
+      case 'FAILED': {
+        const label = 'Analiza zakończona błędem';
+        return {
+          kind: 'error',
+          label,
+          tooltip: component.errorMessage ? `${label}\n${component.errorMessage}` : label
+        };
+      }
+      default:
+        return { kind: 'info', label: this.statusLabel(component.status) };
+    }
+  }
+
   protected statusClass(value: string | null | undefined): string {
     return `status-pill ${statusClassName(value)}`;
   }
@@ -503,44 +604,41 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
     }
   }
 
-  protected trackFinding(_: number, finding: ConfigDriftViewerFinding): string {
-    return finding.findingId;
-  }
-
-  protected findingTitle(finding: ConfigDriftViewerFinding): string {
-    if (finding.code.endsWith('VAR_UNSUPPORTED_SYNTAX')) {
-      return 'Błędna składnia blokuje rozwiązanie referencji';
-    }
-    if (finding.code === 'HARDCODED_SENSITIVE_VALUE_ADDED') {
-      return 'Dodano literalną wartość wrażliwą';
-    }
-    return this.statusLabel(finding.code);
-  }
-
-  protected findingDescription(finding: ConfigDriftViewerFinding): string | null {
-    if (finding.code.endsWith('VAR_UNSUPPORTED_SYNTAX') && finding.referenceIds.length > 0) {
-      return 'Nierozwiązana referencja jest skutkiem tego samego błędu składni.';
-    }
-    if (finding.code === 'HARDCODED_SENSITIVE_VALUE_ADDED') {
-      return 'W target dodano wartość bez bezpiecznego placeholdera. Popraw ją przed wdrożeniem.';
-    }
-    return null;
-  }
-
-  protected findingLocation(finding: ConfigDriftViewerFinding): string | null {
-    if (!finding.filePath) {
-      return null;
-    }
-    return finding.line ? `${finding.filePath}:${finding.line}` : finding.filePath;
+  protected trackFinding(_: number, finding: ConfigDriftFindingView): string {
+    return finding.id;
   }
 
   private coverageSummary(
     branch: string,
     coverage: ConfigDriftViewerDeterministicContext['sourceCoverage']
   ): string {
-    const status = coverage?.complete ? 'Complete' : 'Incomplete';
+    const status = this.hasCompleteCoverage(coverage) ? 'Complete' : 'Incomplete';
     const files = coverage?.files?.length ?? 0;
     return `${branch}: ${status}, ${this.fileCountLabel(files)}`;
+  }
+
+  private coverageDetails(
+    branch: string,
+    coverage: ConfigDriftViewerDeterministicContext['sourceCoverage']
+  ): string {
+    if (!coverage) return `${branch}: brak danych o kompletności.`;
+    const status = !coverage.branchExists ? 'branch nie istnieje'
+      : this.hasCompleteCoverage(coverage) ? 'kompletne dane' : 'niepełne dane';
+    const fileStatuses: Record<string, string> = {
+      MISSING: 'brak pliku', AMBIGUOUS: 'niejednoznaczna ścieżka',
+      TRUNCATED: 'niepełna zawartość', ERROR: 'błąd odczytu', BRANCH_MISSING: 'brak brancha'
+    };
+    return [
+      `${branch}: ${status}. Pliki: ${coverage.files.length}.`,
+      ...coverage.files.filter(file => file.status !== 'AVAILABLE')
+        .map(file => `  ${file.path}: ${fileStatuses[file.status] ?? this.statusLabel(file.status)}`)
+    ].join('\n');
+  }
+
+  private hasCompleteCoverage(coverage: ConfigDriftViewerDeterministicContext['sourceCoverage']): boolean {
+    // The JSON contract has no `complete` field; mirror BranchCoverage.complete() from its file evidence.
+    return Boolean(coverage?.branchExists && coverage.files.length === 3
+      && coverage.files.every(file => file.status === 'AVAILABLE'));
   }
 
   private fileCountLabel(files: number): string {

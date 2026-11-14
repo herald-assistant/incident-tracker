@@ -82,6 +82,14 @@ statycznego opisu capability, dodaj go do route data jako `capabilityInfo`.
 
 ## Dostepnosc i gestosc UI
 
+- Zakladki wyniku reuse'uja `app-analysis-result-tabs` z paginacja Material.
+  Przekaz dane/aktywny ID i projektuj aktywna tresc do komponentu; Material
+  posiada powiazanie z panelem i obsluge klawiatury. Nie przywracaj lokalnego
+  scrollbara, recznego tabpanel ani osobnego wariantu naglowka.
+  Feature mapuje stan domenowy na neutralny `status` zakladki
+  (`loading`, `info`, `error`, label i tooltip); shared nie interpretuje
+  statusow joba. Brak statusu nie rezerwuje miejsca na ikone. Zachowaj
+  opis dla czytnika ekranu, tooltip na hover/focus i reduced motion loadera.
 - Icon-only controls musza miec `aria-label` albo `title`.
 - Tooltipy maja wyjasniac skrocone dane, ale nie moga zaslaniac glownego
   workflow.

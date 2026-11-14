@@ -452,6 +452,12 @@ Zasady granic:
 - Zmiana ostylowania nie upowaznia do zmiany ukladu, funkcjonalnosci ani
   konfiguracji AI feature'a. Propozycje kolejnych widokow nie sa stanem
   wdrozonym, dopoki nie zostana zaimplementowane i zweryfikowane.
+- Config Drift Viewer zachowuje prezentacje przypominajaca plik zrodlowy,
+  wspolne paginowane zakladki i jeden kompaktowy naglowek wyniku.
+  `Uwagi do porównania` korzystaja z jednego deterministycznego mappera
+  dla ekranu i Share; kody pozostaja w diagnostyce. Przed zmiana sprawdz
+  [lokalne zasady prezentacji](frontend/src/app/features/AGENTS.md#config-drift-viewer)
+  oraz [runtime flow](docs/architecture/config-drift-viewer-runtime-flow.md).
 
 ### Kompatybilnosc przed pierwszym wdrozeniem
 

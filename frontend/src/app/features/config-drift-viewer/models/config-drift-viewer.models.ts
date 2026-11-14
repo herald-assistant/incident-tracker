@@ -81,7 +81,6 @@ export interface ConfigDriftViewerBranchCoverage {
   branch: string;
   branchExists: boolean;
   files: ConfigDriftViewerFileCoverage[];
-  complete: boolean;
 }
 
 export interface ConfigDriftViewerFileCoverage {
