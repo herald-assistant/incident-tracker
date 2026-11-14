@@ -52,13 +52,13 @@ uruchamiany z katalogu repozytorium, sprawdza tez `target/`. Jezeli znajdzie
 wiecej niz jeden pasujacy JAR, mozna wskazac plik jawnie:
 
 ```powershell
-.\run-tdw.ps1 -JarPath .\incident-tracker-0.0.1-SNAPSHOT.jar
+.\run-tdw.ps1 -JarPath .\team-delivery-workspace-0.0.1-SNAPSHOT.jar
 ```
 
 Te same argumenty mozna przekazac przez klikany wrapper:
 
 ```powershell
-.\run-tdw.cmd -JarPath .\incident-tracker-0.0.1-SNAPSHOT.jar
+.\run-tdw.cmd -JarPath .\team-delivery-workspace-0.0.1-SNAPSHOT.jar
 ```
 
 Domyslny katalog danych to `tdw-data` obok skryptu i JAR-a. Mozna go nadpisac:
@@ -83,11 +83,56 @@ albo:
 Przy bezposrednim uruchomieniu JAR-a trzeba przekazac te sama property:
 
 ```powershell
-java -jar .\incident-tracker-0.0.1-SNAPSHOT.jar --tdw.workspace.directory=.\tdw-data
+java -jar .\team-delivery-workspace-0.0.1-SNAPSHOT.jar --tdw.workspace.directory=.\tdw-data
 ```
 
 Spring Boot obsluzy tez zmienna srodowiskowa `TDW_WORKSPACE_DIRECTORY`, ale
 rekomendowanym sposobem dla lokalnej paczki jest skrypt.
+
+## Lokalna konfiguracja aplikacji
+
+Opcjonalny plik `${tdw.workspace.directory}/application.properties` nadpisuje
+wartosci z konfiguracji pakowanej w JAR-ze. Domyslnie jest to
+`tdw-data/application.properties`. Import wykonuje Spring Boot podczas startu,
+dlatego dziala przy uruchomieniu z launchera, bezposrednio z JAR-a oraz z IDE.
+
+Launcher przekazuje absolutna sciezke workspace'u. Plik jest wiec wybierany
+z katalogu wskazanego przez `-WorkspaceDirectory`, a domyslnie z `tdw-data`
+obok skryptu, rowniez przy wywolaniu skryptu z innego katalogu. Przy starcie
+bez launchera wzgledna sciezka workspace'u jest liczona od katalogu roboczego
+procesu. Workspace wybiera sie argumentem startowym albo zmienna
+`TDW_WORKSPACE_DIRECTORY`, przed odczytem pliku; nie nalezy zmieniac jego
+wlasnej lokalizacji w tym pliku.
+
+Przyklad lokalnej konfiguracji fikcyjnego CRM:
+
+```properties
+integrations.gitlab.named.connections.runtime-config.base-url=https://gitlab.example.com
+features.config-drift-viewer.branches=dev,test,uat,zt
+features.config-drift-viewer.repositories.crm-config.display-name=CRM configuration
+features.config-drift-viewer.repositories.crm-config.connection-id=runtime-config
+features.config-drift-viewer.repositories.crm-config.project-path=CRM/runtime-configuration
+```
+
+Token dla polaczenia `runtime-config` ustaw w sekcji Config Drift Viewer na
+ekranie Workspace Settings. Lista komponentow pochodzi z lokalnego
+Operational Context i wymaga `runtime.configurationDirectory` systemu.
+
+Brak pliku jest dozwolony i pozostawia wartosci bazowe. Obecny plik nadpisuje
+tylko podane ustawienia; bledna skladnia zatrzymuje start. Zmiany wymagaja
+ponownego uruchomienia aplikacji. Argumenty CLI i zmienne srodowiskowe
+zachowuja pierwszenstwo wynikajace z zasad Spring Boot. Jawne ustawienia
+zapisane w `settings.json` nadal nadpisuja odpowiadajace im beany obslugiwane
+przez Workspace Settings.
+
+Plik nie jest generowany ani nadpisywany przy aktualizacji JAR-a. Mozna go
+dolaczyc do prywatnej paczki w katalogu `tdw-data`; nie jest potrzebny osobny
+plik w `config/`. Nie dolaczaj sekretow do udostepnianych paczek.
+
+Import nie wylacza standardowego wyszukiwania konfiguracji Spring Boot,
+w tym `config/application.properties`. Przy przenoszeniu lokalnych nadpisan
+do `tdw-data/application.properties` usun ich stara kopie z `config/`, aby
+nie utrzymywac dwoch zrodel tych samych ustawien.
 
 ## Co Powstaje Lokalnie
 
@@ -103,6 +148,7 @@ potrzebne:
 
 ```text
 tdw-data/
+  application.properties    # opcjonalne nadpisania konfiguracji startowej
   index.json
   settings.json
   logs/
@@ -171,8 +217,8 @@ sesji.
 
 ## Decyzje MVP
 
-`Analysis History` korzysta z `/analysis/runs` i lokalnego `index.json`.
-Polling live joba pozostaje przy `GET /analysis/jobs/{analysisId}`.
+`Analysis History` korzysta z `/api/analysis/runs` i lokalnego `index.json`.
+Polling live joba pozostaje przy `GET /api/analysis/jobs/{analysisId}`.
 
 W V1 export ma jeden tryb: sanitizowany read-only JSON do podgladu albo
 dzielenia sie wynikiem. Osobny diagnostic export wymaga osobnego kontraktu.

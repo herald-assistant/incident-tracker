@@ -205,12 +205,28 @@ function Get-LogTail {
     return @(Get-Content -LiteralPath $Path -Tail $LineCount -Encoding UTF8 -ErrorAction SilentlyContinue)
 }
 
+function ConvertTo-TdwNativeArgument {
+    param([AllowEmptyString()][string]$Argument)
+
+    if ($Argument.Length -gt 0 -and $Argument -notmatch '[\s"]') {
+        return $Argument
+    }
+
+    # Start-Process joins ArgumentList into a native Windows command line.
+    # Preserve quotes and trailing backslashes inside quoted arguments.
+    $escaped = $Argument -replace '(\\*)"', '$1$1\"'
+    $escaped = $escaped -replace '(\\+)$', '$1$1'
+    return '"' + $escaped + '"'
+}
+
 function Start-TdwServer {
     try {
         $processParameters = @{
             FilePath               = $JavaPath
-            ArgumentList           = $javaArguments
-            NoNewWindow            = $true
+            ArgumentList           = (($javaArguments | ForEach-Object {
+                ConvertTo-TdwNativeArgument -Argument $_
+            }) -join ' ')
+            WindowStyle            = 'Hidden'
             PassThru               = $true
             RedirectStandardOutput = $standardOutputLogPath
             RedirectStandardError  = $standardErrorLogPath

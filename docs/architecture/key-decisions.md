@@ -993,6 +993,17 @@ Aplikacja uruchamiana jako lokalny JAR uzywa prywatnego katalogu workspace'u
 przekazanego przez `tdw.workspace.directory`. Domyslny launcher ustawia
 `tdw-data` obok skryptu/JAR-a.
 
+Konfiguracja pakowana w JAR-ze importuje opcjonalnie
+`${tdw.workspace.directory}/application.properties`. Plik nadpisuje bazowe
+properties podczas bootstrapu Spring Boot; brak pliku jest dozwolony, a
+niepoprawna zawartosc zatrzymuje start. Wybór workspace'u pochodzi z argumentu
+startowego albo `TDW_WORKSPACE_DIRECTORY`, domyslnie `tdw-data`. Launcher
+przekazuje absolutna sciezke, wiec odczyt nie zalezy od katalogu, z ktorego
+wywolano skrypt. Zmiana pliku wymaga restartu. Istniejace jawne nadpisania
+Workspace Settings w `settings.json` zachowuja swoja role.
+Import nie wylacza standardowych lokalizacji konfiguracji Spring Boot;
+lokalne nadpisania TDW utrzymujemy w wybranym workspace.
+
 Decyzje MVP:
 
 - `index.json` jest lekkim read modelem dla ekranu `Analysis History`; lista
@@ -1012,7 +1023,7 @@ Decyzje MVP:
   bazowa konfiguracja pole usuwa override,
 - stan Copilota jest pod `${tdw.workspace.directory}/copilot`, zeby
   `resumeSession` moglo korzystac z tego samego lokalnego workspace'u,
-- historia lokalnych runow jest shared/operator API pod `/analysis/runs`, a
+- historia lokalnych runow jest shared/operator API pod `/api/analysis/runs`, a
   live polling joba zostaje przy `GET /api/analysis/jobs/{analysisId}`,
 - export lokalnego runu zwraca tylko sanitizowany `exportEnvelope`; import
   exportu jest read-only i nie tworzy kontynuowalnego runu,
@@ -1084,6 +1095,13 @@ Publiczny job Config Drift Viewer jest batchowy: przyjmuje uporzadkowane
 agreguje parent status bez zatrzymywania pozostalych komponentow po lokalnym
 bledzie. Wykonanie ma konfigurowalny, ograniczony fan-out, a UI zachowuje
 kolejnosc requestu w zakladkach.
+
+Named/exact odczyty branchy, plikow i metadanych konfiguracji korzystaja ze
+wspolnego `GitLabReadRetry`. Przejsciowe bledy, w tym HTTP 429, dopuszczaja
+maksymalnie trzy proby pojedynczego odczytu. Polityka respektuje `Retry-After`
+do 120 sekund; dluzsze oczekiwanie konczy odczyt bledem bez ponowienia.
+Ponowienia nie obejmuja trwalych bledow HTTP, TLS ani walidacji i nie loguja
+tokenow ani zawartosci odpowiedzi.
 
 Export/result contract oraz kompaktowy format AI/Workbench sa pierwsza
 kanoniczna wersja V1. Poniewaz feature nie mial konsumentow wymagajacych

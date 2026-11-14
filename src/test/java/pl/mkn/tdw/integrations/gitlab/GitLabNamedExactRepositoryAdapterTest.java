@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.ExpectedCount.times;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -123,6 +124,72 @@ class GitLabNamedExactRepositoryAdapterTest {
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         assertFalse(fixture.adapter.branchExists("config-one", "CRM/runtime-config", "dev9"));
+        fixture.server.verify();
+    }
+
+    @Test
+    void shouldRecoverBranchAndContentReadsAfterRateLimiting() {
+        var fixture = fixture(100);
+        var base = "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/";
+        var branchUrl = base + "branches/dev1";
+        var fileUrl = base + "files/global.var/raw?ref=dev1";
+        fixture.server.expect(requestTo(branchUrl))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "0"));
+        fixture.server.expect(requestTo(branchUrl))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        fixture.server.expect(requestTo(fileUrl))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "0"));
+        fixture.server.expect(requestTo(fileUrl))
+                .andExpect(header("PRIVATE-TOKEN", "token-one"))
+                .andRespond(withSuccess("crm: enabled", MediaType.TEXT_PLAIN));
+
+        assertTrue(fixture.adapter.branchExists("config-one", "CRM/runtime-config", "dev1"));
+        assertEquals("crm: enabled", fixture.adapter.readFile(
+                "config-one", "CRM/runtime-config", "dev1", "global.var", 100).content());
+        fixture.server.verify();
+    }
+
+    @Test
+    void shouldRetryFileAndCommitMetadataWithoutRepeatingSuccessfulReads() {
+        var fixture = fixture(100);
+        var base = "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/";
+        var fileUrl = base + "files/backend%2Flocal.var?ref=dev1";
+        var commitUrl = base + "commits/commit-1?stats=false";
+        fixture.server.expect(requestTo(fileUrl))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "0"));
+        fixture.server.expect(requestTo(fileUrl))
+                .andRespond(withSuccess("""
+                        {"file_path":"backend/local.var","last_commit_id":"commit-1","size":12}
+                        """, MediaType.APPLICATION_JSON));
+        fixture.server.expect(requestTo(commitUrl))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).header(HttpHeaders.RETRY_AFTER, "0"));
+        fixture.server.expect(requestTo(commitUrl))
+                .andRespond(withSuccess("""
+                        {"id":"commit-1","committed_date":"2026-07-30T08:15:30Z"}
+                        """, MediaType.APPLICATION_JSON));
+
+        var metadata = fixture.adapter.readFileMetadata(
+                "config-one", "CRM/runtime-config", "dev1", "backend/local.var");
+
+        assertEquals(12L, metadata.sizeBytes());
+        assertEquals("2026-07-30T08:15:30Z", metadata.lastModifiedAt());
+        fixture.server.verify();
+    }
+
+    @Test
+    void shouldPreserveSafeErrorAfterThreeRateLimitedAttempts() {
+        var fixture = fixture(100);
+        fixture.server.expect(times(3), requestTo(
+                        "https://config-one.example.com/api/v4/projects/CRM%2Fruntime-config/repository/files/global.var/raw?ref=dev1"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                        .header(HttpHeaders.RETRY_AFTER, "0").body("token-one"));
+
+        var exception = assertThrows(GitLabExactReadException.class, () -> fixture.adapter.readFile(
+                "config-one", "CRM/runtime-config", "dev1", "global.var", 100));
+
+        assertEquals(GitLabExactReadError.UPSTREAM_FAILURE, exception.error());
+        assertEquals(429, exception.upstreamStatus());
+        assertFalse(exception.getMessage().contains("token-one"));
         fixture.server.verify();
     }
 

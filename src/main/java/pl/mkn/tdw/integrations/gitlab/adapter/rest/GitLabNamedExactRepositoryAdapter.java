@@ -7,6 +7,7 @@ import pl.mkn.tdw.integrations.gitlab.config.GitLabRestClientFactory;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactFileContent;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabExactReadException;
+import pl.mkn.tdw.integrations.gitlab.internal.GitLabReadRetry;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -39,11 +40,11 @@ public class GitLabNamedExactRepositoryAdapter implements GitLabExactRepositoryP
     public boolean branchExists(String connectionId, String projectPath, String branch) {
         var target = target(connectionId, projectPath, branch, null);
         try {
-            client(target.connection()).get()
+            GitLabReadRetry.execute("named-branch-lookup", () -> client(target.connection()).get()
                     .uri(branchUri(target, branch))
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
-                    .toBodilessEntity();
+                    .toBodilessEntity());
             return true;
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 404) {
@@ -74,11 +75,11 @@ public class GitLabNamedExactRepositoryAdapter implements GitLabExactRepositoryP
     ) {
         var target = target(connectionId, projectPath, ref, filePath);
         try {
-            var content = client(target.connection()).get()
+            var content = GitLabReadRetry.execute("named-file-read", () -> client(target.connection()).get()
                     .uri(rawFileUri(target))
                     .accept(MediaType.TEXT_PLAIN)
                     .retrieve()
-                    .body(String.class);
+                    .body(String.class));
             var safeContent = content != null ? content : "";
             var limit = Math.min(
                     maxCharacters > 0 ? maxCharacters : connectionRegistry.maxFileCharacters(),
@@ -119,11 +120,11 @@ public class GitLabNamedExactRepositoryAdapter implements GitLabExactRepositoryP
     ) {
         var target = target(connectionId, projectPath, ref, filePath);
         try {
-            var response = client(target.connection()).get()
+            var response = GitLabReadRetry.execute("named-file-metadata", () -> client(target.connection()).get()
                     .uri(fileMetadataUri(target))
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
-                    .body(FileMetadataResponse.class);
+                    .body(FileMetadataResponse.class));
             if (response == null) {
                 throw GitLabExactReadException.upstream(
                         "file metadata read",
@@ -168,11 +169,11 @@ public class GitLabNamedExactRepositoryAdapter implements GitLabExactRepositoryP
             return null;
         }
         try {
-            var response = client(target.connection()).get()
+            var response = GitLabReadRetry.execute("named-commit-metadata", () -> client(target.connection()).get()
                     .uri(commitUri(target, lastCommitId))
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
-                    .body(CommitResponse.class);
+                    .body(CommitResponse.class));
             return response != null ? response.committedDate() : null;
         } catch (RestClientResponseException exception) {
             throw GitLabExactReadException.upstream(
