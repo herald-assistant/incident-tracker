@@ -249,7 +249,12 @@
 
 .app-shell__nav-item--active {
   background: var(--color-sidebar-active);
+  color: var(--color-sidebar-active-ink);
   font-weight: 700;
+}
+
+.app-shell__nav-item--active:focus-visible {
+  outline-color: var(--color-sidebar-active-focus, currentColor);
 }
 
 .app-shell__disabled-nav-tooltip {

@@ -3,22 +3,23 @@
 
 :root,
 :root[data-theme='light'] {
-  --color-bg: #f6f7f9;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f8f9fa;
-  --color-surface-muted: #f0f2f4;
-  --color-border: #dfe3e8;
-  --color-border-strong: #c2c8d0;
+  --color-bg: #f4f2ee;
+  --color-surface: #fffdf9;
+  --color-surface-alt: #f6f3ee;
+  --color-surface-muted: #efeae3;
+  --color-border: #ded9d0;
+  --color-border-strong: #bdb5a8;
   --color-text: #172b4d;
-  --color-muted: #5e6c84;
-  --color-muted-strong: #44546f;
-  --color-soft: #6b778c;
+  --color-muted: #565d68;
+  --color-muted-strong: #414955;
+  --color-soft: #646a73;
   --color-primary: #0c66e4;
   --color-primary-dark: #0747a6;
   --color-primary-soft: #deebff;
   --color-sidebar-bg: #0b2d63;
   --color-sidebar-hover: #173e77;
-  --color-sidebar-active: #1559c3;
+  --color-sidebar-active: #f2e8d8;
+  --color-sidebar-active-ink: #172b4d;
   --color-sidebar-ink: #f5f8ff;
   --color-sidebar-accent: #b9d4ff;
   --color-sidebar-disabled: #abbedc;
@@ -33,7 +34,7 @@
   --color-ai-soft: #f5f3ff;
   --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-primary);
   --control-border: var(--color-border-strong);
-  --control-border-hover: #8d98a8;
+  --control-border-hover: #948a7d;
   --control-hover: var(--color-surface-alt);
   --control-radius: 8px;
   --control-value-weight: 500;

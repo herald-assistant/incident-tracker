@@ -1,6 +1,7 @@
 @mixin styles {
   :root[data-special-theme='christmas'] {
     --color-bg: #f8f1e4;
+    --color-surface: #ffffff;
     --color-surface-alt: #fcf8f0;
     --color-surface-muted: #f1e9da;
     --color-border: #ddd0bf;
@@ -12,10 +13,13 @@
     --color-primary: #216047;
     --color-primary-dark: #0e4533;
     --color-primary-soft: #e0eee3;
+    --control-border-hover: #8d98a8;
 
     --color-sidebar-bg: #09382e;
     --color-sidebar-hover: #195142;
     --color-sidebar-active: #a21b32;
+    --color-sidebar-active-ink: var(--color-sidebar-ink);
+    --color-sidebar-active-focus: var(--color-sidebar-accent);
     --color-sidebar-ink: #fff8eb;
     --color-sidebar-accent: #f5d080;
     --color-sidebar-disabled: #b3c9bd;
@@ -25,7 +29,6 @@
     --special-hero-ink: #fff6e5;
     --special-hero-heading: Georgia, 'Times New Roman', serif;
     --overview-card-accent: var(--color-primary-dark);
-    --overview-card-border: var(--color-border);
     --overview-card-background: var(--color-surface-alt);
     --overview-card-icon-shadow: transparent;
   }

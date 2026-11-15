@@ -26,8 +26,8 @@ describe('SpecialThemeService', () => {
   });
 
   it.each([
-    [new Date(2025, 11, 14, 23, 59), null],
-    [new Date(2025, 11, 15), 'christmas'],
+    [new Date(2026, 11, 14, 23, 59), null],
+    [new Date(2026, 11, 15), 'christmas'],
     [new Date(2027, 0, 6, 23, 59), 'christmas'],
     [new Date(2027, 0, 7), null]
   ])('resolves the theme for the local day %s', (day, expected) => {

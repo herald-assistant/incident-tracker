@@ -29,7 +29,7 @@
   gap: 0;
   min-height: clamp(320px, 28cqw, 385px);
   overflow: hidden;
-  background: #eef4fd;
+  background: #f8f3ea;
 }
 
 .platform-landing__features,
@@ -124,6 +124,7 @@
   position: absolute;
   inset: 0;
   background: url('/assets/brand/workspace-overview-team.jpg') center top / cover no-repeat;
+  filter: sepia(0.16);
   mask-image: linear-gradient(to right, transparent 32%, #000 54%);
   content: '';
 }
@@ -162,7 +163,6 @@
 .platform-landing__feature-card {
   --feature-accent: var(--primary-dark);
   --feature-ink: var(--primary-dark);
-  --feature-border: rgba(7, 71, 166, 0.24);
   --feature-shadow: rgba(7, 71, 166, 0.14);
 
   display: grid;
@@ -170,7 +170,7 @@
   gap: 12px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid var(--overview-card-border, var(--feature-border));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: var(--overview-card-background, var(--color-surface));
   color: inherit;
@@ -184,35 +184,30 @@
 .platform-landing__feature-card--flow {
   --feature-accent: #0754b8;
   --feature-ink: #0747a6;
-  --feature-border: rgba(7, 84, 184, 0.24);
   --feature-shadow: rgba(7, 84, 184, 0.14);
 }
 
 .platform-landing__feature-card--ui {
   --feature-accent: var(--primary);
   --feature-ink: var(--primary-dark);
-  --feature-border: rgba(12, 102, 228, 0.24);
   --feature-shadow: rgba(12, 102, 228, 0.14);
 }
 
 .platform-landing__feature-card--change {
   --feature-accent: var(--primary);
   --feature-ink: var(--primary-dark);
-  --feature-border: rgba(12, 102, 228, 0.24);
   --feature-shadow: rgba(12, 102, 228, 0.14);
 }
 
 .platform-landing__feature-card--config {
   --feature-accent: #1b72dc;
   --feature-ink: #0747a6;
-  --feature-border: rgba(27, 114, 220, 0.24);
   --feature-shadow: rgba(27, 114, 220, 0.14);
 }
 
 .platform-landing__feature-card--delivery {
   --feature-accent: #0a5bc7;
   --feature-ink: #0747a6;
-  --feature-border: rgba(10, 91, 199, 0.24);
   --feature-shadow: rgba(10, 91, 199, 0.14);
 }
 

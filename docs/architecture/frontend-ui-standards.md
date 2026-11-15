@@ -23,13 +23,15 @@ drugiego standardu tej samej kontrolki.
 
 ## Jezyk wizualny
 
-- Obszar roboczy jest jasny. Tlo strony, pomocnicze powierzchnie i separatory uzywaja
-  neutralnych tokenow `--color-bg`, `--color-surface*` i `--color-border*`.
+- Domyślny obszar roboczy ma ciepłe jasnoszare tło, panele w złamanej bieli
+  i neutralne obramowania. Powierzchnie, pola formularza i separatory
+  korzystają ze wspólnych tokenów `--color-bg`, `--color-surface*`
+  i `--color-border*`.
   Niebieski oznacza marke, wybor i interakcje; kolory statusow zachowuja
   znaczenie semantyczne.
-- Sidebar i etykiety pol maja wage 500. Aktywna pozycja nawigacji zachowuje
-  wage 700 i niebieskie zaznaczenie. Etykiety pol nie wymuszaja uppercase ani
-  rozstrzelonych liter; krotkie naglowki grup moga zachowac uppercase.
+- Sidebar i etykiety pól mają wagę 500. Aktywna pozycja nawigacji ma
+  wagę 700. Etykiety pól zachowują zwykłą pisownię i standardowe odstępy
+  między literami. Krótkie nagłówki grup mogą być pisane wielkimi literami.
 - Panele korzystaja z subtelnych `--shadow-soft` / `--shadow-card`.
   Hover nawigacji lekko rozjasnia pozycje dostepne. Karty Overview
   zmieniaja powierzchnie bez przesuwania sie; akcenty feature'ow pozostaja
@@ -64,9 +66,10 @@ utrzymuj w podstawowym kroju. Kolory statusów zachowują swoje znaczenie.
 
 ## Lewy panel nawigacji
 
-- Domyślny panel ma granatowe tło, jasny znak TDW i niebieskie zaznaczenie
-  aktywnej pozycji. Motywy specjalne ustawiają paletę tymi samymi tokenami
-  `--color-sidebar-*`. Paleta obejmuje też wariant zwinięty i mobilny.
+- Domyślny panel ma granatowe tło i jasny znak TDW. Aktywna pozycja ma
+  ciepłe jasne tło oraz granatowy tekst i ikonę. Motywy specjalne ustawiają
+  paletę tymi samymi tokenami `--color-sidebar-*`. Paleta obejmuje też
+  wariant zwinięty i mobilny.
 - Kolejnosc kategorii to Analysis Features, Platform i Tool Workbench.
   Przy pierwszym otwarciu wszystkie sa rozwiniete. Kazda zapisuje swoj stan
   osobno w `localStorage`. Po zwinieciu calego panelu tryb ikonowy pokazuje
