@@ -1,3 +1,4 @@
+import { CdkDropList } from '@angular/cdk/drag-drop';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -11,6 +12,7 @@ import { vi } from 'vitest';
 import { App } from './app';
 import { routes } from './app.routes';
 import { AppShellComponent } from './components/app-shell/app-shell';
+import { AppUiConfigService } from './core/services/app-ui-config.service';
 import { FlowExplorerPageComponent } from './features/flow-explorer/pages/flow-explorer-page/flow-explorer-page';
 import {
   FlowExplorerEndpointInventoryResponse,
@@ -18,12 +20,16 @@ import {
 } from './features/flow-explorer/models/flow-explorer.models';
 
 const ANALYSIS_GROUP_STORAGE_KEY = 'team-delivery-workspace.sidebar.group.analysis-features.collapsed';
+const ANALYSIS_ORDER_STORAGE_KEY = 'team-delivery-workspace.sidebar.group.analysis-features.order';
+const PLATFORM_ORDER_STORAGE_KEY = 'team-delivery-workspace.sidebar.group.platform.order';
 const SPECIAL_THEMES_DISABLED_KEY = 'team-delivery-workspace.special-themes.disabled';
 
 describe('App', () => {
   beforeEach(async () => {
     window.localStorage.removeItem('team-delivery-workspace.sidebar.collapsed');
     window.localStorage.removeItem(ANALYSIS_GROUP_STORAGE_KEY);
+    window.localStorage.removeItem(ANALYSIS_ORDER_STORAGE_KEY);
+    window.localStorage.removeItem(PLATFORM_ORDER_STORAGE_KEY);
 
     await TestBed.configureTestingModule({
       imports: [App],
@@ -63,7 +69,6 @@ describe('App', () => {
       expect(specialBanner?.querySelector('img')?.getAttribute('src')).toBe(
         'assets/themes/christmas/workspace-overview-banner.jpg'
       );
-      expect(compiled.querySelector('.platform-landing__hero-points')).toBeNull();
       expect(compiled.querySelector('.platform-landing__intro')).toBeNull();
       const wishes = specialBanner?.querySelector('p:last-of-type')?.textContent;
       expect(wishes).toContain('Całemu zespołowi życzymy spokojnych Świąt');
@@ -99,9 +104,8 @@ describe('App', () => {
       expect(standardBanner?.querySelector('.platform-landing__brand-visual')?.getAttribute('aria-hidden'))
         .toBe('true');
       expect(standardBanner?.querySelector('img')).toBeNull();
-      expect(compiled.querySelectorAll('.platform-landing__hero-point')).toHaveLength(3);
-      expect(compiled.querySelector('.platform-landing__copy > p:last-of-type')?.textContent)
-        .toContain('Platforma zbiera za Ciebie informacje');
+      expect(standardBanner?.querySelector('.platform-landing__description')?.textContent)
+        .toContain('formie dopasowanej do zadania.');
       const activeNav = compiled.querySelector('.app-shell__nav-item--active[aria-current="page"]');
       expect(activeNav?.getAttribute('href')).toBe('/');
       http.verify();
@@ -144,8 +148,11 @@ describe('App', () => {
       '.platform-landing__feature-grid a[href="/release-summary"]'
     ]) {
       const releaseSummary = compiled.querySelector(selector);
-      expect(releaseSummary?.previousElementSibling?.getAttribute('href')).toBe('/change-verification');
-      expect(releaseSummary?.nextElementSibling?.getAttribute('href')).toBe('/config-drift-viewer');
+      const entry = releaseSummary?.closest('.app-shell__nav-row') ?? releaseSummary;
+      const previous = entry?.previousElementSibling;
+      const next = entry?.nextElementSibling;
+      expect((previous?.querySelector('a') ?? previous)?.getAttribute('href')).toBe('/change-verification');
+      expect((next?.querySelector('a') ?? next)?.getAttribute('href')).toBe('/config-drift-viewer');
       expect(releaseSummary?.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('deployed_code');
     }
   });
@@ -622,6 +629,74 @@ describe('App', () => {
     expect(window.localStorage.getItem(ANALYSIS_GROUP_STORAGE_KEY)).toBe('false');
   });
 
+  it('sorts and persists sidebar items within their category', () => {
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+    const analysis = sidebarDropList(fixture, 'analysis-features');
+    const platform = sidebarDropList(fixture, 'platform');
+    const initialPlatform = sidebarLinks(fixture, 'platform');
+    const drop = {
+      previousIndex: 1,
+      currentIndex: 0,
+      item: analysis.getSortedItems()[1],
+      previousContainer: analysis,
+      container: analysis,
+      isPointerOverContainer: true,
+      distance: { x: 0, y: -40 },
+      dropPoint: { x: 0, y: 0 },
+      event: new MouseEvent('mouseup')
+    };
+
+    analysis.dropped.emit({ ...drop, isPointerOverContainer: false });
+    platform.dropped.emit({ ...drop, container: platform });
+    expect(window.localStorage.getItem(ANALYSIS_ORDER_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(PLATFORM_ORDER_STORAGE_KEY)).toBeNull();
+
+    analysis.dropped.emit(drop);
+    fixture.detectChanges();
+    expect(sidebarLinks(fixture, 'analysis-features').slice(0, 2)).toEqual(['/flow-explorer', '/incident-analysis']);
+    expect(sidebarLinks(fixture, 'platform')).toEqual(initialPlatform);
+    expect(JSON.parse(window.localStorage.getItem(ANALYSIS_ORDER_STORAGE_KEY)!)).toContain('/release-summary');
+    fixture.destroy();
+
+    window.localStorage.setItem('team-delivery-workspace.sidebar.collapsed', 'true');
+    const reopened = TestBed.createComponent(AppShellComponent);
+    reopened.detectChanges();
+    expect(sidebarLinks(reopened, 'analysis-features').slice(0, 2)).toEqual(['/flow-explorer', '/incident-analysis']);
+    expect(sidebarDropList(reopened, 'analysis-features').disabled).toBe(true);
+  });
+
+  it('restores a saved sidebar order with stale entries and preserves hidden positions when reordering', () => {
+    window.localStorage.setItem(ANALYSIS_ORDER_STORAGE_KEY, JSON.stringify([
+      '/flow-explorer', '/release-summary', '/removed', '/flow-explorer', null
+    ]));
+    window.localStorage.setItem(PLATFORM_ORDER_STORAGE_KEY, '{invalid');
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+    expect(sidebarLinks(fixture, 'analysis-features').slice(0, 3)).toEqual([
+      '/flow-explorer', '/incident-analysis', '/ui-explorer'
+    ]);
+    expect(sidebarLinks(fixture, 'platform')[0]).toBe('/');
+
+    const link = fixture.debugElement.query(By.css('a.app-shell__nav-item[href="/flow-explorer"]'));
+    expect(link.nativeElement.draggable).toBe(false);
+    expect(link.nativeElement.getAttribute('aria-keyshortcuts')).toBe('Shift+ArrowUp Shift+ArrowDown');
+    link.nativeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    fixture.detectChanges();
+    expect(sidebarLinks(fixture, 'analysis-features').slice(0, 2)).toEqual(['/flow-explorer', '/incident-analysis']);
+
+    link.nativeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true }));
+    fixture.detectChanges();
+    expect(sidebarLinks(fixture, 'analysis-features').slice(0, 2)).toEqual(['/incident-analysis', '/flow-explorer']);
+
+    const config = TestBed.inject(AppUiConfigService).config;
+    config.update(value => ({ ...value, releaseSummaryEnabled: true }));
+    fixture.detectChanges();
+    expect(sidebarLinks(fixture, 'analysis-features').slice(0, 3)).toEqual([
+      '/incident-analysis', '/release-summary', '/flow-explorer'
+    ]);
+  });
+
   it('should collapse the left navigation into an icon rail', async () => {
     window.localStorage.setItem(ANALYSIS_GROUP_STORAGE_KEY, 'true');
     const fixture = TestBed.createComponent(App);
@@ -1080,6 +1155,15 @@ function navigationGroups(fixture: ComponentFixture<AppShellComponent>) {
     analysisList: shell.querySelector<HTMLElement>('#sidebar-group-analysis-features')!,
     workbench: shell.querySelector<HTMLButtonElement>('[aria-controls="sidebar-group-tool-workbench"]')!
   };
+}
+
+function sidebarDropList(fixture: ComponentFixture<AppShellComponent>, group: string): CdkDropList {
+  return fixture.debugElement.query(By.css(`#sidebar-group-${group}`)).injector.get(CdkDropList);
+}
+
+function sidebarLinks(fixture: ComponentFixture<AppShellComponent>, group: string): string[] {
+  const shell = fixture.nativeElement as HTMLElement;
+  return Array.from(shell.querySelectorAll(`#sidebar-group-${group} a[href]`), link => link.getAttribute('href')!);
 }
 
 function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Workspace', releaseSummaryEnabled = false): void {

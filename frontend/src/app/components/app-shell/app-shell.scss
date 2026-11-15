@@ -217,6 +217,33 @@
   gap: 4px;
 }
 
+.app-shell__nav-row {
+  display: grid;
+  min-width: 0;
+}
+
+.app-shell__nav-list:not(.cdk-drop-list-disabled)
+  :is(.app-shell__nav-item, .app-shell__disabled-nav-tooltip) {
+  cursor: grab;
+}
+
+.app-shell__nav-row.cdk-drag-preview {
+  border-radius: 8px;
+  background: var(--color-sidebar-bg);
+  box-shadow: var(--shadow-soft);
+}
+
+.app-shell__nav-row.cdk-drag-placeholder {
+  opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-shell__nav-list.cdk-drop-list-dragging .app-shell__nav-row:not(.cdk-drag-placeholder),
+  .app-shell__nav-row.cdk-drag-animating {
+    transition: transform 160ms ease;
+  }
+}
+
 .app-shell__nav-item {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -295,6 +322,7 @@
 
 .app-shell--sidebar-collapsed .app-shell__sidebar-header {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
 }
 
@@ -319,6 +347,13 @@
 }
 
 @media (min-width: 981px) {
+  .app-shell--sidebar-collapsed .app-shell__sidebar {
+    // Balance the left scrollbar gutter within the fixed-width icon rail.
+    scrollbar-gutter: stable both-edges;
+    padding-inline: 0;
+    border-right: 0;
+  }
+
   .app-shell--sidebar-collapsed .app-shell__nav-heading,
   .app-shell--sidebar-expanding .app-shell__nav-heading {
     display: none;

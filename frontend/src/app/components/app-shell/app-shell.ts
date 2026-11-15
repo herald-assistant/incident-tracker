@@ -1,5 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   ActivatedRoute,
@@ -8,19 +12,17 @@ import {
   RouterLink,
   RouterOutlet
 } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, map } from 'rxjs';
 
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { AppBrandComponent } from '../app-brand/app-brand';
 
 type NavItem = {
   label: string;
-  route?: string;
   icon: string;
   exact?: boolean;
   reloadOnActiveClick?: boolean;
-  disabled?: boolean;
-};
+} & ({ route: string; disabled?: false } | { id: string; route?: never; disabled: true });
 
 type NavGroup = {
   id: string;
@@ -59,6 +61,7 @@ const DEFAULT_CONTEXT: RouteContext = {
 };
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'team-delivery-workspace.sidebar.collapsed';
 const SIDEBAR_EXPAND_CONTENT_DELAY_MS = 170;
+const SIDEBAR_HORIZONTAL_QUERY = '(max-width: 980px)';
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -125,7 +128,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: 'finance',
         reloadOnActiveClick: true
       },
-      { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
+      { id: 'data-diagnostics', label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
   },
   {
@@ -137,8 +140,8 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Workspace Settings', route: '/workspace-settings', icon: 'tune' },
       { label: 'AI Skills', route: '/ai-skills', icon: 'auto_stories' },
       { label: 'AI Models', route: '/ai-models', icon: 'model_training' },
-      { label: 'Personalization', icon: 'palette', disabled: true },
-      { label: 'Authentication', icon: 'admin_panel_settings', disabled: true }
+      { id: 'personalization', label: 'Personalization', icon: 'palette', disabled: true },
+      { id: 'authentication', label: 'Authentication', icon: 'admin_panel_settings', disabled: true }
     ]
   },
   {
@@ -162,7 +165,10 @@ const NAV_GROUPS: NavGroup[] = [
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, AppBrandComponent, MatTooltipModule],
+  imports: [
+    RouterOutlet, RouterLink, AppBrandComponent, MatTooltipModule,
+    CdkDropList, CdkDrag, CdkScrollable
+  ],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss'
 })
@@ -170,13 +176,28 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly uiConfig = inject(AppUiConfigService);
+  private readonly breakpoints = inject(BreakpointObserver);
+  private readonly injector = inject(Injector);
+  private readonly liveAnnouncer = inject(LiveAnnouncer);
   private readonly routeContext = signal<RouteContext>(DEFAULT_CONTEXT);
   private readonly currentUrl = signal('');
   private sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null;
 
-  get navGroups(): NavGroup[] {
-    return NAV_GROUPS.map(group => ({...group, items: group.items.filter(item => item.route !== '/release-summary' || this.uiConfig.config().releaseSummaryEnabled)}));
-  }
+  private readonly navOrder = signal(
+    Object.fromEntries(NAV_GROUPS.map(group => [group.id, readNavOrder(group)]))
+  );
+  protected readonly navGroups = computed(() => {
+    const releaseSummaryEnabled = this.uiConfig.config().releaseSummaryEnabled;
+    return NAV_GROUPS.map(group => ({
+      ...group,
+      items: this.navOrder()[group.id].filter(item => releaseSummaryEnabled || item.route !== '/release-summary')
+    }));
+  });
+  protected readonly navItemKey = navItemKey;
+  protected readonly horizontalNavigation = toSignal(
+    this.breakpoints.observe(SIDEBAR_HORIZONTAL_QUERY).pipe(map(state => state.matches)),
+    { initialValue: this.breakpoints.isMatched(SIDEBAR_HORIZONTAL_QUERY) }
+  );
   protected readonly collapsedNavGroups = signal(
     Object.fromEntries(
       NAV_GROUPS.map(({ id }) => [id, readCollapsedPreference(navGroupStorageKey(id))])
@@ -185,6 +206,14 @@ export class AppShellComponent {
   readonly sidebarCollapsed = signal(readCollapsedPreference(SIDEBAR_COLLAPSED_STORAGE_KEY));
   readonly sidebarExpanding = signal(false);
   readonly sidebarRailMode = computed(() => this.sidebarCollapsed() || this.sidebarExpanding());
+  protected readonly canReorderNavigation = computed(() => this.horizontalNavigation() || !this.sidebarRailMode());
+  protected readonly sidebarDragStartDelay = { mouse: 0, touch: 180 };
+  protected readonly reorderShortcuts = computed(() => {
+    if (!this.canReorderNavigation()) {
+      return null;
+    }
+    return this.horizontalNavigation() ? 'Shift+ArrowLeft Shift+ArrowRight' : 'Shift+ArrowUp Shift+ArrowDown';
+  });
   readonly section = computed(() => this.routeContext().section);
   readonly title = computed(() => this.routeContext().title);
   readonly breadcrumbs = computed((): RouteBreadcrumbItem[] => {
@@ -242,6 +271,49 @@ export class AppShellComponent {
     const collapsed = !this.collapsedNavGroups()[id];
     this.collapsedNavGroups.update(groups => ({ ...groups, [id]: collapsed }));
     writeCollapsedPreference(navGroupStorageKey(id), collapsed);
+  }
+
+  protected dropNavItem(group: NavGroup, event: CdkDragDrop<NavItem[], NavItem[], NavItem>): void {
+    if (event.previousContainer === event.container && event.isPointerOverContainer &&
+        group.items[event.previousIndex] === event.item.data) {
+      this.moveNavItem(group, event.previousIndex, event.currentIndex);
+    }
+  }
+
+  protected reorderNavItemWithKeyboard(event: KeyboardEvent, link: HTMLAnchorElement, group: NavGroup, index: number): void {
+    const horizontal = this.horizontalNavigation();
+    const previousKey = horizontal ? 'ArrowLeft' : 'ArrowUp';
+    const nextKey = horizontal ? 'ArrowRight' : 'ArrowDown';
+    if (!this.canReorderNavigation() || !event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ||
+        (event.key !== previousKey && event.key !== nextKey)) {
+      return;
+    }
+
+    event.preventDefault();
+    const targetIndex = index + (event.key === previousKey ? -1 : 1);
+    if (this.moveNavItem(group, index, targetIndex)) {
+      const label = group.items[index].label;
+      afterNextRender(() => link.focus(), { injector: this.injector });
+      void this.liveAnnouncer.announce(`${label}. Pozycja ${targetIndex + 1} z ${group.items.length}.`);
+    }
+  }
+
+  private moveNavItem(group: NavGroup, from: number, to: number): boolean {
+    if (!this.canReorderNavigation() || this.collapsedNavGroups()[group.id] ||
+        from === to || !group.items[from] || !group.items[to]) {
+      return false;
+    }
+
+    const visibleItems = [...group.items];
+    moveItemInArray(visibleItems, from, to);
+
+    // Preserve the slots of items currently hidden by workspace configuration.
+    const visibleSet = new Set(group.items);
+    let index = 0;
+    const order = this.navOrder()[group.id].map(item => visibleSet.has(item) ? visibleItems[index++] : item);
+    this.navOrder.update(groups => ({ ...groups, [group.id]: order }));
+    writeSidebarPreference(navOrderStorageKey(group.id), JSON.stringify(order.map(navItemKey)));
+    return true;
   }
 
   protected navigateFromSidebar(event: MouseEvent, item: NavItem): void {
@@ -384,17 +456,54 @@ function navGroupStorageKey(id: string): string {
   return `team-delivery-workspace.sidebar.group.${id}.collapsed`;
 }
 
-function readCollapsedPreference(key: string): boolean {
+function navOrderStorageKey(id: string): string {
+  return `team-delivery-workspace.sidebar.group.${id}.order`;
+}
+
+function navItemKey(item: NavItem): string {
+  return item.disabled ? item.id : item.route;
+}
+
+function readNavOrder(group: NavGroup): NavItem[] {
   try {
-    return window.localStorage.getItem(key) === 'true';
+    const saved: unknown = JSON.parse(readSidebarPreference(navOrderStorageKey(group.id)) ?? 'null');
+    if (Array.isArray(saved)) {
+      const remaining = new Map(group.items.map(item => [navItemKey(item), item]));
+      const ordered: NavItem[] = [];
+      for (const key of saved) {
+        const item = typeof key === 'string' ? remaining.get(key) : undefined;
+        if (item) {
+          ordered.push(item);
+          remaining.delete(key);
+        }
+      }
+      return [...ordered, ...remaining.values()];
+    }
   } catch {
-    return false;
+    // Invalid saved order falls back to the catalog order.
+  }
+  return group.items;
+}
+
+function readSidebarPreference(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
   }
 }
 
+function readCollapsedPreference(key: string): boolean {
+  return readSidebarPreference(key) === 'true';
+}
+
 function writeCollapsedPreference(key: string, collapsed: boolean): void {
+  writeSidebarPreference(key, String(collapsed));
+}
+
+function writeSidebarPreference(key: string, value: string): void {
   try {
-    window.localStorage.setItem(key, String(collapsed));
+    window.localStorage.setItem(key, value);
   } catch {
     // Layout preference persistence is optional.
   }

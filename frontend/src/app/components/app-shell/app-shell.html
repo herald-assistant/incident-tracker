@@ -3,7 +3,7 @@
   [class.app-shell--sidebar-collapsed]="sidebarCollapsed()"
   [class.app-shell--sidebar-expanding]="sidebarExpanding()"
 >
-  <aside class="app-shell__sidebar" aria-label="Main navigation">
+  <aside class="app-shell__sidebar" aria-label="Main navigation" cdkScrollable>
     <div class="app-shell__sidebar-header">
       @if (sidebarRailMode()) {
         <button
@@ -42,8 +42,8 @@
       }
     </div>
 
-    <nav class="app-shell__nav" aria-label="Workspace sections">
-      @for (group of navGroups; track group.id) {
+    <nav class="app-shell__nav" aria-label="Workspace sections" cdkScrollable>
+      @for (group of navGroups(); track group.id) {
         @let collapsed = collapsedNavGroups()[group.id];
         <section class="app-shell__nav-group">
           <button
@@ -59,42 +59,58 @@
 
           <div
             class="app-shell__nav-list"
+            cdkDropList
+            [cdkDropListData]="group.items"
+            [cdkDropListOrientation]="horizontalNavigation() ? 'horizontal' : 'vertical'"
+            [cdkDropListDisabled]="collapsed || !canReorderNavigation()"
+            (cdkDropListDropped)="dropNavItem(group, $event)"
             [hidden]="collapsed"
             [id]="'sidebar-group-' + group.id"
           >
-            @for (item of group.items; track item.label) {
-              @if (item.disabled) {
-                <div
-                  class="app-shell__disabled-nav-tooltip"
-                  [matTooltip]="item.label + ' - coming soon'"
-                  matTooltipPosition="right"
-                >
-                  <button
-                    class="app-shell__nav-item app-shell__nav-item--disabled"
-                    type="button"
-                    disabled
-                    [attr.aria-label]="item.label + ' coming soon'"
+            @for (item of group.items; track navItemKey(item); let index = $index) {
+              <div
+                class="app-shell__nav-row"
+                cdkDrag
+                [cdkDragData]="item"
+                [cdkDragStartDelay]="sidebarDragStartDelay"
+              >
+                @if (item.disabled) {
+                  <div
+                    class="app-shell__disabled-nav-tooltip"
+                    [matTooltip]="item.label + ' - coming soon'"
+                    matTooltipPosition="right"
+                  >
+                    <button
+                      class="app-shell__nav-item app-shell__nav-item--disabled"
+                      type="button"
+                      disabled
+                      [attr.aria-label]="item.label + ' coming soon'"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+                      <span class="app-shell__nav-label">{{ item.label }}</span>
+                      <small class="app-shell__nav-badge">Soon</small>
+                    </button>
+                  </div>
+                } @else {
+                  <a
+                    #link
+                    class="app-shell__nav-item"
+                    draggable="false"
+                    [class.app-shell__nav-item--active]="isNavItemActive(item)"
+                    [attr.href]="item.route"
+                    [attr.aria-label]="item.label"
+                    [attr.aria-current]="isNavItemActive(item) ? 'page' : null"
+                    [attr.aria-keyshortcuts]="reorderShortcuts()"
+                    [matTooltip]="sidebarRailMode() ? item.label : ''"
+                    matTooltipPosition="right"
+                    (click)="navigateFromSidebar($event, item)"
+                    (keydown)="reorderNavItemWithKeyboard($event, link, group, index)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
                     <span class="app-shell__nav-label">{{ item.label }}</span>
-                    <small class="app-shell__nav-badge">Soon</small>
-                  </button>
-                </div>
-              } @else {
-                <a
-                  class="app-shell__nav-item"
-                  [class.app-shell__nav-item--active]="isNavItemActive(item)"
-                  [attr.href]="item.route"
-                  [attr.aria-label]="item.label"
-                  [attr.aria-current]="isNavItemActive(item) ? 'page' : null"
-                  [matTooltip]="sidebarRailMode() ? item.label : ''"
-                  matTooltipPosition="right"
-                  (click)="navigateFromSidebar($event, item)"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
-                  <span class="app-shell__nav-label">{{ item.label }}</span>
-                </a>
-              }
+                  </a>
+                }
+              </div>
             }
           </div>
         </section>

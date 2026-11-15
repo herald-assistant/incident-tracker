@@ -74,6 +74,11 @@ utrzymuj w podstawowym kroju. Kolory statusów zachowują swoje znaczenie.
   Przy pierwszym otwarciu wszystkie sa rozwiniete. Kazda zapisuje swoj stan
   osobno w `localStorage`. Po zwinieciu calego panelu tryb ikonowy pokazuje
   pozycje tylko z rozwinietych kategorii.
+- Przeciągnięcie całej pozycji zmienia jej kolejność w danej kategorii.
+  Na ekranie dotykowym gest zaczyna się po krótkim przytrzymaniu. Fokus
+  na linku pozwala zmienić jego kolejność skrótem Shift ze strzałką zgodną
+  z kierunkiem listy. Każda kategoria zapisuje kolejność osobno w `localStorage`.
+  Tryb ikonowy na desktopie odtwarza ustawioną kolejność.
 - Chevron po prawej stronie naglowka pojawia sie na hover i przy fokusie
   klawiatury. Na urzadzeniach bez hovera jest stale widoczny.
 - Tooltipy pozycji uzywaja domyslnego wygladu Angular Material i otwieraja
