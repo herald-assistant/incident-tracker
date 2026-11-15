@@ -1,0 +1,11 @@
+<section class="special-theme-banner" [attr.aria-labelledby]="headingId()">
+  <div class="special-theme-banner__copy">
+    <p class="section-eyebrow">Team Delivery Workspace</p>
+    <h2 [id]="headingId()">{{ banner().heading }}</h2>
+    <p>{{ banner().message }}</p>
+  </div>
+
+  <div class="special-theme-banner__visual" aria-hidden="true">
+    <img [src]="banner().image" alt="" />
+  </div>
+</section>

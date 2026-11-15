@@ -23,7 +23,7 @@ drugiego standardu tej samej kontrolki.
 
 ## Jezyk wizualny
 
-- V1 jest jasny. Tlo strony, pomocnicze powierzchnie i separatory uzywaja
+- Obszar roboczy jest jasny. Tlo strony, pomocnicze powierzchnie i separatory uzywaja
   neutralnych tokenow `--color-bg`, `--color-surface*` i `--color-border*`.
   Niebieski oznacza marke, wybor i interakcje; kolory statusow zachowuja
   znaczenie semantyczne.
@@ -31,7 +31,7 @@ drugiego standardu tej samej kontrolki.
   wage 700 i niebieskie zaznaczenie. Etykiety pol nie wymuszaja uppercase ani
   rozstrzelonych liter; krotkie naglowki grup moga zachowac uppercase.
 - Panele korzystaja z subtelnych `--shadow-soft` / `--shadow-card`.
-  Hover nawigacji jest neutralny, nie dotyczy pozycji disabled. Karty Overview
+  Hover nawigacji lekko rozjasnia pozycje dostepne. Karty Overview
   zmieniaja powierzchnie bez przesuwania sie; akcenty feature'ow pozostaja
   w granatowo-niebieskiej rodzinie logo.
 - AI Skills jest lista wierszy z delikatnymi separatorami, neutralnym hoverem
@@ -40,8 +40,33 @@ drugiego standardu tej samej kontrolki.
 - Czytelnosc opiera sie na hierarchii tekstu i odstepach. Nie dodawaj
   dekoracyjnych gradientow ani nowych paneli tylko dla efektu wizualnego.
 
+## Motywy specjalne
+
+Frontend dobiera motyw z rejestru w
+`frontend/src/app/special-themes/special-theme.service.ts` według lokalnej
+daty przeglądarki. Przedziały obejmują obie daty graniczne.
+Otwarta karta przelicza harmonogram o północy i po odzyskaniu fokusu.
+
+Wejście na `/workspace-settings?special=true` włącza motywy specjalne zgodnie
+z harmonogramem, a `/workspace-settings?special=false` je wyłącza. Samo
+`/workspace-settings` oraz inne wartości parametru zachowują dotychczasowy
+wybór. Wyłączenie jest zapisywane dla wszystkich edycji w `localStorage`
+pod kluczem `team-delivery-workspace.special-themes.disabled`.
+
+Kolejna edycja wymaga wpisu z datami oraz zestawu tokenów w
+`frontend/src/app/special-themes/_special-themes.scss`. Opcjonalne
+`overviewBanner` zawiera nagłówek, życzenia i ścieżkę ilustracji dla
+komponentu `app-special-theme-banner` w tym samym katalogu.
+Zasoby należą do `frontend/public/assets/themes/<id>/`. Wybieraj rozłączne
+przedziały. Oprawa dotyczy nawigacji, palety i banera Workspace Overview.
+Ozdobny krój pisma stosuj w życzeniach, a tekst roboczy i kontrolki
+utrzymuj w podstawowym kroju. Kolory statusów zachowują swoje znaczenie.
+
 ## Lewy panel nawigacji
 
+- Domyślny panel ma granatowe tło, jasny znak TDW i niebieskie zaznaczenie
+  aktywnej pozycji. Motywy specjalne ustawiają paletę tymi samymi tokenami
+  `--color-sidebar-*`. Paleta obejmuje też wariant zwinięty i mobilny.
 - Kolejnosc kategorii to Analysis Features, Platform i Tool Workbench.
   Przy pierwszym otwarciu wszystkie sa rozwiniete. Kazda zapisuje swoj stan
   osobno w `localStorage`. Po zwinieciu calego panelu tryb ikonowy pokazuje

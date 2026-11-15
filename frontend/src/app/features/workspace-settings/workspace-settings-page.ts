@@ -4,7 +4,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { finalize } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { distinctUntilChanged, finalize, map } from 'rxjs';
 
 import {
   SourceStatePillComponent,
@@ -16,6 +17,7 @@ import {
   WorkspaceSettingsUpdateRequest
 } from '../../core/models/workspace-settings.models';
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
+import { SpecialThemeService } from '../../special-themes/special-theme.service';
 import { WorkspaceSettingsApiService } from '../../core/services/workspace-settings-api.service';
 
 @Component({
@@ -91,6 +93,19 @@ export class WorkspaceSettingsPageComponent {
   );
 
   constructor() {
+    const specialTheme = inject(SpecialThemeService);
+    inject(ActivatedRoute).queryParamMap
+      .pipe(
+        map(params => params.get('special')),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(value => {
+        if (value === 'true' || value === 'false') {
+          specialTheme.setEnabled(value === 'true');
+        }
+      });
+
     this.loadSettings();
   }
 

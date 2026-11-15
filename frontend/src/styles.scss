@@ -1,4 +1,5 @@
 @use './styles/form-controls' as controls;
+@use './app/special-themes/special-themes';
 
 :root,
 :root[data-theme='light'] {
@@ -15,6 +16,13 @@
   --color-primary: #0c66e4;
   --color-primary-dark: #0747a6;
   --color-primary-soft: #deebff;
+  --color-sidebar-bg: #0b2d63;
+  --color-sidebar-hover: #173e77;
+  --color-sidebar-active: #1559c3;
+  --color-sidebar-ink: #f5f8ff;
+  --color-sidebar-accent: #b9d4ff;
+  --color-sidebar-disabled: #abbedc;
+  --color-sidebar-divider: #6684b3;
   --color-success: #216e4e;
   --color-success-soft: #e3fcef;
   --color-warning: #b76e00;
@@ -100,6 +108,8 @@
 *::after {
   box-sizing: border-box;
 }
+
+@include special-themes.styles;
 
 * {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
@@ -400,6 +410,7 @@ app-root {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  filter: var(--sidebar-brand-filter, none);
 }
 
 .brand-eyebrow,
@@ -427,6 +438,10 @@ app-root {
 .brand-title {
   font-size: 1.08rem;
   font-weight: 700;
+}
+
+.brand-eyebrow {
+  color: var(--sidebar-brand-accent, var(--primary));
 }
 
 .auth-status-badge,

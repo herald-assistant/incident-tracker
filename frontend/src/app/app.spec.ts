@@ -6,6 +6,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
 import { Router, provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 
 import { App } from './app';
 import { routes } from './app.routes';
@@ -17,6 +18,7 @@ import {
 } from './features/flow-explorer/models/flow-explorer.models';
 
 const ANALYSIS_GROUP_STORAGE_KEY = 'team-delivery-workspace.sidebar.group.analysis-features.collapsed';
+const SPECIAL_THEMES_DISABLED_KEY = 'team-delivery-workspace.special-themes.disabled';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -39,6 +41,74 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
+  });
+
+  it('changes the special theme preference through the Workspace Settings URL', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 11, 20));
+    window.localStorage.removeItem(SPECIAL_THEMES_DISABLED_KEY);
+
+    try {
+      const fixture = TestBed.createComponent(App);
+      const router = TestBed.inject(Router);
+      const http = TestBed.inject(HttpTestingController);
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      await router.navigateByUrl('/');
+      fixture.detectChanges();
+      flushUiConfig(http, 'CRM Workspace');
+      await fixture.whenStable();
+      expect(compiled.querySelector('#platformLandingTitle')?.textContent).toContain('Wesołych Świąt!');
+      const specialBanner = compiled.querySelector('app-special-theme-banner');
+      expect(specialBanner?.querySelector('img')?.getAttribute('src')).toBe(
+        'assets/themes/christmas/workspace-overview-banner.jpg'
+      );
+      expect(compiled.querySelector('.platform-landing__hero-points')).toBeNull();
+      expect(compiled.querySelector('.platform-landing__intro')).toBeNull();
+      const wishes = specialBanner?.querySelector('p:last-of-type')?.textContent;
+      expect(wishes).toContain('Całemu zespołowi życzymy spokojnych Świąt');
+      expect(wishes).toContain('Dziękujemy za współpracę');
+
+      await router.navigateByUrl('/workspace-settings?special=false');
+      fixture.detectChanges();
+      http.expectOne('/api/workspace/settings').flush(workspaceSettingsResponse());
+      await fixture.whenStable();
+      expect(compiled.querySelector('#workspaceSettingsAppearanceTitle')).toBeNull();
+      expect(document.documentElement.hasAttribute('data-special-theme')).toBe(false);
+      expect(window.localStorage.getItem(SPECIAL_THEMES_DISABLED_KEY)).toBe('true');
+
+      await router.navigateByUrl('/workspace-settings');
+      await router.navigateByUrl('/workspace-settings?special=invalid');
+      await fixture.whenStable();
+      expect(document.documentElement.hasAttribute('data-special-theme')).toBe(false);
+      expect(window.localStorage.getItem(SPECIAL_THEMES_DISABLED_KEY)).toBe('true');
+
+      await router.navigateByUrl('/workspace-settings?special=true');
+      await fixture.whenStable();
+      expect(document.documentElement.getAttribute('data-special-theme')).toBe('christmas');
+      expect(window.localStorage.getItem(SPECIAL_THEMES_DISABLED_KEY)).toBeNull();
+
+      await router.navigateByUrl('/workspace-settings?special=false');
+      await router.navigateByUrl('/?special=true');
+      fixture.detectChanges();
+      expect(compiled.querySelector('#platformLandingTitle')?.textContent).toContain(
+        'Mniej szukania po systemach'
+      );
+      expect(compiled.querySelector('app-special-theme-banner')).toBeNull();
+      const standardBanner = compiled.querySelector('.platform-landing__intro');
+      expect(standardBanner?.querySelector('.platform-landing__brand-visual')?.getAttribute('aria-hidden'))
+        .toBe('true');
+      expect(standardBanner?.querySelector('img')).toBeNull();
+      expect(compiled.querySelectorAll('.platform-landing__hero-point')).toHaveLength(3);
+      expect(compiled.querySelector('.platform-landing__copy > p:last-of-type')?.textContent)
+        .toContain('Platforma zbiera za Ciebie informacje');
+      const activeNav = compiled.querySelector('.app-shell__nav-item--active[aria-current="page"]');
+      expect(activeNav?.getAttribute('href')).toBe('/');
+      http.verify();
+    } finally {
+      vi.useRealTimers();
+      window.localStorage.removeItem(SPECIAL_THEMES_DISABLED_KEY);
+    }
   });
 
   it('should render the platform landing shell on the root route', async () => {

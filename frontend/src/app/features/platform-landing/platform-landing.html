@@ -1,42 +1,40 @@
 <div class="page-shell platform-landing-page">
   <main class="platform-landing" aria-labelledby="platformLandingTitle">
-    <section class="platform-landing__intro" aria-labelledby="platformLandingTitle">
-      <div class="platform-landing__copy">
-        <p class="section-eyebrow">Team Delivery Workspace</p>
-        <h2 id="platformLandingTitle">
-          Mniej szukania po systemach.<br />
-          Więcej gotowych odpowiedzi do codziennej pracy.
-        </h2>
-        <p>
-          Platforma zbiera za Ciebie informacje z wielu miejsc, porządkuje je i oddaje wynik w
-          formie dopasowanej do zadania. Bez ręcznego przeklikiwania narzędzi, bez znajomości
-          technicznych skrótów i bez przygotowywania konfiguracji przed startem.
-        </p>
+    @if (activeTheme()?.overviewBanner; as banner) {
+      <app-special-theme-banner [banner]="banner" headingId="platformLandingTitle" />
+    } @else {
+      <section class="platform-landing__intro" aria-labelledby="platformLandingTitle">
+        <div class="platform-landing__copy">
+          <p class="section-eyebrow">Team Delivery Workspace</p>
+          <h2 id="platformLandingTitle">
+            Mniej szukania po systemach.<br />
+            Więcej gotowych odpowiedzi do codziennej pracy.
+          </h2>
+          <p>
+            Platforma zbiera za Ciebie informacje z wielu miejsc, porządkuje je i oddaje wynik w
+            formie dopasowanej do zadania. Bez ręcznego przeklikiwania narzędzi, bez znajomości
+            technicznych skrótów i bez przygotowywania konfiguracji przed startem.
+          </p>
 
-        <div class="platform-landing__hero-points" aria-label="Najważniejsze korzyści">
-          <div class="platform-landing__hero-point">
-            <span class="material-symbols-outlined" aria-hidden="true">bolt</span>
-            <span>Startujesz od razu</span>
-          </div>
-          <div class="platform-landing__hero-point">
-            <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
-            <span>Nie szukasz ręcznie</span>
-          </div>
-          <div class="platform-landing__hero-point">
-            <span class="material-symbols-outlined" aria-hidden="true">assignment_turned_in</span>
-            <span>Dostajesz wynik do rozmowy</span>
+          <div class="platform-landing__hero-points" aria-label="Najważniejsze korzyści">
+            <div class="platform-landing__hero-point">
+              <span class="material-symbols-outlined" aria-hidden="true">bolt</span>
+              <span>Startujesz od razu</span>
+            </div>
+            <div class="platform-landing__hero-point">
+              <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
+              <span>Nie szukasz ręcznie</span>
+            </div>
+            <div class="platform-landing__hero-point">
+              <span class="material-symbols-outlined" aria-hidden="true">assignment_turned_in</span>
+              <span>Dostajesz wynik do rozmowy</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="platform-landing__brand-visual" aria-hidden="true">
-        <img
-          class="platform-landing__brand-logo"
-          src="assets/brand/main-logo.png"
-          alt=""
-        />
-      </div>
-    </section>
+        <div class="platform-landing__brand-visual" aria-hidden="true"></div>
+      </section>
+    }
 
     <section
       id="platformLandingFeatures"

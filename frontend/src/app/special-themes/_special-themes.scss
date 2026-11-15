@@ -1,0 +1,46 @@
+@mixin styles {
+  :root[data-special-theme='christmas'] {
+    --color-bg: #f8f1e4;
+    --color-surface-alt: #fcf8f0;
+    --color-surface-muted: #f1e9da;
+    --color-border: #ddd0bf;
+    --color-border-strong: #ac9c8c;
+    --color-text: #14382e;
+    --color-muted: #46534f;
+    --color-muted-strong: #34463e;
+    --color-soft: #58645c;
+    --color-primary: #216047;
+    --color-primary-dark: #0e4533;
+    --color-primary-soft: #e0eee3;
+
+    --color-sidebar-bg: #09382e;
+    --color-sidebar-hover: #195142;
+    --color-sidebar-active: #a21b32;
+    --color-sidebar-ink: #fff8eb;
+    --color-sidebar-accent: #f5d080;
+    --color-sidebar-disabled: #b3c9bd;
+    --color-sidebar-divider: #577568;
+    --special-brand-decoration: url('/assets/themes/christmas/santa-hat.png');
+    --special-hero-bg: #790d1c;
+    --special-hero-ink: #fff6e5;
+    --special-hero-heading: Georgia, 'Times New Roman', serif;
+    --overview-card-accent: var(--color-primary-dark);
+    --overview-card-border: var(--color-border);
+    --overview-card-background: var(--color-surface-alt);
+    --overview-card-icon-shadow: transparent;
+  }
+
+  [data-special-theme] .brand-mark {
+    position: relative;
+  }
+
+  [data-special-theme] .brand-mark::after {
+    position: absolute;
+    inset: -7px -1px auto auto;
+    width: 29px;
+    height: 22px;
+    background: var(--special-brand-decoration) center / contain no-repeat;
+    content: '';
+    pointer-events: none;
+  }
+}
