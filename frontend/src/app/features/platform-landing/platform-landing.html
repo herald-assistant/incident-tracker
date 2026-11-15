@@ -25,237 +25,79 @@
       class="platform-landing__features"
       aria-labelledby="platformLandingFeaturesTitle"
     >
-      <div class="platform-landing__section-heading">
-        <div>
-          <p class="section-eyebrow">Codzienna praca</p>
-          <h3 id="platformLandingFeaturesTitle">Wybierz, co chcesz załatwić</h3>
-        </div>
-        <p>
-          Każdy tryb prowadzi Cię do wyspecjalizowanego rezultatu. Nie musisz wiedzieć, z których
-          systemów pobrać dane ani jak je ze sobą połączyć.
-        </p>
-      </div>
+      <h3 id="platformLandingFeaturesTitle">Wybierz, co chcesz załatwić</h3>
 
-      <div class="platform-landing__feature-grid">
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--incident"
-          routerLink="/incident-analysis"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            troubleshoot
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Incident Analysis</h4>
-            <p>
-              Szybko sprawdzisz, co mogło się wydarzyć, kogo dotyczy problem i jaki materiał można
-              przekazać dalej zespołowi.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--flow"
-          routerLink="/flow-explorer"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            account_tree
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Flow Explorer</h4>
-            <p>
-              Zrozumiesz, jak przebiega proces albo request, bez ręcznego odtwarzania ścieżki w
-              kilku narzędziach.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--ui"
-          routerLink="/ui-explorer"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            screen_search_desktop
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>UI Explorer</h4>
-            <p>
-              Przygotujesz dokumentację wybranego ekranu, formularzy, akcji i reguł bez ręcznego
-              przeglądania kodu frontendu.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--ui"
-          routerLink="/ux-inspector"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            ads_click
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>UX Inspector</h4>
-            <p>
-              Wskażesz element uruchomionej aplikacji i dostaniesz skupioną odpowiedź o jego
-              walidacji, danych, stanie albo działaniu.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--change"
-          routerLink="/change-verification"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            fact_check
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Change Verification</h4>
-            <p>
-              Sprawdzisz zgodność zmiany ze story, materiałem z Confluence i instrukcjami
-              repozytorium przed releasem.
-            </p>
-          </div>
-        </a>
-
-        @if (uiConfig.config().releaseSummaryEnabled) {
-          <a class="platform-landing__feature-card platform-landing__feature-card--flow" routerLink="/release-summary">
-            <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">deployed_code</span>
-            <div><span class="platform-landing__feature-status">Dostępne</span><h4>Release summary</h4>
-              <p>Przygotujesz szczegółowy raport zmian Liquibase między refami i zrozumiesz ich cel w aplikacji.</p></div>
-          </a>
+      <div class="platform-landing__tool-groups">
+        @for (group of toolGroups; track group.id) {
+          <section class="platform-landing__tool-group" [attr.aria-labelledby]="group.id + '-tools'">
+            <div
+              class="platform-landing__tool-image"
+              [attr.data-tool-group]="group.id"
+              aria-hidden="true"
+            ></div>
+            <h4 [id]="group.id + '-tools'">{{ group.title }}</h4>
+            <ul class="platform-landing__tool-list">
+              @for (tool of group.tools; track tool.route) {
+                @if (tool.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
+                  <li>
+                    <a [routerLink]="tool.route">
+                      {{ tool.title }}
+                      <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                    </a>
+                  </li>
+                }
+              }
+            </ul>
+          </section>
         }
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--config"
-          routerLink="/config-drift-viewer"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            build_circle
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Config Drift Viewer</h4>
-            <p>
-              Porównasz konfiguracje środowisk i oddzielnie zobaczysz deterministyczne różnice,
-              drugą opinię AI oraz wpływ na kod i ownership.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--delivery"
-          routerLink="/delivery-complexity-assessment"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            domain_add
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Behavior Change Assessment</h4>
-            <p>
-              Ocenisz złożoność dostarczonych zmian w działaniu produktu:
-              jego funkcjach, regułach i procesach, także tych działających w tle.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--delivery"
-          routerLink="/delivery-scope-complexity"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            engineering
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Technical Change Assessment</h4>
-            <p>
-              Ocenisz zakres i złożoność dostarczonych zmian technicznych,
-              w tym logiki, kontraktów, refaktoryzacji i architektury.
-            </p>
-          </div>
-        </a>
-
-        <a
-          class="platform-landing__feature-card platform-landing__feature-card--delivery"
-          routerLink="/delivery-complexity-trends"
-        >
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            finance
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">Dostępne</span>
-            <h4>Delivery Trends</h4>
-            <p>
-              Połączysz okresowe CSV jednej oceny i zobaczysz trendy Complexity Points
-              oraz ich relacji do zaraportowanego czasu, według dni, tygodni,
-              miesięcy lub kwartałów.
-            </p>
-          </div>
-        </a>
       </div>
-
-      <article
-        class="platform-landing__planned-feature"
-        aria-labelledby="platformLandingPlannedFeatureTitle"
-      >
-        <span
-          class="platform-landing__feature-icon platform-landing__feature-icon--planned material-symbols-outlined"
-          aria-hidden="true"
-        >
-          database_search
-        </span>
-        <div class="platform-landing__planned-feature-heading">
-          <span class="platform-landing__feature-status platform-landing__feature-status--planned">
-            W planie
-          </span>
-          <h4 id="platformLandingPlannedFeatureTitle">Data Diagnostics</h4>
-        </div>
-        <p>
-          Bezpieczne pytania o dane w języku naturalnym, z wynikiem gotowym do rozmowy z biznesem,
-          supportem albo zespołem technicznym.
-        </p>
-      </article>
     </section>
 
-    <section class="platform-landing__capabilities" aria-labelledby="platformLandingCapabilitiesTitle">
-      <div class="platform-landing__section-heading">
-        <div>
-          <p class="section-eyebrow">Dlaczego to oszczędza czas</p>
-          <h3 id="platformLandingCapabilitiesTitle">Platforma wykonuje najżmudniejszą część pracy</h3>
+    <section
+      #benefitsStory
+      class="platform-landing__capabilities"
+      aria-labelledby="platformLandingCapabilitiesTitle"
+    >
+      <div #benefitsTrack class="platform-landing__benefits-track" aria-hidden="true">
+        <div #benefitsStage class="platform-landing__orbit" [style.--source-count]="toolIcons.length">
+          @for (icon of toolIcons; track icon) {
+            <div class="platform-landing__orbit-source" [style.--source-index]="$index">
+              <img
+                class="platform-landing__orbit-tool-icon"
+                [src]="'assets/brand/tool-icons/' + icon"
+                alt=""
+              />
+              <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+            </div>
+          }
+          <div class="platform-landing__orbit-result">
+            <img src="assets/brand/main-logo.png" alt="" />
+          </div>
         </div>
-        <p>
-          Zamiast zbierać materiał od zera, zaczynasz od sprawy do załatwienia i dostajesz kontekst
-          gotowy do dalszej pracy.
-        </p>
       </div>
-
-      <div class="platform-landing__impact-list" aria-label="Efekty pracy z platformą">
-        <div class="platform-landing__impact-item">
-          <span>01</span>
-          <div>
-            <strong>Mniej przygotowań</strong>
-            <p>Nie musisz ustalać, gdzie zacząć ani komu najpierw zadać pytanie.</p>
-          </div>
-        </div>
-        <div class="platform-landing__impact-item">
-          <span>02</span>
-          <div>
-            <strong>Szybszy pierwszy obraz</strong>
-            <p>Rozproszone sygnały wracają jako krótki opis sytuacji i wpływu na klienta.</p>
-          </div>
-        </div>
-        <div class="platform-landing__impact-item">
-          <span>03</span>
-          <div>
-            <strong>Łatwiejsze przekazanie</strong>
-            <p>Wynik jest gotowy do omówienia z analitykiem, supportem, biznesem albo zespołem technicznym.</p>
-          </div>
+      <div class="platform-landing__benefits-copy">
+        <div class="platform-landing__benefits-message">
+          <h3 id="platformLandingCapabilitiesTitle">
+            Ty wyznaczasz cel. <span>Workspace dowozi wynik.</span>
+          </h3>
+          <ul class="platform-landing__benefits-list">
+            <li>
+              <strong>Twoje narzędzia w jednym miejscu.</strong>
+              <span>&ngsp;Workspace obsługuje je za Ciebie.</span>
+            </li>
+            <li>
+              <strong>Flows i narzędzia dopasowane do zadania.</strong>
+              <span>&ngsp;AI wie, czego szukać, co połączyć i co odsiać.</span>
+            </li>
+            <li>
+              <strong>Rezultat gotowy do działania.</strong>
+              <span>&ngsp;Raport, analiza lub odpowiedź.</span>
+            </li>
+            <li>
+              <strong>Junior ready!</strong>
+              <span>&ngsp;Na dobry start w zespole i z AI.</span>
+            </li>
+          </ul>
         </div>
       </div>
     </section>

@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { PlatformLandingPageComponent } from './platform-landing';
 
 describe('PlatformLandingPageComponent', () => {
-  it('should keep feature navigation in the feature grid instead of duplicating selected actions', async () => {
+  it('lists only available tools below the hero', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],
       providers: [provideRouter([])]
@@ -15,62 +15,23 @@ describe('PlatformLandingPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const featureLinks = Array.from(
-      compiled.querySelectorAll<HTMLAnchorElement>('.platform-landing__feature-grid a')
-    );
-    const featureGrid = compiled.querySelector<HTMLElement>('.platform-landing__feature-grid');
-    const plannedFeature = compiled.querySelector<HTMLElement>(
-      '.platform-landing__planned-feature'
+      compiled.querySelectorAll<HTMLAnchorElement>('.platform-landing__tool-list a')
     );
 
     expect(compiled.querySelector('.platform-landing__actions')).toBeNull();
     expect(compiled.querySelectorAll('.platform-landing__intro a')).toHaveLength(0);
     expect(compiled.querySelector('#platformLandingFeatures')).not.toBeNull();
     expect(featureLinks.map((link) => link.getAttribute('href'))).toEqual([
+      '/change-verification',
+      '/config-drift-viewer',
       '/incident-analysis',
       '/flow-explorer',
       '/ui-explorer',
       '/ux-inspector',
-      '/change-verification',
-      '/config-drift-viewer',
       '/delivery-complexity-assessment',
       '/delivery-scope-complexity',
       '/delivery-complexity-trends'
     ]);
-    expect(
-      featureLinks.map((link) =>
-        Array.from(link.classList).find((className) =>
-          className.startsWith('platform-landing__feature-card--')
-        )
-      )
-    ).toEqual([
-      'platform-landing__feature-card--incident',
-      'platform-landing__feature-card--flow',
-      'platform-landing__feature-card--ui',
-      'platform-landing__feature-card--ui',
-      'platform-landing__feature-card--change',
-      'platform-landing__feature-card--config',
-      'platform-landing__feature-card--delivery',
-      'platform-landing__feature-card--delivery',
-      'platform-landing__feature-card--delivery'
-    ]);
-    expect(featureGrid?.textContent).toContain('Behavior Change Assessment');
-    expect(featureGrid?.textContent).toContain('Technical Change Assessment');
-    expect(featureGrid?.textContent).toContain('Delivery Trends');
-    expect(featureGrid?.textContent).not.toContain('Data Diagnostics');
-    expect(featureLinks.slice(6).map((link) =>
-      link.querySelector('.platform-landing__feature-icon')?.textContent?.trim()
-    )).toEqual(['domain_add', 'engineering', 'finance']);
-    expect(featureLinks.slice(6).map((link) =>
-      link.querySelector('.platform-landing__feature-status')?.textContent?.trim()
-    )).toEqual(['Dostępne', 'Dostępne', 'Dostępne']);
-    expect(
-      featureLinks[2]?.querySelector('.platform-landing__feature-icon')?.textContent?.trim()
-    ).toBe('screen_search_desktop');
-    expect(
-      featureLinks[3]?.querySelector('.platform-landing__feature-icon')?.textContent?.trim()
-    ).toBe('ads_click');
-    expect(plannedFeature?.textContent).toContain('W planie');
-    expect(plannedFeature?.textContent).toContain('Data Diagnostics');
-    expect(plannedFeature?.querySelector('a')).toBeNull();
+    expect(compiled.textContent).not.toContain('Data Diagnostics');
   });
 });

@@ -70,6 +70,7 @@ describe('App', () => {
         'assets/themes/christmas/workspace-overview-banner.jpg'
       );
       expect(compiled.querySelector('.platform-landing__intro')).toBeNull();
+      expect(compiled.querySelector('.platform-landing__tool-list a[href="/release-summary"]')).toBeNull();
       const wishes = specialBanner?.querySelector('p:last-of-type')?.textContent;
       expect(wishes).toContain('Całemu zespołowi życzymy spokojnych Świąt');
       expect(wishes).toContain('Dziękujemy za współpracę');
@@ -137,24 +138,28 @@ describe('App', () => {
     ]);
     expect(landing).not.toBeNull();
     expect(landing?.querySelector('#platformLandingTitle')).not.toBeNull();
-    expect(landing?.querySelector('.platform-landing__feature-grid')).not.toBeNull();
+    const toolGroups = [...(landing?.querySelectorAll('.platform-landing__tool-group') ?? [])];
+    expect(toolGroups.map(group => group.querySelector('h4')?.textContent?.trim())).toEqual([
+      'Weryfikacja i wydania',
+      'Analiza i dokumentacja',
+      'Ocena i trendy'
+    ]);
+    expect(toolGroups.map(group => [...group.querySelectorAll('a')].map(link => link.getAttribute('href'))))
+      .toEqual([
+        ['/change-verification', '/config-drift-viewer', '/release-summary'],
+        ['/incident-analysis', '/flow-explorer', '/ui-explorer', '/ux-inspector'],
+        ['/delivery-complexity-assessment', '/delivery-scope-complexity', '/delivery-complexity-trends']
+      ]);
     expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
       'Team Delivery Workspace'
     );
     expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
-    for (const selector of [
-      'a.app-shell__nav-item[aria-label="Release summary"]',
-      '.platform-landing__feature-grid a[href="/release-summary"]'
-    ]) {
-      const releaseSummary = compiled.querySelector(selector);
-      const entry = releaseSummary?.closest('.app-shell__nav-row') ?? releaseSummary;
-      const previous = entry?.previousElementSibling;
-      const next = entry?.nextElementSibling;
-      expect((previous?.querySelector('a') ?? previous)?.getAttribute('href')).toBe('/change-verification');
-      expect((next?.querySelector('a') ?? next)?.getAttribute('href')).toBe('/config-drift-viewer');
-      expect(releaseSummary?.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('deployed_code');
-    }
+    const releaseSummary = compiled.querySelector('a.app-shell__nav-item[aria-label="Release summary"]');
+    const entry = releaseSummary?.closest('.app-shell__nav-row');
+    expect(entry?.previousElementSibling?.querySelector('a')?.getAttribute('href')).toBe('/change-verification');
+    expect(entry?.nextElementSibling?.querySelector('a')?.getAttribute('href')).toBe('/config-drift-viewer');
+    expect(releaseSummary?.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('deployed_code');
   });
 
   it('should render Delivery Trends from the Analysis Features navigation', async () => {

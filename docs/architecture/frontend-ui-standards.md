@@ -33,9 +33,8 @@ drugiego standardu tej samej kontrolki.
   wagę 700. Etykiety pól zachowują zwykłą pisownię i standardowe odstępy
   między literami. Krótkie nagłówki grup mogą być pisane wielkimi literami.
 - Panele korzystaja z subtelnych `--shadow-soft` / `--shadow-card`.
-  Hover nawigacji lekko rozjasnia pozycje dostepne. Karty Overview
-  zmieniaja powierzchnie bez przesuwania sie; akcenty feature'ow pozostaja
-  w granatowo-niebieskiej rodzinie logo.
+  Hover nawigacji lekko rozjasnia pozycje dostepne. Workspace Overview
+  grupuje narzedzia w listy z separatorami i widocznym fokusem klawiatury.
 - AI Skills jest lista wierszy z delikatnymi separatorami, neutralnym hoverem
   i widocznym fokusem klawiatury. Wiersze i ikony nie dostaja osobnych ramek
   ani cieni tworzacych karty wewnatrz karty.
