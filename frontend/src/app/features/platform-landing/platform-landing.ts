@@ -108,6 +108,15 @@ const TOOL_ICONS = [
   'atlassian-jira-icon.svg'
 ] as const;
 
+const SLOGANS = [
+  { scene: 'tools', lines: ['Twoje narzędzia.', 'Jedno miejsce.'] },
+  { scene: 'features', lines: ['AI dopasowane do zadania.', 'Od incydentu po wydanie.'] },
+  {
+    scene: 'guidance',
+    lines: ['Wystarczy wiedzieć, co chcesz zrobić.', 'Workspace prowadzi Cię do wyniku.']
+  }
+] as const;
+
 @Component({
   selector: 'app-platform-landing-page',
   imports: [RouterLink, SpecialThemeBannerComponent],
@@ -118,7 +127,13 @@ export class PlatformLandingPageComponent {
   readonly uiConfig = inject(AppUiConfigService);
   readonly activeTheme = inject(SpecialThemeService).activeTheme;
   readonly features = FEATURES;
+  protected readonly orbitFeatures = FEATURES.filter(feature => feature.route !== '/release-summary');
   readonly toolIcons = TOOL_ICONS;
+  protected readonly slogans = SLOGANS.map(({ scene, lines }) => ({
+    scene,
+    label: lines.join(' '),
+    lines: lines.map(line => Array.from(line))
+  }));
   protected readonly canScrollBack = signal(false);
   protected readonly canScrollForward = signal(true);
 
@@ -182,30 +197,38 @@ export class PlatformLandingPageComponent {
     const stage = this.benefitsStage().nativeElement;
     const motion = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-height: 680px)');
     let frame: number | undefined;
-    let lastOrbitProgress = '';
-    let lastCopyProgress = '';
+    let lastToolProgress = '';
+    let lastFeatureProgress = '';
+    let lastGuidanceProgress = '';
 
     const draw = () => {
       frame = undefined;
       const bounds = track.getBoundingClientRect();
       const stageStyle = window.getComputedStyle(stage);
       const stickyTop = Number.parseFloat(stageStyle.top);
-      const revealDistance = Number.parseFloat(stageStyle.getPropertyValue('--story-reveal-distance'));
+      const toolsShare = Number.parseFloat(stageStyle.getPropertyValue('--story-tools-share'));
+      const guidanceDistance = Number.parseFloat(stageStyle.getPropertyValue('--story-guidance-distance'));
       const orbitDistance = Math.max(
         1,
-        bounds.height - stage.getBoundingClientRect().height - revealDistance - stickyTop
+        bounds.height - stage.getBoundingClientRect().height - stickyTop - guidanceDistance
       );
       const travelled = stickyTop - bounds.top;
-      const orbitProgress = scrollProgress(travelled / orbitDistance);
-      const copyProgress = scrollProgress((travelled - orbitDistance) / revealDistance);
+      const toolsDistance = orbitDistance * toolsShare;
+      const toolProgress = scrollProgress(travelled / toolsDistance);
+      const featureProgress = scrollProgress((travelled - toolsDistance) / (orbitDistance - toolsDistance));
+      const guidanceProgress = scrollProgress((travelled - orbitDistance) / guidanceDistance);
 
-      if (orbitProgress !== lastOrbitProgress) {
-        story.style.setProperty('--story-progress', orbitProgress);
-        lastOrbitProgress = orbitProgress;
+      if (toolProgress !== lastToolProgress) {
+        story.style.setProperty('--story-tool-progress', toolProgress);
+        lastToolProgress = toolProgress;
       }
-      if (copyProgress !== lastCopyProgress) {
-        story.style.setProperty('--story-copy-progress', copyProgress);
-        lastCopyProgress = copyProgress;
+      if (featureProgress !== lastFeatureProgress) {
+        story.style.setProperty('--story-feature-progress', featureProgress);
+        lastFeatureProgress = featureProgress;
+      }
+      if (guidanceProgress !== lastGuidanceProgress) {
+        story.style.setProperty('--story-guidance-progress', guidanceProgress);
+        lastGuidanceProgress = guidanceProgress;
       }
     };
 
