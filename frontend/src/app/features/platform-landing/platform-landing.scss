@@ -367,7 +367,7 @@
 
 @media (prefers-reduced-motion: no-preference) and (min-height: 680px) {
   [data-scroll-motion] .platform-landing__benefits-track {
-    min-height: calc(var(--orbit-size) + clamp(360px, 54svh, 620px));
+    min-height: calc(var(--orbit-size) + clamp(820px, 115svh, 1250px));
   }
 
   [data-scroll-motion] .platform-landing__benefits-copy {
@@ -384,22 +384,25 @@
   [data-scroll-motion] .platform-landing__orbit {
     position: sticky;
     top: calc(50dvh - var(--orbit-size) / 2);
-    --spiral: clamp(0, (var(--story-progress, 0) - 0.39) / 0.61, 1);
-    --complete: clamp(0, (var(--story-progress, 0) - 0.82) / 0.18, 1);
-    --turn: calc(var(--story-progress, 0) * 0.47turn + var(--spiral) * 0.48turn);
+    // Keep the angle advancing at the same rate through the swap and the inward spiral.
+    --rotation: clamp(0, (var(--story-progress, 0) - 0.2) / 0.8, 1);
+    --turn: calc(var(--rotation) * 1.1turn);
+    --spiral: clamp(0, (var(--story-progress, 0) - 0.69) / 0.31, 1);
+    --complete: clamp(0, (var(--story-progress, 0) - 0.88) / 0.12, 1);
   }
 
   [data-scroll-motion] .platform-landing__orbit-source {
-    --source-symbol: clamp(0, (0.7 + var(--source-index) * 0.008 - var(--story-progress, 0)) / 0.19, 1);
-    opacity: calc(1 - var(--complete));
+    --appearance: clamp(0, (var(--story-progress, 0) - 0.04 - var(--source-index) * 0.006) / 0.1, 1);
+    --tdw-symbol: clamp(0, (var(--story-progress, 0) - 0.42 - var(--source-index) * 0.007) / 0.15, 1);
+    opacity: calc(var(--appearance) * (1 - var(--complete)));
   }
 
   [data-scroll-motion] .platform-landing__orbit-tool-icon {
-    opacity: var(--source-symbol);
+    opacity: calc(1 - var(--tdw-symbol));
   }
 
   [data-scroll-motion] .platform-landing__orbit-tdw-icon {
-    opacity: calc(1 - var(--source-symbol));
+    opacity: var(--tdw-symbol);
   }
 
   [data-scroll-motion] .platform-landing__orbit-result {
