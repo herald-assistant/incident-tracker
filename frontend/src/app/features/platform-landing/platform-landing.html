@@ -25,32 +25,68 @@
       class="platform-landing__features"
       aria-labelledby="platformLandingFeaturesTitle"
     >
-      <h3 id="platformLandingFeaturesTitle">Wybierz, co chcesz załatwić</h3>
-
-      <div class="platform-landing__tool-groups">
-        @for (group of toolGroups; track group.id) {
-          <section class="platform-landing__tool-group" [attr.aria-labelledby]="group.id + '-tools'">
-            <div
-              class="platform-landing__tool-image"
-              [attr.data-tool-group]="group.id"
-              aria-hidden="true"
-            ></div>
-            <h4 [id]="group.id + '-tools'">{{ group.title }}</h4>
-            <ul class="platform-landing__tool-list">
-              @for (tool of group.tools; track tool.route) {
-                @if (tool.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
-                  <li>
-                    <a [routerLink]="tool.route">
-                      {{ tool.title }}
-                      <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
-                    </a>
-                  </li>
-                }
-              }
-            </ul>
-          </section>
-        }
+      <div class="platform-landing__features-header">
+        <h3 id="platformLandingFeaturesTitle">Wybierz, co chcesz załatwić</h3>
+        <div class="platform-landing__carousel-controls">
+          <button
+            type="button"
+            aria-label="Poprzednia karta"
+            aria-controls="platformLandingFeatureList"
+            [disabled]="!canScrollBack()"
+            (click)="scrollFeatureCarousel(-1)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Następna karta"
+            aria-controls="platformLandingFeatureList"
+            [disabled]="!canScrollForward()"
+            (click)="scrollFeatureCarousel(1)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+          </button>
+        </div>
       </div>
+
+      <ul
+        #featureList
+        id="platformLandingFeatureList"
+        class="platform-landing__feature-list"
+        role="list"
+        (scroll)="updateFeatureCarousel()"
+      >
+        @for (feature of features; track feature.route) {
+          @if (feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
+            <li #featureSlide>
+              <a
+                class="platform-landing__feature-card"
+                [routerLink]="feature.route"
+                [attr.aria-labelledby]="'overview-feature-title-' + $index"
+                [attr.aria-describedby]="'overview-feature-description-' + $index"
+              >
+                <div
+                  class="platform-landing__feature-visual"
+                  [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
+                  aria-hidden="true"
+                >
+                  @if (!feature.image) {
+                    <span class="platform-landing__feature-icon material-symbols-outlined">
+                      {{ feature.icon }}
+                    </span>
+                  }
+                </div>
+                <div class="platform-landing__feature-copy">
+                  <h4 class="platform-landing__feature-name" [id]="'overview-feature-title-' + $index">
+                    {{ feature.title }}
+                  </h4>
+                  <p [id]="'overview-feature-description-' + $index">{{ feature.description }}</p>
+                </div>
+              </a>
+            </li>
+          }
+        }
+      </ul>
     </section>
 
     <section

@@ -2,6 +2,7 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkScrollable } from '@angular/cdk/scrolling';
+import { ViewportScroller } from '@angular/common';
 import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -174,6 +175,7 @@ const NAV_GROUPS: NavGroup[] = [
 })
 export class AppShellComponent {
   private readonly router = inject(Router);
+  private readonly viewportScroller = inject(ViewportScroller);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly uiConfig = inject(AppUiConfigService);
   private readonly breakpoints = inject(BreakpointObserver);
@@ -242,6 +244,16 @@ export class AppShellComponent {
         takeUntilDestroyed()
       )
       .subscribe((event) => {
+        const previousPath = this.currentUrl().split(/[?#]/, 1)[0];
+        const nextPath = event.urlAfterRedirects.split(/[?#]/, 1)[0];
+        if (
+          previousPath === '/' &&
+          nextPath !== '/' &&
+          this.router.currentNavigation()?.trigger === 'imperative' &&
+          this.viewportScroller.getScrollPosition()[1] > 0
+        ) {
+          this.viewportScroller.scrollToPosition([0, 0], { behavior: 'instant' });
+        }
         this.currentUrl.set(event.urlAfterRedirects);
         this.updateRouteContext();
       });

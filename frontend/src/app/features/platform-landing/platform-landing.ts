@@ -1,39 +1,99 @@
-import { afterNextRender, Component, DestroyRef, ElementRef, inject, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  afterRenderEffect,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+  viewChildren
+} from '@angular/core';
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { RouterLink } from '@angular/router';
 import { SpecialThemeBannerComponent } from '../../special-themes/special-theme-banner';
 import { SpecialThemeService } from '../../special-themes/special-theme.service';
 
-const TOOL_GROUPS = [
+interface OverviewFeature {
+  readonly title: string;
+  readonly route: string;
+  readonly icon: string;
+  readonly description: string;
+  readonly image?: string;
+}
+
+const FEATURES: readonly OverviewFeature[] = [
   {
-    id: 'verification',
-    title: 'Weryfikacja i wydania',
-    tools: [
-      { title: 'Change Verification', route: '/change-verification' },
-      { title: 'Config Drift Viewer', route: '/config-drift-viewer' },
-      { title: 'Release summary', route: '/release-summary' }
-    ]
+    title: 'Incident Analysis',
+    description: 'Ustal wpływ incydentu',
+    route: '/incident-analysis',
+    icon: 'troubleshoot',
+    image: '/assets/brand/workspace-overview-incident-analysis.jpg'
   },
   {
-    id: 'analysis',
-    title: 'Analiza i dokumentacja',
-    tools: [
-      { title: 'Incident Analysis', route: '/incident-analysis' },
-      { title: 'Flow Explorer', route: '/flow-explorer' },
-      { title: 'UI Explorer', route: '/ui-explorer' },
-      { title: 'UX Inspector', route: '/ux-inspector' }
-    ]
+    title: 'Flow Explorer',
+    description: 'Zobacz, od czego zależy proces',
+    route: '/flow-explorer',
+    icon: 'account_tree',
+    image: '/assets/brand/workspace-overview-flow-explorer.jpg'
   },
   {
-    id: 'assessment',
-    title: 'Ocena i trendy',
-    tools: [
-      { title: 'Behavior Change Assessment', route: '/delivery-complexity-assessment' },
-      { title: 'Technical Change Assessment', route: '/delivery-scope-complexity' },
-      { title: 'Delivery Trends', route: '/delivery-complexity-trends' }
-    ]
+    title: 'UI Explorer',
+    description: 'Udokumentuj działanie ekranu',
+    route: '/ui-explorer',
+    icon: 'screen_search_desktop',
+    image: '/assets/brand/workspace-overview-ui-explorer.jpg'
+  },
+  {
+    title: 'UX Inspector',
+    description: 'Wyjaśnij zachowanie interfejsu',
+    route: '/ux-inspector',
+    icon: 'ads_click',
+    image: '/assets/brand/workspace-overview-ux-inspector.jpg'
+  },
+  {
+    title: 'Change Verification',
+    description: 'Zweryfikuj zmianę przed wydaniem',
+    route: '/change-verification',
+    icon: 'fact_check',
+    image: '/assets/brand/workspace-overview-change-verification.jpg'
+  },
+  {
+    title: 'Config Drift Viewer',
+    description: 'Zrozum różnice między środowiskami',
+    route: '/config-drift-viewer',
+    icon: 'build_circle',
+    image: '/assets/brand/workspace-overview-config-drift-viewer.jpg'
+  },
+  {
+    title: 'Release summary',
+    description: 'Zobacz, co wydanie zmienia w bazie danych',
+    route: '/release-summary',
+    icon: 'deployed_code',
+    image: '/assets/brand/workspace-overview-release-summary.jpg'
+  },
+  {
+    title: 'Behavior Change Assessment',
+    description: 'Oceń złożoność zmian w produkcie',
+    route: '/delivery-complexity-assessment',
+    icon: 'domain_add',
+    image: '/assets/brand/workspace-overview-behavior-change-assessment.jpg'
+  },
+  {
+    title: 'Technical Change Assessment',
+    description: 'Oceń złożoność zmian w systemie',
+    route: '/delivery-scope-complexity',
+    icon: 'engineering',
+    image: '/assets/brand/workspace-overview-technical-change-assessment.jpg'
+  },
+  {
+    title: 'Delivery Trends',
+    description: 'Porównaj złożoność pracy w czasie',
+    route: '/delivery-complexity-trends',
+    icon: 'finance',
+    image: '/assets/brand/workspace-overview-delivery-trends.jpg'
   }
-] as const;
+];
 
 const TOOL_ICONS = [
   'openshift-icon.svg',
@@ -57,17 +117,59 @@ const TOOL_ICONS = [
 export class PlatformLandingPageComponent {
   readonly uiConfig = inject(AppUiConfigService);
   readonly activeTheme = inject(SpecialThemeService).activeTheme;
-  readonly toolGroups = TOOL_GROUPS;
+  readonly features = FEATURES;
   readonly toolIcons = TOOL_ICONS;
+  protected readonly canScrollBack = signal(false);
+  protected readonly canScrollForward = signal(true);
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly featureList = viewChild.required<ElementRef<HTMLUListElement>>('featureList');
+  private readonly featureSlides = viewChildren<ElementRef<HTMLLIElement>>('featureSlide');
   private readonly benefitsStory = viewChild.required<ElementRef<HTMLElement>>('benefitsStory');
   private readonly benefitsTrack = viewChild.required<ElementRef<HTMLElement>>('benefitsTrack');
   private readonly benefitsStage = viewChild.required<ElementRef<HTMLElement>>('benefitsStage');
 
   constructor() {
     this.uiConfig.load();
+    afterRenderEffect({
+      read: (onCleanup) => {
+        const firstSlide = this.featureSlides()[0]?.nativeElement;
+        this.updateFeatureCarousel();
+        if (typeof ResizeObserver !== 'function') {
+          return;
+        }
+
+        const observer = new ResizeObserver(() => this.updateFeatureCarousel());
+        observer.observe(this.featureList().nativeElement);
+        if (firstSlide) {
+          observer.observe(firstSlide);
+        }
+        onCleanup(() => observer.disconnect());
+      }
+    });
     afterNextRender(() => this.connectScrollMotion());
+  }
+
+  protected updateFeatureCarousel(): void {
+    const { scrollLeft, scrollWidth, clientWidth } = this.featureList().nativeElement;
+    this.canScrollBack.set(scrollLeft > 1);
+    this.canScrollForward.set(scrollLeft < scrollWidth - clientWidth - 1);
+  }
+
+  protected scrollFeatureCarousel(direction: -1 | 1): void {
+    const [first, second] = this.featureSlides();
+    if (!first || !second) {
+      return;
+    }
+
+    const list = this.featureList().nativeElement;
+    const step = second.nativeElement.getBoundingClientRect().left -
+      first.nativeElement.getBoundingClientRect().left;
+    const nextIndex = direction > 0
+      ? Math.floor((list.scrollLeft + 1) / step) + 1
+      : Math.ceil((list.scrollLeft - 1) / step) - 1;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    list.scrollTo({ left: Math.max(0, nextIndex * step), behavior: reducedMotion ? 'instant' : 'smooth' });
   }
 
   private connectScrollMotion(): void {

@@ -1,4 +1,5 @@
 import { CdkDropList } from '@angular/cdk/drag-drop';
+import { ViewportScroller } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -49,6 +50,30 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
+  it('opens a feature from a scrolled Workspace Overview at the top', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const viewport = TestBed.inject(ViewportScroller);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    const getPosition = vi.spyOn(viewport, 'getScrollPosition').mockReturnValue([0, 750]);
+    const resetPosition = vi.spyOn(viewport, 'scrollToPosition').mockImplementation(() => {});
+
+    try {
+      await router.navigateByUrl('/?special=false');
+      expect(resetPosition).not.toHaveBeenCalled();
+
+      await router.navigateByUrl('/incident-analysis');
+      expect(resetPosition).toHaveBeenCalledExactlyOnceWith([0, 0], { behavior: 'instant' });
+    } finally {
+      getPosition.mockRestore();
+      resetPosition.mockRestore();
+    }
+  });
+
   it('changes the special theme preference through the Workspace Settings URL', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 11, 20));
@@ -70,7 +95,7 @@ describe('App', () => {
         'assets/themes/christmas/workspace-overview-banner.jpg'
       );
       expect(compiled.querySelector('.platform-landing__intro')).toBeNull();
-      expect(compiled.querySelector('.platform-landing__tool-list a[href="/release-summary"]')).toBeNull();
+      expect(compiled.querySelector('.platform-landing__feature-card[href="/release-summary"]')).toBeNull();
       const wishes = specialBanner?.querySelector('p:last-of-type')?.textContent;
       expect(wishes).toContain('Całemu zespołowi życzymy spokojnych Świąt');
       expect(wishes).toContain('Dziękujemy za współpracę');
@@ -138,18 +163,9 @@ describe('App', () => {
     ]);
     expect(landing).not.toBeNull();
     expect(landing?.querySelector('#platformLandingTitle')).not.toBeNull();
-    const toolGroups = [...(landing?.querySelectorAll('.platform-landing__tool-group') ?? [])];
-    expect(toolGroups.map(group => group.querySelector('h4')?.textContent?.trim())).toEqual([
-      'Weryfikacja i wydania',
-      'Analiza i dokumentacja',
-      'Ocena i trendy'
-    ]);
-    expect(toolGroups.map(group => [...group.querySelectorAll('a')].map(link => link.getAttribute('href'))))
-      .toEqual([
-        ['/change-verification', '/config-drift-viewer', '/release-summary'],
-        ['/incident-analysis', '/flow-explorer', '/ui-explorer', '/ux-inspector'],
-        ['/delivery-complexity-assessment', '/delivery-scope-complexity', '/delivery-complexity-trends']
-      ]);
+    const releaseSummaryCard = landing?.querySelector('.platform-landing__feature-card[href="/release-summary"]');
+    expect(releaseSummaryCard?.querySelector('.platform-landing__feature-name')?.textContent?.trim())
+      .toBe('Release summary');
     expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
       'Team Delivery Workspace'
     );

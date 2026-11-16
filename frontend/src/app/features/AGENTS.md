@@ -30,9 +30,8 @@ powinien tylko mapowac swoje dane, teksty i akcje do wspolnego wzorca. Celem
 jest to, zeby operator po poznaniu jednego feature'a rozpoznawal te same
 elementy pracy w kolejnych feature'ach.
 
-Workspace Overview (`features/platform-landing`) pokazuje dostepne dedykowane
-feature'y jako jedna rodzine produktowa. Grupy narzedzi korzystaja ze wspolnej
-palety platformy.
+Workspace Overview (`features/platform-landing`) pokazuje karty dostepnych
+funkcji z ikonami zgodnymi z nawigacja i opisami w jezyku polskim.
 
 ## Formularze ekranow
 
@@ -100,8 +99,8 @@ oraz [standardzie UI](../../../../docs/architecture/frontend-ui-standards.md).
 
 W Analysis Features Release summary domyślnie występuje po Change Verification,
 przed Config Drift Viewer, i używa ikony `deployed_code`. W Workspace Overview
-zamyka grupę Weryfikacja i wydania. Oba miejsca respektują flagę dostępności
-feature'a.
+karta Release summary występuje po Config Drift Viewer. Oba miejsca
+respektują flagę dostępności feature'a.
 Release summary używa wspólnego application select (także Flow Explorer) oraz
 jednego branch select z paginacją, bez auto-select. Daty Od/Do (Do włącznie)
 dobierają dwa first-parent commity jednego primary repo; pokazuj efektywną datę

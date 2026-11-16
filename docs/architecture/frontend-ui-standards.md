@@ -34,7 +34,10 @@ drugiego standardu tej samej kontrolki.
   między literami. Krótkie nagłówki grup mogą być pisane wielkimi literami.
 - Panele korzystaja z subtelnych `--shadow-soft` / `--shadow-card`.
   Hover nawigacji lekko rozjasnia pozycje dostepne. Workspace Overview
-  grupuje narzedzia w listy z separatorami i widocznym fokusem klawiatury.
+  pokazuje karty funkcji w poziomej karuzeli z widocznym fokusem klawiatury.
+  Na szerokim ekranie widać trzy pełne karty i fragment czwartej, a na wąskim
+  jedną pełną i fragment kolejnej. Rząd przewija się gestem lub przyciskami w nagłówku.
+  Cała karta prowadzi do funkcji.
 - AI Skills jest lista wierszy z delikatnymi separatorami, neutralnym hoverem
   i widocznym fokusem klawiatury. Wiersze i ikony nie dostaja osobnych ramek
   ani cieni tworzacych karty wewnatrz karty.

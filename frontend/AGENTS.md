@@ -32,9 +32,8 @@ Glowny shell ma trzy grupy nawigacji:
 - Gdy backend ustawia `app.ui.title`, pokazuj property jako tytul i
   `Team Delivery Workspace` jako podtytul.
 - Glowny brand uzywa `assets/brand/main-logo.png`.
-- Workspace Overview pokazuje listy narzedzi w grupach Weryfikacja i wydania,
-  Analiza i dokumentacja oraz Ocena i trendy. Na waskim ekranie grupy sa
-  ulozone jedna pod druga. Linki korzystaja ze wspolnej palety platformy.
+- Workspace Overview pokazuje dostepne funkcje w poziomej karuzeli,
+  zaczynajac od Incident Analysis. Karty zawieraja opis i link do funkcji.
 
 ## Styl i UX
 
