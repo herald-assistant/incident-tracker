@@ -53,14 +53,14 @@
 }
 
 .platform-landing__copy .platform-landing__description {
-  max-width: 48ch;
+  max-width: 44ch;
   color: var(--color-muted-strong);
 }
 
 .platform-landing__brand-visual {
   position: absolute;
   inset: 0;
-  background: url('/assets/brand/workspace-overview-team-arch.png') right center / cover no-repeat;
+  background: url('/assets/brand/workspace-overview-team-arch.jpg') right center / cover no-repeat;
   pointer-events: none;
 }
 
@@ -253,14 +253,22 @@
 
 
 .platform-landing__capabilities {
+  --story-surface: color-mix(in srgb, var(--color-surface-alt) 64%, #e6d6bf);
+  --story-shadow-ink: #675139;
   --orbit-size: min(88cqw, 33rem, 55svh);
   --orbit-result-inset: 0.29;
   --story-reveal-distance: 160px;
   margin-block-start: clamp(16px, 4cqw, 52px);
+  overflow: clip;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--story-surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .platform-landing__benefits-copy {
   padding-block: clamp(18px, 3svh, 30px);
+  padding-inline: clamp(14px, 3cqw, 36px);
   text-align: center;
 }
 
@@ -268,7 +276,7 @@
   max-width: 27ch;
   margin: 0 auto;
   color: var(--text-main);
-  font-size: clamp(1.9rem, 4.35cqw, 3.65rem);
+  font-size: clamp(1.65rem, 3.55cqw, 2.75rem);
   line-height: 1.12;
   letter-spacing: -0.025em;
   text-wrap: balance;
@@ -276,7 +284,7 @@
 
 .platform-landing__benefits-copy h3 span {
   display: block;
-  color: var(--primary-dark);
+  color: inherit;
 }
 
 .platform-landing__benefits-list {
@@ -294,11 +302,16 @@
 }
 
 .platform-landing__benefits-list li::marker {
-  color: var(--primary-dark);
+  color: var(--color-soft);
+  font-size: 0.75em;
+}
+
+.platform-landing__benefits-list strong {
+  font-weight: 500;
 }
 
 .platform-landing__benefits-list span {
-  color: var(--text-muted);
+  color: var(--color-muted-strong);
 }
 
 .platform-landing__orbit {
@@ -307,13 +320,14 @@
   margin-inline: auto;
   aspect-ratio: 1;
   container-type: inline-size;
-  color: var(--primary-dark);
 }
 
 .platform-landing__orbit-source {
   --source-angle: calc(-90deg + var(--source-index) * 1turn / var(--source-count));
   --angle: calc(var(--source-angle) + var(--turn, 0turn));
   --orbit-depth: sin(var(--angle));
+  --tile-shadow-offset: calc(5px + 3px * var(--orbit-depth));
+  --tile-shadow-blur: calc(10px + 3px * var(--orbit-depth));
   --radius: calc(var(--entry-radius, 1) * (1 - var(--spiral, 0)));
   --source-scale: calc((0.8 + 0.2 * var(--appearance, 1) + 0.3 * var(--orbit-depth) * var(--radius)) *
     (1 - var(--spiral, 0) * 0.7));
@@ -331,9 +345,21 @@
     scale(var(--source-scale));
 }
 
+.platform-landing__orbit-source,
+.platform-landing__orbit-result {
+  border-radius: var(--tile-radius, 23%);
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 85%),
+    inset 0 -2px 0 color-mix(in srgb, var(--story-shadow-ink) 13%, transparent),
+    1px 2px 3px color-mix(in srgb, var(--story-shadow-ink) 13%, transparent),
+    3px var(--tile-shadow-offset, 9px) var(--tile-shadow-blur, 17px)
+      color-mix(in srgb, var(--story-shadow-ink) 23%, transparent);
+}
+
 .platform-landing__orbit-source img {
   grid-area: 1 / 1;
-  width: 100%;
+  width: 68%;
   aspect-ratio: 1;
   object-fit: contain;
 }
@@ -343,6 +369,7 @@
 }
 
 .platform-landing__orbit-result {
+  --tile-radius: 25%;
   position: absolute;
   inset: calc(100% * var(--orbit-result-inset));
   z-index: 12;
@@ -351,7 +378,7 @@
 }
 
 .platform-landing__orbit-result img {
-  width: 100%;
+  width: 74%;
 }
 
 @media (prefers-reduced-motion: no-preference) and (min-height: 680px) {
