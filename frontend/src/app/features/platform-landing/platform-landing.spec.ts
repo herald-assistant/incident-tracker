@@ -94,4 +94,59 @@ describe('PlatformLandingPageComponent', () => {
       'finance'
     ]);
   });
+
+  it('plays one full scene per scroll gesture and ignores scrolling during playback', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PlatformLandingPageComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+
+    vi.stubGlobal('matchMedia', () => Object.assign(new EventTarget(), { matches: true }));
+    vi.useFakeTimers({ toFake: ['performance', 'requestAnimationFrame', 'cancelAnimationFrame'] });
+    const fixture = TestBed.createComponent(PlatformLandingPageComponent);
+
+    try {
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const story = compiled.querySelector<HTMLElement>('.platform-landing__capabilities')!;
+      const track = story.querySelector<HTMLElement>('.platform-landing__benefits-track')!;
+      const stage = story.querySelector<HTMLElement>('.platform-landing__benefits-stage')!;
+      stage.style.top = '160px';
+      vi.spyOn(track, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 160, 800, 400));
+
+      const scroll = (deltaY: number) => {
+        const event = new WheelEvent('wheel', { deltaY, cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      const progress = (scene: string) => story.style.getPropertyValue('--story-' + scene + '-progress');
+
+      expect(scroll(100)).toBe(true);
+      vi.advanceTimersByTime(4100);
+      expect(Number(progress('tool'))).toBeGreaterThan(0.9);
+      expect(scroll(-100)).toBe(true);
+      expect(scroll(100)).toBe(true);
+      vi.advanceTimersByTime(140);
+      expect(progress('tool')).toBe('1.0000');
+      expect(scroll(100)).toBe(false);
+      expect(progress('feature')).toBe('');
+
+      vi.advanceTimersByTime(170);
+      expect(scroll(100)).toBe(true);
+      vi.advanceTimersByTime(4600);
+      expect(progress('feature')).toBe('1.0000');
+      expect(progress('guidance')).toBe('');
+
+      const pageDown = new KeyboardEvent('keydown', { key: 'PageDown', cancelable: true });
+      window.dispatchEvent(pageDown);
+      expect(pageDown.defaultPrevented).toBe(true);
+      vi.advanceTimersByTime(5100);
+      expect(progress('guidance')).toBe('1.0000');
+      expect(scroll(100)).toBe(false);
+    } finally {
+      fixture.destroy();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
 });

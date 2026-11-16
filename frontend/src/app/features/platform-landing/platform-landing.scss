@@ -397,9 +397,7 @@
 
 @media (prefers-reduced-motion: no-preference) and (min-height: 680px) {
   .platform-landing__capabilities[data-scroll-motion] {
-    --story-tools-share: 0.57;
     --story-orbit-motion-share: 0.82;
-    --story-guidance-distance: 1420px;
     --story-stage-top: calc(50dvh - var(--orbit-size) / 2);
     --tool-scene-progress: var(--story-tool-progress, 0);
     --feature-scene-progress: var(--story-feature-progress, 0);
@@ -421,12 +419,8 @@
   }
 
   [data-scroll-motion] .platform-landing__benefits-track {
-    // Keep the travel for each orbit and add space for its slogan at the end.
-    min-height: calc(
-      var(--orbit-size) + 2 * clamp(820px, 115svh, 1250px) /
-      (var(--story-tools-share) * var(--story-orbit-motion-share))
-      + var(--story-guidance-distance) + var(--story-stage-top)
-    );
+    // Align the stage at the center when the page reaches its end.
+    min-height: calc(100dvh - var(--story-stage-top));
   }
 
   [data-scroll-motion] .platform-landing__benefits-copy {

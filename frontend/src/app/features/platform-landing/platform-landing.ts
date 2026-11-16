@@ -117,6 +117,14 @@ const SLOGANS = [
   }
 ] as const;
 
+const SCROLL_SCENES = [
+  { property: '--story-tool-progress', duration: 4200 },
+  { property: '--story-feature-progress', duration: 4500 },
+  { property: '--story-guidance-progress', duration: 5000 }
+] as const;
+
+const WHEEL_GESTURE_GAP_MS = 160;
+
 @Component({
   selector: 'app-platform-landing-page',
   imports: [RouterLink, SpecialThemeBannerComponent],
@@ -196,74 +204,164 @@ export class PlatformLandingPageComponent {
     const track = this.benefitsTrack().nativeElement;
     const stage = this.benefitsStage().nativeElement;
     const motion = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-height: 680px)');
+    const listeners = new AbortController();
+    const { signal } = listeners;
     let frame: number | undefined;
-    let lastToolProgress = '';
-    let lastFeatureProgress = '';
-    let lastGuidanceProgress = '';
+    let nextScene = 0;
+    let lastScrollY = window.scrollY;
+    let lastWheelAt = -Infinity;
+    let touchStart: { x: number; y: number; consumed: boolean } | undefined;
 
-    const draw = () => {
-      frame = undefined;
+    const stickyTop = () => Number.parseFloat(window.getComputedStyle(stage).top);
+
+    const isAtStage = () => {
       const bounds = track.getBoundingClientRect();
-      const stageStyle = window.getComputedStyle(stage);
-      const stickyTop = Number.parseFloat(stageStyle.top);
-      const toolsShare = Number.parseFloat(stageStyle.getPropertyValue('--story-tools-share'));
-      const guidanceDistance = Number.parseFloat(stageStyle.getPropertyValue('--story-guidance-distance'));
-      const orbitDistance = Math.max(
-        1,
-        bounds.height - stage.getBoundingClientRect().height - stickyTop - guidanceDistance
-      );
-      const travelled = stickyTop - bounds.top;
-      const toolsDistance = orbitDistance * toolsShare;
-      const toolProgress = scrollProgress(travelled / toolsDistance);
-      const featureProgress = scrollProgress((travelled - toolsDistance) / (orbitDistance - toolsDistance));
-      const guidanceProgress = scrollProgress((travelled - orbitDistance) / guidanceDistance);
+      const top = stickyTop();
+      return bounds.top <= top + 2 && bounds.bottom >= top + stage.offsetHeight - 2;
+    };
 
-      if (toolProgress !== lastToolProgress) {
-        story.style.setProperty('--story-tool-progress', toolProgress);
-        lastToolProgress = toolProgress;
-      }
-      if (featureProgress !== lastFeatureProgress) {
-        story.style.setProperty('--story-feature-progress', featureProgress);
-        lastFeatureProgress = featureProgress;
-      }
-      if (guidanceProgress !== lastGuidanceProgress) {
-        story.style.setProperty('--story-guidance-progress', guidanceProgress);
-        lastGuidanceProgress = guidanceProgress;
+    const keepStageInPlace = () => {
+      const target = window.scrollY + track.getBoundingClientRect().top - stickyTop();
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const top = Math.max(0, Math.min(target, maxScroll));
+      if (Math.abs(window.scrollY - top) > 1) {
+        window.scrollTo({ top, behavior: 'instant' });
       }
     };
 
-    const requestDraw = () => {
-      if (motion.matches && frame === undefined) {
+    const startNextScene = () => {
+      const scene = SCROLL_SCENES[nextScene];
+      if (!motion.matches || frame !== undefined || !scene || !isAtStage()) {
+        return false;
+      }
+
+      let startedAt: number | undefined;
+      const draw = (now: number) => {
+        startedAt ??= now;
+        const progress = Math.min(1, (now - startedAt) / scene.duration);
+        story.style.setProperty(scene.property, progress.toFixed(4));
+        if (progress === 1) {
+          nextScene++;
+          frame = undefined;
+          return;
+        }
         frame = window.requestAnimationFrame(draw);
+      };
+
+      if (touchStart) {
+        touchStart.consumed = true;
+      }
+      frame = window.requestAnimationFrame(draw);
+      keepStageInPlace();
+      return true;
+    };
+
+    const reset = () => {
+      if (frame !== undefined) {
+        window.cancelAnimationFrame(frame);
+        frame = undefined;
+      }
+      nextScene = 0;
+      for (const { property } of SCROLL_SCENES) {
+        story.style.removeProperty(property);
+      }
+    };
+
+    const onScroll = () => {
+      const scrollY = window.scrollY;
+      const down = scrollY > lastScrollY;
+      lastScrollY = scrollY;
+      if (!motion.matches) {
+        return;
+      }
+      if (frame !== undefined) {
+        keepStageInPlace();
+        return;
+      }
+      if (nextScene > 0 && track.getBoundingClientRect().top >= window.innerHeight) {
+        reset();
+      }
+      if (nextScene === 0 && down) {
+        startNextScene();
+      }
+    };
+
+    const onResize = () => {
+      if (motion.matches && frame !== undefined) {
+        keepStageInPlace();
+      }
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (!motion.matches || event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+        return;
+      }
+
+      // Momentum and wheel events received during playback do not queue another scene.
+      const now = performance.now();
+      const newGesture = now - lastWheelAt >= WHEEL_GESTURE_GAP_MS;
+      lastWheelAt = now;
+      if (frame !== undefined || (event.deltaY > 0 && newGesture && startNextScene())) {
+        event.preventDefault();
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!motion.matches || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      const target = event.target instanceof Element ? event.target : undefined;
+      const space = event.key === ' ';
+      if (target?.closest('input, textarea, select, [contenteditable]') ||
+          (space && target?.closest('button, [role="button"]'))) {
+        return;
+      }
+
+      const down = ['ArrowDown', 'PageDown', 'End'].includes(event.key) || (space && !event.shiftKey);
+      const up = ['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (space && event.shiftKey);
+      if ((down || up) && (frame !== undefined || (down && !event.repeat && startNextScene()))) {
+        event.preventDefault();
+      }
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches.length === 1 ? event.touches[0] : undefined;
+      touchStart = touch && { x: touch.clientX, y: touch.clientY, consumed: frame !== undefined };
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!motion.matches || !touchStart || event.touches.length !== 1) {
+        return;
+      }
+      const touch = event.touches[0];
+      const distance = touchStart.y - touch.clientY;
+      const swipingDown = distance >= 8 && distance > Math.abs(touch.clientX - touchStart.x);
+      if (frame !== undefined || touchStart.consumed || (swipingDown && startNextScene())) {
+        touchStart.consumed = true;
+        event.preventDefault();
       }
     };
 
     const syncMotion = () => {
       story.toggleAttribute('data-scroll-motion', motion.matches);
-      if (motion.matches) {
-        requestDraw();
-      } else if (frame !== undefined) {
-        window.cancelAnimationFrame(frame);
-        frame = undefined;
+      lastScrollY = window.scrollY;
+      if (!motion.matches) {
+        reset();
       }
     };
 
-    window.addEventListener('scroll', requestDraw, { passive: true });
-    window.addEventListener('resize', requestDraw);
-    motion.addEventListener('change', syncMotion);
+    window.addEventListener('scroll', onScroll, { passive: true, signal });
+    window.addEventListener('resize', onResize, { signal });
+    window.addEventListener('wheel', onWheel, { passive: false, signal });
+    window.addEventListener('keydown', onKeyDown, { signal });
+    window.addEventListener('touchstart', onTouchStart, { passive: true, signal });
+    window.addEventListener('touchmove', onTouchMove, { passive: false, signal });
+    motion.addEventListener('change', syncMotion, { signal });
     syncMotion();
 
     this.destroyRef.onDestroy(() => {
-      window.removeEventListener('scroll', requestDraw);
-      window.removeEventListener('resize', requestDraw);
-      motion.removeEventListener('change', syncMotion);
-      if (frame !== undefined) {
-        window.cancelAnimationFrame(frame);
-      }
+      listeners.abort();
+      reset();
     });
   }
-}
-
-function scrollProgress(fraction: number): string {
-  return Math.max(0, Math.min(1, fraction)).toFixed(4);
 }
