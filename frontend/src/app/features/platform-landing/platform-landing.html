@@ -94,46 +94,43 @@
       class="platform-landing__capabilities"
       aria-labelledby="platformLandingCapabilitiesTitle"
     >
-      <div #benefitsTrack class="platform-landing__benefits-track" aria-hidden="true">
-        <div #benefitsStage class="platform-landing__orbit" [style.--source-count]="toolIcons.length">
-          @for (icon of toolIcons; track icon) {
-            <div class="platform-landing__orbit-source" [style.--source-index]="$index">
-              <img
-                class="platform-landing__orbit-tool-icon"
-                [src]="'assets/brand/tool-icons/' + icon"
-                alt=""
-              />
-              <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+      <div #benefitsTrack class="platform-landing__benefits-track">
+        <div #benefitsStage class="platform-landing__benefits-stage">
+          <div class="platform-landing__orbit" [style.--source-count]="toolIcons.length" aria-hidden="true">
+            @for (icon of toolIcons; track icon) {
+              <div class="platform-landing__orbit-source" [style.--source-index]="$index">
+                <img
+                  class="platform-landing__orbit-tool-icon"
+                  [src]="'assets/brand/tool-icons/' + icon"
+                  alt=""
+                />
+                <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+              </div>
+            }
+            <div class="platform-landing__orbit-result">
+              <img src="assets/brand/main-logo.png" alt="" />
             </div>
-          }
-          <div class="platform-landing__orbit-result">
-            <img src="assets/brand/main-logo.png" alt="" />
           </div>
-        </div>
-      </div>
-      <div class="platform-landing__benefits-copy">
-        <div class="platform-landing__benefits-message">
-          <h3 id="platformLandingCapabilitiesTitle">
-            Ty wyznaczasz cel. <span>Workspace dowozi wynik.</span>
-          </h3>
-          <ul class="platform-landing__benefits-list">
-            <li>
-              <strong>Twoje narzędzia w jednym miejscu.</strong>
-              <span>&ngsp;Workspace obsługuje je za Ciebie.</span>
+
+          <ol class="platform-landing__captions" role="list">
+            <li class="platform-landing__caption" style="--caption-start: 0.08">
+              Twoje narzędzia. Jedno miejsce.
             </li>
-            <li>
-              <strong>Flows i narzędzia dopasowane do zadania.</strong>
-              <span>&ngsp;AI wie, czego szukać, co połączyć i co odsiać.</span>
+            <li class="platform-landing__caption" style="--caption-start: 0.28">
+              AI dopasowane do zadania.
             </li>
-            <li>
-              <strong>Rezultat gotowy do działania.</strong>
-              <span>&ngsp;Raport, analiza lub odpowiedź.</span>
+            <li class="platform-landing__caption" style="--caption-start: 0.48">
+              Wynik gotowy do użycia.
             </li>
-            <li>
-              <strong>Junior ready!</strong>
-              <span>&ngsp;Na dobry start w zespole i z AI.</span>
+            <li class="platform-landing__caption" style="--caption-start: 0.68">
+              Szybszy start w zespole.
             </li>
-          </ul>
+          </ol>
+          <div class="platform-landing__benefits-copy">
+            <h3 id="platformLandingCapabilitiesTitle" class="platform-landing__benefits-message">
+              Ty wyznaczasz cel. <span>Workspace dowozi wynik.</span>
+            </h3>
+          </div>
         </div>
       </div>
     </section>

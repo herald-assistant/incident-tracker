@@ -191,10 +191,13 @@ export class PlatformLandingPageComponent {
       const stageStyle = window.getComputedStyle(stage);
       const stickyTop = Number.parseFloat(stageStyle.top);
       const revealDistance = Number.parseFloat(stageStyle.getPropertyValue('--story-reveal-distance'));
-      const travel = Math.max(1, bounds.height - stage.getBoundingClientRect().height);
+      const orbitDistance = Math.max(
+        1,
+        bounds.height - stage.getBoundingClientRect().height - revealDistance - stickyTop
+      );
       const travelled = stickyTop - bounds.top;
-      const orbitProgress = scrollProgress(travelled / travel);
-      const copyProgress = scrollProgress((travelled - travel) / revealDistance);
+      const orbitProgress = scrollProgress(travelled / orbitDistance);
+      const copyProgress = scrollProgress((travelled - orbitDistance) / revealDistance);
 
       if (orbitProgress !== lastOrbitProgress) {
         story.style.setProperty('--story-progress', orbitProgress);

@@ -4,6 +4,7 @@
 
 .platform-landing-page {
   width: min(1320px, calc(100% - 28px));
+  padding-block-end: 0;
   container-type: inline-size;
 }
 
@@ -257,11 +258,12 @@
   --story-shadow-ink: #675139;
   --orbit-size: min(88cqw, 33rem, 55svh);
   --orbit-result-inset: 0.29;
-  --story-reveal-distance: 160px;
+  --story-reveal-distance: 320px;
   margin-block-start: clamp(16px, 4cqw, 52px);
   overflow: clip;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border-block-end: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--story-surface);
   box-shadow: var(--shadow-soft);
 }
@@ -272,7 +274,7 @@
   text-align: center;
 }
 
-.platform-landing__benefits-copy h3 {
+.platform-landing__benefits-message {
   max-width: 27ch;
   margin: 0 auto;
   color: var(--text-main);
@@ -282,36 +284,27 @@
   text-wrap: balance;
 }
 
-.platform-landing__benefits-copy h3 span {
+.platform-landing__benefits-message span {
   display: block;
-  color: inherit;
+  color: var(--primary-dark);
 }
 
-.platform-landing__benefits-list {
-  width: fit-content;
-  max-width: min(100%, 70ch);
-  margin: clamp(14px, 2.2cqw, 24px) auto 0;
-  padding-inline-start: 1.2em;
-  font-size: clamp(1rem, 1.55cqw, 1.2rem);
-  line-height: 1.5;
-  text-align: start;
+.platform-landing__captions {
+  display: grid;
+  gap: 12px;
+  width: min(calc(100% - 28px), 38rem);
+  margin: 0 auto;
+  padding: 0;
+  color: var(--text-main);
+  list-style: none;
+  text-align: center;
 }
 
-.platform-landing__benefits-list li + li {
-  margin-block-start: 0.55em;
-}
-
-.platform-landing__benefits-list li::marker {
-  color: var(--color-soft);
-  font-size: 0.75em;
-}
-
-.platform-landing__benefits-list strong {
-  font-weight: 500;
-}
-
-.platform-landing__benefits-list span {
-  color: var(--color-muted-strong);
+.platform-landing__caption {
+  font-size: clamp(1rem, 1.8cqw, 1.375rem);
+  font-weight: 700;
+  line-height: 1.4;
+  text-wrap: balance;
 }
 
 .platform-landing__orbit {
@@ -382,24 +375,45 @@
 }
 
 @media (prefers-reduced-motion: no-preference) and (min-height: 680px) {
+  .platform-landing__capabilities[data-scroll-motion] {
+    --story-stage-top: calc(50dvh - var(--orbit-size) / 2);
+  }
+
   [data-scroll-motion] .platform-landing__benefits-track {
-    min-height: calc(var(--orbit-size) + clamp(820px, 115svh, 1250px));
+    // Leave the stage pinned through the reveal with room below it at the end of the page.
+    min-height: calc(
+      var(--orbit-size) + 2 * clamp(820px, 115svh, 1250px)
+      + var(--story-reveal-distance) + var(--story-stage-top)
+    );
   }
 
   [data-scroll-motion] .platform-landing__benefits-copy {
-    min-height: calc(50dvh - var(--orbit-size) / 2 + var(--story-reveal-distance));
+    position: absolute;
+    inset: calc(100% * (1 - var(--orbit-result-inset))) 0 auto;
   }
 
   [data-scroll-motion] .platform-landing__benefits-message {
     opacity: var(--story-copy-progress, 0);
-    transform: translateY(calc(
-      -1 * var(--orbit-size) * var(--orbit-result-inset) + 18px * (1 - var(--story-copy-progress, 0))
-    ));
+  }
+
+  [data-scroll-motion] .platform-landing__benefits-stage {
+    position: sticky;
+    top: var(--story-stage-top);
+  }
+
+  [data-scroll-motion] .platform-landing__captions {
+    position: absolute;
+    inset: 100% 0 auto;
+    pointer-events: none;
+  }
+
+  [data-scroll-motion] .platform-landing__caption {
+    --caption-progress: calc(var(--story-progress, 0) - var(--caption-start));
+    grid-area: 1 / 1;
+    opacity: clamp(0, min(var(--caption-progress) / 0.035, (0.2 - var(--caption-progress)) / 0.035), 1);
   }
 
   [data-scroll-motion] .platform-landing__orbit {
-    position: sticky;
-    top: calc(50dvh - var(--orbit-size) / 2);
     // Keep the angle advancing at the same rate through the swap and the inward spiral.
     --turns: calc(clamp(0, (var(--story-progress, 0) - 0.2) / 0.8, 1) * 1.8);
     --turn: calc(var(--turns) * 1turn);
