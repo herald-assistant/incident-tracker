@@ -289,11 +289,19 @@
   color: var(--primary-dark);
 }
 
+.platform-landing__caption-plaque {
+  width: min(calc(100% - 28px), 38rem);
+  margin: 0 auto;
+}
+
+.platform-landing__caption-icon {
+  display: none;
+}
+
 .platform-landing__captions {
   display: grid;
   gap: 12px;
-  width: min(calc(100% - 28px), 38rem);
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
   color: var(--text-main);
   list-style: none;
@@ -308,6 +316,9 @@
 }
 
 .platform-landing__orbit {
+  --orbit-radius-inline: 40cqi;
+  --orbit-radius-block: 32cqi;
+  --orbit-tile-span: 168cqi;
   position: relative;
   width: var(--orbit-size);
   margin-inline: auto;
@@ -329,12 +340,12 @@
   left: 50%;
   z-index: calc(6 + 5 * var(--orbit-depth));
   display: grid;
-  width: min(19cqi, calc(168cqi / var(--source-count)));
+  width: min(19cqi, calc(var(--orbit-tile-span) / var(--source-count)));
   aspect-ratio: 1;
   place-items: center;
   transform: translate(-50%, -50%)
-    translate(calc(40cqi * cos(var(--angle)) * var(--radius)),
-      calc(32cqi * var(--orbit-depth) * var(--radius)))
+    translate(calc(var(--orbit-radius-inline) * cos(var(--angle)) * var(--radius)),
+      calc(var(--orbit-radius-block) * var(--orbit-depth) * var(--radius)))
     scale(var(--source-scale));
 }
 
@@ -401,16 +412,55 @@
     top: var(--story-stage-top);
   }
 
-  [data-scroll-motion] .platform-landing__captions {
+  [data-scroll-motion] .platform-landing__caption-plaque {
+    --caption-duration: 0.125;
+    --caption-fade: 0.02;
+    --caption-sequence: calc(var(--story-progress, 0) - 0.18);
+    // Fade the plaque out before the tiles spiral toward the center.
+    --caption-remaining: calc(4 * var(--caption-duration) - var(--caption-sequence));
     position: absolute;
-    inset: 100% 0 auto;
+    z-index: 13;
+    inset: 50% 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    width: min(17.5rem, calc(100% - 28px));
+    max-width: calc(var(--orbit-size) * 0.66);
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-soft);
+    opacity: clamp(0, min(var(--caption-sequence), var(--caption-remaining)) / var(--caption-fade), 1);
+    translate: 0 -50%;
     pointer-events: none;
   }
 
+  [data-scroll-motion] .platform-landing__caption-icon {
+    display: grid;
+    width: 24px;
+    aspect-ratio: 1;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--primary) 12%, var(--color-surface));
+    color: var(--primary-dark);
+    font-size: 1rem;
+  }
+
+  [data-scroll-motion] .platform-landing__captions {
+    text-align: start;
+  }
+
   [data-scroll-motion] .platform-landing__caption {
-    --caption-progress: calc(var(--story-progress, 0) - var(--caption-start));
+    --caption-progress: calc(var(--caption-sequence) - var(--caption-index) * var(--caption-duration));
     grid-area: 1 / 1;
-    opacity: clamp(0, min(var(--caption-progress) / 0.035, (0.2 - var(--caption-progress)) / 0.035), 1);
+    opacity: clamp(0, min(var(--caption-progress), var(--caption-duration) - var(--caption-progress))
+      / var(--caption-fade), 1);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
   }
 
   [data-scroll-motion] .platform-landing__orbit {
@@ -418,6 +468,14 @@
     --turns: calc(clamp(0, (var(--story-progress, 0) - 0.2) / 0.8, 1) * 1.8);
     --turn: calc(var(--turns) * 1turn);
     --complete: clamp(0, (var(--story-progress, 0) - 0.89) / 0.07, 1);
+  }
+
+  @media (width > 980px) {
+    [data-scroll-motion] .platform-landing__orbit {
+      --orbit-radius-inline: min(53cqi, 16.5rem);
+      --orbit-radius-block: 38cqi;
+      --orbit-tile-span: 180cqi;
+    }
   }
 
   [data-scroll-motion] .platform-landing__orbit-source {
@@ -448,6 +506,14 @@
 @media (max-width: 980px) {
   .platform-landing__capabilities {
     --orbit-size: min(88cqw, 32rem, 55svh, max(180px, calc(100svh - 360px)));
+  }
+}
+
+@media (max-width: 980px) {
+  [data-scroll-motion] .platform-landing__caption-plaque {
+    inset-block-start: 100%;
+    max-width: none;
+    translate: none;
   }
 }
 
