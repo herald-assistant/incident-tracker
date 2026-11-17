@@ -72,6 +72,7 @@ describe('PlatformLandingPageComponent', () => {
       'Wybierz zadanie w Workspace.'
     ]);
     expect(orbit.getAttribute('aria-hidden')).toBe('true');
+    expect(orbit.querySelectorAll('.platform-landing__orbit-tool--result')).toHaveLength(1);
     const guidanceCard = orbit.querySelector(
       '.platform-landing__orbit-result > .platform-landing__guidance-card'
     )!;
@@ -81,9 +82,10 @@ describe('PlatformLandingPageComponent', () => {
     expect(guidanceCard.querySelector('.platform-landing__guidance-document-result')?.textContent.trim())
       .toBe('markdown_document');
     expect(guidanceCard.querySelector('.platform-landing__guidance-action')).not.toBeNull();
-    expect(orbit.querySelectorAll('.platform-landing__orbit-feature')).toHaveLength(9);
-    expect(orbit.querySelectorAll('.platform-landing__orbit-flip img')).toHaveLength(9);
-    expect(Array.from(orbit.querySelectorAll('.platform-landing__orbit-face--feature span'),
+    const carousel = orbit.querySelector('.platform-landing__story-carousel')!;
+    expect(carousel.querySelectorAll('.platform-landing__story-feature')).toHaveLength(9);
+    expect(carousel.querySelectorAll('.platform-landing__story-feature-flip img')).toHaveLength(9);
+    expect(Array.from(carousel.querySelectorAll('.platform-landing__story-feature-face--details .material-symbols-outlined'),
       icon => icon.textContent.trim()
     )).toEqual([
       'troubleshoot',
@@ -95,6 +97,19 @@ describe('PlatformLandingPageComponent', () => {
       'domain_add',
       'engineering',
       'finance'
+    ]);
+    expect(Array.from(carousel.querySelectorAll('.platform-landing__story-feature-name'),
+      name => name.textContent.trim()
+    )).toEqual([
+      'Incident Analysis',
+      'Flow Explorer',
+      'UI Explorer',
+      'UX Inspector',
+      'Change Verification',
+      'Config Drift Viewer',
+      'Behavior Change Assessment',
+      'Technical Change Assessment',
+      'Delivery Trends'
     ]);
   });
 
@@ -136,7 +151,7 @@ describe('PlatformLandingPageComponent', () => {
 
       vi.advanceTimersByTime(170);
       expect(scroll(100)).toBe(true);
-      vi.advanceTimersByTime(4600);
+      vi.advanceTimersByTime(6600);
       expect(progress('feature')).toBe('1.0000');
       expect(progress('guidance')).toBe('');
 

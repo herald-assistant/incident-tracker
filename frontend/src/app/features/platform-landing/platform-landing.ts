@@ -117,7 +117,7 @@ const SLOGANS = [
 
 const SCROLL_SCENES = [
   { property: '--story-tool-progress', duration: 4200 },
-  { property: '--story-feature-progress', duration: 4500 },
+  { property: '--story-feature-progress', duration: 6500 },
   { property: '--story-guidance-progress', duration: 5000 },
   { property: '--story-closing-progress', duration: 2700 }
 ] as const;
@@ -134,8 +134,9 @@ export class PlatformLandingPageComponent {
   readonly uiConfig = inject(AppUiConfigService);
   readonly activeTheme = inject(SpecialThemeService).activeTheme;
   readonly features = FEATURES;
-  protected readonly orbitFeatures = FEATURES.filter(feature => feature.route !== '/release-summary');
+  protected readonly storyFeatures = FEATURES.filter(feature => feature.route !== '/release-summary');
   readonly toolIcons = TOOL_ICONS;
+  protected readonly toolOrbitResultIndex = 2;
   protected readonly slogans = SLOGANS.map(({ scene, lines }) => ({
     scene,
     label: lines.join(' '),

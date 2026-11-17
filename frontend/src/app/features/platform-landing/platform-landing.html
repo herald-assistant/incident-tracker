@@ -96,10 +96,16 @@
     >
       <div #benefitsTrack class="platform-landing__benefits-track">
         <div #benefitsStage class="platform-landing__benefits-stage">
-          <div class="platform-landing__orbit" aria-hidden="true">
+          <div
+            class="platform-landing__orbit"
+            [style.--tool-orbit-stop]="0.5 - toolOrbitResultIndex / toolIcons.length"
+            [style.--tool-result-index]="toolOrbitResultIndex"
+            aria-hidden="true"
+          >
             @for (icon of toolIcons; track icon) {
               <div
                 class="platform-landing__orbit-source platform-landing__orbit-tool"
+                [class.platform-landing__orbit-tool--result]="$index === toolOrbitResultIndex"
                 [style.--source-index]="$index"
                 [style.--source-count]="toolIcons.length"
               >
@@ -111,22 +117,21 @@
                 <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
               </div>
             }
-            @for (feature of orbitFeatures; track feature.route) {
-              <div
-                class="platform-landing__orbit-source platform-landing__orbit-feature"
-                [style.--source-index]="$index"
-                [style.--source-count]="orbitFeatures.length"
-              >
-                <div class="platform-landing__orbit-flip">
-                  <div class="platform-landing__orbit-face">
-                    <img src="assets/brand/main-logo.png" alt="" />
-                  </div>
-                  <div class="platform-landing__orbit-face platform-landing__orbit-face--feature">
-                    <span class="material-symbols-outlined">{{ feature.icon }}</span>
+            <div class="platform-landing__story-carousel">
+              @for (feature of storyFeatures; track feature.route) {
+                <div class="platform-landing__story-feature" [style.--feature-index]="$index">
+                  <div class="platform-landing__story-feature-flip">
+                    <div class="platform-landing__story-feature-face">
+                      <img src="assets/brand/main-logo.png" alt="" />
+                    </div>
+                    <div class="platform-landing__story-feature-face platform-landing__story-feature-face--details">
+                      <span class="material-symbols-outlined">{{ feature.icon }}</span>
+                      <span class="platform-landing__story-feature-name">{{ feature.title }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            }
+              }
+            </div>
             <div class="platform-landing__orbit-result">
               <img src="assets/brand/main-logo.png" alt="" />
               <div class="platform-landing__guidance-card">
