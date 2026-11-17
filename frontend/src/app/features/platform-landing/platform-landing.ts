@@ -108,21 +108,13 @@ const TOOL_ICONS = [
   'atlassian-jira-icon.svg'
 ] as const;
 
-const SLOGANS = [
-  { scene: 'tools', lines: ['Wszystkie Twoje aplikacje.', 'Wreszcie grają razem.'] },
-  { scene: 'features', lines: ['Rozwiązuje Twoje problemy.', 'Od incydentu po wdrożenie.'] },
-  { scene: 'guidance', lines: ['Twój osobisty ekspert.', 'Od pierwszego dnia.'] },
-  { scene: 'closing', lines: ['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.'] }
+const STORY_SCENES = [
+  { id: 'tools', duration: 4200, lines: ['Wszystkie Twoje aplikacje.', 'Wreszcie grają razem.'] },
+  { id: 'features', duration: 4800, lines: ['Rozwiązuje Twoje problemy.', 'Od incydentu po wdrożenie.'] },
+  { id: 'guidance', duration: 5000, lines: ['Twój osobisty ekspert.', 'Od pierwszego dnia.'] },
+  { id: 'closing', duration: 3600, lines: ['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.'] }
 ] as const;
-
-const SCROLL_SCENES = [
-  { property: '--story-tool-progress', duration: 4200 },
-  { property: '--story-feature-progress', duration: 6500 },
-  { property: '--story-guidance-progress', duration: 5000 },
-  { property: '--story-closing-progress', duration: 3600 }
-] as const;
-
-const WHEEL_GESTURE_GAP_MS = 160;
+const STORY_CAPTION_HOLD_MS = 1400;
 
 @Component({
   selector: 'app-platform-landing-page',
@@ -134,14 +126,19 @@ export class PlatformLandingPageComponent {
   readonly uiConfig = inject(AppUiConfigService);
   readonly activeTheme = inject(SpecialThemeService).activeTheme;
   readonly features = FEATURES;
-  protected readonly storyFeatures = FEATURES.filter(feature => feature.route !== '/release-summary');
+  protected readonly storyFeatures = FEATURES.slice(0, 6);
   readonly toolIcons = TOOL_ICONS;
   protected readonly toolOrbitResultIndex = 2;
-  protected readonly slogans = SLOGANS.map(({ scene, lines }) => ({
-    scene,
+  protected readonly storyScenes = STORY_SCENES.map(({ lines, duration, ...scene }) => ({
+    ...scene,
+    duration: duration + STORY_CAPTION_HOLD_MS,
+    motionShare: duration / (duration + STORY_CAPTION_HOLD_MS),
     label: lines.join(' '),
     lines: lines.map(line => Array.from(line))
   }));
+  protected readonly storyIndex = signal(0);
+  protected readonly storyPlaying = signal(false);
+  protected readonly storyFinished = signal(false);
   protected readonly canScrollBack = signal(false);
   protected readonly canScrollForward = signal(true);
 
@@ -149,6 +146,10 @@ export class PlatformLandingPageComponent {
   private readonly featureList = viewChild.required<ElementRef<HTMLUListElement>>('featureList');
   private readonly featureSlides = viewChildren<ElementRef<HTMLLIElement>>('featureSlide');
   private readonly benefitsStory = viewChild.required<ElementRef<HTMLElement>>('benefitsStory');
+  private storyInView = false;
+  private storyElapsed = 0;
+  private storyFrame: number | undefined;
+  private storyFrameAt: number | undefined;
 
   constructor() {
     this.uiConfig.load();
@@ -168,7 +169,7 @@ export class PlatformLandingPageComponent {
         onCleanup(() => observer.disconnect());
       }
     });
-    afterNextRender(() => this.connectScrollMotion());
+    afterNextRender(() => this.connectStoryPlayback());
   }
 
   protected updateFeatureCarousel(): void {
@@ -193,197 +194,102 @@ export class PlatformLandingPageComponent {
     list.scrollTo({ left: Math.max(0, nextIndex * step), behavior: reducedMotion ? 'instant' : 'smooth' });
   }
 
-  private connectScrollMotion(): void {
-    if (typeof window.matchMedia !== 'function') {
-      return;
+  protected selectStoryScene(index: number): void {
+    if (index !== this.storyIndex()) {
+      this.resetStoryScene(index);
     }
+  }
 
+  protected toggleStoryPlayback(): void {
+    if (this.storyFinished()) {
+      this.resetStoryScene(0);
+    }
+    this.storyPlaying.update(playing => !playing);
+    this.syncStoryPlayback();
+  }
+
+  private connectStoryPlayback(): void {
     const story = this.benefitsStory().nativeElement;
-    const shell = story.closest('.app-shell');
-    const chrome = Array.from(shell?.querySelectorAll<HTMLElement>(
-      ':scope > .app-shell__sidebar, :scope > .app-shell__workspace > .app-shell__topbar'
-    ) ?? []);
-    const motion = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-height: 680px)');
-    const listeners = new AbortController();
-    const { signal } = listeners;
-    let frame: number | undefined;
-    let nextScene = 0;
-    let lastScrollY = window.scrollY;
-    let lastWheelAt = -Infinity;
-    let viewportTop = 0;
-    let touchStart: { x: number; y: number; consumed: boolean } | undefined;
+    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const visibility = new AbortController();
+    const { signal } = visibility;
+    const sync = () => this.syncStoryPlayback();
+    const observer = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(([entry]) => {
+          this.storyInView = entry.isIntersecting && entry.intersectionRatio >= 0.4;
+          sync();
+        }, { threshold: 0.4 })
+      : undefined;
 
-    const syncViewportTop = () => {
-      const { left, right } = story.getBoundingClientRect();
-      viewportTop = 0;
-      for (const element of chrome) {
-        const bounds = element.getBoundingClientRect();
-        const horizontalOverlap = Math.min(right, bounds.right) - Math.max(left, bounds.left);
-        if (horizontalOverlap > 1 && window.getComputedStyle(element).position === 'sticky') {
-          viewportTop = Math.max(viewportTop, bounds.height);
-        }
+    this.storyPlaying.set(!motion?.matches);
+    this.storyInView = !observer;
+    observer?.observe(story);
+    document.addEventListener('visibilitychange', sync, { signal });
+    motion?.addEventListener('change', () => {
+      if (motion.matches) {
+        this.storyPlaying.set(false);
+        sync();
       }
-      story.style.setProperty('--story-top-inset', viewportTop + 'px');
-    };
-
-    const isAtStage = () => {
-      const bounds = story.getBoundingClientRect();
-      return Math.abs(bounds.top - viewportTop) <= 2 && bounds.bottom >= window.innerHeight - 2;
-    };
-
-    const keepStageInPlace = () => {
-      const target = window.scrollY + story.getBoundingClientRect().top - viewportTop;
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const top = Math.max(0, Math.min(target, maxScroll));
-      if (Math.abs(window.scrollY - top) > 1) {
-        window.scrollTo({ top, behavior: 'instant' });
-      }
-    };
-
-    const startNextScene = () => {
-      const scene = SCROLL_SCENES[nextScene];
-      if (!motion.matches || frame !== undefined || !scene || !isAtStage()) {
-        return false;
-      }
-
-      let startedAt: number | undefined;
-      const draw = (now: number) => {
-        startedAt ??= now;
-        const progress = Math.min(1, (now - startedAt) / scene.duration);
-        story.style.setProperty(scene.property, progress.toFixed(4));
-        if (progress === 1) {
-          nextScene++;
-          frame = undefined;
-          return;
-        }
-        frame = window.requestAnimationFrame(draw);
-      };
-
-      if (touchStart) {
-        touchStart.consumed = true;
-      }
-      frame = window.requestAnimationFrame(draw);
-      keepStageInPlace();
-      return true;
-    };
-
-    const reset = () => {
-      if (frame !== undefined) {
-        window.cancelAnimationFrame(frame);
-        frame = undefined;
-      }
-      nextScene = 0;
-      for (const { property } of SCROLL_SCENES) {
-        story.style.removeProperty(property);
-      }
-    };
-
-    const onScroll = () => {
-      const scrollY = window.scrollY;
-      const down = scrollY > lastScrollY;
-      lastScrollY = scrollY;
-      if (!motion.matches) {
-        return;
-      }
-      if (frame !== undefined) {
-        keepStageInPlace();
-        return;
-      }
-      if (nextScene > 0 && story.getBoundingClientRect().top >= window.innerHeight) {
-        reset();
-      }
-      if (nextScene === 0 && down) {
-        startNextScene();
-      }
-    };
-
-    const onResize = () => {
-      const atStage = frame !== undefined ||
-        (nextScene > 0 && Math.abs(story.getBoundingClientRect().top - viewportTop) <= 2);
-      syncViewportTop();
-      if (motion.matches && atStage) {
-        keepStageInPlace();
-      }
-    };
-
-    const onWheel = (event: WheelEvent) => {
-      if (!motion.matches || event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
-        return;
-      }
-
-      // Momentum and wheel events received during playback do not queue another scene.
-      const now = performance.now();
-      const newGesture = now - lastWheelAt >= WHEEL_GESTURE_GAP_MS;
-      lastWheelAt = now;
-      if (frame !== undefined || (event.deltaY > 0 && newGesture && startNextScene())) {
-        event.preventDefault();
-      }
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!motion.matches || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
-        return;
-      }
-      const target = event.target instanceof Element ? event.target : undefined;
-      const space = event.key === ' ';
-      if (target?.closest('input, textarea, select, [contenteditable]') ||
-          (space && target?.closest('button, [role="button"]'))) {
-        return;
-      }
-
-      const down = ['ArrowDown', 'PageDown', 'End'].includes(event.key) || (space && !event.shiftKey);
-      const up = ['ArrowUp', 'PageUp', 'Home'].includes(event.key) || (space && event.shiftKey);
-      if ((down || up) && (frame !== undefined || (down && !event.repeat && startNextScene()))) {
-        event.preventDefault();
-      }
-    };
-
-    const onTouchStart = (event: TouchEvent) => {
-      const touch = event.touches.length === 1 ? event.touches[0] : undefined;
-      touchStart = touch && { x: touch.clientX, y: touch.clientY, consumed: frame !== undefined };
-    };
-
-    const onTouchMove = (event: TouchEvent) => {
-      if (!motion.matches || !touchStart || event.touches.length !== 1) {
-        return;
-      }
-      const touch = event.touches[0];
-      const distance = touchStart.y - touch.clientY;
-      const swipingDown = distance >= 8 && distance > Math.abs(touch.clientX - touchStart.x);
-      if (frame !== undefined || touchStart.consumed || (swipingDown && startNextScene())) {
-        touchStart.consumed = true;
-        event.preventDefault();
-      }
-    };
-
-    const syncMotion = () => {
-      story.toggleAttribute('data-scroll-motion', motion.matches);
-      lastScrollY = window.scrollY;
-      if (!motion.matches) {
-        reset();
-      }
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true, signal });
-    window.addEventListener('resize', onResize, { signal });
-    window.addEventListener('wheel', onWheel, { passive: false, signal });
-    window.addEventListener('keydown', onKeyDown, { signal });
-    window.addEventListener('touchstart', onTouchStart, { passive: true, signal });
-    window.addEventListener('touchmove', onTouchMove, { passive: false, signal });
-    motion.addEventListener('change', syncMotion, { signal });
-    const chromeObserver = typeof ResizeObserver === 'function' && new ResizeObserver(onResize);
-    if (chromeObserver) {
-      chrome.forEach(element => chromeObserver.observe(element));
-    }
-    syncViewportTop();
-    syncMotion();
+    }, { signal });
+    sync();
 
     this.destroyRef.onDestroy(() => {
-      listeners.abort();
-      if (chromeObserver) {
-        chromeObserver.disconnect();
-      }
-      reset();
+      visibility.abort();
+      observer?.disconnect();
+      this.stopStoryFrame();
     });
+  }
+
+  private resetStoryScene(index: number): void {
+    this.stopStoryFrame();
+    this.storyElapsed = 0;
+    this.storyIndex.set(index);
+    this.storyFinished.set(false);
+    const story = this.benefitsStory().nativeElement;
+    story.removeAttribute('data-story-frame');
+    story.style.removeProperty('--story-playhead');
+    this.syncStoryPlayback();
+  }
+
+  private syncStoryPlayback(): void {
+    if (!this.storyPlaying() || !this.storyInView || document.visibilityState === 'hidden') {
+      this.stopStoryFrame();
+      return;
+    }
+    if (this.storyFrame === undefined) {
+      const story = this.benefitsStory().nativeElement;
+      story.setAttribute('data-story-frame', '');
+      story.style.setProperty('--story-playhead', this.storyProgress().toFixed(4));
+      this.storyFrame = window.requestAnimationFrame(this.paintStoryFrame);
+    }
+  }
+
+  private storyProgress(): number {
+    return Math.min(1, this.storyElapsed / this.storyScenes[this.storyIndex()].duration);
+  }
+
+  private readonly paintStoryFrame = (now: number): void => {
+    this.storyFrame = undefined;
+    this.storyElapsed += now - (this.storyFrameAt ?? now);
+    this.storyFrameAt = now;
+    const progress = this.storyProgress();
+    this.benefitsStory().nativeElement.style.setProperty('--story-playhead', progress.toFixed(4));
+    if (progress < 1) {
+      this.storyFrame = window.requestAnimationFrame(this.paintStoryFrame);
+    } else if (this.storyIndex() + 1 < this.storyScenes.length) {
+      this.resetStoryScene(this.storyIndex() + 1);
+    } else {
+      this.storyFinished.set(true);
+      this.storyPlaying.set(false);
+      this.stopStoryFrame();
+    }
+  };
+
+  private stopStoryFrame(): void {
+    if (this.storyFrame !== undefined) {
+      window.cancelAnimationFrame(this.storyFrame);
+      this.storyFrame = undefined;
+    }
+    this.storyFrameAt = undefined;
   }
 }

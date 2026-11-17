@@ -41,7 +41,7 @@ describe('PlatformLandingPageComponent', () => {
     expect(compiled.textContent).not.toContain('Data Diagnostics');
   });
 
-  it('shows the scene slogans and closing message below the scroll story', async () => {
+  it('renders one animation and caption per card', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],
       providers: [provideRouter([])]
@@ -52,14 +52,14 @@ describe('PlatformLandingPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const story = compiled.querySelector('.platform-landing__capabilities')!;
     const orbit = story.querySelector('.platform-landing__orbit')!;
-    const copy = story.querySelector('.platform-landing__benefits-copy')!;
-    expect(Array.from(copy.querySelectorAll('h3'), heading => heading.getAttribute('aria-label'))).toEqual([
+    expect(story.querySelectorAll('.platform-landing__story-card')).toHaveLength(4);
+    expect(Array.from(story.querySelectorAll('h3'), heading => heading.getAttribute('aria-label'))).toEqual([
       'Wszystkie Twoje aplikacje. Wreszcie grają razem.',
       'Rozwiązuje Twoje problemy. Od incydentu po wdrożenie.',
       'Twój osobisty ekspert. Od pierwszego dnia.',
       'Od czego zaczynamy? Wybierz zadanie w Workspace.'
     ]);
-    expect(Array.from(copy.querySelectorAll('.platform-landing__slogan-line'),
+    expect(Array.from(story.querySelectorAll('.platform-landing__slogan-line'),
       line => line.textContent.trim()
     )).toEqual([
       'Wszystkie Twoje aplikacje.',
@@ -73,10 +73,10 @@ describe('PlatformLandingPageComponent', () => {
     ]);
     expect(orbit.getAttribute('aria-hidden')).toBe('true');
     expect(orbit.querySelectorAll('.platform-landing__orbit-tool--result')).toHaveLength(1);
-    expect(Array.from(copy.querySelectorAll('[data-slogan="closing"] .platform-landing__slogan-phrase'),
+    expect(Array.from(story.querySelectorAll('[data-scene="closing"] .platform-landing__slogan-phrase'),
       phrase => phrase.textContent.trim()
     )).toEqual(['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.']);
-    const guidanceCard = orbit.querySelector(
+    const guidanceCard = story.querySelector(
       '.platform-landing__orbit-result > .platform-landing__guidance-card'
     )!;
     expect(Array.from(guidanceCard.querySelectorAll('.platform-landing__guidance-step span'),
@@ -85,9 +85,9 @@ describe('PlatformLandingPageComponent', () => {
     expect(guidanceCard.querySelector('.platform-landing__guidance-document-result')?.textContent.trim())
       .toBe('markdown_document');
     expect(guidanceCard.querySelector('.platform-landing__guidance-action')).not.toBeNull();
-    const carousel = orbit.querySelector('.platform-landing__story-carousel')!;
-    expect(carousel.querySelectorAll('.platform-landing__story-feature')).toHaveLength(9);
-    expect(carousel.querySelectorAll('.platform-landing__story-feature-flip img')).toHaveLength(9);
+    const carousel = story.querySelector('.platform-landing__story-carousel')!;
+    expect(carousel.querySelectorAll('.platform-landing__story-feature')).toHaveLength(6);
+    expect(carousel.querySelectorAll('.platform-landing__story-feature-flip img')).toHaveLength(6);
     expect(Array.from(carousel.querySelectorAll('.platform-landing__story-feature-face--details .material-symbols-outlined'),
       icon => icon.textContent.trim()
     )).toEqual([
@@ -96,10 +96,7 @@ describe('PlatformLandingPageComponent', () => {
       'screen_search_desktop',
       'ads_click',
       'fact_check',
-      'build_circle',
-      'domain_add',
-      'engineering',
-      'finance'
+      'build_circle'
     ]);
     expect(Array.from(carousel.querySelectorAll('.platform-landing__story-feature-name'),
       name => name.textContent.trim()
@@ -109,20 +106,29 @@ describe('PlatformLandingPageComponent', () => {
       'UI Explorer',
       'UX Inspector',
       'Change Verification',
-      'Config Drift Viewer',
-      'Behavior Change Assessment',
-      'Technical Change Assessment',
-      'Delivery Trends'
+      'Config Drift Viewer'
     ]);
   });
 
-  it('plays one full scene per scroll gesture and ignores scrolling during playback', async () => {
+  it('pauses the timeline, advances between cards and can replay after the finale', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],
       providers: [provideRouter([])]
     }).compileComponents();
 
-    vi.stubGlobal('matchMedia', () => Object.assign(new EventTarget(), { matches: true }));
+    let setVisibility!: (visible: boolean) => void;
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(notify: IntersectionObserverCallback) {
+        setVisibility = visible => notify([{
+          isIntersecting: visible,
+          intersectionRatio: visible ? 1 : 0
+        } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    });
+    vi.stubGlobal('matchMedia', () => Object.assign(new EventTarget(), { matches: false }));
     vi.useFakeTimers({ toFake: ['performance', 'requestAnimationFrame', 'cancelAnimationFrame'] });
     const fixture = TestBed.createComponent(PlatformLandingPageComponent);
 
@@ -130,47 +136,60 @@ describe('PlatformLandingPageComponent', () => {
       fixture.detectChanges();
       const compiled = fixture.nativeElement as HTMLElement;
       const story = compiled.querySelector<HTMLElement>('.platform-landing__capabilities')!;
-      let storyTop = 32;
-      vi.spyOn(story, 'getBoundingClientRect')
-        .mockImplementation(() => new DOMRect(0, storyTop, 800, window.innerHeight));
-
-      const scroll = (deltaY: number) => {
-        const event = new WheelEvent('wheel', { deltaY, cancelable: true });
-        window.dispatchEvent(event);
-        return event.defaultPrevented;
+      const buttons = story.querySelectorAll<HTMLButtonElement>('.platform-landing__story-indicator');
+      const playback = story.querySelector<HTMLButtonElement>('.platform-landing__story-play')!;
+      const progress = () => story.style.getPropertyValue('--story-playhead');
+      const current = () => story.querySelector('.platform-landing__story-card[data-active]')?.id;
+      const click = (button: HTMLButtonElement) => {
+        button.click();
+        fixture.detectChanges();
       };
-      const progress = (scene: string) => story.style.getPropertyValue('--story-' + scene + '-progress');
 
-      expect(scroll(100)).toBe(false);
-      vi.advanceTimersByTime(170);
-      storyTop = 0;
-      expect(scroll(100)).toBe(true);
-      vi.advanceTimersByTime(4100);
-      expect(Number(progress('tool'))).toBeGreaterThan(0.9);
-      expect(scroll(-100)).toBe(true);
-      expect(scroll(100)).toBe(true);
-      vi.advanceTimersByTime(140);
-      expect(progress('tool')).toBe('1.0000');
-      expect(scroll(100)).toBe(false);
-      expect(progress('feature')).toBe('');
+      vi.advanceTimersByTime(500);
+      expect(progress()).toBe('');
+      setVisibility(true);
+      vi.advanceTimersByTime(1000);
+      expect(Number(progress())).toBeGreaterThan(0.15);
+      const initialProgress = progress();
 
-      vi.advanceTimersByTime(170);
-      expect(scroll(100)).toBe(true);
-      vi.advanceTimersByTime(6600);
-      expect(progress('feature')).toBe('1.0000');
-      expect(progress('guidance')).toBe('');
+      const wheel = new WheelEvent('wheel', { deltaY: 100, cancelable: true });
+      window.dispatchEvent(wheel);
+      expect(wheel.defaultPrevented).toBe(false);
 
-      const pageDown = new KeyboardEvent('keydown', { key: 'PageDown', cancelable: true });
-      window.dispatchEvent(pageDown);
-      expect(pageDown.defaultPrevented).toBe(true);
+      click(playback);
+      vi.advanceTimersByTime(8000);
+      expect(progress()).toBe(initialProgress);
+      expect(current()).toBe('workspace-scene-tools');
+
+      click(playback);
+      vi.advanceTimersByTime(500);
+      expect(Number(progress())).toBeGreaterThan(Number(initialProgress));
+      setVisibility(false);
+      const offscreenProgress = progress();
+      vi.advanceTimersByTime(8000);
+      expect(progress()).toBe(offscreenProgress);
+
+      setVisibility(true);
+      vi.advanceTimersByTime(4300);
+      fixture.detectChanges();
+      expect(current()).toBe('workspace-scene-features');
+      expect(buttons[1].getAttribute('aria-current')).toBe('true');
+
+      vi.advanceTimersByTime(6400);
+      fixture.detectChanges();
+      expect(current()).toBe('workspace-scene-guidance');
+
+      click(buttons[3]);
+      expect(current()).toBe('workspace-scene-closing');
+      expect(progress()).toBe('0.0000');
       vi.advanceTimersByTime(5100);
-      expect(progress('guidance')).toBe('1.0000');
-      expect(progress('closing')).toBe('');
+      fixture.detectChanges();
+      expect(progress()).toBe('1.0000');
+      expect(playback.getAttribute('aria-label')).toBe('Odtwórz animacje od początku');
 
-      expect(scroll(100)).toBe(true);
-      vi.advanceTimersByTime(3700);
-      expect(progress('closing')).toBe('1.0000');
-      expect(scroll(100)).toBe(false);
+      click(playback);
+      expect(current()).toBe('workspace-scene-tools');
+      expect(progress()).toBe('0.0000');
     } finally {
       fixture.destroy();
       vi.useRealTimers();
