@@ -109,18 +109,17 @@ const TOOL_ICONS = [
 ] as const;
 
 const SLOGANS = [
-  { scene: 'tools', lines: ['Twoje narzędzia.', 'Jedno miejsce.'] },
-  { scene: 'features', lines: ['AI dopasowane do zadania.', 'Od incydentu po wydanie.'] },
-  {
-    scene: 'guidance',
-    lines: ['Wystarczy wiedzieć, co chcesz zrobić.', 'Workspace prowadzi Cię do wyniku.']
-  }
+  { scene: 'tools', lines: ['Wszystkie Twoje aplikacje.', 'Wreszcie grają razem.'] },
+  { scene: 'features', lines: ['Rozwiązuje Twoje problemy.', 'Od incydentu po wdrożenie.'] },
+  { scene: 'guidance', lines: ['Twój osobisty ekspert.', 'Od pierwszego dnia.'] },
+  { scene: 'closing', lines: ['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.'] }
 ] as const;
 
 const SCROLL_SCENES = [
   { property: '--story-tool-progress', duration: 4200 },
   { property: '--story-feature-progress', duration: 4500 },
-  { property: '--story-guidance-progress', duration: 5000 }
+  { property: '--story-guidance-progress', duration: 5000 },
+  { property: '--story-closing-progress', duration: 2700 }
 ] as const;
 
 const WHEEL_GESTURE_GAP_MS = 160;

@@ -41,7 +41,7 @@ describe('PlatformLandingPageComponent', () => {
     expect(compiled.textContent).not.toContain('Data Diagnostics');
   });
 
-  it('shows the three slogans below the visual scroll story', async () => {
+  it('shows the scene slogans and closing message below the scroll story', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],
       providers: [provideRouter([])]
@@ -54,19 +54,22 @@ describe('PlatformLandingPageComponent', () => {
     const orbit = story.querySelector('.platform-landing__orbit')!;
     const copy = orbit.nextElementSibling!;
     expect(Array.from(copy.querySelectorAll('h3'), heading => heading.getAttribute('aria-label'))).toEqual([
-      'Twoje narzędzia. Jedno miejsce.',
-      'AI dopasowane do zadania. Od incydentu po wydanie.',
-      'Wystarczy wiedzieć, co chcesz zrobić. Workspace prowadzi Cię do wyniku.'
+      'Wszystkie Twoje aplikacje. Wreszcie grają razem.',
+      'Rozwiązuje Twoje problemy. Od incydentu po wdrożenie.',
+      'Twój osobisty ekspert. Od pierwszego dnia.',
+      'Od czego zaczynamy? Wybierz zadanie w Workspace.'
     ]);
     expect(Array.from(copy.querySelectorAll('.platform-landing__slogan-line'),
       line => line.textContent.trim()
     )).toEqual([
-      'Twoje narzędzia.',
-      'Jedno miejsce.',
-      'AI dopasowane do zadania.',
-      'Od incydentu po wydanie.',
-      'Wystarczy wiedzieć, co chcesz zrobić.',
-      'Workspace prowadzi Cię do wyniku.'
+      'Wszystkie Twoje aplikacje.',
+      'Wreszcie grają razem.',
+      'Rozwiązuje Twoje problemy.',
+      'Od incydentu po wdrożenie.',
+      'Twój osobisty ekspert.',
+      'Od pierwszego dnia.',
+      'Od czego zaczynamy?',
+      'Wybierz zadanie w Workspace.'
     ]);
     expect(orbit.getAttribute('aria-hidden')).toBe('true');
     const guidanceCard = orbit.querySelector(
@@ -142,6 +145,11 @@ describe('PlatformLandingPageComponent', () => {
       expect(pageDown.defaultPrevented).toBe(true);
       vi.advanceTimersByTime(5100);
       expect(progress('guidance')).toBe('1.0000');
+      expect(progress('closing')).toBe('');
+
+      expect(scroll(100)).toBe(true);
+      vi.advanceTimersByTime(2800);
+      expect(progress('closing')).toBe('1.0000');
       expect(scroll(100)).toBe(false);
     } finally {
       fixture.destroy();

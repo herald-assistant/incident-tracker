@@ -402,7 +402,12 @@
     --tool-scene-progress: var(--story-tool-progress, 0);
     --feature-scene-progress: var(--story-feature-progress, 0);
     --guidance-scene-progress: var(--story-guidance-progress, 0);
+    --closing-progress: var(--story-closing-progress, 0);
+    --closing-motion-end: 0.60;
     --tool-progress: clamp(0, var(--tool-scene-progress) / var(--story-orbit-motion-share), 1);
+    --tool-spiral-start: 0.68;
+    --tool-spiral-last-start: 0.735;
+    --tool-spiral-duration: 0.24;
     --feature-progress: clamp(0, var(--feature-scene-progress) / var(--story-orbit-motion-share), 1);
     --tool-finale: clamp(0, (var(--tool-scene-progress) - var(--story-orbit-motion-share)) /
       (1 - var(--story-orbit-motion-share)), 1);
@@ -424,7 +429,8 @@
   }
 
   [data-scroll-motion] .platform-landing__benefits-copy {
-    --tool-spread: clamp(0, (0.96 - var(--tool-progress)) / 0.23, 1);
+    --tool-spread: clamp(0, (var(--tool-spiral-last-start) + var(--tool-spiral-duration) -
+      var(--tool-progress)) / var(--tool-spiral-duration), 1);
     --orbit-spread: max(var(--tool-spread), var(--feature-spread));
     position: absolute;
     // Keep the message below the cards through both orbits.
@@ -451,7 +457,14 @@
   [data-scroll-motion] [data-slogan='guidance'] {
     --slogan-progress: clamp(0, (var(--guidance-progress) - 0.13) / 0.48, 1);
     --slogan-finale: var(--guidance-finale);
-    opacity: clamp(0, (var(--guidance-progress) - 0.08) / 0.10, 1);
+    opacity: clamp(0, min((var(--guidance-progress) - 0.08) / 0.10,
+      (0.14 - var(--closing-progress)) / 0.14), 1);
+  }
+
+  [data-scroll-motion] [data-slogan='closing'] {
+    --slogan-progress: clamp(0, (var(--closing-progress) - 0.16) / 0.38, 1);
+    --slogan-finale: clamp(0, (var(--closing-progress) - var(--closing-motion-end)) /
+      (1 - var(--closing-motion-end)), 1);
   }
 
   [data-scroll-motion] .platform-landing__slogan-line {
@@ -472,9 +485,18 @@
   }
 
   [data-scroll-motion] .platform-landing__orbit {
-    // Keep the angle advancing at the same rate through the swap and the inward spiral.
-    --tool-turns: calc(clamp(0, (var(--tool-progress) - 0.2) / 0.8, 1) * 1.8);
-    --tools-complete: clamp(0, (var(--tool-progress) - 0.89) / 0.07, 1);
+    --tool-orbit-progress: clamp(0, (var(--tool-progress) - 0.26) / 0.74, 1);
+    --tool-merge-progress: clamp(0, (var(--tool-progress) - var(--tool-spiral-start)) /
+      (1 - var(--tool-spiral-start)), 1);
+    // Keep the visible logos readable and settle the turn as the ring closes.
+    --tool-orbit-easing: calc(var(--tool-orbit-progress) * var(--tool-orbit-progress) *
+      (2 - var(--tool-orbit-progress)));
+    --tool-merge-easing: calc(var(--tool-merge-progress) * var(--tool-merge-progress) *
+      (3 - 2 * var(--tool-merge-progress)));
+    --tool-turns: calc(0.65 * var(--tool-orbit-easing) + 0.35 * var(--tool-merge-easing));
+    --tool-logo-progress: clamp(0, (var(--tool-progress) - 0.82) / 0.15, 1);
+    --tools-complete: calc(var(--tool-logo-progress) * var(--tool-logo-progress) *
+      (3 - 2 * var(--tool-logo-progress)));
     --guidance-morph: calc(clamp(0, var(--guidance-progress) / 0.18, 1) * (1 - var(--guidance-return)));
     --guidance-reveal: calc(clamp(0, (var(--guidance-progress) - 0.06) / 0.12, 1) *
       clamp(0, 1 - var(--guidance-return) / 0.6, 1));
@@ -495,10 +517,16 @@
     --turn: calc(var(--tool-turns) * 1turn);
     --appearance: clamp(0, (var(--tool-progress) - 0.04 - var(--source-index) * 0.006) / 0.1, 1);
     --entry-radius: calc(1 - 0.8 * (1 - var(--appearance)) * (1 - var(--appearance)));
-    // Each icon swaps at the same angle on its first pass across the front.
     --swap-turn: mod(calc(0.585 - var(--source-index) / var(--source-count)), 1);
-    --tdw-symbol: clamp(0, (var(--tool-turns) - var(--swap-turn) + 0.035) / 0.07, 1);
-    --spiral: clamp(0, (var(--tool-progress) - 0.69 - var(--source-index) * 0.004) / 0.23, 1);
+    --spiral-delay: calc((var(--tool-spiral-last-start) - var(--tool-spiral-start)) * var(--swap-turn));
+    --spiral-progress: clamp(0, (var(--tool-progress) - var(--tool-spiral-start) - var(--spiral-delay)) /
+      var(--tool-spiral-duration), 1);
+    --spiral: calc(var(--spiral-progress) * var(--spiral-progress) * (3 - 2 * var(--spiral-progress)));
+    // Swap on the front pass or as the remaining tiles join the spiral.
+    --tdw-symbol: max(
+      clamp(0, (var(--tool-turns) - var(--swap-turn) + 0.035) / 0.07, 1),
+      clamp(0, (var(--spiral) - 0.20) / 0.35, 1)
+    );
     --source-fade: clamp(0, (var(--spiral) - 0.68) / 0.32, 1);
     opacity: calc(var(--appearance) * (1 - var(--source-fade)));
   }
@@ -526,11 +554,25 @@
   [data-scroll-motion] .platform-landing__orbit-result {
     --feature-orbit-visible: clamp(0, min((var(--feature-progress) - 0.22) / 0.12,
       (0.99 - var(--feature-progress)) / 0.12), 1);
+    --closing-motion: clamp(0, var(--closing-progress) / var(--closing-motion-end), 1);
+    --closing-pulse: sin(var(--closing-motion) * 180deg);
     --tile-radius: calc(10.5cqi * (1 - var(--guidance-morph)) + 14px * var(--guidance-morph));
     inset-block: calc(100% * (var(--orbit-result-inset) + 0.065 * var(--guidance-morph)));
     inset-inline: calc(100% * (var(--orbit-result-inset) - 0.13 * var(--guidance-morph)));
     opacity: calc(var(--tools-complete) * (1 - var(--feature-orbit-visible)));
-    transform: scale(calc(0.6 + 0.4 * var(--tools-complete)));
+    transform: translateY(calc(-8px * var(--closing-pulse)))
+      scale(calc((0.6 + 0.4 * var(--tools-complete)) * (1 + 0.055 * var(--closing-pulse))));
+  }
+
+  [data-scroll-motion] .platform-landing__orbit-result::after {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--primary);
+    border-radius: inherit;
+    opacity: calc(0.5 * var(--closing-pulse));
+    scale: calc(1 + 0.18 * var(--closing-motion));
+    pointer-events: none;
+    content: '';
   }
 
   [data-scroll-motion] .platform-landing__orbit-result > img {
