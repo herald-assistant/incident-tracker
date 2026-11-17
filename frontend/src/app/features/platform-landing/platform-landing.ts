@@ -119,7 +119,7 @@ const SCROLL_SCENES = [
   { property: '--story-tool-progress', duration: 4200 },
   { property: '--story-feature-progress', duration: 6500 },
   { property: '--story-guidance-progress', duration: 5000 },
-  { property: '--story-closing-progress', duration: 2700 }
+  { property: '--story-closing-progress', duration: 3600 }
 ] as const;
 
 const WHEEL_GESTURE_GAP_MS = 160;
@@ -149,8 +149,6 @@ export class PlatformLandingPageComponent {
   private readonly featureList = viewChild.required<ElementRef<HTMLUListElement>>('featureList');
   private readonly featureSlides = viewChildren<ElementRef<HTMLLIElement>>('featureSlide');
   private readonly benefitsStory = viewChild.required<ElementRef<HTMLElement>>('benefitsStory');
-  private readonly benefitsTrack = viewChild.required<ElementRef<HTMLElement>>('benefitsTrack');
-  private readonly benefitsStage = viewChild.required<ElementRef<HTMLElement>>('benefitsStage');
 
   constructor() {
     this.uiConfig.load();
@@ -201,8 +199,10 @@ export class PlatformLandingPageComponent {
     }
 
     const story = this.benefitsStory().nativeElement;
-    const track = this.benefitsTrack().nativeElement;
-    const stage = this.benefitsStage().nativeElement;
+    const shell = story.closest('.app-shell');
+    const chrome = Array.from(shell?.querySelectorAll<HTMLElement>(
+      ':scope > .app-shell__sidebar, :scope > .app-shell__workspace > .app-shell__topbar'
+    ) ?? []);
     const motion = window.matchMedia('(prefers-reduced-motion: no-preference) and (min-height: 680px)');
     const listeners = new AbortController();
     const { signal } = listeners;
@@ -210,18 +210,29 @@ export class PlatformLandingPageComponent {
     let nextScene = 0;
     let lastScrollY = window.scrollY;
     let lastWheelAt = -Infinity;
+    let viewportTop = 0;
     let touchStart: { x: number; y: number; consumed: boolean } | undefined;
 
-    const stickyTop = () => Number.parseFloat(window.getComputedStyle(stage).top);
+    const syncViewportTop = () => {
+      const { left, right } = story.getBoundingClientRect();
+      viewportTop = 0;
+      for (const element of chrome) {
+        const bounds = element.getBoundingClientRect();
+        const horizontalOverlap = Math.min(right, bounds.right) - Math.max(left, bounds.left);
+        if (horizontalOverlap > 1 && window.getComputedStyle(element).position === 'sticky') {
+          viewportTop = Math.max(viewportTop, bounds.height);
+        }
+      }
+      story.style.setProperty('--story-top-inset', viewportTop + 'px');
+    };
 
     const isAtStage = () => {
-      const bounds = track.getBoundingClientRect();
-      const top = stickyTop();
-      return bounds.top <= top + 2 && bounds.bottom >= top + stage.offsetHeight - 2;
+      const bounds = story.getBoundingClientRect();
+      return Math.abs(bounds.top - viewportTop) <= 2 && bounds.bottom >= window.innerHeight - 2;
     };
 
     const keepStageInPlace = () => {
-      const target = window.scrollY + track.getBoundingClientRect().top - stickyTop();
+      const target = window.scrollY + story.getBoundingClientRect().top - viewportTop;
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       const top = Math.max(0, Math.min(target, maxScroll));
       if (Math.abs(window.scrollY - top) > 1) {
@@ -278,7 +289,7 @@ export class PlatformLandingPageComponent {
         keepStageInPlace();
         return;
       }
-      if (nextScene > 0 && track.getBoundingClientRect().top >= window.innerHeight) {
+      if (nextScene > 0 && story.getBoundingClientRect().top >= window.innerHeight) {
         reset();
       }
       if (nextScene === 0 && down) {
@@ -287,7 +298,10 @@ export class PlatformLandingPageComponent {
     };
 
     const onResize = () => {
-      if (motion.matches && frame !== undefined) {
+      const atStage = frame !== undefined ||
+        (nextScene > 0 && Math.abs(story.getBoundingClientRect().top - viewportTop) <= 2);
+      syncViewportTop();
+      if (motion.matches && atStage) {
         keepStageInPlace();
       }
     };
@@ -357,10 +371,18 @@ export class PlatformLandingPageComponent {
     window.addEventListener('touchstart', onTouchStart, { passive: true, signal });
     window.addEventListener('touchmove', onTouchMove, { passive: false, signal });
     motion.addEventListener('change', syncMotion, { signal });
+    const chromeObserver = typeof ResizeObserver === 'function' && new ResizeObserver(onResize);
+    if (chromeObserver) {
+      chrome.forEach(element => chromeObserver.observe(element));
+    }
+    syncViewportTop();
     syncMotion();
 
     this.destroyRef.onDestroy(() => {
       listeners.abort();
+      if (chromeObserver) {
+        chromeObserver.disconnect();
+      }
       reset();
     });
   }

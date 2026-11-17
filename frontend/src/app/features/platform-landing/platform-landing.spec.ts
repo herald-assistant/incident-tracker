@@ -52,7 +52,7 @@ describe('PlatformLandingPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const story = compiled.querySelector('.platform-landing__capabilities')!;
     const orbit = story.querySelector('.platform-landing__orbit')!;
-    const copy = orbit.nextElementSibling!;
+    const copy = story.querySelector('.platform-landing__benefits-copy')!;
     expect(Array.from(copy.querySelectorAll('h3'), heading => heading.getAttribute('aria-label'))).toEqual([
       'Wszystkie Twoje aplikacje. Wreszcie grają razem.',
       'Rozwiązuje Twoje problemy. Od incydentu po wdrożenie.',
@@ -73,6 +73,9 @@ describe('PlatformLandingPageComponent', () => {
     ]);
     expect(orbit.getAttribute('aria-hidden')).toBe('true');
     expect(orbit.querySelectorAll('.platform-landing__orbit-tool--result')).toHaveLength(1);
+    expect(Array.from(copy.querySelectorAll('[data-slogan="closing"] .platform-landing__slogan-phrase'),
+      phrase => phrase.textContent.trim()
+    )).toEqual(['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.']);
     const guidanceCard = orbit.querySelector(
       '.platform-landing__orbit-result > .platform-landing__guidance-card'
     )!;
@@ -127,10 +130,9 @@ describe('PlatformLandingPageComponent', () => {
       fixture.detectChanges();
       const compiled = fixture.nativeElement as HTMLElement;
       const story = compiled.querySelector<HTMLElement>('.platform-landing__capabilities')!;
-      const track = story.querySelector<HTMLElement>('.platform-landing__benefits-track')!;
-      const stage = story.querySelector<HTMLElement>('.platform-landing__benefits-stage')!;
-      stage.style.top = '160px';
-      vi.spyOn(track, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 160, 800, 400));
+      let storyTop = 32;
+      vi.spyOn(story, 'getBoundingClientRect')
+        .mockImplementation(() => new DOMRect(0, storyTop, 800, window.innerHeight));
 
       const scroll = (deltaY: number) => {
         const event = new WheelEvent('wheel', { deltaY, cancelable: true });
@@ -139,6 +141,9 @@ describe('PlatformLandingPageComponent', () => {
       };
       const progress = (scene: string) => story.style.getPropertyValue('--story-' + scene + '-progress');
 
+      expect(scroll(100)).toBe(false);
+      vi.advanceTimersByTime(170);
+      storyTop = 0;
       expect(scroll(100)).toBe(true);
       vi.advanceTimersByTime(4100);
       expect(Number(progress('tool'))).toBeGreaterThan(0.9);
@@ -163,7 +168,7 @@ describe('PlatformLandingPageComponent', () => {
       expect(progress('closing')).toBe('');
 
       expect(scroll(100)).toBe(true);
-      vi.advanceTimersByTime(2800);
+      vi.advanceTimersByTime(3700);
       expect(progress('closing')).toBe('1.0000');
       expect(scroll(100)).toBe(false);
     } finally {
