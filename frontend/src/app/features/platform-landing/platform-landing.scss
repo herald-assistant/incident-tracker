@@ -15,7 +15,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
-  min-height: 39.4cqw;
+  aspect-ratio: 1769 / 656;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -30,7 +30,7 @@
   align-content: center;
   justify-items: start;
   gap: clamp(12px, 1.5cqw, 20px);
-  width: 48%;
+  width: 46%;
   padding: clamp(22px, 3.6cqw, 48px) 0 clamp(22px, 3.6cqw, 48px) clamp(18px, 3.6cqw, 48px);
 }
 
@@ -38,7 +38,7 @@
   margin: 0;
   color: var(--text-main);
   overflow-wrap: anywhere;
-  font-size: clamp(1.45rem, 3.05cqw, 2.5rem);
+  font-size: clamp(1.45rem, 2.9cqw, 2.5rem);
   line-height: 1.13;
 }
 
@@ -64,7 +64,7 @@
 
 @container (max-width: 820px) {
   .platform-landing__intro {
-    min-height: 0;
+    aspect-ratio: auto;
   }
 
   .platform-landing__copy {
