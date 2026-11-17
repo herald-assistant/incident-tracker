@@ -251,8 +251,9 @@
 
 
 .platform-landing__capabilities {
-  --story-surface: color-mix(in srgb, var(--color-surface-alt) 64%, #e6d6bf);
-  --story-shadow-ink: #675139;
+  --story-ink: #f5f8ff;
+  --story-accent: #b9ddff;
+  --story-shadow-ink: #050f1b;
   --orbit-result-inset: 0.29;
   --story-gutter: clamp(20px, 10%, 17rem);
   --story-gap: clamp(10px, 1.5vw, 24px);
@@ -274,21 +275,52 @@
   grid-auto-columns: var(--story-card-width);
   grid-template-rows: clamp(14rem, 50.5svh, 26rem) auto auto;
   gap: var(--story-row-gap) var(--story-gap);
-  transform: translateX(calc(var(--story-gutter) - var(--scene-index) * (var(--story-card-width) + var(--story-gap))));
+  transform: translateX(calc(var(--story-gutter) - (var(--scene-index) + 1) * (var(--story-card-width) + var(--story-gap))));
+}
+
+.platform-landing__story-track::before,
+.platform-landing__story-track::after,
+.platform-landing__story-card {
+  grid-row: 1 / -1;
+  border-radius: clamp(20px, 3vw, 36px);
+}
+
+.platform-landing__story-track::before,
+.platform-landing__story-track::after {
+  background-color: #e1d2c5;
+  content: '';
 }
 
 .platform-landing__story-card {
   --scene-progress: var(--scene-preview);
   --caption-preview: 1;
   --orbit-size: min(66cqw, 30rem, max(12rem, 55svh));
+  position: relative;
+  isolation: isolate;
   display: grid;
-  grid-row: 1 / span 3;
   grid-template-rows: subgrid;
   min-width: 0;
   padding: var(--story-card-block-padding) clamp(12px, 2.4%, 24px);
   overflow: clip;
-  border-radius: clamp(20px, 3vw, 36px);
   background-color: var(--story-surface);
+}
+
+.platform-landing__story-card::before {
+  --light-angle: calc(var(--story-light-progress, 0) * 1turn);
+  position: absolute;
+  z-index: -1;
+  inset: -8%;
+  background:
+    radial-gradient(ellipse 21% 32% at 25% 34%,
+      color-mix(in srgb, var(--story-light) 36%, transparent), transparent 100%),
+    radial-gradient(ellipse 20% 29% at 52% 21%,
+      color-mix(in srgb, var(--story-light) 42%, transparent), transparent 100%),
+    radial-gradient(ellipse 22% 33% at 77% 37%,
+      color-mix(in srgb, var(--story-light) 30%, transparent), transparent 100%);
+  transform: translate(calc(2.5% * sin(var(--light-angle))), calc(-1.5% * sin(var(--light-angle) / 2)))
+    scale(calc(1 + 0.025 * sin(var(--light-angle) / 2)));
+  pointer-events: none;
+  content: '';
 }
 
 .platform-landing__story-controls {
@@ -377,6 +409,10 @@
   .platform-landing__story-track {
     transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+
+  .platform-landing__capabilities[data-story-frame] .platform-landing__story-card[data-active] {
+    --story-light-progress: var(--story-playhead);
+  }
 }
 
 @media (max-width: 700px) {
@@ -388,7 +424,7 @@
 .platform-landing__benefits-message {
   max-width: 27ch;
   margin: 0 auto;
-  color: var(--text-main);
+  color: var(--story-ink);
   font-size: clamp(1.65rem, 3.55cqw, 2.75rem);
   line-height: 1.12;
   letter-spacing: -0.025em;
@@ -402,7 +438,7 @@
 }
 
 .platform-landing__slogan-line + .platform-landing__slogan-line {
-  color: var(--primary-dark);
+  color: var(--story-accent);
   font-size: 0.75em;
   font-weight: 550;
   line-height: 1.2;
@@ -539,7 +575,6 @@
   --closing-darken: calc(var(--closing-backdrop) * var(--closing-backdrop) * (3 - 2 * var(--closing-backdrop)));
   --closing-arrival: clamp(0, var(--closing-progress) / 0.56, 1);
   --closing-settle: calc(var(--closing-arrival) * var(--closing-arrival) * (3 - 2 * var(--closing-arrival)));
-  --closing-ink: #f5f8ff;
   --tool-progress: clamp(0, var(--tool-scene-progress) / var(--story-tool-motion-share), 1);
   --tool-collection-start: 0.68;
   --tool-result-ready: 0.97;
@@ -563,6 +598,9 @@
 
 .platform-landing__story-card[data-scene='tools'] {
   --scene-preview: 0.43;
+  --story-surface: var(--color-sidebar-bg);
+  --story-light: var(--color-primary);
+  --story-accent: var(--color-sidebar-accent);
   --tool-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--tool-progress) - 0.32) / 0.24, 1);
   --slogan-finale: var(--tool-finale);
@@ -573,7 +611,8 @@
   --feature-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--feature-scene-progress) - 0.08) / 0.26, 1);
   --slogan-finale: var(--feature-finale);
-  --story-surface: color-mix(in srgb, var(--color-surface-alt) 60%, #ccddf3);
+  --story-surface: #0b263c;
+  --story-light: #459cda;
 }
 
 .platform-landing__story-card[data-scene='guidance'] {
@@ -581,14 +620,19 @@
   --guidance-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--guidance-progress) - 0.13) / 0.48, 1);
   --slogan-finale: var(--guidance-finale);
-  --story-surface: color-mix(in srgb, var(--color-surface-alt) 60%, #cedfd8);
+  --story-surface: #2b1b44;
+  --story-light: #8f68c7;
+  --story-accent: #e7d6ff;
 }
 
 .platform-landing__story-card[data-scene='closing'] {
   --scene-preview: 1;
+  --story-surface: #1c202b;
+  --story-light: #495363;
+  --story-accent: #cdd7e5;
   --closing-progress: var(--scene-progress);
   --phrase-progress: clamp(0, (var(--closing-progress) - 0.24) / 0.29, 1);
-  background-color: color-mix(in srgb, var(--story-surface), #081426 calc(100% * var(--closing-darken)));
+  background-color: color-mix(in srgb, var(--story-surface), #0e1017 calc(100% * var(--closing-darken)));
 }
 
 .platform-landing__capabilities[data-story-frame] .platform-landing__story-card[data-active] {
@@ -622,7 +666,6 @@
 
 .platform-landing__story-card[data-scene='closing'] .platform-landing__benefits-message {
   max-width: none;
-  color: var(--closing-ink);
   font-size: clamp(1.8rem, 5.6cqw, 3.625rem);
   font-weight: 700;
   line-height: 1.05;
@@ -635,7 +678,6 @@
 
 .platform-landing__story-card[data-scene='closing'] .platform-landing__slogan-line + .platform-landing__slogan-line {
   --phrase-progress: clamp(0, (var(--closing-progress) - 0.51) / 0.27, 1);
-  color: #b9d4ff;
   font-size: clamp(1.15rem, 3.1cqw, 2.125rem);
   font-weight: 500;
   line-height: 1.18;
@@ -796,7 +838,7 @@
   z-index: 11;
   width: 31cqi;
   aspect-ratio: 1;
-  background-color: var(--closing-ink);
+  background-color: var(--story-ink);
   mask: url('/assets/brand/main-logo.png') center / contain no-repeat;
   opacity: var(--closing-logo-reveal);
   transform: translate(-50%, -50%) var(--closing-logo-transform);
