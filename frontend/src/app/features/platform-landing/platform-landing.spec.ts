@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { PlatformLandingPageComponent } from './platform-landing';
 
 describe('PlatformLandingPageComponent', () => {
-  it('lists the available feature cards in reading order below the hero', async () => {
+  it('presents the hero and animations before the available feature cards', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],
       providers: [provideRouter([])]
@@ -20,7 +20,15 @@ describe('PlatformLandingPageComponent', () => {
 
     expect(compiled.querySelector('.platform-landing__actions')).toBeNull();
     expect(compiled.querySelectorAll('.platform-landing__intro a')).toHaveLength(0);
-    expect(compiled.querySelector('#platformLandingFeatures')).not.toBeNull();
+    expect(compiled.querySelector('.platform-landing__intro .section-eyebrow')).toBeNull();
+    const sections = compiled.querySelectorAll(
+      '.platform-landing__intro, .platform-landing__capabilities, #platformLandingFeatures'
+    );
+    expect(Array.from(sections, section => section.className)).toEqual([
+      'platform-landing__intro',
+      'platform-landing__capabilities',
+      'platform-landing__features'
+    ]);
     expect(featureLinks.map((link) => link.getAttribute('href'))).toEqual([
       '/incident-analysis',
       '/flow-explorer',
@@ -32,9 +40,15 @@ describe('PlatformLandingPageComponent', () => {
       '/delivery-scope-complexity',
       '/delivery-complexity-trends'
     ]);
+    expect(featureLinks[0].querySelector('h4')?.textContent?.trim()).toBe('Ustal wpływ incydentu');
+    expect(featureLinks[0].querySelector('p')?.textContent?.trim()).toBe('Incident Analysis');
     for (const link of featureLinks) {
-      expect(link.querySelector('h4')?.textContent?.trim()).toBeTruthy();
-      expect(link.querySelector('p')?.textContent?.trim()).toBeTruthy();
+      const task = link.querySelector('h4');
+      const name = link.querySelector('p');
+      expect(task?.textContent?.trim()).toBeTruthy();
+      expect(name?.textContent?.trim()).toBeTruthy();
+      expect(link.getAttribute('aria-labelledby')).toBe(task?.id);
+      expect(link.getAttribute('aria-describedby')).toBe(name?.id);
       const visual = link.querySelector<HTMLElement>('.platform-landing__feature-visual');
       expect(visual?.style.backgroundImage || visual?.textContent?.trim()).toBeTruthy();
     }
@@ -53,29 +67,32 @@ describe('PlatformLandingPageComponent', () => {
     const story = compiled.querySelector('.platform-landing__capabilities')!;
     const orbit = story.querySelector('.platform-landing__orbit')!;
     expect(story.querySelectorAll('.platform-landing__story-card')).toHaveLength(4);
-    expect(Array.from(story.querySelectorAll('h3'), heading => heading.getAttribute('aria-label'))).toEqual([
+    const storyTitle = story.querySelector('h3');
+    expect(storyTitle?.textContent?.trim()).toBe('Zobacz Workspace w akcji');
+    expect(story.getAttribute('aria-labelledby')).toBe(storyTitle?.id);
+    expect(Array.from(story.querySelectorAll('h4'), heading => heading.getAttribute('aria-label'))).toEqual([
       'Wszystkie Twoje aplikacje. Wreszcie grają razem.',
-      'Rozwiązuje Twoje problemy. Od incydentu po wdrożenie.',
-      'Twój osobisty ekspert. Od pierwszego dnia.',
-      'Od czego zaczynamy? Wybierz zadanie w Workspace.'
+      'Rozwiązuj codzienne problemy. Od incydentu po wdrożenie.',
+      'Wbudowana wiedza ekspercka. Działasz efektywnie od pierwszego dnia.',
+      'Czas na Twój ruch. Wybierz pierwsze zadanie.'
     ]);
     expect(Array.from(story.querySelectorAll('.platform-landing__slogan-line'),
       line => line.textContent.trim()
     )).toEqual([
       'Wszystkie Twoje aplikacje.',
       'Wreszcie grają razem.',
-      'Rozwiązuje Twoje problemy.',
+      'Rozwiązuj codzienne problemy.',
       'Od incydentu po wdrożenie.',
-      'Twój osobisty ekspert.',
-      'Od pierwszego dnia.',
-      'Od czego zaczynamy?',
-      'Wybierz zadanie w Workspace.'
+      'Wbudowana wiedza ekspercka.',
+      'Działasz efektywnie od pierwszego dnia.',
+      'Czas na Twój ruch.',
+      'Wybierz pierwsze zadanie.'
     ]);
     expect(orbit.getAttribute('aria-hidden')).toBe('true');
     expect(orbit.querySelectorAll('.platform-landing__orbit-tool--result')).toHaveLength(1);
     expect(Array.from(story.querySelectorAll('[data-scene="closing"] .platform-landing__slogan-phrase'),
       phrase => phrase.textContent.trim()
-    )).toEqual(['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.']);
+    )).toEqual(['Czas na Twój ruch.', 'Wybierz pierwsze zadanie.']);
     const guidanceCard = story.querySelector(
       '.platform-landing__orbit-result > .platform-landing__guidance-card'
     )!;

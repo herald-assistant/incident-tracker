@@ -1,100 +1,33 @@
-<main aria-labelledby="platformLandingTitle">
-  <div class="page-shell platform-landing-page">
-    @if (activeTheme()?.overviewBanner; as banner) {
+<main class="platform-landing" aria-labelledby="platformLandingTitle">
+  @if (activeTheme()?.overviewBanner; as banner) {
+    <div class="platform-landing__content platform-landing__special-intro">
       <app-special-theme-banner [banner]="banner" headingId="platformLandingTitle" />
-    } @else {
-      <section class="platform-landing__intro" aria-labelledby="platformLandingTitle">
-        <div class="platform-landing__copy">
-          <p class="section-eyebrow">Team Delivery Workspace</p>
-          <h2 id="platformLandingTitle">
-            Mniej szukania po systemach.<br />
-            Więcej gotowych odpowiedzi do codziennej pracy.
-          </h2>
-          <p class="platform-landing__description">
-            Platforma zbiera za Ciebie informacje z wielu miejsc, porządkuje je i oddaje wynik w
-            formie dopasowanej do zadania.
-          </p>
-        </div>
-
-        <div class="platform-landing__brand-visual" aria-hidden="true"></div>
-      </section>
-    }
-
-    <section
-      id="platformLandingFeatures"
-      class="platform-landing__features"
-      aria-labelledby="platformLandingFeaturesTitle"
-    >
-      <div class="platform-landing__features-header">
-        <h3 id="platformLandingFeaturesTitle">Wybierz, co chcesz załatwić</h3>
-        <div class="platform-landing__carousel-controls">
-          <button
-            type="button"
-            aria-label="Poprzednia karta"
-            aria-controls="platformLandingFeatureList"
-            [disabled]="!canScrollBack()"
-            (click)="scrollFeatureCarousel(-1)"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Następna karta"
-            aria-controls="platformLandingFeatureList"
-            [disabled]="!canScrollForward()"
-            (click)="scrollFeatureCarousel(1)"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
-          </button>
-        </div>
+    </div>
+  } @else {
+    <section class="platform-landing__intro" aria-labelledby="platformLandingTitle">
+      <div class="platform-landing__copy">
+        <h2 id="platformLandingTitle">
+          Mniej szukania po systemach.<br />
+          Więcej gotowych odpowiedzi do codziennej pracy.
+        </h2>
+        <p class="platform-landing__description">
+          Platforma zbiera za Ciebie informacje z wielu miejsc, porządkuje je i oddaje wynik w
+          formie dopasowanej do zadania.
+        </p>
       </div>
 
-      <ul
-        #featureList
-        id="platformLandingFeatureList"
-        class="platform-landing__feature-list"
-        role="list"
-        (scroll)="updateFeatureCarousel()"
-      >
-        @for (feature of features; track feature.route) {
-          @if (feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
-            <li #featureSlide>
-              <a
-                class="platform-landing__feature-card"
-                [routerLink]="feature.route"
-                [attr.aria-labelledby]="'overview-feature-title-' + $index"
-                [attr.aria-describedby]="'overview-feature-description-' + $index"
-              >
-                <div
-                  class="platform-landing__feature-visual"
-                  [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
-                  aria-hidden="true"
-                >
-                  @if (!feature.image) {
-                    <span class="platform-landing__feature-icon material-symbols-outlined">
-                      {{ feature.icon }}
-                    </span>
-                  }
-                </div>
-                <div class="platform-landing__feature-copy">
-                  <h4 class="platform-landing__feature-name" [id]="'overview-feature-title-' + $index">
-                    {{ feature.title }}
-                  </h4>
-                  <p [id]="'overview-feature-description-' + $index">{{ feature.description }}</p>
-                </div>
-              </a>
-            </li>
-          }
-        }
-      </ul>
+      <div class="platform-landing__brand-visual" aria-hidden="true"></div>
     </section>
-  </div>
+  }
 
   <section
     #benefitsStory
     class="platform-landing__capabilities"
-    aria-label="Możliwości Team Delivery Workspace"
+    aria-labelledby="platformLandingStoryTitle"
   >
+    <header class="platform-landing__story-header">
+      <h3 id="platformLandingStoryTitle" class="platform-landing__section-title">Zobacz Workspace w akcji</h3>
+    </header>
     <div class="platform-landing__story-viewport">
       <div class="platform-landing__story-track" [style.--scene-index]="storyIndex()">
         @for (scene of storyScenes; track scene.id) {
@@ -181,7 +114,7 @@
                 </div>
               </div>
             </div>
-            <h3
+            <h4
               class="platform-landing__benefits-message"
               [attr.aria-label]="scene.label"
             >
@@ -196,7 +129,7 @@
                   }
                 </span>
               }
-            </h3>
+            </h4>
           </article>
         }
       </div>
@@ -227,4 +160,76 @@
       </button>
     </div>
   </section>
+  <div class="platform-landing__content">
+    <section
+      id="platformLandingFeatures"
+      class="platform-landing__features"
+      aria-labelledby="platformLandingFeaturesTitle"
+    >
+      <div class="platform-landing__features-header">
+        <h3 id="platformLandingFeaturesTitle" class="platform-landing__section-title">Wybierz, co chcesz załatwić</h3>
+        <div class="platform-landing__carousel-controls">
+          <button
+            type="button"
+            aria-label="Poprzednia karta"
+            aria-controls="platformLandingFeatureList"
+            [disabled]="!canScrollBack()"
+            (click)="scrollFeatureCarousel(-1)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Następna karta"
+            aria-controls="platformLandingFeatureList"
+            [disabled]="!canScrollForward()"
+            (click)="scrollFeatureCarousel(1)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
+      <ul
+        #featureList
+        id="platformLandingFeatureList"
+        class="platform-landing__feature-list"
+        role="list"
+        (scroll)="updateFeatureCarousel()"
+      >
+        @for (feature of features; track feature.route) {
+          @if (feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
+            <li #featureSlide>
+              <a
+                class="platform-landing__feature-card"
+                [routerLink]="feature.route"
+                [attr.aria-labelledby]="'overview-feature-title-' + $index"
+                [attr.aria-describedby]="'overview-feature-name-' + $index"
+              >
+                <div
+                  class="platform-landing__feature-visual"
+                  [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
+                  aria-hidden="true"
+                >
+                  @if (!feature.image) {
+                    <span class="platform-landing__feature-icon material-symbols-outlined">
+                      {{ feature.icon }}
+                    </span>
+                  }
+                </div>
+                <div class="platform-landing__feature-copy">
+                  <h4 class="platform-landing__feature-task" [id]="'overview-feature-title-' + $index">
+                    {{ feature.task }}
+                  </h4>
+                  <p class="platform-landing__feature-name" [id]="'overview-feature-name-' + $index">
+                    {{ feature.title }}
+                  </p>
+                </div>
+              </a>
+            </li>
+          }
+        }
+      </ul>
+    </section>
+  </div>
 </main>

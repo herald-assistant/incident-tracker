@@ -1,13 +1,26 @@
 :host {
+  --landing-content-width: min(1320px, calc(100% - 28px));
+  --landing-section-gap: clamp(16px, 2cqw, 24px);
   display: block;
 }
 
-.platform-landing-page {
+.platform-landing {
   display: grid;
-  gap: 16px;
-  width: min(1320px, calc(100% - 28px));
-  padding-block-end: 0;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: clamp(28px, 4vw, 52px);
+  padding-block-end: clamp(28px, 5svh, 56px);
   container-type: inline-size;
+}
+
+.platform-landing__content,
+.platform-landing__story-header {
+  width: var(--landing-content-width);
+  margin-inline: auto;
+  container-type: inline-size;
+}
+
+.platform-landing__special-intro {
+  margin-block-start: 18px;
 }
 
 .platform-landing__intro {
@@ -17,10 +30,9 @@
   gap: 0;
   aspect-ratio: 1769 / 656;
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border-block-end: 1px solid var(--color-border);
   background: #f8f0e7;
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 6px 12px -9px color-mix(in srgb, var(--color-text) 25%, transparent);
 }
 
 .platform-landing__copy {
@@ -87,11 +99,8 @@
 
 .platform-landing__features {
   display: grid;
-  gap: clamp(16px, 2cqw, 24px);
-  width: min(100%, 75rem);
+  gap: var(--landing-section-gap);
   min-width: 0;
-  margin-inline: auto;
-  padding-block: clamp(20px, 3.4cqw, 44px) 12px;
   scroll-margin-top: 80px;
 }
 
@@ -102,7 +111,7 @@
   gap: 12px;
 }
 
-.platform-landing__features-header h3 {
+.platform-landing__section-title {
   margin: 0;
   color: var(--text-main);
   font-size: clamp(1.3rem, 2.6cqw, 2rem);
@@ -142,12 +151,13 @@
   --carousel-gap: clamp(12px, 1.7cqw, 22px);
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 3 * var(--carousel-gap)) / 3.5);
+  grid-auto-columns: calc((100% - 3 * var(--carousel-gap)) / 3.25);
   gap: var(--carousel-gap);
-  margin: 0;
-  padding: 8px 0 12px;
+  margin: 0 -4px;
+  padding: 8px 4px 12px;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
+  scroll-padding-inline: 4px;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   list-style: none;
@@ -156,7 +166,6 @@
 .platform-landing__feature-list > li {
   display: flex;
   min-width: 0;
-  padding-inline: 4px;
   scroll-snap-align: start;
 }
 
@@ -229,16 +238,17 @@
   padding: clamp(20px, 2.8cqw, 32px);
 }
 
-.platform-landing__feature-name {
+.platform-landing__feature-task {
   margin: 0;
-  font-size: clamp(1.25rem, 2.4cqw, 1.75rem);
+  font-size: clamp(1.25rem, 2.25cqw, 1.65rem);
   font-weight: 700;
   line-height: 1.12;
 }
 
-.platform-landing__feature-copy p {
+.platform-landing__feature-name {
   margin: 8px 0 0;
   font-size: clamp(0.9rem, 1.55cqw, 1.05rem);
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -259,8 +269,10 @@
   --story-gap: clamp(10px, 1.5vw, 24px);
   --story-row-gap: clamp(6px, 1svh, 12px);
   --story-card-block-padding: clamp(18px, 3svh, 32px);
-  margin-block-start: clamp(16px, 4vw, 52px);
-  padding-block-end: clamp(28px, 5svh, 56px);
+}
+
+.platform-landing__story-header .platform-landing__section-title {
+  padding-block-end: var(--landing-section-gap);
 }
 
 .platform-landing__story-viewport {
@@ -985,7 +997,7 @@
 }
 
 @media (max-width: 640px) {
-  .platform-landing-page {
-    width: min(100% - 18px, 100%);
+  :host {
+    --landing-content-width: calc(100% - 18px);
   }
 }

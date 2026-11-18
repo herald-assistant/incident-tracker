@@ -18,77 +18,77 @@ interface OverviewFeature {
   readonly title: string;
   readonly route: string;
   readonly icon: string;
-  readonly description: string;
+  readonly task: string;
   readonly image?: string;
 }
 
 const FEATURES: readonly OverviewFeature[] = [
   {
     title: 'Incident Analysis',
-    description: 'Ustal wpływ incydentu',
+    task: 'Ustal wpływ incydentu',
     route: '/incident-analysis',
     icon: 'troubleshoot',
     image: '/assets/brand/workspace-overview-incident-analysis.jpg'
   },
   {
     title: 'Flow Explorer',
-    description: 'Zobacz, od czego zależy proces',
+    task: 'Zobacz, od czego zależy proces',
     route: '/flow-explorer',
     icon: 'account_tree',
     image: '/assets/brand/workspace-overview-flow-explorer.jpg'
   },
   {
     title: 'UI Explorer',
-    description: 'Udokumentuj działanie ekranu',
+    task: 'Udokumentuj działanie ekranu',
     route: '/ui-explorer',
     icon: 'screen_search_desktop',
     image: '/assets/brand/workspace-overview-ui-explorer.jpg'
   },
   {
     title: 'UX Inspector',
-    description: 'Wyjaśnij zachowanie interfejsu',
+    task: 'Wyjaśnij zachowanie interfejsu',
     route: '/ux-inspector',
     icon: 'ads_click',
     image: '/assets/brand/workspace-overview-ux-inspector.jpg'
   },
   {
     title: 'Change Verification',
-    description: 'Zweryfikuj zmianę przed wydaniem',
+    task: 'Zweryfikuj zmianę przed wydaniem',
     route: '/change-verification',
     icon: 'fact_check',
     image: '/assets/brand/workspace-overview-change-verification.jpg'
   },
   {
     title: 'Config Drift Viewer',
-    description: 'Zrozum różnice między środowiskami',
+    task: 'Zrozum różnice między środowiskami',
     route: '/config-drift-viewer',
     icon: 'build_circle',
     image: '/assets/brand/workspace-overview-config-drift-viewer.jpg'
   },
   {
     title: 'Release summary',
-    description: 'Zobacz, co wydanie zmienia w bazie danych',
+    task: 'Zobacz, co wydanie zmienia w bazie danych',
     route: '/release-summary',
     icon: 'deployed_code',
     image: '/assets/brand/workspace-overview-release-summary.jpg'
   },
   {
     title: 'Behavior Change Assessment',
-    description: 'Oceń złożoność zmian w produkcie',
+    task: 'Oceń złożoność zmian w produkcie',
     route: '/delivery-complexity-assessment',
     icon: 'domain_add',
     image: '/assets/brand/workspace-overview-behavior-change-assessment.jpg'
   },
   {
     title: 'Technical Change Assessment',
-    description: 'Oceń złożoność zmian w systemie',
+    task: 'Oceń złożoność zmian w systemie',
     route: '/delivery-scope-complexity',
     icon: 'engineering',
     image: '/assets/brand/workspace-overview-technical-change-assessment.jpg'
   },
   {
     title: 'Delivery Trends',
-    description: 'Porównaj złożoność pracy w czasie',
+    task: 'Porównaj złożoność pracy w czasie',
     route: '/delivery-complexity-trends',
     icon: 'finance',
     image: '/assets/brand/workspace-overview-delivery-trends.jpg'
@@ -110,9 +110,13 @@ const TOOL_ICONS = [
 
 const STORY_SCENES = [
   { id: 'tools', duration: 4200, lines: ['Wszystkie Twoje aplikacje.', 'Wreszcie grają razem.'] },
-  { id: 'features', duration: 4800, lines: ['Rozwiązuje Twoje problemy.', 'Od incydentu po wdrożenie.'] },
-  { id: 'guidance', duration: 5000, lines: ['Twój osobisty ekspert.', 'Od pierwszego dnia.'] },
-  { id: 'closing', duration: 3600, lines: ['Od czego zaczynamy?', 'Wybierz zadanie w Workspace.'] }
+  { id: 'features', duration: 4800, lines: ['Rozwiązuj codzienne problemy.', 'Od incydentu po wdrożenie.'] },
+  {
+    id: 'guidance',
+    duration: 5000,
+    lines: ['Wbudowana wiedza ekspercka.', 'Działasz efektywnie od pierwszego dnia.']
+  },
+  { id: 'closing', duration: 3600, lines: ['Czas na Twój ruch.', 'Wybierz pierwsze zadanie.'] }
 ] as const;
 const STORY_CAPTION_HOLD_MS = 1400;
 
