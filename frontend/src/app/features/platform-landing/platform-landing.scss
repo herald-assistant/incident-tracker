@@ -285,7 +285,7 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: var(--story-card-width);
-  grid-template-rows: clamp(14rem, 50.5svh, 26rem) auto auto;
+  grid-template-rows: clamp(13rem, 48.5svh, 25rem) auto auto;
   gap: var(--story-row-gap) var(--story-gap);
   transform: translateX(calc(var(--story-gutter) - (var(--scene-index) + 1) * (var(--story-card-width) + var(--story-gap))));
 }
@@ -799,7 +799,7 @@
 
 @container platform-story (max-width: 660px) {
   .platform-landing__story-track {
-    grid-template-rows: clamp(14rem, 43svh, 22rem) auto auto;
+    grid-template-rows: clamp(13rem, 41svh, 21rem) auto auto;
   }
 
   .platform-landing__story-card {
