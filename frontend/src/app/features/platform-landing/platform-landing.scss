@@ -583,8 +583,6 @@
   --feature-scene-progress: 0;
   --guidance-scene-progress: 0;
   --closing-progress: 0;
-  --closing-backdrop: clamp(0, var(--closing-progress) / 0.34, 1);
-  --closing-darken: calc(var(--closing-backdrop) * var(--closing-backdrop) * (3 - 2 * var(--closing-backdrop)));
   --closing-arrival: clamp(0, var(--closing-progress) / 0.56, 1);
   --closing-settle: calc(var(--closing-arrival) * var(--closing-arrival) * (3 - 2 * var(--closing-arrival)));
   --tool-progress: clamp(0, var(--tool-scene-progress) / var(--story-tool-motion-share), 1);
@@ -610,9 +608,9 @@
 
 .platform-landing__story-card[data-scene='tools'] {
   --scene-preview: 0.43;
-  --story-surface: var(--color-sidebar-bg);
-  --story-light: var(--color-primary);
-  --story-accent: var(--color-sidebar-accent);
+  --story-surface: #153c2c;
+  --story-light: #6eb587;
+  --story-accent: #bee7ca;
   --tool-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--tool-progress) - 0.32) / 0.24, 1);
   --slogan-finale: var(--tool-finale);
@@ -639,12 +637,14 @@
 
 .platform-landing__story-card[data-scene='closing'] {
   --scene-preview: 1;
-  --story-surface: #1c202b;
-  --story-light: #495363;
-  --story-accent: #cdd7e5;
+  --story-surface: var(--color-sidebar-bg);
+  --story-light: var(--color-primary);
+  --story-accent: var(--color-sidebar-accent);
   --closing-progress: var(--scene-progress);
+  --closing-backdrop: clamp(0, var(--closing-progress) / 0.34, 1);
+  --closing-darken: calc(var(--closing-backdrop) * var(--closing-backdrop) * (3 - 2 * var(--closing-backdrop)));
   --phrase-progress: clamp(0, (var(--closing-progress) - 0.24) / 0.29, 1);
-  background-color: color-mix(in srgb, var(--story-surface), #0e1017 calc(100% * var(--closing-darken)));
+  background-color: color-mix(in srgb, var(--story-surface) calc(100% * var(--closing-darken)), var(--color-sidebar-hover));
 }
 
 .platform-landing__capabilities[data-story-frame] .platform-landing__story-card[data-active] {
