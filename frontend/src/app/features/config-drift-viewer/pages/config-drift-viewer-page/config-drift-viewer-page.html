@@ -21,7 +21,7 @@
         }
       </div>
 
-      <fieldset class="mode-selector" aria-label="Tryb analizy">
+      <fieldset class="mode-selector" aria-label="Tryb analizy" data-form-tour="config-drift-mode">
         <legend class="field-label">Tryb analizy</legend>
         <div class="mode-selector__options">
           <button
@@ -58,10 +58,10 @@
       </fieldset>
 
       <div class="runtime-form-grid">
-        <app-choice-select label="Repozytorium konfiguracji" [options]="repositoryOptions()"
+        <app-choice-select data-form-tour="config-drift-repository" label="Repozytorium konfiguracji" [options]="repositoryOptions()"
           [formControl]="repositoryControl" />
 
-        <div class="field-control">
+        <div class="field-control" data-form-tour="config-drift-components">
           <span class="field-label">Komponent / internal-service</span>
           <div
             class="system-multiselect"
@@ -123,9 +123,9 @@
           }
         </div>
 
-        <app-choice-select label="Środowisko źródłowe" [options]="branchOptions()"
+        <app-choice-select data-form-tour="config-drift-source" label="Środowisko źródłowe" [options]="branchOptions()"
           [formControl]="sourceBranchControl" />
-        <app-choice-select label="Środowisko docelowe" [options]="branchOptions()"
+        <app-choice-select data-form-tour="config-drift-target" label="Środowisko docelowe" [options]="branchOptions()"
           [formControl]="targetBranchControl" [error]="branchPairInvalid() ? 'Wybierz dwa różne środowiska.' : ''" />
 
         @if (modeControl.value === 'DEEP') {
@@ -237,6 +237,7 @@
         <button
           type="button"
           class="secondary-button"
+          data-form-tour="config-drift-import"
           [disabled]="submitting() || workflowRunning()"
           (click)="triggerImport(runtimeImportInput)"
         >
@@ -246,6 +247,7 @@
         <button
           type="button"
           class="primary-button"
+          data-form-tour="config-drift-run"
           [disabled]="!canStart()"
           (click)="startJob()"
         >

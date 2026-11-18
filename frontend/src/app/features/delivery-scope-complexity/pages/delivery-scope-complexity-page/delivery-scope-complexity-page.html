@@ -24,6 +24,7 @@
             type="button"
             class="icon-button"
             aria-label="Importuj run"
+            data-form-tour="technical-assessment-import"
             matTooltip="Importuj run"
             [disabled]="!canImport()"
             (click)="triggerImport(runImportInput)"
@@ -50,6 +51,7 @@
 
       <div class="assessment-form-grid">
         <app-text-field
+          data-form-tour="technical-assessment-project"
           type="text"
           maxLength="50"
           spellcheck="false"
@@ -59,14 +61,15 @@
           class="field-control"
         />
 
-        <app-text-field type="date" [formControl]="fromDateControl" label="Od" class="field-control" />
+        <app-text-field data-form-tour="technical-assessment-from" type="date" [formControl]="fromDateControl" label="Od" class="field-control" />
 
-        <app-text-field type="date" [formControl]="toDateControl" label="Do" class="field-control" />
+        <app-text-field data-form-tour="technical-assessment-to" type="date" [formControl]="toDateControl" label="Do" class="field-control" />
 
         <div class="composer-action">
           <button
             type="button"
             class="primary-button"
+            data-form-tour="technical-assessment-run"
             [class.is-loading]="submitting()"
             [disabled]="!canStart()"
             (click)="startJob()"

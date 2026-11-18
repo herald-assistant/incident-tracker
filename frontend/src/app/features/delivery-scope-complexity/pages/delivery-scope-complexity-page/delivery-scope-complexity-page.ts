@@ -18,6 +18,7 @@ import {
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
+import type { FormTourSource } from '../../../../core/models/form-tour';
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { GithubAuthService } from '../../../../core/services/github-auth.service';
@@ -39,6 +40,7 @@ import {
 } from '../../models/delivery-scope-complexity.models';
 import { DeliveryScopeComplexityApiService } from '../../services/delivery-scope-complexity-api.service';
 import { downloadDeliveryScopeComplexityCsv } from '../../utils/delivery-scope-complexity-csv.utils';
+import { DELIVERY_SCOPE_COMPLEXITY_FORM_TOUR } from '../../delivery-scope-complexity-form-tour';
 
 type DimensionRow = { label: string; value: DeliveryScopeDimensionScore };
 type FilterOption = { value: string; label: string; issueCount: number; complexityPoints: number };
@@ -56,7 +58,7 @@ type FilterOption = { value: string; label: string; issueCount: number; complexi
   templateUrl: './delivery-scope-complexity-page.html',
   styleUrl: './delivery-scope-complexity-page.scss'
 })
-export class DeliveryScopeComplexityPageComponent implements OnDestroy {
+export class DeliveryScopeComplexityPageComponent implements OnDestroy, FormTourSource {
   private readonly api = inject(DeliveryScopeComplexityApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
@@ -89,6 +91,9 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
   });
   readonly canImport = computed(() =>
     !this.submitting() && !this.portabilityBusy() && !this.workflowRunning()
+  );
+  readonly formTourSteps = computed(() =>
+    this.canImport() ? DELIVERY_SCOPE_COMPLEXITY_FORM_TOUR : []
   );
   readonly hasTerminalRun = computed(() => this.isTerminal(this.job()?.status));
   readonly canExport = computed(() => {

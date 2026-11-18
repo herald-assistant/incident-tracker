@@ -29,6 +29,7 @@ import {
   LocalAnalysisRunDetailResponse,
   TransportErrorState
 } from '../../core/models/analysis.models';
+import type { FormTourSource } from '../../core/models/form-tour';
 import { AnalysisApiService } from '../../core/services/analysis-api.service';
 import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
@@ -64,6 +65,7 @@ import { AnalysisFinalResultComponent } from '../../components/analysis-final-re
 import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
+import { incidentFormTour } from './incident-form-tour';
 
 const POLL_INTERVAL_MS = 1500;
 const PROBLEM_DESCRIPTION_MAX_LENGTH = 4000;
@@ -109,7 +111,7 @@ const DEFAULT_ANALYSIS_INPUT_OPTIONS: AnalysisJobInputOptionsResponse = {
   templateUrl: './analysis-console.html',
   styleUrl: './analysis-console.scss'
 })
-export class AnalysisConsoleComponent {
+export class AnalysisConsoleComponent implements FormTourSource {
   private readonly analysisApi = inject(AnalysisApiService);
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly githubAuth = inject(GithubAuthService);
@@ -164,6 +166,11 @@ export class AnalysisConsoleComponent {
   });
   readonly analysisStartUnavailable = computed(
     () => !this.canUseElasticsearchInput() && !this.canUseCsvUploadInput()
+  );
+  readonly formTourSteps = computed(() =>
+    this.isInputOptionsLoading() || this.analysisStartUnavailable() || this.isLoading()
+      ? []
+      : incidentFormTour(this.canUseElasticsearchInput(), this.canUseCsvUploadInput())
   );
   readonly loadingContextLabel = computed(() =>
     this.loadingLogSource() === 'CSV_UPLOAD' ? 'CSV file' : 'Correlation ID'

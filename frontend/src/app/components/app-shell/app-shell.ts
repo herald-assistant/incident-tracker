@@ -1,9 +1,11 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { Overlay } from '@angular/cdk/overlay';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { ViewportScroller } from '@angular/common';
-import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, inject, Injector, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
@@ -15,8 +17,10 @@ import {
 } from '@angular/router';
 import { filter, map } from 'rxjs';
 
+import type { FormTourSource } from '../../core/models/form-tour';
 import { AppUiConfigService } from '../../core/services/app-ui-config.service';
 import { AppBrandComponent } from '../app-brand/app-brand';
+import { collectFormTourStops, FormTourComponent } from '../form-tour/form-tour';
 
 type NavItem = {
   label: string;
@@ -181,8 +185,12 @@ export class AppShellComponent {
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly injector = inject(Injector);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
+  private readonly dialog = inject(Dialog);
+  private readonly overlay = inject(Overlay);
   private readonly routeContext = signal<RouteContext>(DEFAULT_CONTEXT);
   private readonly currentUrl = signal('');
+  private readonly tourSource = signal<FormTourSource | null>(null);
+  private formTourDialog: DialogRef<void, FormTourComponent> | null = null;
   private sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly navOrder = signal(
@@ -233,8 +241,10 @@ export class AppShellComponent {
     return [{ label: workspaceTitle, route: '/' }, ...routeBreadcrumbs];
   });
   readonly capabilityInfo = computed(() => this.routeContext().capabilityInfo);
+  protected readonly formTourSteps = computed(() => this.tourSource()?.formTourSteps() ?? []);
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.formTourDialog?.close());
     this.uiConfig.load();
     this.currentUrl.set(this.router.url);
     this.updateRouteContext();
@@ -244,6 +254,7 @@ export class AppShellComponent {
         takeUntilDestroyed()
       )
       .subscribe((event) => {
+        this.formTourDialog?.close();
         const previousPath = this.currentUrl().split(/[?#]/, 1)[0];
         const nextPath = event.urlAfterRedirects.split(/[?#]/, 1)[0];
         if (
@@ -257,6 +268,36 @@ export class AppShellComponent {
         this.currentUrl.set(event.urlAfterRedirects);
         this.updateRouteContext();
       });
+  }
+
+  protected setTourPage(page: unknown): void {
+    const source = page as FormTourSource | null;
+    this.tourSource.set(typeof source?.formTourSteps === 'function' ? source : null);
+  }
+
+  protected startFormTour(scope: HTMLElement): void {
+    if (this.formTourDialog) {
+      return;
+    }
+    const stops = collectFormTourStops(scope, this.formTourSteps());
+    if (!stops.length) {
+      return;
+    }
+    const dialog = this.dialog.open<void, typeof stops, FormTourComponent>(FormTourComponent, {
+      data: stops,
+      ariaLabel: `Przewodnik po formularzu · ${this.title()}`,
+      ariaDescribedBy: 'form-tour-copy',
+      ariaModal: true,
+      autoFocus: 'dialog',
+      hasBackdrop: false,
+      width: '100%',
+      height: '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
+      scrollStrategy: this.overlay.scrollStrategies.noop()
+    });
+    this.formTourDialog = dialog;
+    dialog.closed.subscribe(() => { this.formTourDialog = null; });
   }
 
   protected toggleSidebar(): void {

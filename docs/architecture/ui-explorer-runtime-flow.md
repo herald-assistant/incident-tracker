@@ -319,6 +319,11 @@ trybow sekcji, scenariusza, modelu i reasoning. Katalog pokazuje `Data:`
 przy polu View i jest czyszczony po zmianie scope. Konfiguracja jest blokowana na
 czas aktywnego runu.
 
+„Oprowadź mnie” w topbarze prowadzi przez wybór aplikacji, rewizji i widoku,
+zakres dokumentacji oraz akcje startu i importu. Pusty katalog aplikacji ma
+krok wskazujący rejestrację frontendu w Operational Context. Nakładkę obsługuje
+wspólny [przewodnik po formularzu](frontend-ui-standards.md#przewodnik-po-formularzu-startowym).
+
 Wspolny aside pokazuje postep, workflow AI, evidence, feedback i follow-up
 chat. Wskaznik postepu analizy jest aktywny tylko przed terminalnym statusem
 jobu; polling odpowiedzi follow-up nie uruchamia go ponownie. Przy odpowiedzi,

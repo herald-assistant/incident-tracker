@@ -12,12 +12,18 @@ import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-f
 import { AnalysisReportEditorComponent } from '../../../../components/analysis-report-editor/analysis-report-editor';
 import { BrowserToolsSetupComponent } from '../../../../components/browser-tools-setup/browser-tools-setup';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
+import type { FormTourSource } from '../../../../core/models/form-tour';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { formatDataDate } from '../../../../core/utils/format-data-date';
 import { UxInspectorCapture, UxInspectorJobStatus, UxInspectorVisibleFormField, UxInspectorHttpEntry } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
 import { UxInspectorResultComponent } from '../../components/ux-inspector-result/ux-inspector-result';
+import {
+  UX_INSPECTOR_EMPTY_CATALOG_TOUR,
+  UX_INSPECTOR_FORM_TOUR,
+  UX_INSPECTOR_SETUP_TOUR
+} from '../../ux-inspector-form-tour';
 
 type OpenMenu = 'system' | 'view' | null;
 
@@ -38,7 +44,7 @@ type OpenMenu = 'system' | 'view' | null;
   templateUrl: './ux-inspector-page.html',
   styleUrl: './ux-inspector-page.scss'
 })
-export class UxInspectorPageComponent implements OnInit {
+export class UxInspectorPageComponent implements OnInit, FormTourSource {
   readonly facade = inject(UxInspectorFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -49,6 +55,25 @@ export class UxInspectorPageComponent implements OnInit {
       relativeTo: this.route, queryParams: { localRunId: runId, captureId: null },
       queryParamsHandling: 'merge', replaceUrl: true
     }).catch(() => undefined);
+  });
+
+  readonly formTourSteps = computed(() => {
+    if (this.facade.controlsLocked() || this.facade.portabilityBusy()) {
+      return [];
+    }
+    if (!this.facade.capture()) {
+      return this.facade.captureStatus() === 'loading' || this.facade.captureError()
+        ? []
+        : UX_INSPECTOR_SETUP_TOUR;
+    }
+    switch (this.facade.inputState()) {
+      case 'ready':
+        return UX_INSPECTOR_FORM_TOUR;
+      case 'empty':
+        return UX_INSPECTOR_EMPTY_CATALOG_TOUR;
+      default:
+        return [];
+    }
   });
 
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);

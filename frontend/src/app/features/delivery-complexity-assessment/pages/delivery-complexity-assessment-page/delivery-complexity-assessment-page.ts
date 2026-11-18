@@ -18,6 +18,7 @@ import {
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
+import type { FormTourSource } from '../../../../core/models/form-tour';
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { GithubAuthService } from '../../../../core/services/github-auth.service';
@@ -38,6 +39,7 @@ import {
 } from '../../models/delivery-complexity-assessment.models';
 import { DeliveryComplexityAssessmentApiService } from '../../services/delivery-complexity-assessment-api.service';
 import { downloadDeliveryComplexityAssessmentCsv } from '../../utils/delivery-complexity-assessment-csv.utils';
+import { DELIVERY_COMPLEXITY_ASSESSMENT_FORM_TOUR } from '../../delivery-complexity-assessment-form-tour';
 
 type DimensionRow = { label: string; value: number };
 type FilterOption = { value: string; label: string; issueCount: number; deliveredStoryPoints: number };
@@ -55,7 +57,7 @@ type FilterOption = { value: string; label: string; issueCount: number; delivere
   templateUrl: './delivery-complexity-assessment-page.html',
   styleUrl: './delivery-complexity-assessment-page.scss'
 })
-export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
+export class DeliveryComplexityAssessmentPageComponent implements OnDestroy, FormTourSource {
   private readonly api = inject(DeliveryComplexityAssessmentApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
@@ -88,6 +90,9 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   });
   readonly canImport = computed(() =>
     !this.submitting() && !this.portabilityBusy() && !this.workflowRunning()
+  );
+  readonly formTourSteps = computed(() =>
+    this.canImport() ? DELIVERY_COMPLEXITY_ASSESSMENT_FORM_TOUR : []
   );
   readonly hasTerminalRun = computed(() => this.isTerminal(this.job()?.status));
   readonly canExport = computed(() => {

@@ -5,6 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { merge } from 'rxjs';
 
+import type { FormTourSource } from '../../../../core/models/form-tour';
+import { DELIVERY_TRENDS_FORM_TOUR, DELIVERY_TRENDS_IMPORT_TOUR } from '../../delivery-complexity-trends-form-tour';
 import {
   AssessmentTrendDataset,
   AssessmentTrendDimensionDefinition,
@@ -31,10 +33,16 @@ import {
   templateUrl: './delivery-complexity-trends-page.html',
   styleUrl: './delivery-complexity-trends-page.scss'
 })
-export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
+export class DeliveryComplexityTrendsPageComponent implements OnDestroy, FormTourSource {
   readonly dataset = signal<AssessmentTrendDataset | null>(null);
   readonly importing = signal(false);
   readonly importError = signal('');
+  readonly formTourSteps = computed(() => {
+    if (this.importing()) {
+      return [];
+    }
+    return this.dataset() ? DELIVERY_TRENDS_FORM_TOUR : DELIVERY_TRENDS_IMPORT_TOUR;
+  });
   readonly dimensionMode = signal<AssessmentTrendDimensionMode>('AVERAGE');
   readonly selectedIssueTypeKeys = signal<readonly string[]>([]);
   readonly filtersStuck = signal(false);

@@ -21,6 +21,7 @@
       />
       <button
         class="trend-primary-button"
+        data-form-tour="delivery-trends-import"
         type="button"
         [disabled]="importing()"
         (click)="trendFileInput.click()"
@@ -57,21 +58,21 @@
         <p class="section-eyebrow trend-filter-context">Zakres widoku</p>
 
         <div class="trend-filter-grid">
-          <app-choice-select [formControl]="granularityControl" label="Okres" class="trend-field">
+          <app-choice-select data-form-tour="delivery-trends-period" [formControl]="granularityControl" label="Okres" class="trend-field">
               <app-choice-option value="DAY" label="Dzień" />
               <app-choice-option value="WEEK" label="Tydzień" />
               <app-choice-option value="MONTH" label="Miesiąc" />
               <app-choice-option value="QUARTER" label="Kwartał" />
             </app-choice-select>
 
-          <app-choice-select [formControl]="teamControl" label="Zespół" class="trend-field">
+          <app-choice-select data-form-tour="delivery-trends-team" [formControl]="teamControl" label="Zespół" class="trend-field">
               <app-choice-option value="" label="Wszystkie zespoły" />
               @for (option of currentTrend.teamOptions; track option.key) {
                 <app-choice-option [value]="option.key" label="{{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})" />
               }
             </app-choice-select>
 
-          <app-choice-select [formControl]="authorControl" label="Autor MR" class="trend-field">
+          <app-choice-select data-form-tour="delivery-trends-author" [formControl]="authorControl" label="Autor MR" class="trend-field">
               <app-choice-option
                 value=""
                 label="{{ currentTrend.authorOptions.length ? &#x27;Wszyscy autorzy&#x27; : &#x27;Brak danych o autorach&#x27; }}"
@@ -82,7 +83,7 @@
             </app-choice-select>
 
           @if (currentTrend.issueTypeOptions.length > 0) {
-            <div class="trend-field trend-field--issue-types">
+            <div class="trend-field trend-field--issue-types" data-form-tour="delivery-trends-issue-types">
               <span>Typ issue</span>
               <details class="trend-multiselect">
                 <summary>
@@ -107,14 +108,15 @@
             </div>
           }
 
-          <app-text-field type="date" [formControl]="fromDateControl" label="Od" class="trend-field" />
+          <app-text-field data-form-tour="delivery-trends-from" type="date" [formControl]="fromDateControl" label="Od" class="trend-field" />
 
-          <app-text-field type="date" [formControl]="toDateControl" label="Do" class="trend-field" />
+          <app-text-field data-form-tour="delivery-trends-to" type="date" [formControl]="toDateControl" label="Do" class="trend-field" />
 
           <button
             class="trend-filter-reset"
             type="button"
             aria-label="Wyczyść filtry"
+            data-form-tour="delivery-trends-reset"
             title="Wyczyść filtry"
             [disabled]="!filtersActive()"
             (click)="resetFilters()"

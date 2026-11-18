@@ -9,11 +9,11 @@
       <input #importInput type="file" aria-label="Importuj raport Release summary" accept="application/json,.json" hidden (change)="importFile($event)" />
       @if (uiConfig.config().releaseSummaryEnabled) {
         <div class="release-summary-target-grid">
-          <app-application-select [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
+          <app-application-select data-form-tour="release-summary-application" [options]="applications()" [selectedId]="systemId()" [loading]="loading()"
             [disabled]="busy()" [error]="error()" (selected)="selectSystem($event)" (retry)="loadApplications()" />
-          <app-gitlab-branch-select label="Branch" [sourceKey]="systemId()" [branchLoader]="branchLoader"
+          <app-gitlab-branch-select data-form-tour="release-summary-branch" label="Branch" [sourceKey]="systemId()" [branchLoader]="branchLoader"
             [selectedBranch]="branch()" [autoSelect]="false" [disabled]="busy()" (branchSelected)="selectBranch($event)" />
-          <div class="release-summary-date">
+          <div class="release-summary-date" data-form-tour="release-summary-from">
             <app-text-field type="date" size="descriptive" label="Od" [value]="dateFrom()" [max]="dateTo()"
               [disabled]="busy()" (committed)="selectDate('from', $event)" />
             @if(range(); as selected) {
@@ -23,7 +23,7 @@
               </p>
             }
           </div>
-          <div class="release-summary-date">
+          <div class="release-summary-date" data-form-tour="release-summary-to">
             <app-text-field type="date" size="descriptive" label="Do" [value]="dateTo()" [min]="dateFrom()"
               [disabled]="busy()" (committed)="selectDate('to', $event)" />
             @if(range(); as selected) {
@@ -34,7 +34,7 @@
             }
           </div>
         </div>
-        <div class="release-summary-range-status" aria-live="polite">
+        <div class="release-summary-range-status" aria-live="polite" data-form-tour="release-summary-preview">
           <p class="release-summary-note">Data Do włącznie. Porównujemy stan sprzed daty Od ze stanem do daty Do. Strefa: {{timeZone()}}.</p>
           @if(previewLoading()) {<p role="status">Dobieranie commitów…</p>}
           @if(dateError()) {<p role="alert">{{dateError()}}</p>}
@@ -42,7 +42,7 @@
           @if(noChanges()) {<p role="status">W wybranym okresie nie było zmian.</p>}
         </div>
         <div class="release-summary-ai-grid">
-          <app-ai-execution-controls
+          <app-ai-execution-controls data-form-tour="release-summary-ai"
             [catalog]="modelCatalog()" [model]="model()" [reasoningEffort]="reasoning()"
             [loading]="modelsLoading()" [unavailable]="!!modelError()" [disabled]="busy()" [allowDefaultSelection]="true"
             (modelChange)="selectModel($event)" (reasoningEffortChange)="reasoning.set($event)" />
@@ -52,12 +52,12 @@
       <footer class="release-summary-actions">
         <div class="release-summary-actions__buttons">
           @if (uiConfig.config().releaseSummaryEnabled) {
-            <button class="primary-button" type="button" [disabled]="!canStart()" (click)="start()">
+            <button class="primary-button" type="button" data-form-tour="release-summary-run" [disabled]="!canStart()" (click)="start()">
               <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
               {{starting() ? 'Uruchamianie…' : 'Generuj raport'}}
             </button>
           }
-          <button class="secondary-button" type="button" [disabled]="busy() || editing()" (click)="importInput.click()">
+          <button class="secondary-button" type="button" data-form-tour="release-summary-import" [disabled]="busy() || editing()" (click)="importInput.click()">
             <span class="material-symbols-outlined" aria-hidden="true">upload_file</span> Import
           </button>
           @if(job()?.exportAvailable) {

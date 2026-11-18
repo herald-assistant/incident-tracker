@@ -2,6 +2,7 @@ import { Component, DestroyRef, OnInit, computed, effect, inject } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import type { FormTourSource } from '../../../../core/models/form-tour';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisRunStateComponent } from '../../../../components/analysis-run-state/analysis-run-state';
@@ -12,6 +13,10 @@ import { UiExplorerResultComponent } from '../../components/ui-explorer-result/u
 import { UiExplorerJobStatus } from '../../models/ui-explorer.models';
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
 import { UiExplorerPageContextIngressService } from '../../services/ui-explorer-page-context-ingress.service';
+import {
+  UI_EXPLORER_EMPTY_FORM_TOUR,
+  UI_EXPLORER_START_FORM_TOUR
+} from '../../ui-explorer-form-tour';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils';
 
@@ -30,7 +35,7 @@ import { rememberLocalRunId } from '../../../../core/utils/local-run-route.utils
   templateUrl: './ui-explorer-page.html',
   styleUrl: './ui-explorer-page.scss'
 })
-export class UiExplorerPageComponent implements OnInit {
+export class UiExplorerPageComponent implements OnInit, FormTourSource {
   readonly facade = inject(UiExplorerFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -38,6 +43,19 @@ export class UiExplorerPageComponent implements OnInit {
   private readonly persistStartedRun = effect(() => {
     const runId = this.facade.startedRunId();
     if (runId) rememberLocalRunId(this.router, this.route, runId);
+  });
+  readonly formTourSteps = computed(() => {
+    if (this.facade.isReadOnlyResult() || this.facade.controlsLocked()) {
+      return [];
+    }
+    switch (this.facade.inputState()) {
+      case 'ready':
+        return UI_EXPLORER_START_FORM_TOUR;
+      case 'empty':
+        return UI_EXPLORER_EMPTY_FORM_TOUR;
+      default:
+        return [];
+    }
   });
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
   readonly aiCount = computed(() => this.facade.job()?.aiActivityEvents.length ?? 0);

@@ -42,9 +42,9 @@
         </div>
 
         <div class="change-verification-source-grid">
-          <app-text-field label="Jira key or link" [value]="issueInput()"
+          <app-text-field data-form-tour="change-verification-jira" label="Jira key or link" [value]="issueInput()"
             placeholder="CRM-123 or https://jira.example.com/browse/CRM-123" (valueChange)="updateIssueInput($event)" />
-          <fieldset class="change-verification-options">
+          <fieldset class="change-verification-options" data-form-tour="change-verification-scope">
             <legend class="field-label">Verification scope</legend>
             <div class="change-verification-option-grid">
               <label><input type="checkbox" [checked]="checkStoryCompliance()" (change)="toggleStoryCompliance($any($event.target).checked)" /><span>Story rules</span></label>
@@ -54,7 +54,7 @@
         </div>
 
         <div class="change-verification-ai-grid">
-          <app-ai-execution-controls
+          <app-ai-execution-controls data-form-tour="change-verification-ai"
             modelInputId="changeVerificationAiModel" reasoningInputId="changeVerificationReasoningEffort"
             [catalog]="aiModelCatalog()" [model]="aiModelControl.value" [reasoningEffort]="reasoningEffortControl.value"
             [loading]="isAiModelOptionsLoading()" [unavailable]="!!aiModelOptionsError()"
@@ -65,14 +65,15 @@
         @if (aiModelOptionsError()) { <p class="field-hint change-verification-warning">{{ aiModelOptionsError() }}</p> }
 
         <app-text-field class="change-verification-notes" label="Operator notes" type="textarea" [rows]="4" [spellcheck]="true"
+          data-form-tour="change-verification-notes"
           [value]="userInstructions()" placeholder="Optional focus, release context or known risk."
           (valueChange)="updateUserInstructions($event)" />
 
         <div class="change-verification-run-actions">
-          <button type="button" class="secondary-button" [disabled]="isSubmitting() || workflowIsRunning()" (click)="triggerImport(changeVerificationImportFileInput)">
+          <button type="button" class="secondary-button" data-form-tour="change-verification-import" [disabled]="isSubmitting() || workflowIsRunning()" (click)="triggerImport(changeVerificationImportFileInput)">
             <span class="material-symbols-outlined" aria-hidden="true">upload_file</span><span>Import</span>
           </button>
-          <button type="button" class="primary-button" [disabled]="!canStartJob()" (click)="startJob()">
+          <button type="button" class="primary-button" data-form-tour="change-verification-run" [disabled]="!canStartJob()" (click)="startJob()">
             <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span><span>{{ isSubmitting() ? 'Starting...' : 'Run Verification' }}</span>
           </button>
         </div>

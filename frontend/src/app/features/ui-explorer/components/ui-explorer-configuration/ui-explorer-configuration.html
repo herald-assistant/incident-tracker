@@ -35,7 +35,7 @@
         </div>
       }
       @case ('empty') {
-        <div class="ui-explorer-message ui-explorer-message--warning" role="status">
+        <div class="ui-explorer-message ui-explorer-message--warning" role="status" data-form-tour="ui-explorer-empty">
           <span class="material-symbols-outlined" aria-hidden="true">web_asset_off</span>
           <div>
             <strong>Brak frontendów gotowych do analizy.</strong>
@@ -47,7 +47,7 @@
 
     @if (facade.inputState() === 'ready' && facade.inputOptions(); as options) {
       <div class="ui-explorer-target-grid">
-        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+        <div class="ui-explorer-select" data-form-tour="ui-explorer-application" (click)="keepMenuOpen($event)">
           <span class="ui-explorer-field-label">
             <span class="field-label">Application</span>
             <span
@@ -112,16 +112,16 @@
           }
         </div>
 
-        <app-gitlab-branch-select
+        <app-gitlab-branch-select data-form-tour="ui-explorer-branch"
           [systemId]="facade.selectedSystemId()"
           [selectedBranch]="facade.branch()"
           [disabled]="facade.controlsLocked()"
           (branchSelected)="facade.changeBranch($event)"
         />
 
-        <app-ui-explorer-screen-catalog />
+        <app-ui-explorer-screen-catalog data-form-tour="ui-explorer-view" />
 
-        <div class="ui-explorer-control-actions">
+        <div class="ui-explorer-control-actions" data-form-tour="ui-explorer-inventory">
           <span class="ui-explorer-field-label">
             <span class="field-label">Inventory</span>
             <span
@@ -147,7 +147,7 @@
       </div>
 
       <div class="ui-explorer-scope-grid">
-        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+        <div class="ui-explorer-select" data-form-tour="ui-explorer-sections" (click)="keepMenuOpen($event)">
           <span class="ui-explorer-field-label">
             <span class="field-label">Section modes</span>
             <span
@@ -207,7 +207,7 @@
           }
         </div>
 
-        <app-ai-execution-controls
+        <app-ai-execution-controls data-form-tour="ui-explorer-ai"
           [catalog]="facade.aiOptions()" [model]="facade.selectedModel()" [reasoningEffort]="facade.selectedReasoningEffort()"
           [loading]="facade.aiOptionsState() === 'loading'" [unavailable]="facade.aiOptionsState() === 'error'"
           [disabled]="facade.controlsLocked()" (opened)="closeMenus()"
@@ -238,6 +238,7 @@
       }
 
       <app-text-field class="ui-explorer-instructions" label="Doprecyzuj oczekiwany opis" type="textarea" size="descriptive" [rows]="4" [maxLength]="4000"
+        data-form-tour="ui-explorer-scenario"
         tooltip="Opcjonalny scenariusz zawęża dokumentację do konkretnego celu użytkownika lub planowanej zmiany."
         [disabled]="facade.controlsLocked()" [value]="facade.scenarioDescription()"
         placeholder="Np. opisz utworzenie kontaktu, reguły walidacji oraz zachowanie po zapisaniu formularza."
@@ -255,6 +256,7 @@
           <button
             class="primary-button"
             type="button"
+            data-form-tour="ui-explorer-run"
             [disabled]="!facade.canStartJob()"
             (click)="facade.startJob()"
           >
@@ -264,6 +266,7 @@
           <button
             class="secondary-button"
             type="button"
+            data-form-tour="ui-explorer-import"
             [disabled]="facade.isJobActive() || facade.portabilityBusy()"
             (click)="importRequested.emit()"
           >

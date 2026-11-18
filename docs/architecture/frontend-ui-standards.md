@@ -13,6 +13,7 @@ a zasady rozwoju [playbook feature'ow](analysis-feature-delivery-playbook.md).
 | Paleta, typografia, cienie i tokeny kontrolek | `frontend/src/styles.scss` |
 | Wspolne powierzchnie, stany, focus, menu i opcje | `frontend/src/styles/_form-controls.scss` |
 | Sidebar, topbar i stan nawigacji | `frontend/src/app/components/app-shell` |
+| Przewodnik po formularzu startowym | `frontend/src/app/components/form-tour` i kroki po stronie ekranu |
 | Oprawa pola, wybor, tekst i preferencje AI | `frontend/src/app/components/{form-field,choice-select,text-field,ai-execution-controls}` |
 | Siatka formularza, dane, walidacja biznesowa i request | Konsumujacy ekran lub feature |
 
@@ -88,6 +89,41 @@ utrzymuj w podstawowym kroju. Kolory statusów zachowują swoje znaczenie.
   a pozycje niedostepne pokazuja komunikat „coming soon”.
 - Pionowy pasek przewijania jest widoczny tylko na hover panelu.
   Przewijanie i szerokosc zawartosci sa niezalezne od widocznosci paska.
+
+## Przewodnik po formularzu startowym
+
+„Oprowadź mnie” w topbarze otwiera przewodnik aktywnego ekranu. Ekran
+implementuje `FormTourSource`, dobiera listę kroków do stanu formularza
+i oznacza kontrolki atrybutem `data-form-tour` zgodnym z `anchor` kroku.
+Teksty opisują rolę kontrolki i kolejność wypełniania danych.
+
+Shell zbiera kotwice z aktywnej trasy. Wspólny dialog CDK przewija do
+kontrolki, wyróżnia ją i ustawia obok panel z instrukcją. Kroki bez kotwicy są
+pomijane. W grupie z `display: contents` wyróżnienie obejmuje kontrolki potomne.
+Panel mieści się w widocznym obszarze przeglądarki. Między krokami panel i
+podświetlenie płynnie zmieniają położenie. Systemowa preferencja ograniczenia
+ruchu wyłącza tę animację. Dialog obsługuje Wstecz, Dalej, Zakończ, Escape i
+zwrot fokusu po zamknięciu. Zmiana trasy zamyka przewodnik. Wartości pól i
+wykonanie analizy pozostają decyzją operatora.
+
+Przewodniki obejmują wszystkie dostępne ekrany Analysis Features.
+
+| Ekran | Zakres przygotowania |
+| --- | --- |
+| Incident Analysis | Źródła logów, opis objawu i preferencje AI |
+| Flow Explorer | Aplikacja, branch, katalog endpointów i zakres dokumentacji |
+| UI Explorer | Aplikacja, branch, katalog widoków i zakres dokumentacji |
+| UX Inspector | Instalacja Browser Tools przed capture oraz formularz po wskazaniu elementu |
+| Change Verification | Jira, zakres weryfikacji, preferencje AI i uwagi operatora |
+| Release summary | Aplikacja, branch, daty i podgląd dobranych commitów |
+| Config Drift Viewer | Dostępny tryb Basic, repozytorium, komponenty i kierunek porównania |
+| Behavior Change Assessment | Projekt Jira i okres dostarczonych zmian zachowania |
+| Technical Change Assessment | Projekt Jira i okres dostarczonych zmian technicznych |
+| Delivery Trends | Import CSV oraz filtry dostępne po wczytaniu danych |
+
+Kroki są dobierane do stanu ekranu. Puste katalogi Flow Explorera,
+UX Inspectora i Release summary wskazują konfigurację źródeł. Wyłączenie
+nowych analiz Release summary pozostawia przewodnik po imporcie.
 
 ## Dobor komponentu
 

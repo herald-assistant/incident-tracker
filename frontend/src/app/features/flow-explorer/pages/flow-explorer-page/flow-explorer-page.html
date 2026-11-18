@@ -16,18 +16,18 @@
 
       <div class="flow-explorer-collapsible__body">
         <div class="flow-explorer-target-grid">
-          <app-application-select [options]="applicationOptions()" [selectedId]="selectedSystemId()"
+          <app-application-select data-form-tour="flow-explorer-application" [options]="applicationOptions()" [selectedId]="selectedSystemId()"
             [loading]="catalogState() === 'loading'" [error]="catalogError()"
             (selected)="selectApplication($event)" (retry)="loadSystems()" />
 
-          <app-gitlab-branch-select
+          <app-gitlab-branch-select data-form-tour="flow-explorer-branch"
             [systemId]="selectedSystemId()"
             [selectedBranch]="branch()"
             [disabled]="isJobActive() || isImportedResult() || isHistoryResult()"
             (branchSelected)="onBranchSelected($event)"
           />
 
-          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+          <div class="flow-explorer-select" data-form-tour="flow-explorer-endpoint" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">
               <span class="field-label">Endpoint</span>
               @if (endpointInventoryDateLabel()) {
@@ -213,7 +213,7 @@
             }
           </div>
 
-          <div class="flow-explorer-control-actions">
+          <div class="flow-explorer-control-actions" data-form-tour="flow-explorer-inventory">
             <span class="flow-explorer-field-label">
               <span class="field-label">Inventory</span>
               <span
@@ -240,12 +240,12 @@
         </div>
 
         <div class="flow-explorer-scope-grid">
-          <app-choice-select label="Goal" size="descriptive" [options]="goalChoices"
+          <app-choice-select data-form-tour="flow-explorer-goal" label="Goal" size="descriptive" [options]="goalChoices"
             tooltip="Ustawia cel analizy. Deep Discovery buduje kompleksowe rozpoznanie endpointu."
             [value]="analysisGoal()" [description]="selectedGoalMeta()" [disabled]="isSubmitting() || isJobActive()"
             (opened)="closeCustomSelects()" (valueChange)="selectGoal($event)" />
 
-          <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
+          <div class="flow-explorer-select" data-form-tour="flow-explorer-sections" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">
               <span class="field-label">Section modes</span>
               <span
@@ -313,7 +313,7 @@
             }
           </div>
 
-          <app-ai-execution-controls
+          <app-ai-execution-controls data-form-tour="flow-explorer-ai"
             [catalog]="aiModelCatalog()" [model]="selectedAiModel()" [reasoningEffort]="selectedReasoningEffort()"
             [loading]="isAiModelOptionsLoading()" [disabled]="isSubmitting() || isJobActive()" [error]="aiModelOptionsError()"
             (opened)="closeCustomSelects()" (modelChange)="selectAiModel($event)" (reasoningEffortChange)="selectReasoningEffort($event)" />
@@ -349,13 +349,14 @@
         }
 
         <app-text-field class="flow-explorer-instructions" label="Doprecyzuj oczekiwany opis" type="textarea" size="descriptive" [rows]="4"
+          data-form-tour="flow-explorer-instructions"
           tooltip="Doprecyzowanie oczekiwanego rezultatu. Backend nadal buduje canonical prompt i kontrakt odpowiedzi."
           placeholder="Np. skup sie na scenariuszach testowych dla walidacji statusu klienta."
           [value]="userInstructions()" [disabled]="isSubmitting() || isJobActive()"
           (valueChange)="onUserInstructionsChanged($event)" />
 
         <div class="flow-explorer-run-actions">
-          <button class="primary-button" type="button" [disabled]="!canStartJob()" (click)="startJob()">
+          <button class="primary-button" type="button" data-form-tour="flow-explorer-run" [disabled]="!canStartJob()" (click)="startJob()">
             <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
             <span>
               @if (isSubmitting()) {
@@ -378,6 +379,7 @@
           <button
             class="secondary-button"
             type="button"
+            data-form-tour="flow-explorer-import"
             [disabled]="isSubmitting() || isJobActive()"
             (click)="triggerImport(flowExplorerImportFileInput)"
           >

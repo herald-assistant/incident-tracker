@@ -811,6 +811,10 @@ widokami helper capability. Te route'y moga pomagac operatorowi w recznym
 debugowaniu albo zbieraniu inputu, ale nie zmieniaja publicznego requestu
 `POST /api/analysis/jobs` ani hidden scope'u sesji AI.
 
+„Oprowadź mnie” w topbarze pokazuje źródła wejścia udostępnione w
+bieżącej konfiguracji, preferencje AI, opis objawu oraz akcje startu i importu.
+Nakładkę obsługuje wspólny [przewodnik po formularzu](frontend-ui-standards.md#przewodnik-po-formularzu-startowym).
+
 `toolEvidenceSections` oraz `aiActivityEvents` sa osobnymi polami job response
 i moga byc aktualizowane podczas sesji AI przez listenery. Sa jednak jednym
 mechanizmem prezentacji w UI: frontend buduje z nich plaska liste pracy

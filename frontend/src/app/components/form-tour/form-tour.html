@@ -1,0 +1,43 @@
+@let currentLayout = layout();
+@let spotlight = currentLayout?.spotlight;
+<div
+  class="form-tour__spotlight"
+  aria-hidden="true"
+  [hidden]="!spotlight"
+  [style.left.px]="spotlight?.left"
+  [style.top.px]="spotlight?.top"
+  [style.width.px]="spotlight?.width"
+  [style.height.px]="spotlight?.height"
+></div>
+@if (!spotlight) {
+  <div class="form-tour__shade" aria-hidden="true"></div>
+}
+
+<section
+  #panel
+  class="form-tour__panel"
+  [style.left.px]="currentLayout ? currentLayout.panel.left : null"
+  [style.top.px]="currentLayout ? currentLayout.panel.top : null"
+>
+  <div id="form-tour-copy" class="form-tour__copy" aria-live="polite" aria-atomic="true">
+    <p class="form-tour__progress">Krok {{ index() + 1 }} z {{ stops.length }}</p>
+    <h2>{{ current().step.title }}</h2>
+    <p>{{ current().step.description }}</p>
+  </div>
+  <button
+    type="button"
+    class="secondary-button form-tour__close"
+    aria-label="Zamknij przewodnik"
+    (click)="close()"
+  >
+    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+  </button>
+  <div class="form-tour__actions">
+    <button type="button" class="secondary-button" [disabled]="index() === 0" (click)="previous()">
+      Wstecz
+    </button>
+    <button type="button" class="primary-button" (click)="next()">
+      {{ index() === stops.length - 1 ? 'Zakończ' : 'Dalej' }}
+    </button>
+  </div>
+</section>

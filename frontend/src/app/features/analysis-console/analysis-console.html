@@ -64,12 +64,13 @@
         >
           @if (canUseElasticsearchInput()) {
             <app-text-field class="analysis-start-grid__log-input" inputId="correlationId" label="Correlation ID"
+              data-form-tour="incident-correlation-id"
               placeholder="np. timeout-123" [required]="true" [formControl]="correlationIdControl"
               (valueChange)="clearFormError()" />
           }
 
           @if (canUseCsvUploadInput()) {
-            <div class="field-control analysis-start-grid__log-input analysis-file-control">
+            <div class="field-control analysis-start-grid__log-input analysis-file-control" data-form-tour="incident-csv">
               <span class="field-label">CSV file</span>
               <div class="file-picker">
                 <input
@@ -106,7 +107,7 @@
             </div>
           }
 
-          <app-ai-execution-controls
+          <app-ai-execution-controls data-form-tour="incident-ai"
             modelInputId="aiModel" reasoningInputId="reasoningEffort"
             [catalog]="aiModelCatalog()" [model]="aiModelControl.value" [reasoningEffort]="reasoningEffortControl.value"
             [loading]="isAiModelOptionsLoading()" [unavailable]="!!githubAuthError()"
@@ -115,6 +116,7 @@
             (modelTouched)="aiModelControl.markAsTouched()" (reasoningTouched)="reasoningEffortControl.markAsTouched()" />
 
           <app-text-field class="analysis-start-grid__problem-description" inputId="problemDescription"
+            data-form-tour="incident-description"
             label="Problem description (optional)" type="textarea" [rows]="2" [maxLength]="problemDescriptionMaxLength" [spellcheck]="true"
             [formControl]="problemDescriptionControl" (valueChange)="clearFormError()"
             placeholder="For example: the response contains incorrect data or the request is too slow."
@@ -124,6 +126,7 @@
             <button
               class="primary-button"
               type="submit"
+              data-form-tour="incident-run"
               [disabled]="isLoading() || isAnalysisBlockedByAuth() || analysisStartUnavailable()"
               [class.is-loading]="isLoading()"
               [attr.aria-busy]="isLoading()"
@@ -140,7 +143,7 @@
               hidden
               (change)="importAnalysis($event)"
             />
-            <button class="secondary-button" type="button" (click)="triggerImport(importFileInput)">
+            <button class="secondary-button" type="button" data-form-tour="incident-import" (click)="triggerImport(importFileInput)">
               <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
               <span>Import</span>
             </button>

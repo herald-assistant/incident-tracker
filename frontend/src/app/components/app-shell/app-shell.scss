@@ -485,6 +485,17 @@
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 auto;
+  gap: 8px;
+}
+
+.app-shell__tour-trigger {
+  gap: 6px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+
+  .material-symbols-outlined {
+    font-size: 20px;
+  }
 }
 
 .app-shell__info {

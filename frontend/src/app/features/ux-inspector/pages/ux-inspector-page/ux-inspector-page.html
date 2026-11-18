@@ -28,7 +28,7 @@
           <span class="ux-inspector-capture__icon material-symbols-outlined" aria-hidden="true">select_check_box</span>
           <div class="ux-inspector-capture__body">
             <span class="field-label">Element z Browser Tools</span>
-            <h3>{{ targetLabel() }}</h3>
+            <h3 data-form-tour="ux-inspector-capture">{{ targetLabel() }}</h3>
             <p><code>&lt;{{ capture.target.tag }}&gt;</code> · {{ capture.page.origin }}{{ capture.page.path }}</p>
             @if (facade.captureSnapshot()) {
             <p>Store: {{ facade.storeStatus() === 'available' ? 'dostępny dla tej analizy' : 'niedostępny w tej sesji' }}</p>
@@ -126,7 +126,7 @@
             </div>
           }
           @case ('empty') {
-            <div class="ux-inspector-message ux-inspector-message--warning" role="status">
+            <div class="ux-inspector-message ux-inspector-message--warning" role="status" data-form-tour="ux-inspector-empty-catalog">
               <p>Brak frontendów z primary repository w Operational Context.</p>
             </div>
           }
@@ -134,7 +134,7 @@
 
         @if (facade.inputOptions(); as options) {
           <div class="ux-inspector-target-grid">
-            <div class="ux-inspector-select" (click)="keepMenuOpen($event)">
+            <div class="ux-inspector-select" data-form-tour="ux-inspector-application" (click)="keepMenuOpen($event)">
               <span class="ux-inspector-field-label">
                 <span class="field-label">Application</span>
                 <span
@@ -191,14 +191,14 @@
               }
             </div>
 
-            <app-gitlab-branch-select
+            <app-gitlab-branch-select data-form-tour="ux-inspector-branch"
               [systemId]="facade.selectedSystemId()"
               [selectedBranch]="facade.branch()"
               [disabled]="facade.controlsLocked()"
               (branchSelected)="facade.changeBranch($event)"
             />
 
-            <div class="ux-inspector-select" (click)="keepMenuOpen($event)">
+            <div class="ux-inspector-select" data-form-tour="ux-inspector-view" (click)="keepMenuOpen($event)">
               <span class="ux-inspector-field-label">
                 <span class="field-label">View</span>
                 @if (viewCatalogDateLabel()) { <span class="ux-inspector-cache-date">{{ viewCatalogDateLabel() }}</span> }
@@ -255,7 +255,7 @@
               }
             </div>
 
-            <div class="ux-inspector-control-actions">
+            <div class="ux-inspector-control-actions" data-form-tour="ux-inspector-inventory">
               <span class="ux-inspector-field-label">
                 <span class="field-label">Inventory</span>
                 <span class="ux-inspector-label-help" tabindex="0" aria-label="View inventory refresh help" matTooltip="Pobiera świeży katalog widoków dla wybranej aplikacji i branch/ref." matTooltipPosition="right">
@@ -286,7 +286,7 @@
         }
 
         <div class="ux-inspector-ai-grid">
-          <app-ai-execution-controls
+          <app-ai-execution-controls data-form-tour="ux-inspector-ai"
             [catalog]="facade.aiOptions()" [model]="facade.selectedModel()" [reasoningEffort]="facade.selectedReasoningEffort()"
             [loading]="facade.aiOptionsState() === 'loading'" [unavailable]="facade.aiOptionsState() === 'error'"
             [disabled]="facade.controlsLocked()" (opened)="closeMenus()"
@@ -298,6 +298,7 @@
         }
 
         <app-text-field class="ux-inspector-question" label="Pytanie lub polecenie" type="textarea" size="descriptive" [rows]="5" [maxLength]="4000"
+          data-form-tour="ux-inspector-question"
           [disabled]="facade.controlsLocked()" [value]="facade.question()"
           placeholder="Np. Dlaczego ten przycisk jest zablokowany i jakie warunki go odblokowują?"
           [hint]="'Jedno pytanie, jeden element. ' + facade.question().length + '/4000'"
@@ -305,11 +306,11 @@
 
         <footer class="ux-inspector-actions" aria-live="polite">
           <div>
-            <button class="primary-button" type="button" [disabled]="!facade.canStartJob()" (click)="facade.startJob()">
+            <button class="primary-button" type="button" data-form-tour="ux-inspector-run" [disabled]="!facade.canStartJob()" (click)="facade.startJob()">
               <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
               {{ facade.isSubmitting() ? 'Uruchamianie…' : 'Uruchom UX Inspector' }}
             </button>
-            <button class="secondary-button" type="button" [disabled]="facade.isJobActive() || facade.portabilityBusy()" (click)="triggerImport(importInput)">
+            <button class="secondary-button" type="button" data-form-tour="ux-inspector-import" [disabled]="facade.isJobActive() || facade.portabilityBusy()" (click)="triggerImport(importInput)">
               <span class="material-symbols-outlined" aria-hidden="true">upload_file</span> Import
             </button>
           </div>
@@ -326,7 +327,7 @@
           <button class="secondary-button secondary-button--compact" type="button" (click)="retryCapture()">Ponów</button>
         </div>
       } @else {
-        <app-browser-tools-setup />
+        <app-browser-tools-setup data-form-tour="ux-inspector-browser-tools" />
       }
     }
 

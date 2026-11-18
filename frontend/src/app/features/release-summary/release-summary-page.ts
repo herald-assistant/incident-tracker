@@ -7,6 +7,7 @@ import { Subscription, timer, switchMap } from 'rxjs';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisReportEditorComponent } from '../../components/analysis-report-editor/analysis-report-editor';
 import { AnalysisReportEditRequest } from '../../core/models/analysis.models';
+import type { FormTourSource } from '../../core/models/form-tour';
 import { downloadJsonFile } from '../../core/utils/json-file.utils';
 import { parseReleaseSummaryImport, releaseSummaryExport } from './release-summary-import-export';
 import { ApplicationOption, ApplicationSelectComponent } from '../../components/application-select/application-select';
@@ -16,6 +17,11 @@ import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-pan
 import { AnalysisReportPanelComponent } from '../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisResultHeaderComponent } from '../../components/analysis-result-header/analysis-result-header';
 import { ReleaseSummaryApiService } from './release-summary-api.service';
+import {
+  RELEASE_SUMMARY_EMPTY_CATALOG_TOUR,
+  RELEASE_SUMMARY_FORM_TOUR,
+  RELEASE_SUMMARY_IMPORT_TOUR
+} from './release-summary-form-tour';
 import { ReleaseCommit, ReleaseRange, ReleaseSummarySnapshot, terminalReleaseSummary } from './release-summary.models';
 import { AnalysisJobPollingService } from '../../core/services/analysis-job-polling.service';
 import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
@@ -32,7 +38,7 @@ import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, liste
   templateUrl: './release-summary-page.html',
   styleUrl: './release-summary-page.scss'
 })
-export class ReleaseSummaryPageComponent {
+export class ReleaseSummaryPageComponent implements FormTourSource {
   readonly api = inject(ReleaseSummaryApiService);
   private readonly polling = inject(AnalysisJobPollingService);
   private readonly aiOptionsApi = inject(AiOptionsApiService);
@@ -66,6 +72,18 @@ export class ReleaseSummaryPageComponent {
   readonly canStart = computed(() => !!this.systemId() && !!this.range() && !this.noChanges() && !this.previewLoading() && !this.dateError() && !!this.effectiveModel()
     && !this.modelsLoading() && !this.busy() && !this.editing() && this.uiConfig.config().releaseSummaryEnabled);
   readonly busy = computed(() => this.starting() || this.saving() || this.chatSubmitting() || !!this.job() && !terminalReleaseSummary(this.job()!));
+  readonly formTourSteps = computed(() => {
+    if (this.busy() || this.editing()) {
+      return [];
+    }
+    if (!this.uiConfig.config().releaseSummaryEnabled) {
+      return RELEASE_SUMMARY_IMPORT_TOUR;
+    }
+    if (this.loading()) {
+      return [];
+    }
+    return this.applications().length ? RELEASE_SUMMARY_FORM_TOUR : RELEASE_SUMMARY_EMPTY_CATALOG_TOUR;
+  });
   readonly aiWorkflowIsRunning = computed(() => Boolean(this.job()?.steps.some(step =>
     step.phase === 'AI' && (step.status === 'RUNNING' || step.status === 'IN_PROGRESS')
   )));

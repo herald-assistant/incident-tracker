@@ -19,6 +19,7 @@ import {
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
+import type { FormTourSource } from '../../../../core/models/form-tour';
 import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
@@ -39,6 +40,7 @@ import {
   FlowExplorerSystemOption
 } from '../../models/flow-explorer.models';
 import { FlowExplorerApiService } from '../../services/flow-explorer-api.service';
+import { FLOW_EXPLORER_EMPTY_FORM_TOUR, FLOW_EXPLORER_FORM_TOUR } from '../../flow-explorer-form-tour';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import {
   FlowExplorerExportState,
@@ -209,7 +211,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
 })
-export class FlowExplorerPageComponent implements OnInit {
+export class FlowExplorerPageComponent implements OnInit, FormTourSource {
   private readonly flowExplorerApi = inject(FlowExplorerApiService);
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
@@ -291,6 +293,19 @@ export class FlowExplorerPageComponent implements OnInit {
   });
   readonly isImportedResult = computed(() => this.exportState()?.origin === 'imported');
   readonly isHistoryResult = computed(() => this.exportState()?.origin === 'local');
+  readonly formTourSteps = computed(() => {
+    if (this.isSubmitting() || this.isJobActive() || this.isImportedResult() || this.isHistoryResult()) {
+      return [];
+    }
+    switch (this.catalogState()) {
+      case 'ready':
+        return FLOW_EXPLORER_FORM_TOUR;
+      case 'empty':
+        return FLOW_EXPLORER_EMPTY_FORM_TOUR;
+      default:
+        return [];
+    }
+  });
   readonly canStartJob = computed(
     () =>
       Boolean(this.selectedSystem() && this.selectedEndpoint()) &&

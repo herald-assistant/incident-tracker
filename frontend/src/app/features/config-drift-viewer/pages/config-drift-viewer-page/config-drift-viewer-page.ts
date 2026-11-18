@@ -1,4 +1,6 @@
 import { AiExecutionControlsComponent } from '../../../../components/ai-execution-controls/ai-execution-controls';
+import type { FormTourSource } from '../../../../core/models/form-tour';
+import { CONFIG_DRIFT_VIEWER_FORM_TOUR } from '../../config-drift-viewer-form-tour';
 import { ChoiceSelectComponent, ChoiceOptionComponent } from '../../../../components/choice-select/choice-select';
 import { TextFieldComponent } from '../../../../components/text-field/text-field';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -87,7 +89,7 @@ const EMPTY_INPUT_OPTIONS: ConfigDriftViewerInputOptions = {
   templateUrl: './config-drift-viewer-page.html',
   styleUrl: './config-drift-viewer-page.scss'
 })
-export class ConfigDriftViewerPageComponent implements OnDestroy {
+export class ConfigDriftViewerPageComponent implements OnDestroy, FormTourSource {
   private readonly api = inject(ConfigDriftViewerApiService);
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
@@ -199,6 +201,11 @@ export class ConfigDriftViewerPageComponent implements OnDestroy {
     const job = this.job();
     return Boolean(job && !this.isTerminal(job.status));
   });
+  readonly formTourSteps = computed(() =>
+    this.inputOptionsLoading() || this.submitting() || this.workflowRunning() || this.resultOrigin() !== 'live'
+      ? []
+      : CONFIG_DRIFT_VIEWER_FORM_TOUR
+  );
   readonly componentTabs = computed<AnalysisResultTabItem[]>(() =>
     (this.job()?.components ?? []).map((component) => ({
       id: component.systemId,

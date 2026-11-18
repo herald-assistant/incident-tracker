@@ -235,6 +235,59 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
+  it.each([true, false])('guides the Incident Analysis form with Elasticsearch enabled=%s', async (enabled) => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await router.navigateByUrl('/incident-analysis');
+    fixture.detectChanges();
+    flushUiConfig(http);
+    http.expectOne('/api/analysis/jobs/input-options').flush({
+      elasticsearch: { source: 'ELASTICSEARCH', enabled, disabledReason: null },
+      csvUpload: { source: 'CSV_UPLOAD', enabled: true, disabledReason: null }
+    });
+    http.expectOne('/api/auth/github/status').flush({
+      configured: false,
+      settingsUrl: '/workspace-settings'
+    });
+    await fixture.whenStable();
+
+    const description = compiled.querySelector<HTMLTextAreaElement>('#problemDescription')!;
+    description.value = 'Lista kontaktów CRM odświeża się z opóźnieniem.';
+    description.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const trigger = compiled.querySelector<HTMLButtonElement>('.app-shell__tour-trigger')!;
+    trigger.focus();
+    trigger.click();
+    await fixture.whenStable();
+
+    const tour = document.querySelector<HTMLElement>('app-form-tour')!;
+    const next = tour.querySelector<HTMLButtonElement>('.primary-button')!;
+    const previous = tour.querySelector<HTMLButtonElement>('.form-tour__actions .secondary-button')!;
+    const spotlight = tour.querySelector('.form-tour__spotlight');
+    expect(spotlight).not.toBeNull();
+    expect(tour.querySelector('h2')?.textContent).toBe(enabled ? 'Correlation ID' : 'CSV file');
+    expect(tour.querySelector('.form-tour__progress')?.textContent?.trim())
+      .toBe(enabled ? 'Krok 1 z 6' : 'Krok 1 z 5');
+    expect(previous.disabled).toBe(true);
+    next.click();
+    await fixture.whenStable();
+    expect(tour.querySelector('h2')?.textContent).toBe(enabled ? 'CSV file' : 'Model i poziom rozumowania');
+    expect(tour.querySelector('.form-tour__spotlight')).toBe(spotlight);
+    previous.click();
+    await fixture.whenStable();
+    expect(tour.querySelector('h2')?.textContent).toBe(enabled ? 'Correlation ID' : 'CSV file');
+
+    tour.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+    await fixture.whenStable();
+    expect(document.querySelector('app-form-tour')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    expect(description.value).toBe('Lista kontaktów CRM odświeża się z opóźnieniem.');
+    http.verify();
+  });
+
   it('should render the analysis history shell on the analysis history route', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
@@ -969,7 +1022,7 @@ describe('App', () => {
     expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
   });
 
-  it('should render the UI Explorer configuration shell on the UI Explorer route', async () => {
+  it('renders the UI Explorer configuration and guides its initial fields in order', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
     const http = TestBed.inject(HttpTestingController);
@@ -1015,6 +1068,60 @@ describe('App', () => {
       .toBe('screen_search_desktop');
     expect(compiled.textContent).toContain('Screen documentation workspace');
     expect(compiled.textContent).toContain('Load view inventory');
+
+    const details = compiled.querySelector<HTMLDetailsElement>('.ui-explorer-collapsible')!;
+    details.open = false;
+    const trigger = compiled.querySelector<HTMLButtonElement>('.app-shell__tour-trigger')!;
+    trigger.click();
+    await fixture.whenStable();
+    expect(details.open).toBe(true);
+
+    const tour = document.querySelector<HTMLElement>('app-form-tour')!;
+    const next = tour.querySelector<HTMLButtonElement>('.primary-button')!;
+    for (const title of [
+      'Application', 'Branch / Ref', 'Load views', 'View', 'Section modes',
+      'Model i poziom rozumowania', 'Doprecyzuj oczekiwany opis', 'Run UI Explorer', 'Import'
+    ]) {
+      expect(tour.querySelector('h2')?.textContent).toBe(title);
+      if (title === 'Import') {
+        expect(next.textContent?.trim()).toBe('Zakończ');
+      }
+      next.click();
+      await fixture.whenStable();
+    }
+    expect(document.querySelector('app-form-tour')).toBeNull();
+    expect(details.open).toBe(false);
+    expect(compiled.querySelector('[data-form-tour="ui-explorer-run"]')?.hasAttribute('disabled')).toBe(true);
+
+    trigger.click();
+    await fixture.whenStable();
+    expect(document.querySelector('app-form-tour h2')?.textContent).toBe('Application');
+    await router.navigateByUrl('/');
+    await fixture.whenStable();
+    expect(document.querySelector('app-form-tour')).toBeNull();
+    expect(compiled.querySelector('.app-shell__tour-trigger')).toBeNull();
+    http.verify();
+  });
+
+  it('guides UI Explorer users to Operational Context when the frontend catalog is empty', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await router.navigateByUrl('/ui-explorer');
+    fixture.detectChanges();
+    flushUiConfig(http);
+    expect(compiled.querySelector('.app-shell__tour-trigger')).toBeNull();
+    http.expectOne('/api/ui-explorer/input-options').flush({ ...uiExplorerInputOptions(), systems: [] });
+    http.expectOne('/api/analysis/ai/options').flush({ models: [] });
+    await fixture.whenStable();
+
+    compiled.querySelector<HTMLButtonElement>('.app-shell__tour-trigger')!.click();
+    await fixture.whenStable();
+    expect(document.querySelector('app-form-tour h2')?.textContent).toBe('Dodaj frontend do katalogu');
+    expect(document.querySelector('app-form-tour .form-tour__progress')?.textContent?.trim()).toBe('Krok 1 z 1');
+    http.verify();
   });
 
   it('should render the change verification shell on the change verification route', async () => {

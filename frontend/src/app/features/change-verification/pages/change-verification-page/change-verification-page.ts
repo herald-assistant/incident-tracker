@@ -12,11 +12,13 @@ import {
   ChangeVerificationJobStateSnapshot
 } from '../../models/change-verification.models';
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
+import { CHANGE_VERIFICATION_FORM_TOUR } from '../../change-verification-form-tour';
 import {
   AnalysisAiModelOptionsResponse,
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
+import type { FormTourSource } from '../../../../core/models/form-tour';
 import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
@@ -52,7 +54,7 @@ import {
   templateUrl: './change-verification-page.html',
   styleUrl: './change-verification-page.scss'
 })
-export class ChangeVerificationPageComponent implements OnDestroy {
+export class ChangeVerificationPageComponent implements OnDestroy, FormTourSource {
   private readonly changeVerificationApi = inject(ChangeVerificationApiService);
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
@@ -106,6 +108,11 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     const currentJob = this.job();
     return Boolean(currentJob && !this.isTerminalStatus(currentJob.status));
   });
+  readonly formTourSteps = computed(() =>
+    this.composerCollapsed() || this.isSubmitting() || this.workflowIsRunning()
+      ? []
+      : CHANGE_VERIFICATION_FORM_TOUR
+  );
   readonly aiWorkflowIsRunning = computed(() => {
     const currentJob = this.job();
     return Boolean(
