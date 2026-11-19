@@ -97,7 +97,7 @@ public final class GitLabHistoryRuntimeFixture {
 
     public void verifyRepositoryReadBoundaries(List<ToolDefinition> enabled) {
         for (var args : List.of(
-                Map.of("projectName", "other-crm-project", "branchRef", "main", "filePath", path, "reason", "Sprawdzam zakres."),
+                Map.of("projectName", "../other-crm-project", "branchRef", "main", "filePath", path, "reason", "Sprawdzam zakres."),
                 Map.of("projectName", project, "branchRef", "main", "filePath", "../secret.txt", "reason", "Sprawdzam zakres."),
                 Map.of("projectName", project, "branchRef", "main", "filePath", path, "reason", ""))) {
             assertThat(call(enabled, GitLabToolNames.READ_REPOSITORY_FILE, new HashMap<>(args)))

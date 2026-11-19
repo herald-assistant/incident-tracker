@@ -9,6 +9,8 @@ import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendScreenSele
 import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBinding;
 import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabTypeScriptTemplateBindingKind;
 import pl.mkn.tdw.integrations.gitlab.GitLabFrontendScreenReachabilityPort;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
+import pl.mkn.tdw.common.GitLabPathUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -37,15 +39,21 @@ public class UxInspectorTargetResolver {
     );
     private static final Pattern ID_SELECTOR = Pattern.compile("^#([A-Za-z][A-Za-z0-9_.:-]*)$");
     private static final Pattern ATTRIBUTE_SELECTOR = Pattern.compile(
-            "^[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label|class)(~=|=)\"([A-Za-z][A-Za-z0-9_.:-]*)\"\\]$");
+            "^([a-z][a-z0-9-]{0,39})\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label|class)(~=|=)\"([A-Za-z][A-Za-z0-9_.:-]*)\"\\]$");
     private final FrontendApplicationCatalogService applicationCatalogService;
     private final GitLabFrontendScreenReachabilityPort screenReachabilityService;
+    private final GitLabSettingsPort gitLabSettings;
 
     public UxInspectorTargetContext resolve(String systemId, String branch, String viewId,
                                             UxInspectorCapture capture) {
         var frontend = applicationCatalogService.loadCatalog().findFrontend(systemId)
                 .orElseThrow(() -> error("UX_INSPECTOR_FRONTEND_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
                         "Selected frontend is not registered for source analysis."));
+        var mainGroup = gitLabSettings.getGroup();
+        if (!GitLabPathUtils.isSameOrNestedPath(mainGroup, frontend.gitLabGroup())) {
+            throw error("UX_INSPECTOR_REPOSITORY_SCOPE_UNAVAILABLE", UserFacingErrorType.CONFLICT,
+                    "The selected frontend must belong to the configured GitLab group.");
+        }
         var scope = new GitLabFrontendRepositoryScope(frontend.gitLabGroup(), frontend.gitLabProjectName(),
                 branch, frontend.pathPrefixes());
         GitLabFrontendScreenReachabilityGraph graph;
@@ -57,12 +65,18 @@ public class UxInspectorTargetResolver {
             throw mapFailure(exception);
         }
         var selectorSignals = selectorSignals(capture);
-        var candidates = graph.componentLevels().stream().flatMap(level -> level.components().stream())
-                .map(component -> candidate(component, capture, graph, selectorSignals)).filter(value -> value.score() > 0)
-                .sorted(Comparator.comparingInt(UxInspectorTargetCandidate::score).reversed()
-                        .thenComparing(UxInspectorTargetCandidate::componentId))
+        var matches = graph.componentLevels().stream().flatMap(level -> level.components().stream())
+                .map(component -> candidate(component, capture, graph, selectorSignals))
+                .filter(match -> match.candidate().score() > 0)
+                .sorted(Comparator.comparing(CandidateMatch::candidate,
+                        Comparator.comparingInt(UxInspectorTargetCandidate::score).reversed()
+                                .thenComparing(UxInspectorTargetCandidate::componentId)))
                 .limit(MAX_CANDIDATES).toList();
+        var candidates = matches.stream().map(CandidateMatch::candidate).toList();
         var status = resolutionStatus(candidates);
+        if (status == UxInspectorTargetResolutionStatus.RESOLVED && matches.get(0).ambiguousElement()) {
+            status = UxInspectorTargetResolutionStatus.AMBIGUOUS;
+        }
         var limitations = new LinkedHashSet<String>(graph.limitations());
         if (status == UxInspectorTargetResolutionStatus.AMBIGUOUS) {
             limitations.add("Several source targets match the runtime observation; the answer must preserve this ambiguity.");
@@ -73,15 +87,13 @@ public class UxInspectorTargetResolver {
         UxInspectorSourceBinding sourceBinding = null;
         if (status == UxInspectorTargetResolutionStatus.RESOLVED && !candidates.isEmpty()) {
             focused = candidates.get(0).sourceSlice();
-            var component = component(graph, candidates.get(0).componentId());
-            if (component != null) {
-                sourceBinding = sourceBinding(component, capture, candidates.get(0).templateLine());
-            }
+            sourceBinding = matches.get(0).binding();
         } else if (status == UxInspectorTargetResolutionStatus.AMBIGUOUS) {
-            focused = ambiguousCandidateEvidence(candidates, graph, capture);
+            focused = ambiguousCandidateEvidence(matches);
         }
         return new UxInspectorTargetContext(frontend.systemId(), frontend.label(),
-                new UxInspectorSourceScope(scope.group(), scope.projectName(), scope.ref(), scope.pathPrefixes()),
+                new UxInspectorSourceScope(GitLabPathUtils.trimSlashes(mainGroup.trim()),
+                        scope.group(), scope.projectName(), scope.ref(), scope.pathPrefixes()),
                 new UxInspectorViewIdentity(viewId,
                         StringUtils.hasText(graph.screenNode().label()) ? graph.screenNode().label() : graph.screenNode().routePattern(),
                         graph.screenNode().routePattern()),
@@ -89,65 +101,80 @@ public class UxInspectorTargetResolver {
                 status, candidates, sourceBinding, focused, List.copyOf(limitations), graph);
     }
 
-    private UxInspectorTargetCandidate candidate(GitLabFrontendReachabilityComponent component,
+    private CandidateMatch candidate(GitLabFrontendReachabilityComponent component,
                                                   UxInspectorCapture capture,
                                                   GitLabFrontendScreenReachabilityGraph graph,
                                                   List<SelectorSignal> selectorSignals) {
+        var elements = UxInspectorTemplateElement.find(component.templateContent(), capture.target().tag()).stream()
+                .map(element -> matchElement(element, capture.target(), selectorSignals))
+                .sorted(Comparator.comparingInt(ElementMatch::score).reversed()).toList();
+        var best = elements.isEmpty() ? null : elements.get(0);
         var reasons = new ArrayList<String>();
-        var searchable = (component.templateContent() + "\n" + component.sliceContent()).toLowerCase(Locale.ROOT);
         var score = 0;
-        var matchedValues = new LinkedHashSet<String>();
-        for (var signal : selectorSignals) {
-            if (containsStableValue(searchable, signal.value())) {
-                score += signal.weight();
-                matchedValues.add(signal.value());
-                reasons.add("selector " + signal.kind() + " matched");
-            }
-        }
-        var name = normalized(capture.target().accessibleName());
-        if (StringUtils.hasText(name) && !matchedValues.contains(name) && searchable.contains(name)) {
-            score += 28;
-            matchedValues.add(name);
-            reasons.add("accessible name matched");
-        }
-        var text = normalized(capture.target().text());
-        if (StringUtils.hasText(text) && text.length() >= 3 && !matchedValues.contains(text)
-                && searchable.contains(text)) {
-            score += 20;
-            reasons.add("visible text matched");
-        }
-        var tagNeedle = "<" + capture.target().tag().toLowerCase(Locale.ROOT);
-        if (component.templateContent().toLowerCase(Locale.ROOT).contains(tagNeedle)) {
+        if (best != null) {
+            score = best.score();
+            reasons.addAll(best.reasons());
             score += 4;
             reasons.add("element tag is present in template");
         }
-        if (StringUtils.hasText(capture.target().role())
-                && searchable.contains("role=\"" + capture.target().role().toLowerCase(Locale.ROOT))) {
-            score += 9;
-            reasons.add("explicit role matched");
-        }
         var boundaries = orderedComponentBoundaries(capture);
-        var boundaryIndex = StringUtils.hasText(component.selector())
-                ? boundaries.indexOf(component.selector().toLowerCase(Locale.ROOT)) : -1;
-        if (boundaryIndex >= 0) {
-            var boundaryScore = componentBoundaryScore(boundaryIndex);
-            score += boundaryScore;
-            reasons.add("component boundary matched at distance " + (boundaryIndex + 1));
+        for (var index = 0; index < boundaries.size(); index++) {
+            if (GitLabFrontendReachabilityComponent.selectorMatchesTag(component.selector(), boundaries.get(index))) {
+                score += componentBoundaryScore(index);
+                reasons.add("component boundary matched at distance " + (index + 1));
+                break;
+            }
         }
         if (routeMatches(graph.screenNode().routePattern(), capture.page().path())) {
             score += 6;
             reasons.add("runtime path matches selected view route");
         }
-        var line = matchingLine(component.templateContent(), capture, selectorSignals);
+        var ambiguousElement = best != null && best.score() > 0 && elements.size() > 1
+                && best.score() == elements.get(1).score();
+        var element = best != null && best.score() > 0 && !ambiguousElement ? best.element() : null;
+        var binding = sourceBinding(component, element);
+        var line = binding.templateLineStart();
         var related = new LinkedHashSet<String>();
         addPath(related, component.templatePath());
         addPath(related, component.sourcePath());
         component.dependencyIds().forEach(id -> graph.dependencies().stream()
                 .filter(dependency -> id.equals(dependency.dependencyId()))
                 .forEach(dependency -> addPath(related, dependency.sourcePath())));
-        return new UxInspectorTargetCandidate(component.componentId(), score, reasons, component.componentId(),
+        var candidate = new UxInspectorTargetCandidate(component.componentId(), score, reasons, component.componentId(),
                 component.symbol(), component.selector(), component.sourcePath(), component.templatePath(), line,
                 sourceSlice(component, line), List.copyOf(related));
+        return new CandidateMatch(candidate, binding, ambiguousElement);
+    }
+
+    private ElementMatch matchElement(UxInspectorTemplateElement element, UxInspectorCapture.Target target,
+                                      List<SelectorSignal> selectorSignals) {
+        var reasons = new ArrayList<String>();
+        var matchedValues = new LinkedHashSet<String>();
+        var score = 0;
+        for (var signal : selectorSignals) {
+            if (element.matches(signal.kind(), signal.value()) && matchedValues.add(normalized(signal.value()))) {
+                score += signal.weight();
+                reasons.add("selector " + signal.kind() + " matched");
+            }
+        }
+        var content = element.text();
+        var name = normalized(target.accessibleName());
+        if (name != null && !matchedValues.contains(name)
+                && (element.matches("aria-label", target.accessibleName()) || content.contains(name))) {
+            score += 28;
+            matchedValues.add(name);
+            reasons.add("accessible name matched");
+        }
+        var text = normalized(target.text());
+        if (text != null && text.length() >= 3 && !matchedValues.contains(text) && content.contains(text)) {
+            score += 20;
+            reasons.add("visible text matched");
+        }
+        if (target.role() != null && element.matches("role", target.role())) {
+            score += 9;
+            reasons.add("explicit role matched");
+        }
+        return new ElementMatch(element, score, reasons);
     }
 
     private List<SelectorSignal> selectorSignals(UxInspectorCapture capture) {
@@ -163,12 +190,12 @@ public class UxInspectorTargetResolver {
                 continue;
             }
             var attribute = ATTRIBUTE_SELECTOR.matcher(selector);
-            if (!attribute.matches()) continue;
-            var kind = attribute.group(1);
-            var operator = attribute.group(2);
+            if (!attribute.matches() || !capture.target().tag().equalsIgnoreCase(attribute.group(1))) continue;
+            var kind = attribute.group(2);
+            var operator = attribute.group(3);
             if (("class".equals(kind) && !"~=".equals(operator))
                     || (!"class".equals(kind) && !"=".equals(operator))) continue;
-            addSelectorSignal(signalsByValue, kind, attribute.group(3));
+            addSelectorSignal(signalsByValue, kind, attribute.group(4));
         }
         return signalsByValue.values().stream()
                 .sorted(Comparator.comparingInt(SelectorSignal::weight).reversed()
@@ -177,12 +204,11 @@ public class UxInspectorTargetResolver {
     }
 
     private void addSelectorSignal(LinkedHashMap<String, SelectorSignal> signalsByValue, String kind, String rawValue) {
-        var value = normalized(rawValue);
+        var value = rawValue == null ? null : rawValue.strip();
         var weight = selectorSignalWeight(kind);
         if (!StringUtils.hasText(value) || weight <= 0) return;
         var signal = new SelectorSignal(kind, value, weight);
-        signalsByValue.merge(value, signal, (current, candidate) ->
-                candidate.weight() > current.weight() ? candidate : current);
+        signalsByValue.putIfAbsent(kind + "=" + value, signal);
     }
 
     private int selectorSignalWeight(String kind) {
@@ -246,19 +272,12 @@ public class UxInspectorTargetResolver {
         return value.length() <= MAX_SOURCE_SLICE ? value : value.substring(0, MAX_SOURCE_SLICE);
     }
 
-    private String ambiguousCandidateEvidence(
-            List<UxInspectorTargetCandidate> candidates,
-            GitLabFrontendScreenReachabilityGraph graph,
-            UxInspectorCapture capture
-    ) {
+    private String ambiguousCandidateEvidence(List<CandidateMatch> matches) {
         var builder = new StringBuilder();
-        var selected = candidates.stream().limit(MAX_AMBIGUOUS_CANDIDATES).toList();
+        var selected = matches.stream().limit(MAX_AMBIGUOUS_CANDIDATES).toList();
         for (var index = 0; index < selected.size(); index++) {
-            var candidate = selected.get(index);
-            var component = component(graph, candidate.componentId());
-            if (component == null) continue;
-            var binding = sourceBinding(component, capture, candidate.templateLine());
-            var evidence = renderCandidateEvidence(index + 1, candidate, binding);
+            var match = selected.get(index);
+            var evidence = renderCandidateEvidence(index + 1, match.candidate(), match.binding());
             if (!builder.isEmpty()) builder.append("\n\n");
             builder.append(evidence, 0, Math.min(evidence.length(), MAX_AMBIGUOUS_CANDIDATE_EVIDENCE));
         }
@@ -298,13 +317,6 @@ public class UxInspectorTargetResolver {
         return builder.toString();
     }
 
-    private GitLabFrontendReachabilityComponent component(
-            GitLabFrontendScreenReachabilityGraph graph,
-            String componentId
-    ) {
-        return graph.componentLevels().stream().flatMap(level -> level.components().stream())
-                .filter(value -> value.componentId().equals(componentId)).findFirst().orElse(null);
-    }
 
     private String excerpt(String content, Integer line) {
         if (!StringUtils.hasText(content)) return "";
@@ -319,73 +331,34 @@ public class UxInspectorTargetResolver {
         return builder.toString().trim();
     }
 
-    private Integer matchingLine(
-            String template,
-            UxInspectorCapture capture,
-            List<SelectorSignal> selectorSignals
-    ) {
-        if (!StringUtils.hasText(template)) return null;
-        var lines = template.split("\\R", -1);
-        for (var signal : selectorSignals) {
-            var line = uniqueMatchingLine(lines, signal.value());
-            if (line != null) return line;
-        }
-        var accessibleName = normalized(capture.target().accessibleName());
-        var line = uniqueMatchingLine(lines, accessibleName);
-        if (line != null) return line;
-        var text = normalized(capture.target().text());
-        if (StringUtils.hasText(text) && !text.equals(accessibleName)) {
-            line = uniqueMatchingLine(lines, text);
-            if (line != null) return line;
-        }
-        var role = normalized(capture.target().role());
-        if (StringUtils.hasText(role)) return uniqueMatchingLine(lines, "role=\"" + role + "\"");
-        return null;
-    }
-
-    private Integer uniqueMatchingLine(String[] lines, String needle) {
-        if (!StringUtils.hasText(needle)) return null;
-        Integer match = null;
-        for (var index = 0; index < lines.length; index++) {
-            if (!containsStableValue(lines[index].toLowerCase(Locale.ROOT), needle)) continue;
-            if (match != null) return null;
-            match = index + 1;
-        }
-        return match;
-    }
-
-    private UxInspectorSourceBinding sourceBinding(
-            GitLabFrontendReachabilityComponent component,
-            UxInspectorCapture capture,
-            Integer matchingLine
-    ) {
-        var range = elementRange(component.templateContent(), capture.target().tag(), matchingLine);
+    private UxInspectorSourceBinding sourceBinding(GitLabFrontendReachabilityComponent component,
+                                                    UxInspectorTemplateElement element) {
+        var template = component.templateContent();
+        Integer start = element == null ? null : lineAtOffset(template, element.offset);
+        Integer end = element == null ? null : lineAtOffset(template, element.offset + element.openingTag.length() - 1);
         var bindings = component.templateBindings().stream()
-                .filter(binding -> range != null && binding.lineStart() >= range.startLine()
-                        && binding.lineStart() <= range.endLine())
+                .filter(binding -> element != null && binding.lineStart() >= start && binding.lineStart() <= end
+                        && element.hasBinding(binding))
                 .limit(12).map(this::sourceBinding).toList();
-        var formRange = range != null ? enclosingFormRange(component.templateContent(), range.startLine()) : null;
+        var form = element == null ? null : element.form;
+        var formLine = form == null ? 0 : lineAtOffset(template, form.offset);
+        var formEnd = form == null ? 0 : lineAtOffset(template, form.offset + form.openingTag.length() - 1);
         var submitBinding = component.templateBindings().stream()
-                .filter(binding -> formRange != null
+                .filter(binding -> form != null && binding.lineStart() >= formLine && binding.lineStart() <= formEnd
                         && binding.kind() == GitLabTypeScriptTemplateBindingKind.EVENT
                         && Set.of("ngsubmit", "submit").contains(binding.target().toLowerCase(Locale.ROOT))
-                        && binding.lineStart() >= formRange.startLine()
-                        && binding.lineStart() <= formRange.endLine())
+                        && form.hasBinding(binding))
                 .findFirst().map(this::sourceBinding).orElse(null);
         var referenced = new LinkedHashSet<String>();
         bindings.forEach(binding -> referenced.addAll(binding.referencedSymbols()));
         if (submitBinding != null) referenced.addAll(submitBinding.referencedSymbols());
         var external = StringUtils.hasText(component.templatePath());
-        var referencePath = external ? component.templatePath() : component.sourcePath();
-        var sourceReference = referencePath;
-        if (external && range != null) {
-            sourceReference += "#L" + range.startLine() + "-L" + range.endLine();
-        }
+        var sourceReference = external ? component.templatePath() : component.sourcePath();
+        if (external && element != null) sourceReference += "#L" + start + "-L" + end;
+        var snippet = element == null ? "" : element.openingTag.substring(0, Math.min(2_000, element.openingTag.length()));
         return new UxInspectorSourceBinding(component.componentId(), component.symbol(), component.selector(),
                 component.sourcePath(), component.templatePath(), external ? "EXTERNAL" : "INLINE",
-                range != null ? range.startLine() : null, range != null ? range.endLine() : null,
-                sourceReference, range != null ? range.snippet() : "", bindings, submitBinding,
-                List.copyOf(referenced));
+                start, end, sourceReference, snippet, bindings, submitBinding, List.copyOf(referenced));
     }
 
     private UxInspectorSourceBinding.TemplateBinding sourceBinding(GitLabTypeScriptTemplateBinding binding) {
@@ -393,61 +366,6 @@ public class UxInspectorTargetResolver {
                 binding.expression(), binding.referencedSymbols(), binding.lineStart());
     }
 
-    private SourceRange elementRange(String template, String targetTag, Integer matchingLine) {
-        if (!StringUtils.hasText(template) || !StringUtils.hasText(targetTag) || matchingLine == null) return null;
-        var lines = template.split("\\R", -1);
-        var anchor = Math.max(0, Math.min(lines.length - 1, matchingLine - 1));
-        var tagNeedle = "<" + targetTag.toLowerCase(Locale.ROOT);
-        var start = -1;
-        var bestDistance = Integer.MAX_VALUE;
-        var tied = false;
-        for (var index = Math.max(0, anchor - 12); index <= Math.min(lines.length - 1, anchor + 12); index++) {
-            if (!lines[index].toLowerCase(Locale.ROOT).contains(tagNeedle)) continue;
-            var distance = Math.abs(index - anchor);
-            if (distance < bestDistance) {
-                start = index;
-                bestDistance = distance;
-                tied = false;
-            } else if (distance == bestDistance) {
-                tied = true;
-            }
-        }
-        if (start < 0 || tied) return null;
-        var end = start;
-        var snippet = new StringBuilder();
-        while (end < lines.length && end <= start + 16 && snippet.length() < 2_000) {
-            if (!snippet.isEmpty()) snippet.append('\n');
-            snippet.append(lines[end]);
-            if (lines[end].contains(">")) break;
-            end++;
-        }
-        var value = snippet.toString();
-        if (value.length() > 2_000) value = value.substring(0, 2_000);
-        return new SourceRange(start + 1, Math.min(lines.length, end + 1), value);
-    }
-
-    private SourceRange enclosingFormRange(String template, int targetLine) {
-        if (!StringUtils.hasText(template)) return null;
-        var offset = offsetAtLine(template, targetLine);
-        var lower = template.toLowerCase(Locale.ROOT);
-        var formStart = lower.lastIndexOf("<form", offset);
-        var closedBefore = lower.lastIndexOf("</form", offset);
-        if (formStart < 0 || closedBefore > formStart) return null;
-        var formEnd = lower.indexOf("</form", offset);
-        if (formEnd < 0) formEnd = template.length();
-        var startLine = lineAtOffset(template, formStart);
-        var endLine = lineAtOffset(template, formEnd);
-        return new SourceRange(startLine, endLine, "");
-    }
-
-    private int offsetAtLine(String value, int line) {
-        var currentLine = 1;
-        for (var index = 0; index < value.length(); index++) {
-            if (currentLine == line) return index;
-            if (value.charAt(index) == '\n') currentLine++;
-        }
-        return value.length();
-    }
 
     private int lineAtOffset(String value, int offset) {
         var line = 1;
@@ -501,12 +419,9 @@ public class UxInspectorTargetResolver {
         return new UxInspectorContextException(code, type, message);
     }
     private String normalized(String value) { return StringUtils.hasText(value) ? value.trim().toLowerCase(Locale.ROOT) : null; }
-    private boolean containsStableValue(String searchable, String value) {
-        if (!StringUtils.hasText(value)) return false;
-        return Pattern.compile("(?<![a-z0-9_-])" + Pattern.quote(value) + "(?![a-z0-9_-])")
-                .matcher(searchable).find();
-    }
     private void addPath(Set<String> paths, String path) { if (StringUtils.hasText(path)) paths.add(path.trim().replace('\\', '/')); }
     private record SelectorSignal(String kind, String value, int weight) {}
-    private record SourceRange(int startLine, int endLine, String snippet) {}
+    private record ElementMatch(UxInspectorTemplateElement element, int score, List<String> reasons) {}
+    private record CandidateMatch(UxInspectorTargetCandidate candidate, UxInspectorSourceBinding binding,
+                                  boolean ambiguousElement) {}
 }

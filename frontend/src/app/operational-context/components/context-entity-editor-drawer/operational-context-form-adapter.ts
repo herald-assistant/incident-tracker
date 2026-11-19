@@ -335,7 +335,7 @@ const FIELD_TOOLTIPS_PL: Record<string, string> = {
 };
 
 const FIELD_TOOLTIPS_PL_BY_TYPE: Record<string, string> = {
-  'system.matchSignals': 'Wpisuj trwałe sygnały identyfikujące system. Wszystkie siły, także weak, oraz aliases i useFor uczestniczą w doborze scope’ów GitLaba. Kolizja z nazwą innego systemu może dołączyć dodatkowe scope’y. Porównaj dobór źródeł przed i po zmianie; opisowych metadanych nie przenoś do sygnałów.',
+  'system.matchSignals': 'Dla adresów HTTP wybierz strong i urlPatterns. Wpisz adres widoczny w przeglądarce dla każdego znanego środowiska, np. https://crm-test.example.com/api/contacts/**. Zachowaj prefiks bramy i pomiń query oraz fragment. * pasuje w jednym segmencie, ** obejmuje kolejne segmenty. Wszystkie siły, także weak, oraz aliases i useFor uczestniczą w doborze scope’ów GitLaba. Kolizja z nazwą innego systemu może dołączyć dodatkowe scope’y. Porównaj dobór źródeł przed i po zmianie.',
   'system.participants': 'Wpisz nazwę zewnętrznej organizacji tylko wtedy, gdy cały system jest obsługiwany poza lokalnym katalogiem zespołów.',
   'process.participants': 'Wybierz systemy biorące udział w procesie i określ, czy pełnią rolę główną, wspierającą lub zewnętrzną.',
   'integration.participants': 'Wskaż system źródłowy, cele i ewentualnych pośredników. Ich role określają kierunek komunikacji.',

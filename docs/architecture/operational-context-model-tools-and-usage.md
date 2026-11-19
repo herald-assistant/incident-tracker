@@ -183,6 +183,25 @@ deploymentow i aplikacji pozostaja sygnalami w `matchSignals`, a nie druga
 prawda w `runtime`. Code discovery dla systemu zaczyna sie od code-search
 scope'u targetujacego ten system.
 
+System wewnętrzny może podać adresy HTTP w istniejącej mapie sygnałów.
+`matchSignals.strong.urlPatterns` jest opcjonalną listą tekstów. Każda pozycja
+opisuje origin i ścieżkę widoczną dla przeglądarki na danym środowisku, razem
+z prefiksem bramy. W tym przykładzie system CRM obsługuje kontakty na dwóch
+środowiskach.
+
+```yaml
+matchSignals:
+  strong:
+    urlPatterns:
+      - "https://crm-test.example.com/api/contacts/**"
+      - "https://crm.example.com/api/contacts/**"
+```
+
+Operator wpisuje po jednym wzorcu w wierszu edytora sygnałów albo podaje
+znane adresy asyście AI. Przy aktualizacji asysta proponuje całe pole
+`matchSignals`, zachowując pozostałe grupy, klucze i wartości. Operator może
+poprawić propozycję, sprawdzić podgląd i zatwierdzić zapis.
+
 `systemType` jest jedynym polem klasyfikacji systemu; `type` i `kind`
 nie sa parsowane ani przyjmowane przez maintenance API. Kazdy
 `systemType=internal-service` musi miec dokladnie jeden `systemSubtype` z
@@ -1174,6 +1193,16 @@ Katalog nie rozszerza dostepu do kodu przez odczyt repository/code-search
 scope i nie zmienia trybow COMPACT/DEEP, readiness, tematu ani struktury
 raportow. Nie dodaje tez prawa do ich edycji podczas follow-up.
 Brak katalogu lub narzedzi nie blokuje dotychczasowej analizy.
+
+UX Inspector przekazuje modelowi świeżą listę wzorców z sekcji
+`matchSignals.strong.urlPatterns` wszystkich aktywnych systemów
+`internal-service`, które ją wypełniły. Model pomija query i fragment adresu.
+`*` pasuje w obrębie jednego segmentu, a `**` może objąć kolejne segmenty
+ścieżki. Dopasowanie wskazuje system do sprawdzenia. Repozytoria podpowiada
+`opctx_get_entity` z `include=["codeSearch"]`, a powiązanie z obsługą żądania
+potwierdza kod. Dalszy odczyt zależy od dostępu integracji GitLab do grupy
+i podgrup. Postępowanie przy kilku dopasowaniach i zakres narzędzi
+opisuje [przepływ UX Inspectora](ux-inspector-runtime-flow.md).
 
 ## Anty-Wzorce
 

@@ -64,11 +64,10 @@ Nie musi najpierw odczytać listy commitów ani ponownie potwierdzać SHA.
 Lista commitów przypina ref do SHA dla stabilnej paginacji konkretnego
 zapytania; nie jest to granica uprawnień. Kolejne zapytanie może wskazać
 inną rewizję. Odczyty plików i chunków używają `branchRef` bez rejestru grantów.
-Zwykły repository scope zachowuje przygotowane przypięcia znanych refs
-oraz granice repozytorium; badanie innego ref nie zmienia bazowej analizy.
-Wszystkie operacje z `GitLabRepositoryToolScope` używają jednego `resolve`:
-nowy branch/tag jest przypinany do SHA raz dla pary projekt/ref, także w
-wybranym projekcie i projektach porównania. Kolejne odczyty używają tego
+W UX Inspectorze historia obejmuje projekty skonfigurowanej grupy i jej
+podgrup. W każdym z nich preferowany jest branch wybrany w UI.
+`GitLabRepositoryToolScope` zachowuje przygotowane rewizje i przypina każdy
+nowy branch lub tag do SHA raz dla pary projekt/ref. Kolejne odczyty używają tego
 samego SHA mimo zmiany HEAD. Pełny SHA jest czytany bezpośrednio. Restore
 zachowuje dodatkowe przypięcia, nie pozwalając nadpisać przygotowanych refs.
 Nie ma osobnej ścieżki `resolveResearch`.

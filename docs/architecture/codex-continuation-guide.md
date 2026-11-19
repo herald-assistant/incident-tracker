@@ -105,8 +105,8 @@ zatwierdzony invariant trafia do architektury.
   Copilot prompt, opcjonalny skill store-grounding, session-bound `uxi_*` target tools,
   prywatny snapshot HTTP i neutralne `run_http_history_*` tools z JSON Pointer/chunkami,
   czteropoziomowa mape nazw sciezek i neutralne GitLab
-  navigation/search/read tools dla calego wybranego repozytorium pod branchowa
-  policy, jednosekcyjny report, job/history oraz import/export v1. Runtime opisuje
+  navigation/search/read tools dla projektów w głównej grupie i podgrupach,
+  jednosekcyjny report, job/history oraz import/export v1. Runtime opisuje
   `docs/architecture/ux-inspector-runtime-flow.md`.
 
 Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.

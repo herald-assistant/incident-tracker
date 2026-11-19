@@ -19,7 +19,8 @@ class UxInspectorCopilotToolSessionContextFactoryTest {
             var session = turn == 0 ? factory.create("crm-history", targetContext())
                     : factory.createFollowUp("crm-history", "crm-history-session", targetContext());
             var policy = new UxInspectorCopilotScopePolicy(new com.fasterxml.jackson.databind.ObjectMapper());
-            var fixture = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(session, "crm-ui", "src/Phone.ts", policy);
+            var fixture = new pl.mkn.tdw.testsupport.agenttools.GitLabHistoryRuntimeFixture(
+                    session, "services/crm-contacts", "src/main/java/crm/Phone.java", policy);
             fixture.exercise(UxInspectorCopilotToolAccessPolicy.from(fixture.definitions()).enabledTools());
             fixture.verifyRepositoryReadBoundaries(UxInspectorCopilotToolAccessPolicy.from(fixture.definitions()).enabledTools());
         }

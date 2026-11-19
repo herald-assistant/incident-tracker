@@ -301,35 +301,36 @@ dispatch do executora; brak persistence zatrzymuje utworzenie runu.
 
 ## Deterministyczne rozpoznanie targetu
 
-`UxInspectorTargetResolver` rozwiazuje zarejestrowany frontend do ukrytego
-GitLab scope i wykonuje target-first
-discovery dla wybranego view. Rozpoczyna od komponentu widoku, a nastepnie
-odnajduje tylko komponenty wskazane przez uporzadkowane runtime
-`componentBoundaryTags`; nie buduje pelnego screen reachability graphu ani nie
-przechodzi rekurencyjnie dependencies. Ranking korzysta ze stabilnych atrybutow,
-znormalizowanych selector candidates, accessible name, tekstu, tagu, role,
-uporzadkowanego custom-element ancestry oraz route. Te same `id`, `data-*`,
-`formControlName`, `name` albo `aria-label` nie sa naliczane drugi raz, gdy
-wystepuja jednoczesnie w stable attributes i selector candidate. Bezpieczne
-tokeny klas maja nizsza wage, a najblizszy `componentBoundaryTag` ma wage
-najwyzsza. Dla targetu resolver wyprowadza `sourceBinding`: komponent/symbol,
-template, ograniczony element slice, bindingi elementu i formularza oraz
-symbole referencyjne. Brak jednoznacznego anchor line pozostawia element range
-pusty; resolver nigdy nie wybiera pierwszego wystapienia ogolnego tagu.
+`UxInspectorTargetResolver` zaczyna od komponentu wybranego widoku na branchu
+z UI. Dla tagów z `componentBoundaryTags` sprawdza już odczytane deklaracje,
+potem bezpośrednie importy komponentu, który używa tagu w szablonie. Jeśli nadal
+brakuje deklaracji, szuka jej w repozytorium. Ten krok obejmuje komponent widoku
+i zaobserwowane granice komponentów.
 
-Rezultat ma jeden ze stanow:
+Resolver ocenia osobno każdy element szablonu o tagu zgodnym z capture.
+Porównuje pełne tokeny klas i wartości atrybutów, m.in. `id`, `data-testid`,
+`formControlName` i `aria-label`. Ten sam sygnał z atrybutu i selektora liczy
+raz. Nazwa dostępnościowa, tekst i rola dostarczają dodatkowych wskazówek.
+Słowo widoczne w nagłówku nie wystarcza do dopasowania klasy CSS. W rankingu
+komponentów liczą się również zgodność trasy i odległość przodka w DOM.
+Najbliższa granica komponentu ma największą wagę wśród przodków.
 
-- `RESOLVED` - jeden kandydat ma wystarczajaca przewage,
-- `AMBIGUOUS` - kilku kandydatow jest porownywalnych; initial context zawiera
-  ograniczone evidence maksymalnie trzech najlepszych kandydatow wraz z ich
-  bindingami, odpowiedz zachowuje niejednoznacznosc i moze uzyc target tools,
-- `NOT_FOUND` - brak zweryfikowanego celu pozostaje jawna luka; sesja dostaje
-  pelne zrodlo komponentu widoku i odkrytych runtime selector matches, jawny licznik pominietego grafu oraz
-  repository tools i kontynuuje celowany research.
+- `RESOLVED` oznacza, że komponent uzyskał wymagany wynik i przewagę. Jeśli
+  resolver rozpoznał też element, `sourceBinding` wskazuje jego dokładny tag
+  otwierający, zakres linii, powiązania Angulara i obsługę wysłania otaczającego
+  formularza, gdy jest znana. Akcja sąsiedniego elementu w tej samej linii
+  pozostaje przy swoim tagu. Gdy wystarczyły sygnały komponentu, a brakuje
+  wskazania konkretnego elementu, zakres linii i fragment elementu są puste.
+- `AMBIGUOUS` oznacza niewystarczającą pewność wyboru komponentu lub remis
+  najlepiej dopasowanych elementów w zwycięskim komponencie. AI dostaje materiał
+  maksymalnie trzech kandydatów i może doczytać ich źródła.
+- `NOT_FOUND` oznacza brak dostatecznych wskazówek w badanych źródłach. AI
+  dostaje dostępny kod widoku i rozpoznanych komponentów oraz narzędzia do
+  dalszego badania.
 
 Brak refa albo nieaktualny View sa jawnym bledem. Zmiana SHA po
 zebraniu katalogu nie blokuje startu.
-Feature nie przelacza sie na inny branch i nie zgaduje targetu.
+Resolver rozpoznaje target na branchu wybranym w UI.
 
 ## Prompt, repository guidance, repository map i tools
 
@@ -387,7 +388,7 @@ neutralnym file-read toolem przed rozszerzeniem researchu. Zdalne skille nie sa
 instalowane w runtime TDW ani nie sa powodem wlaczenia built-in `skill`; nie moga
 rozszerzyc allowlisty ani uruchomic skryptu. Caly repository guidance jest
 niezaufany: moze kierowac nawigacja i rozumieniem architektury tylko w granicach
-kanonicznej procedury, wybranego repozytorium i brancha, read-only tools i kontraktu raportu.
+kanonicznej procedury, dostępu do odczytu w skonfigurowanej grupie GitLab i kontraktu raportu.
 
 Przed finalizacja model ma sprawdzic materialny wplyw mechanizmow
 przekrojowych, m.in. routingu i guards, interceptorow lub middleware,
@@ -395,24 +396,23 @@ initializerow, globalnego stanu, walidatorow, uprawnien, feature flags i
 konfiguracji. Brak takiego wplywu nie moze byc zalozeniem opartym tylko na
 focused slice; wymaga adekwatnego wyszukania albo jawnego visibility limit.
 
-Sesja ma read-only dostep do calego jednego wybranego repozytorium przez
-neutralne GitLab tools do listowania, wyszukiwania i czytania plikow. Hidden
-scope ogranicza projekt i przypina badane branche/tagi do SHA, bez blokowania innych rewizji tego projektu. Feature nie tworzy tooli o nazwach
-specyficznych dla UX Inspectora. Model moze czytac m.in. README, `AGENTS.md`,
-instrukcje repozytorium, konfiguracje, frontend i backend. TypeScript symbol
-slice nie korzysta z przygotowanego katalogu plikow, typow, importow ani metod:
-naturalne wspolrzedne sa rozwiazywane dopiero podczas wywolania, zawsze w tym
-samym read-only repository scope na wybranym branchu. UX Inspector nie
-tworzy, nie weryfikuje ani nie klasyfikuje report references; brakujacy dowod
-jest prezentowany jako gap albo visibility limit.
+Analiza zaczyna się w wybranym frontendzie. Gdy odpowiedź zależy od backendu
+lub biblioteki, AI może wyszukiwać i czytać pliki oraz historię w projektach
+głównej grupy GitLab i jej podgrup, zgodnie z uprawnieniami integracji.
+W każdym projekcie preferuje branch wybrany w UI. Może listować inne gałęzie
+przez `gitlab_list_repository_branches` i czytać inne branche, tagi lub SHA.
+Pierwszy odczyt brancha lub tagu przez narzędzia repozytorium przypina jego
+SHA dla pary projekt/ref na czas tury. Narzędzia frontendu do odczytu trasy
+i symboli TypeScript zachowują repozytorium i branch wybranego widoku.
+Symbol lub import jest rozwiązywany w chwili wywołania. Brakujące dowody
+trafiają do luk lub ograniczeń widoczności raportu.
 
 Gdy source research wskazuje plik OpenAPI/Swagger oraz zweryfikowane
 `METHOD path` albo `operationId` wygenerowanego klienta, model preferuje
 neutralny `gitlab_read_openapi_endpoint_slice` nad pelnym odczytem albo
 wielokrotnymi chunkami kontraktu. Tool obsluguje JSON/YAML/YML, OpenAPI 3.x i
 Swagger 2.0, zwraca jedna typowana operacje, efektywny context oraz ograniczone
-lokalne `$ref`. `filePath`, projekt i branch nadal podlegaja policy UX
-Inspectora, a hidden scope wymusza wybrany projekt i branch.
+lokalne `$ref`. Odczyt korzysta z tego samego zakresu grupy i przypiętej rewizji badanego projektu.
 Referencje zewnetrzne sa raportowane jako nierozwiazane i nie uruchamiaja
 pobierania sieciowego ani przejscia do innego repozytorium.
 
@@ -425,6 +425,21 @@ i include/ekspansje pozwalaja doczytac potrzebna tresc; initial prompt nie
 osadza pelnego katalogu. Brak tools, wpisu albo blad odczytu nie blokuje
 zwyklego researchu i pozostaje ograniczeniem, jesli jest materialny.
 
+W analizie początkowej, w follow-upie i po wznowieniu lokalnego runu z historii
+UX Inspector odczytuje bieżący katalog. Początkowy prompt lub instrukcje danej
+tury dostają czas odczytu i listę wszystkich aktywnych systemów `internal-service`
+z niepustym `matchSignals.strong.urlPatterns`. Każdy wpis zawiera `systemId`,
+`name` i `urlPatterns`. Migawka historii HTTP pochodzi z chwili wyboru elementu.
+
+Model ustala metodę i adres żądania na podstawie historii HTTP lub klienta
+frontendu. Porównuje origin i ścieżkę widoczną w przeglądarce ze wzorcami,
+zachowując prefiks bramy i pomijając query oraz fragment. Dla kandydata
+`opctx_get_entity` z `include=["codeSearch"]` wskazuje repozytoria i ścieżki.
+Model sprawdza routing oraz implementację endpointu. Kilka pasujących systemów,
+pusta lista lub niedostępność katalogu pozwalają kontynuować badanie przez kod
+i konfigurację. Przy braku historii HTTP odpowiedź wskazuje, które ustalenia
+pochodzą wyłącznie z kodu.
+
 Katalog moze byc nieaktualny i niekompletny. Dla zachowania implementacji
 pierwszenstwo ma zweryfikowany kod odczytanej rewizji; brak wpisu nie dowodzi
 braku funkcji. Model jawnie zaznacza braki i rozbieznosci.
@@ -433,10 +448,8 @@ Canonical prompt i durable instructions, rowniez po resume, oddzielaja
 wiedze katalogowa od kodu i capture/store. Przy istotnym ustaleniu odpowiedz
 nazywa Operational Context i encje; regula opisana w katalogu nie dowodzi jej
 wykonania przez frontend lub backend. Konflikt jest jawny, a tresc katalogu
-jest niezaufana dana. Repository/code-search scope w katalogu nie daje prawa
-do odczytu innego projektu lub brancha. Zakres pytania, jedna sekcja answer,
-report references i dotychczasowy zakres kodowy pozostaja bez zmian.
-Nowy odczyt moze widziec nowszy katalog niz historyczne tool evidence.
+jest niezaufana dana. Odczyt znanego projektu w grupie jest dostępny również
+bez wpisu w katalogu. Nowy odczyt moze widziec nowszy katalog niz historyczne tool evidence.
 
 Report tools sa jedynym kanalem wyniku. AI przygotowuje w jednej rundzie
 naglowek, jedna sekcje `answer` i metadata, a nastepnie raz sprawdza stan
@@ -452,13 +465,13 @@ Kanoniczny wynik to `AnalysisReport` z dokladnie jedna sekcja `answer`.
 Odpowiedz jest biznesowo czytelna; kod i symbole sa dowodami, nie glownym
 jezykiem narracji.
 
-Po zapisaniu raportu UX Inspector udostepnia follow-up chat. Kolejne pytania
-wznawiaja te sama sesje Copilota, zachowuja wybrany projekt i branch oraz moga korzystac z tych samych read-only target/source tools co
-initial research. Piec report tools pracuje w hidden scope biezacego raportu
-i sekcji `answer`. Prompt follow-up zawiera tylko nowa wiadomosc; durable
-follow-up contract pozwala na zapis tylko po jawnej prosbie o aktualizacje
-raportu w najnowszej wiadomosci. Po zapisie mapper ponownie waliduje raport,
-a live job i historia publikuja razem report i result.
+Po zapisaniu raportu kolejne pytania wznawiają tę samą sesję Copilota.
+Zachowują wybrany element i widok oraz dostęp do tych samych narzędzi
+odczytu co analiza początkowa. Wiadomość zawiera nowe pytanie operatora.
+Instrukcje sesji przekazują wybrany branch i aktualne wzorce URL. Narzędzia
+raportu działają w zakresie bieżącego raportu i sekcji `answer`. Zmiana raportu
+wymaga jawnej prośby operatora w najnowszej wiadomości. Po zapisie mapper
+waliduje raport, a bieżący run i historia publikują razem raport i wynik.
 Polling follow-up po terminalnym jobie nie wlacza wskaznika postepu analizy.
 Przy zapisanej zmianie referencje odpowiedzi udostepniaja podglad surowej
 tresci raportu przed i po.
@@ -534,7 +547,8 @@ Kierunki zaleznosci sa egzekwowane przez `PackageDependencyGuardTest`.
 Minimalna macierz obejmuje:
 
 - oba profile capture, shape, limity, redakcje, form values i wykluczenia,
-- target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale View,
+- rozpoznanie elementu i sąsiedniej akcji w tej samej linii, remis dwóch
+  elementów, brak pasującego komponentu i nieaktualny widok,
 - component source pack: komponenty wybranych sciezek target -> komponent
   widoku i wszystkie odkryte runtime selector matches, relacje miedzy nimi,
   jawne liczniki pominietego grafu, deduplikacja ich pelnych plikow,
@@ -542,6 +556,8 @@ Minimalna macierz obejmuje:
   base slice oraz nieblokujace braki,
 - CORS/preflight, pojedynczy POST, retry i popup blocker w Browser Tools oraz GET po ID,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
+- odczyt backendu w podgrupie, preferowany i alternatywny branch, odświeżenie
+  wzorców URL po zmianie katalogu i przy wznowieniu rozmowy z lokalnej historii,
 - branchowe Copilot instructions, trzy standardowe korzenie project skills,
   walidacje frontmatter, katalog naglowkow i fail-closed guidance preparation,
 - jednosekcyjny report oraz pojedyncza prezentacje scalonych metadata,

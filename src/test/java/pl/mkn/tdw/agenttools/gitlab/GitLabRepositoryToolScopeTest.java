@@ -38,7 +38,7 @@ class GitLabRepositoryToolScopeTest {
         verifyNoInteractions(port);
     }
 
-    @Test void selectedProjectScopePinsEveryRefAndStillRejectsOtherProjects() {
+    @Test void branchScopePinsEachProjectAndRefIndependently() {
         var port = mock(GitLabRepositoryRevisionPort.class);
         var scope = GitLabRepositoryToolScope.forBranch("CRM", "portal", "main");
         when(port.resolveRevision("CRM", "portal", "main")).thenReturn(
@@ -49,8 +49,12 @@ class GitLabRepositoryToolScopeTest {
         assertThat(target.responseCommitId()).isEqualTo(FIRST);
         assertThat(scope.recordRead(target, "src/app.ts")).isEqualTo("gitlab:CRM/portal@" + FIRST + ":src/app.ts");
         assertThat(scope.resolve("portal", "release", port).readRef()).isEqualTo(SECOND);
-        assertThatThrownBy(() -> scope.resolve("other", "main", port)).isInstanceOf(IllegalArgumentException.class);
-        verify(port, never()).resolveRevision("CRM", "other", "main");
+        when(port.resolveRevision("CRM", "services/contacts", "main")).thenReturn(
+                new GitLabRepositoryRevision("CRM", "services/contacts", "main", THIRD, null));
+        assertThat(scope.resolve("CRM/services/contacts", "main", port).readRef()).isEqualTo(THIRD);
+        assertThat(scope.resolve("services/contacts", "main", port).readRef()).isEqualTo(THIRD);
+        verify(port, times(1)).resolveRevision("CRM", "services/contacts", "main");
+        assertThatThrownBy(() -> scope.resolve("../other", "main", port)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test void continuationRestoresAdditionalRefsOfComparedProjectWithoutRepinning() {

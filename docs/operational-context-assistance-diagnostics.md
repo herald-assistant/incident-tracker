@@ -66,6 +66,13 @@ scope'ów GitLaba. Nierozpoznany glossary ID pozostaje jawną luką wiedzy.
   nie potwierdzają roli repozytorium. `BLOCKED` oznacza brak zestawu gotowego
   do review albo blokadę przygotowania; `PARTIAL` wskazuje ograniczenia przy
   istniejących propozycjach.
+- **Wpisany wzorzec URL nie pojawia się w UX Inspectorze.** W podglądzie
+  zmiany systemu sprawdź całe pole `matchSignals`. Wartość `after` powinna
+  zawierać nowy adres w `strong.urlPatterns` i dotychczasowe sygnały.
+  Po zatwierdzeniu zapisu sprawdź typ `internal-service` i status `active`
+  na karcie systemu. Nowa analiza lub kolejna wiadomość follow-up pobiera
+  aktualny katalog. Przy porównaniu z historią HTTP użyj adresu z przeglądarki
+  wraz z prefiksem bramy, pomijając query i fragment.
 - **Frontend nie przechodzi walidacji.** Sprawdź jawny wybór
   `repositoryFacts.systemSubtype` operatora. Dla `frontend` draft musi zawierać
   `systemSubtype: frontend`, `repositoryType: frontend` oraz scope tego systemu

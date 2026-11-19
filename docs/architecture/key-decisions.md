@@ -520,10 +520,10 @@ publiczny kontrakt:
   `UiExplorerResultResponse`, waliduje source references wobec deterministic
   context i captured tool evidence oraz zachowuje poprawne sekcje, gdy
   pojedyncza sekcja jest niekompletna.
-- UX Inspector dopuszcza dokladnie jedna sekcje `answer`, waliduje referencje
-  wobec initial target context albo plikow rzeczywiscie odczytanych z
-  wybranego repozytorium na wybranym branchu i wymaga jawnego evidence gap, gdy
-  odpowiedz nie ma source reference.
+- UX Inspector zapisuje odpowiedź w jednej sekcji Markdown `answer`. AI
+  uzasadnia wnioski obserwacją z przeglądarki i odczytanym kodem frontendu
+  lub backendu. Mapper pozostawia `sourceReferences` puste, a do ograniczeń
+  wyniku dołącza luki z raportu i ograniczenia rozpoznania elementu.
 
 UI Explorer i UX Inspector nie posiadaja JSON fallbacku ani parsera finalnej
 odpowiedzi. Brak zapisanego raportu jest bledem runu, a finalna proza z
@@ -1298,14 +1298,18 @@ wybranym branchu. Brak targetu jest jawna luka
 i nie zatrzymuje AI. Wynik ma jedna sekcje answer. Import/export UX
 obsluguje tylko v1; nie ma legacy continuation ani starych endpointow.
 
-## 31. UI Explorer i UX Inspector czytaja wybrany branch przez caly run
+## 31. Branch wybrany w UI określa źródło widoku
 
 Katalog widokow jest wskazowka wyboru i zawiera `dataCollectedAt`. Cache hit
 zachowuje date zebrania, a refresh tworzy nowy katalog. Start ponownie szuka
-widoku na wybranym branchu bez porownania SHA. Initial research tools i
-follow-up po restarcie uzywaja tego samego brancha jako refa, bez przypinania
-commita. Nie gwarantuje to jednego snapshotu kodu ani najnowszego HEAD przy
-cache hit. UI pokazuje `Data:` przy `View` i nie prezentuje SHA.
+widoku na wybranym branchu bez porownania SHA. UI Explorer używa tego brancha
+jako refa także po wznowieniu. UI pokazuje `Data:` przy `View`.
+
+W UX Inspectorze narzędzia frontendu zachowują współrzędne wybranego widoku.
+Narzędzia repozytorium mogą czytać dowolny projekt w skonfigurowanej grupie
+i jej podgrupach. Branch z UI jest preferowany w każdym projekcie. Odczyt
+innej gałęzi, tagu lub commita jest dozwolony. Pierwszy odczyt przypina
+branch lub tag do SHA niezależnie dla każdej pary projekt/ref w danej turze.
 
 Neutralny `GitLabRepositoryToolScope` utrzymuje osobny tryb pinned dla
 Operational Context Assistance oraz wariant wielu przypiętych rewizji dla

@@ -1,6 +1,7 @@
 package pl.mkn.tdw.integrations.gitlab.contract.frontend;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 public record GitLabFrontendReachabilityComponent(
         String componentId,
@@ -25,6 +26,17 @@ public record GitLabFrontendReachabilityComponent(
         boolean truncated,
         List<String> limitations
 ) {
+    private static final Pattern SELECTOR_ELEMENT = Pattern.compile("(?:^|,)\\s*([A-Za-z][A-Za-z0-9_-]*)");
+
+    public static boolean selectorMatchesTag(String selectors, String tag) {
+        if (selectors == null || tag == null) return false;
+        var elements = SELECTOR_ELEMENT.matcher(selectors);
+        while (elements.find()) {
+            if (tag.equalsIgnoreCase(elements.group(1))) return true;
+        }
+        return false;
+    }
+
     public GitLabFrontendReachabilityComponent {
         templateBindings = templateBindings != null ? List.copyOf(templateBindings) : List.of();
         entrySymbols = entrySymbols != null ? List.copyOf(entrySymbols) : List.of();

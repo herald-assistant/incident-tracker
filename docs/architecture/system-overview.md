@@ -220,11 +220,11 @@ context na wybranym branchu i klasyfikuje wynik jako `RESOLVED`, `AMBIGUOUS` alb
 procedure w prompcie, session-bound target refs, waskie frontend slice tools,
 komplet nazw sciezek pierwszych czterech poziomow, pelna tresc obecnego
 repository-wide Copilot instructions i katalog naglowkow project skills oraz
-neutralne GitLab navigation/search/read tools dla calego wybranego repozytorium
-pod branchowa policy. Model musi doczytac materialny project skill i sprawdzic
-mechanizmy przekrojowe przed wnioskiem. Repository scope nie korzysta z
-Operational Context `pathPrefixes` i nie ma feature-specific limitu liczby
-wywolan; inny projekt lub branch jest odrzucany. Sesja ma
+neutralne GitLab navigation/search/read tools dla projektów w skonfigurowanej
+głównej grupie i podgrupach. Model musi doczytac materialny project skill i sprawdzic
+mechanizmy przekrojowe przed wnioskiem. Wzorce URL z Operational Context
+pomagają znaleźć backend, a branch z UI jest preferowany dla wszystkich projektów.
+Sesja ma
 `skillsEnabled=false` bez store'a; store wlacza skill grounding, sama historia
 HTTP nie zmienia tego ustawienia. Zdalne skille nie sa instalowane w TDW. Initial
 report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest

@@ -106,7 +106,7 @@ public final class UxInspectorTestFixtures {
                 "FILE " + component.templatePath() + "#L1\n" + component.templateContent(),
                 List.of(component.templatePath(), component.sourcePath()));
         return new UxInspectorTargetContext("crm-agent-portal", "CRM Agent Portal",
-                new UxInspectorSourceScope("CRM", "crm-ui", "main", List.of("src/app")),
+                new UxInspectorSourceScope("CRM", "CRM", "crm-ui", "main", List.of("src/app")),
                 new UxInspectorViewIdentity(VIEW_ID, "Create contact", "/contacts/new"),
                 new UxInspectorSourceRevision("main"), UxInspectorTargetResolutionStatus.RESOLVED,
                 List.of(candidate), new UxInspectorSourceBinding(component.componentId(), component.symbol(),

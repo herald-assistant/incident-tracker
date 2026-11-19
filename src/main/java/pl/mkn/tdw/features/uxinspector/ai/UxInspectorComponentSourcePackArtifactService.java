@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Builds a best-effort, branch-scoped source pack for selected target-to-view paths
@@ -39,7 +38,6 @@ public class UxInspectorComponentSourcePackArtifactService {
     static final String SCHEMA = "tdw.ux-inspector-component-source-pack";
     static final int VERSION = 1;
     private static final int MAX_INHERITED_SLICE_CHARACTERS = 12_000;
-    private static final Pattern ELEMENT_SELECTOR_PREFIX = Pattern.compile("^([A-Za-z][A-Za-z0-9_.:-]*)");
     private static final String INHERITED_SLICE_BOUNDARY_MARKER =
             "\n// ... direct inherited slice bounded by UX Inspector ...";
 
@@ -91,7 +89,7 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (runtimeBoundaries != null) {
             for (var boundary : runtimeBoundaries) {
                 components.stream()
-                        .filter(component -> selectorMatchesBoundary(component.selector(), boundary))
+                        .filter(component -> GitLabFrontendReachabilityComponent.selectorMatchesTag(component.selector(), boundary))
                         .map(GitLabFrontendReachabilityComponent::componentId)
                         .forEach(runtimeMatchedIds::add);
             }
@@ -330,7 +328,7 @@ public class UxInspectorComponentSourcePackArtifactService {
             for (var index = 0; index < boundaries.size(); index++) {
                 var boundary = boundaries.get(index);
                 var matches = components.stream()
-                        .filter(component -> selectorMatchesBoundary(component.selector(), boundary))
+                        .filter(component -> GitLabFrontendReachabilityComponent.selectorMatchesTag(component.selector(), boundary))
                         .map(GitLabFrontendReachabilityComponent::componentId).toList();
                 builder.append("- distance=").append(index + 1).append(" tag=").append(boundary)
                         .append(" status=").append(matches.isEmpty() ? "NOT_FOUND_IN_STATIC_GRAPH" : "MATCHED")
@@ -663,14 +661,6 @@ public class UxInspectorComponentSourcePackArtifactService {
         if (!StringUtils.hasText(path)) return false;
         var file = files.get(path.trim().replace('\\', '/'));
         return file != null && file.available();
-    }
-
-    private boolean selectorMatchesBoundary(String selectors, String boundary) {
-        if (!StringUtils.hasText(selectors) || !StringUtils.hasText(boundary)) return false;
-        return java.util.Arrays.stream(selectors.split(","))
-                .map(String::trim)
-                .map(ELEMENT_SELECTOR_PREFIX::matcher)
-                .anyMatch(matcher -> matcher.find() && matcher.group(1).equalsIgnoreCase(boundary));
     }
 
     private String text(String value) {

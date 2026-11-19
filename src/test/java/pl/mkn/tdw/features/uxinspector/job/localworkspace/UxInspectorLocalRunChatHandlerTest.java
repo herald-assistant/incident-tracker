@@ -3,7 +3,17 @@ package pl.mkn.tdw.features.uxinspector.job.localworkspace;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.features.uxinspector.ai.*;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatRequest;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpChatService;
+import pl.mkn.tdw.features.uxinspector.ai.chat.UxInspectorFollowUpPromptService;
+import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolver;
+import pl.mkn.tdw.features.uxinspector.job.UxInspectorFollowUpReportProjection;
+import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper;
 import pl.mkn.tdw.features.uxinspector.contract.UxInspectorResultResponse;
 import pl.mkn.tdw.features.uxinspector.job.UxInspectorAnalysisRequest;
 import pl.mkn.tdw.features.uxinspector.job.export.UxInspectorExportEnvelope;
@@ -16,9 +26,46 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.*;
 
 class UxInspectorLocalRunChatHandlerTest {
+    @Test
+    void restoredRunUsesTheSameFollowUpResearchAndOriginalSnapshots() {
+        var mapper = JsonMapper.builder().findAndAddModules().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
+        var snapshot = completedSnapshot("ux-crm-contacts");
+        var continuation = new LocalAnalysisRunContinuation(true, "CRM", null, null, "crm-session", null, null);
+        var record = LocalAnalysisRunRecord.v1(mapper.valueToTree(UxInspectorExportEnvelope.from(snapshot, Instant.now())), continuation)
+                .withStoreSnapshot(new LocalAnalysisRunStoreSnapshot(mapper.createObjectNode(), Instant.EPOCH, "CRM", 0))
+                .withHttpHistorySnapshot(pl.mkn.tdw.common.HttpHistoryTestFixtures.snapshot(mapper.createArrayNode()));
+        var index = new LocalAnalysisRunIndexEntry(snapshot.jobId(), LocalAnalysisRunRecord.SCHEMA, 1,
+                "runs/ux-crm-contacts/run.json", "ux-inspector", "CRM Contacts", "COMPLETED",
+                snapshot.createdAt(), snapshot.updatedAt(), snapshot.completedAt());
+        var resolver = mock(UxInspectorTargetResolver.class);
+        when(resolver.resolve("crm-agent-portal", "main", VIEW_ID, capture())).thenReturn(targetContext());
+        var chat = mock(UxInspectorFollowUpChatService.class);
+        when(chat.chat(any(), any(), any())).thenReturn(new CopilotExecutionResult(
+                "Backend sprawdza numer telefonu.", null, "crm-session", snapshot.report()));
+        var handler = new UxInspectorLocalRunChatHandler(mapper,
+                pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureTestSupport.envelopes(mapper),
+                resolver, new UxInspectorFollowUpPromptService(), chat, new UxInspectorFollowUpReportProjection(new UxInspectorReportMapper()),
+                new CopilotRunAuthMapper(), mock(CopilotAccessTokenResolver.class));
+
+        var result = handler.continueRun(index, record, "Dlaczego backend odrzuca numer telefonu?");
+
+        var request = ArgumentCaptor.forClass(UxInspectorFollowUpChatRequest.class);
+        verify(chat).chat(request.capture(), any(), any());
+        assertThat(request.getValue().copilotSessionId()).isEqualTo("crm-session");
+        assertThat(request.getValue().storeRunId()).isEqualTo(snapshot.jobId());
+        assertThat(request.getValue().context().sourceScope().mainGroup()).isEqualTo("CRM");
+        assertThat(result.record().httpHistorySnapshot()).isEqualTo(record.httpHistorySnapshot());
+        assertThat(result.record().storeSnapshot()).isEqualTo(record.storeSnapshot());
+        assertThat(result.record().exportEnvelope().at("/payload/job/report")).isEqualTo(record.exportEnvelope().at("/payload/job/report"));
+        assertThat(result.record().exportEnvelope().at("/payload/job/chatMessages/1/content").asText()).isEqualTo("Backend sprawdza numer telefonu.");
+    }
+
     @Test
     void restoresValidCaptureAndRejectsCorruptCaptureInContinuationAndStoredExport() {
         var mapper = JsonMapper.builder().findAndAddModules()

@@ -105,6 +105,10 @@ Minimum useful entry:
   process and integration links are available through the effective map,
 - `ownership` only when there is durable system-level accountability.
 
+When the operator or source identifies a browser-facing address, add the
+environment's URL glob to `matchSignals.strong.urlPatterns` on the internal
+system. A worker or a service with no known public prefix can omit this signal.
+
 Do not list repositories on a system. Repository navigation for a system goes
 through one system-targeted entry in `code-search-scopes.yml` when the system
 requires code discovery. An external SaaS or partner system with no accessible

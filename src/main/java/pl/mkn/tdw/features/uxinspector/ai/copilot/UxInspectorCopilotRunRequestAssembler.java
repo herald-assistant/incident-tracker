@@ -46,7 +46,7 @@ public class UxInspectorCopilotRunRequestAssembler {
         var access = UxInspectorCopilotToolAccessPolicy.from(registered);
         var sessionConfig = new CopilotSessionConfigRequest(toolContext.copilotSessionId(), access.enabledTools(),
                 access.availableToolNames(), new CopilotModelSelection(request.model(), request.reasoningEffort()),
-                "Use only enabled UX Inspector target/source/store/HTTP-history/report tools and read-only Operational Context tools. Code access remains in the selected branch scope.",
+                "Use only enabled UX Inspector target/source/store/HTTP-history/report tools and read-only Operational Context tools.",
                 !storeCallbacks.isEmpty())
                 .withDurableSystemInstructions(UxInspectorDurableSystemInstructions.render(preparation));
         var initialReport = reportFactory.create((String) toolContext.hiddenContext().get(AgentToolContextKeys.REPORT_ID), context);

@@ -51,9 +51,7 @@ public class GitLabRepositoryNavigationMcpTools {
 
     @Tool(name = LIST_REPOSITORY_BRANCHES, description = """
             List up to 100 GitLab branches, including the default branch marker, for a project
-            inside the configured main group. Use this to discover a branch before inspecting
-            another project; never guess its branch. The operator-selected project remains
-            bound to the operator-selected branch for all content tools.
+            inside the configured main group, including subgroups.
             """)
     public BranchesResult listRepositoryBranches(
             @ToolParam(description = "Project path relative to the configured GitLab group, including subgroups.") String projectName,
@@ -78,13 +76,11 @@ public class GitLabRepositoryNavigationMcpTools {
     @Tool(name = LIST_REPOSITORY_TREE, description = """
             Show up to four levels of directory and file paths beneath path in a GitLab project.
             projectName is relative to the configured main group and may include subgroups.
-            Use the operator-selected branch for the selected project. A different project in the
-            same group can be inspected when it is needed to verify a cross-repository relationship.
             Results contain names only; read a file before citing its contents.
             """)
     public TreeResult listRepositoryTree(
             @ToolParam(description = "Project path relative to the configured GitLab group, including subgroups.") String projectName,
-            @ToolParam(description = "GitLab branch. Use the operator-selected branch for the selected project.") String branchRef,
+            @ToolParam(description = "GitLab branch, tag or commit to inspect.") String branchRef,
             @ToolParam(description = "Relative directory path; empty string starts at repository root.", required = false) String path,
             @ToolParam(description = "Optional continuation cursor for the same path.", required = false) String cursor,
             @ToolParam(description = "Krótki powód przeglądania drzewa po polsku.") String reason,
@@ -106,7 +102,7 @@ public class GitLabRepositoryNavigationMcpTools {
             """)
     public FilePathsResult listRepositoryFiles(
             @ToolParam(description = "Project path relative to the configured GitLab group, including subgroups.") String projectName,
-            @ToolParam(description = "GitLab branch. Use the operator-selected branch for the selected project.") String branchRef,
+            @ToolParam(description = "GitLab branch, tag or commit to inspect.") String branchRef,
             @ToolParam(description = "Optional relative directory prefix.", required = false) String pathPrefix,
             @ToolParam(description = "Optional nextCursor returned for this project, branch and prefix.", required = false) String afterPath,
             @ToolParam(description = "Krótki powód listowania po polsku.") String reason,
@@ -135,7 +131,7 @@ public class GitLabRepositoryNavigationMcpTools {
             """)
     public FilePathsResult searchRepositoryFiles(
             @ToolParam(description = "Project path relative to the configured GitLab group, including subgroups.") String projectName,
-            @ToolParam(description = "GitLab branch. Use the operator-selected branch for the selected project.") String branchRef,
+            @ToolParam(description = "GitLab branch, tag or commit to inspect.") String branchRef,
             @ToolParam(description = "Literal search term, 2-120 printable characters.") String query,
             @ToolParam(description = "Optional relative directory prefix.", required = false) String pathPrefix,
             @ToolParam(description = "Optional nextCursor from a previous partial search with the same prefix.", required = false) String afterPath,

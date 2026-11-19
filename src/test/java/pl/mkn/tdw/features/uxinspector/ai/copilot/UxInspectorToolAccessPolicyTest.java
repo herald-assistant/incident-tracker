@@ -20,6 +20,7 @@ class UxInspectorToolAccessPolicyTest {
         UxInspectorToolNames.ALL.forEach(name -> registered.add(tool(name)));
         registered.add(tool(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE));
         registered.add(tool(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE));
+        registered.add(tool(GitLabToolNames.LIST_REPOSITORY_BRANCHES));
         registered.add(tool(GitLabToolNames.LIST_REPOSITORY_TREE));
         registered.add(tool(GitLabToolNames.LIST_REPOSITORY_FILES));
         registered.add(tool(GitLabToolNames.SEARCH_REPOSITORY_FILES));
@@ -39,6 +40,7 @@ class UxInspectorToolAccessPolicyTest {
         var policy = UxInspectorCopilotToolAccessPolicy.from(registered);
 
         assertThat(policy.followUpResearchAvailable()).isTrue();
+        assertThat(policy.availableToolNames()).contains(GitLabToolNames.LIST_REPOSITORY_BRANCHES);
         assertThat(policy.availableToolNames()).containsAll(UxInspectorToolNames.ALL);
         assertThat(policy.availableToolNames()).containsAll(CopilotReportToolNames.allToolNames());
         assertThat(policy.availableToolNames()).containsAll(catalogTools)

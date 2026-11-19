@@ -40,6 +40,9 @@ import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabTypeScriptSymbolSli
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileContent;
+import pl.mkn.tdw.integrations.gitlab.contract.GitLabRepositoryFileCandidate;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -183,6 +186,42 @@ class GitLabFrontendScreenReachabilityServiceTest {
                         || dependency.kind() == GitLabFrontendReachabilityDependencyKind.BACKEND_CLIENT);
         assertThat(result.limitations()).noneMatch(value -> value.contains("runtime component boundaries"));
         verify(symbolSliceService, times(3)).readSymbolSlice(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldFindTheRuntimeBoundaryOutsideTheSeedWithCompactDecoratorSyntax(boolean throughImport) {
+        var selection = mock(GitLabFrontendScreenSelectionService.class);
+        var slices = mock(GitLabTypeScriptSymbolSliceService.class);
+        var repository = mock(GitLabRepositoryPort.class);
+        var context = context();
+        var root = """
+                import { CrmCustomerFormComponent } from './customer-form.component';
+                @Component({selector:'crm-customer-page', %s template:'<crm-customer-form />'})
+                export class CrmCustomerPageComponent {}
+                """.formatted(throughImport ? "imports:[CrmCustomerFormComponent]," : "");
+        when(selection.select(any())).thenReturn(new GitLabFrontendScreenReachabilitySeed(
+                context.scope(), context.sourceRevision(), context.screenNode(), context.effectiveRouteChain(),
+                List.of(), context.graphCoverage(), List.of(source(ROOT_PATH, GitLabFrontendSourceRole.VIEW_COMPONENT, root)),
+                List.of()));
+        var child = "@Component({selector:'crm-customer-form',template:'<div class=\"tile\"></div>'}) "
+                + "export class CrmCustomerFormComponent {}";
+        when(repository.readFile(scope().group(), scope().projectName(), scope().ref(), CHILD_PATH, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(scope().group(), scope().projectName(), scope().ref(),
+                        CHILD_PATH, child, false));
+        if (!throughImport) {
+            when(repository.searchRepositoryFilesByContent(scope().group(), scope().projectName(), scope().ref(),
+                    List.of("'crm-customer-form"), 10)).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                    scope().group(), scope().projectName(), scope().ref(), CHILD_PATH, "selector", 1)));
+        }
+        when(slices.readSymbolSlice(any())).thenAnswer(invocation -> slice(invocation.getArgument(0)));
+
+        var graph = new GitLabFrontendScreenReachabilityService(selection, slices, repository)
+                .buildFocused(request(), List.of("crm-customer-form", "crm-customer-page"));
+
+        assertThat(graph.componentLevels().stream().flatMap(level -> level.components().stream()))
+                .extracting(GitLabFrontendReachabilityComponent::symbol)
+                .containsExactly("CrmCustomerPageComponent", "CrmCustomerFormComponent");
     }
 
     @Test

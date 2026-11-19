@@ -10,6 +10,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorSystemUrlPatterns;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorComponentSourcePackArtifact;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorComponentSourcePackArtifactService;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryGuidanceArtifactService;
@@ -57,7 +58,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
         var preparation = new UxInspectorPromptPreparationService(
                 new ObjectMapper().findAndRegisterModules(), treeArtifactService, guidanceArtifactService,
-                componentPackService)
+                componentPackService, mock(UxInspectorSystemUrlPatterns.class))
                 .prepare(request, targetContext);
         var assembler = new UxInspectorCopilotRunRequestAssembler(
                 toolFactory,
@@ -85,8 +86,8 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                         GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
                         GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE)
                 .containsAll(CopilotReportToolNames.initialToolNames())
-                .doesNotContain("skill", GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
-                        GitLabToolNames.LIST_REPOSITORY_BRANCHES);
+                .contains(GitLabToolNames.LIST_REPOSITORY_BRANCHES)
+                .doesNotContain("skill", GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES);
         assertThat(assembly.toolAccessPolicy().sourceToolsAvailable()).isTrue();
         assertThat(assembly.toolAccessPolicy().reportToolsAvailable()).isTrue();
         assertThat(assembly.repositoryToolScope().selectedProject()).isEqualTo("crm-ui");
@@ -120,6 +121,7 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 UxInspectorToolNames.READ_TARGET_SLICE,
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                GitLabToolNames.LIST_REPOSITORY_BRANCHES,
                 GitLabToolNames.LIST_REPOSITORY_TREE,
                 GitLabToolNames.LIST_REPOSITORY_FILES,
                 GitLabToolNames.SEARCH_REPOSITORY_FILES,

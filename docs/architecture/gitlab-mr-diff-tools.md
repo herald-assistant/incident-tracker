@@ -36,11 +36,11 @@ odpowiedz. Kontynuacja zwraca offset pliku i znaku wewnatrz patcha; dotyczy
 tej samej wersji i tych samych filtrow sciezek. Brak patcha nie potwierdza
 braku zmian: moze oznaczac binary, metadata-only, collapsed albo too-large.
 
-Odczyty oldPath@baseSha i newPath@headSha reuse'uja dotychczasowe file-read
-tools. Feature wybiera allowliste oraz egzekwuje scope dla kazdego rodzaju
-odczytu/research. `GitLabDiffToolScope` waliduje tozsamosc MR i dozwolone
-projekty/SHA; nie zmienia dotychczasowego `GitLabRepositoryToolScope`
-Operational Context Assistance ani branch-scoped UX Inspectora.
+Odczyty `oldPath@baseSha` i `newPath@headSha` korzystają z narzędzi odczytu
+plików. Feature wybiera narzędzia i określa zakres każdego odczytu.
+`GitLabDiffToolScope` sprawdza tożsamość MR oraz dozwolone projekty i SHA.
+Asysta Operational Context i UX Inspector przekazują własny
+`GitLabRepositoryToolScope` do odczytu repozytoriów.
 
 Wyniki sa przechwytywane przez `GitLabToolEvidenceMapper` jako neutralne
 `tool-fetched-diff` z argumentami, powodem, call id i odpowiedzia zawierajaca

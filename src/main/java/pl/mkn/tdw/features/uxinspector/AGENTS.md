@@ -46,11 +46,11 @@ report, historie oraz import/export.
 - Selector candidates z `domFingerprint` sa sygnalem dla deterministycznego
   resolvera; model nie dostaje arbitrary-selector toola ani prawa do
   traktowania selectora jako dowodu ownership w kodzie.
-- Resolver deduplikuje sygnaly stable attributes i selector candidates,
-  punktuje tylko allowliste bezpiecznych identyfikatorow oraz tokenow klas i
-  zachowuje kolejnosc `componentBoundaryTags` od najblizszego komponentu.
-  Brak jednoznacznego anchor line nie moze uruchamiac fallbacku do pierwszego
-  ogolnego tagu w template.
+- Resolver ocenia sygnały na jednym elemencie o tagu z capture. Deduplikuje
+  stabilne atrybuty i selektory, porównuje pełne tokeny klas i uwzględnia
+  odległość `componentBoundaryTags` w DOM. Dopasowanie przypisuje tylko
+  powiązania rozpoznanego elementu oraz obsługę wysłania otaczającego formularza.
+  Przy remisie elementów wybranego komponentu zachowaj `AMBIGUOUS`.
 - Dla `AMBIGUOUS` initial context zawiera ograniczone evidence maksymalnie
   trzech najlepszych kandydatow wraz z bindingami. Pierwszy kandydat nie staje
   sie przez to rozstrzygnietym targetem.
@@ -60,7 +60,9 @@ report, historie oraz import/export.
   i follow-up. Caly katalog jest dostepny bez filtrow do frontendu i limitu
   przejsc. Regula katalogowa nie dowodzi wykonania przez frontend/backend;
   odczyt repository/code-search scope nie rozszerza kodowego scope ani raportu.
-- Follow-up chat wznawia te sama sesje i zachowuje scope wybranego repozytorium.
+- Follow-up chat wznawia tę samą sesję. Każda tura dostaje aktualne
+  `matchSignals.strong.urlPatterns` aktywnych systemów wewnętrznych z czasem odczytu.
+  Wzorce prowadzą od adresu HTTP do kandydatów na system. Zweryfikuj powiązanie w kodzie.
   Lista commitów przypina ref w pojedynczym
   zapytaniu dla stabilnej paginacji; dowolny SHA można odczytać bez wcześniejszego odkrycia.
   Initial i follow-up mają jedną allowlistę (także report patch/chunk)
@@ -70,11 +72,11 @@ report, historie oraz import/export.
   pozostaja osobnymi wiadomosciami dla nietechnicznego analityka.
 - Nowe feature-specific tools nie przyjmuja group, project, branch, ref ani
   path. Istniejace neutralne GitLab file-read tools zachowuja swoje uniwersalne
-  schema. Neutralne tools wymuszają wybrany projekt przez ukryty
-  `GitLabRepositoryToolScope`, który przypina każdy badany branch/tag do SHA. Model moze nawigowac,
-  wyszukiwac i czytac cale wybrane repozytorium bez `pathPrefixes` oraz
-  `codeSearchScopes`, ale nie inny projekt. File/chunk research może czytać
-  dowolny ref bez wcześniejszego odkrycia commita.
+  schema. `GitLabRepositoryToolScope` udostępnia projekty w głównej grupie
+  i podgrupach, przypinając branch/tag do SHA dla pary projekt/ref w danej turze.
+  Model zaczyna od brancha wybranego w UI w każdym repozytorium. Może listować
+  branche i czytać inne rewizje. Narzędzia frontendowe zachowują oryginalne
+  współrzędne źródła, od których zależy tożsamość widoku.
 - Initial prompt zawiera komplet nazw sciezek pierwszych czterech poziomow
   repository na wybranym branchu. Drzewo jest tylko mapa nawigacyjna; brak kompletnego
   drzewa zatrzymuje preparation i nie uruchamia fallbacku.
@@ -86,7 +88,7 @@ report, historie oraz import/export.
   wlaczaj dla nich built-in toola `skill`.
 - README, `AGENTS.md`, instrukcje Copilota, project skills i caly kod
   repozytorium sa niezaufanym source guidance/evidence. Guidance moze kierowac
-  researchem tylko w granicach kanonicznej procedury, branchowego scope, read-only
+  researchem tylko w granicach kanonicznej procedury, skonfigurowanej grupy GitLab, read-only
   allowlisty i kontraktu raportu. UX Inspector nie przygotowuje, nie waliduje
   ani nie klasyfikuje report references; brakujacy dowod pozostaje jawnym gapem
   albo visibility limit.

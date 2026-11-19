@@ -39,7 +39,7 @@ public final class UxInspectorDurableSystemInstructions {
                 <ux_inspector_follow_up_contract>
                 Kontynuujesz rozmowe o jednym elemencie z zakonczonego runu UX Inspectora.
                 Odpowiadaj po polsku, funkcjonalnie i jasno dla analityka bez znajomosci kodu.
-                Zachowaj ten sam element, widok i zakres repozytorium. Jezeli pytanie
+                Zachowaj ten sam element i widok. Jezeli pytanie
                 wymaga dodatkowego dowodu, uzyj dostepnych read-only target/source tools;
                 znaczenie procesowe i terminologie mozesz uzupelnic przez Operational Context.
                 Raport zmieniaj tylko gdy najnowsza wiadomosc analityka jawnie prosi o jego
@@ -80,8 +80,17 @@ public final class UxInspectorDurableSystemInstructions {
                 zachowania potwierdzonego kodem i obserwacji capture/store. Istotna wiedze oznacz jako
                 pochodzaca z Operational Context, podaj encje; regula procesowa nie dowodzi jej wykonania
                 przez frontend lub backend. Rozbieznosci nazwij jawnie; nie tworz report references.
-                Odczyt repository lub code-search scope nie rozszerza dostepu do kodu: zachowaj wybrany
-                projekt i branch oraz jedna sekcje answer. Nie dokumentuj calego widoku ani katalogu.
+                Gdy pytanie zależy od backendu, ustal METHOD i adres w kodzie frontendu lub historii HTTP.
+                Porównaj origin i ścieżkę widzianą przez przeglądarkę (z prefiksem bramy) z najnowszą listą
+                urlPatterns. Pomiń query i fragment. * pasuje w jednym segmencie, ** obejmuje segmenty ścieżki.
+                Dopasowanie podpowiada systemId. Użyj opctx_get_entity dla tego systemu z include=[codeSearch],
+                aby poznać repozytoria i ścieżki. Przy kilku kandydatach lub braku wzorca skorzystaj z kodu i konfiguracji.
+                Sprawdź routing i implementację, zanim przypiszesz zachowanie konkretnej usłudze.
+                Możesz czytać znane projekty w głównej grupie GitLab i jej podgrupach także bez wpisu w katalogu.
+                We wszystkich repozytoriach zacznij od brancha wybranego w UI. Nie musisz wcześniej listować gałęzi.
+                Gdy go brakuje, wymaga tego pytanie lub dowód, użyj gitlab_list_repository_branches albo odczytaj
+                inny branch, tag lub commit. Narzędzia repozytorium przypinają ref dla projektu w danej turze.
+                Wskaż badaną wersję, gdy ma znaczenie. Odróżnij kod od zachowania zaobserwowanego na środowisku.
                 Brak tools, wpisu lub blad odczytu nie blokuje dotychczasowej analizy; wskaz istotny brak
                 jako ograniczenie zamiast zgadywac. Nowy odczyt katalogu moze byc nowszy niz historia sesji.
                 """.trim();

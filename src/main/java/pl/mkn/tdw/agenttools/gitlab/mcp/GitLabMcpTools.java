@@ -837,8 +837,7 @@ public class GitLabMcpTools {
             name = READ_REPOSITORY_FILE,
             description = """
                     Read a file from the GitLab repository in the resolved GitLab group and explicit branchRef.
-                    In a session with a repository scope, the selected project is pinned to the operator's
-                    branch and other projects in the main group are pinned separately. Such reads return
+                    In a session with a repository scope, each project and ref is pinned to a commit. Such reads return
                     a sourceRef only after complete text, size and revision verification.
                     In other sessions, prefer outline/chunk tools before full reads of large files.
                     """

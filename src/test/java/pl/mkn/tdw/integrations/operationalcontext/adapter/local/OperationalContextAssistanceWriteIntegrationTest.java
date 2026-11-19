@@ -4,6 +4,7 @@ import pl.mkn.tdw.integrations.operationalcontext.config.OperationalContextPrope
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalBatchCommand;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogConditionalMutationCommand;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogMutationCommand;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextCatalogQueryService;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.contract.OperationalContextRelationIndex;
@@ -36,6 +37,7 @@ import pl.mkn.tdw.features.operationalcontextassistance.job.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorSystemUrlPatterns;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,6 +59,60 @@ class OperationalContextAssistanceWriteIntegrationTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void inspectorSeesManualAndReviewedUrlPatternsOnlyAfterEachSave() {
+        var testUrl = "https://crm-test.example.com/api/contacts/**";
+        var proposedUrl = "https://crm.example.com/contacts/**";
+        var correctedUrl = "https://crm.example.com/api/contacts/**";
+        var documents = emptyDocuments();
+        documents.put("systems.yml", """
+                schemaVersion: 1
+                catalogKind: operational-context-systems
+                systems:
+                  - id: crm-contacts
+                    name: CRM Contacts
+                    systemType: internal-service
+                    systemSubtype: backend
+                    lifecycleStatus: active
+                    matchSignals: {exact: {serviceNames: [crm-contacts]}}
+                """);
+        var aiResponse = """
+                {"proposals":[{"operation":"UPDATE","entityType":"system","entityId":"crm-contacts",
+                  "changes":[{"path":"matchSignals","basis":"USER_STATEMENT","sourceRefs":["operator:description"],
+                    "reason":"Operator podał adres produkcyjny.","confidence":"HIGH","requiresConfirmation":false,
+                    "before":{"exact":{"serviceNames":["crm-contacts"]},"strong":{"urlPatterns":["%s"]}},
+                    "after":{"exact":{"serviceNames":["crm-contacts"]},"strong":{"urlPatterns":["%s","%s"]}}}],
+                  "confidence":"HIGH","requiresConfirmation":false,"visibilityLimits":[]}],"visibilityLimits":[]}
+                """.formatted(testUrl, testUrl, proposedUrl);
+        var harness = harness("crm-url-patterns", documents, null, aiResponse);
+        var port = new OperationalContextAdapter(harness.store(), new OperationalContextCatalogQueryService());
+        var mapper = JsonMapper.builder().build();
+        var index = new UxInspectorSystemUrlPatterns(port, mapper);
+        assertThat(index.render()).contains("\n[]\n");
+
+        var exact = Map.of("serviceNames", List.of("crm-contacts"));
+        var payload = new LinkedHashMap<>(harness.maintenance().writablePayloadForUpdate("system", "crm-contacts"));
+        payload.put("matchSignals", Map.of("exact", exact, "strong", Map.of("urlPatterns", List.of(testUrl))));
+        harness.maintenance().update(new OperationalContextCatalogMutationCommand("system", "crm-contacts", payload));
+        assertThat(index.render()).contains(testUrl, "CRM Contacts").doesNotContain("serviceNames");
+
+        var started = harness.job().startJob(new OperationalContextAssistanceJobStartRequest(
+                OperationalContextAssistanceMode.IMPROVE_ENTITY, "Dodaj adres " + proposedUrl,
+                new OperationalContextAssistanceJobStartRequest.Target(
+                        OperationalContextAssistanceJobStartRequest.Target.Kind.ENTITY, "system", "crm-contacts", null),
+                null, null, null, null));
+        var corrected = Map.of("exact", exact, "strong", Map.of("urlPatterns", List.of(testUrl, correctedUrl)));
+        var decisions = List.of(new OperationalContextAssistanceProposalDecisionRequest(
+                OperationalContextAssistanceProposalDecisionRequest.Action.APPLY, List.of("matchSignals"),
+                List.of("matchSignals"), Map.of("matchSignals", mapper.valueToTree(corrected))));
+        var preview = harness.job().previewBatch(started.jobId(), new OperationalContextAssistanceBatchReviewRequest(decisions, null));
+        assertThat(preview.valid()).isTrue();
+        assertThat(index.render()).contains(testUrl).doesNotContain(proposedUrl, correctedUrl);
+        harness.job().applyBatch(started.jobId(), new OperationalContextAssistanceBatchReviewRequest(decisions, preview.candidateDigest()));
+        assertThat(harness.maintenance().entity("system", "crm-contacts").payload()).containsEntry("matchSignals", corrected);
+        assertThat(index.render()).contains(testUrl, correctedUrl).doesNotContain(proposedUrl);
+    }
 
     @Test
     void resolvesGlossaryReferencesToTermsCreatedLaterInTheSameBatch() {
@@ -332,6 +388,14 @@ class OperationalContextAssistanceWriteIntegrationTest {
             String directory, Map<String, String> documents,
             Function<OperationalContextCatalogMaintenanceService, List<OperationalContextAssistanceDraft.Proposal>> proposals
     ) {
+        return harness(directory, documents, proposals, "{draft}");
+    }
+
+    private Harness harness(
+            String directory, Map<String, String> documents,
+            Function<OperationalContextCatalogMaintenanceService, List<OperationalContextAssistanceDraft.Proposal>> proposals,
+            String aiResponse
+    ) {
         var properties = new OperationalContextProperties();
         properties.setStorageDirectory(temporaryDirectory.resolve(directory).toString());
         var source = (OperationalContextDocumentSource) () ->
@@ -353,10 +417,12 @@ class OperationalContextAssistanceWriteIntegrationTest {
         var copilot = mock(OperationalContextAssistanceCopilotProvider.class);
         when(copilot.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
-                        new CopilotExecutionResult("{draft}", null), Set.of()));
-        var parser = mock(OperationalContextAssistanceDraftParser.class);
-        when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                proposals.apply(maintenance), List.of()));
+                        new CopilotExecutionResult(aiResponse, null), Set.of()));
+        var parser = new OperationalContextAssistanceDraftParser(mapper, maintenance);
+        if (proposals != null) {
+            parser = mock(OperationalContextAssistanceDraftParser.class);
+            when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(proposals.apply(maintenance), List.of()));
+        }
 
         var collector = mock(OperationalContextGitLabSourceCollector.class);
         when(collector.collect(anyString(), anyString())).thenReturn(new OperationalContextGitLabSourceSnapshot(

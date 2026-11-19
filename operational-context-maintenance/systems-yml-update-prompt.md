@@ -74,6 +74,9 @@ systems:
         serviceNames:
           - crm-contact-service
       strong:
+        urlPatterns:
+          - "https://crm-test.example.com/api/contacts/**"
+          - "https://crm.example.com/api/contacts/**"
         names:
           - CRM Contact Core
     notes:
@@ -131,6 +134,13 @@ deployment and application identities in `matchSignals`.
   All system signal strengths, aliases and `useFor` participate in GitLab
   application matching. Do not preserve unrelated metadata as `weak` signals;
   compare code-scope selection before and after identity changes.
+- For an `internal-service` with a known browser-facing HTTP address, use the
+  optional `matchSignals.strong.urlPatterns`. Record the origin and stable
+  path prefix, including any gateway prefix, for each evidenced environment.
+  For example, `https://crm-test.example.com/api/contacts/**` and
+  `https://crm.example.com/api/contacts/**` need independent support in
+  operator statements or source files. Leave unknown addresses out.
+  When updating the field, carry all other signals into the proposed value.
 - Keep the optional `runtime.configurationDirectory` safe and
   repository-relative. Do not put service or deployment identities in
   `runtime`.

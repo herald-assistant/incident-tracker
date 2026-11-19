@@ -23,6 +23,7 @@ public record UxInspectorCopilotToolAccessPolicy(List<ToolDefinition> enabledToo
             RunHttpHistoryTools.READ,
             GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
             GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+            GitLabToolNames.LIST_REPOSITORY_BRANCHES,
             GitLabToolNames.LIST_REPOSITORY_TREE,
             GitLabToolNames.LIST_REPOSITORY_FILES,
             GitLabToolNames.SEARCH_REPOSITORY_FILES,

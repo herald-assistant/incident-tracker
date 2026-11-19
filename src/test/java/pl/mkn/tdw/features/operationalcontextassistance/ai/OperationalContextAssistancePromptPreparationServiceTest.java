@@ -421,7 +421,7 @@ class OperationalContextAssistancePromptPreparationServiceTest {
 
         assertThat(markdown).startsWith("---").contains("name: operational-context-catalog-revision");
         assertThat(markdown).contains("nie zapisuj katalogu", "systemSubtype: unknown",
-                "code-search-scope", "ownershipStatus: explicit", "proposals: []",
+                "code-search-scope", "ownershipStatus: explicit", "proposals: []", "matchSignals.strong.urlPatterns",
                 "Ta asysta nie prowadzi dialogu", "Nie dodawaj pola");
         assertThat(markdown).doesNotContain("teraz zapytaj", "zadaj pytanie", "pytanie do człowieka");
     }
@@ -452,7 +452,9 @@ class OperationalContextAssistancePromptPreparationServiceTest {
         rules.values().forEach(rule -> assertThat(prompt).contains(rule.strip()));
         assertThat(prompt).contains("Cleanup verification", "all system signal values, including `weak`",
                 "include=[navigationDetails]", "Preserve boundaries per scope and repository",
-                "pomiń destrukcyjną propozycję", "nie zgaduj definicji ani podobnego celu");
+                "pomiń destrukcyjną propozycję", "nie zgaduj definicji ani podobnego celu",
+                "matchSignals.strong.urlPatterns", "https://crm-test.example.com/api/contacts/**",
+                "Leave unknown addresses out", "carry all other signals");
     }
 
     @Test

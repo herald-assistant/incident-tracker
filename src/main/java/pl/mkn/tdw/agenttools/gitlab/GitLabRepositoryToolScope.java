@@ -18,7 +18,6 @@ public final class GitLabRepositoryToolScope {
     private final String selectedProject;
     private final String selectedBranch;
     private final String selectedCommit;
-    private final boolean selectedProjectOnly;
     private final ConcurrentHashMap<String, String> revisions = new ConcurrentHashMap<>();
     private final Set<String> readSourceRefs = ConcurrentHashMap.newKeySet();
 
@@ -32,7 +31,6 @@ public final class GitLabRepositoryToolScope {
             throw new IllegalArgumentException("Selected GitLab commit is invalid.");
         }
         this.selectedCommit = selectedCommit;
-        this.selectedProjectOnly = false;
         revisions.put(this.selectedProject + "@" + this.selectedBranch, selectedCommit);
     }
 
@@ -41,7 +39,6 @@ public final class GitLabRepositoryToolScope {
         this.selectedProject = relativeProject(selectedProject);
         this.selectedBranch = checkedBranch(selectedBranch);
         this.selectedCommit = null;
-        this.selectedProjectOnly = true;
     }
 
     public static GitLabRepositoryToolScope forBranch(String group, String selectedProject, String selectedBranch) {
@@ -113,9 +110,6 @@ public final class GitLabRepositoryToolScope {
     public Target resolve(String projectName, String branchRef, GitLabRepositoryRevisionPort port) {
         var project = relativeProject(projectName);
         var branch = checkedBranch(branchRef);
-        if (selectedProjectOnly && !selectedProject.equals(project)) {
-            throw new IllegalArgumentException("The GitLab session is limited to its selected project.");
-        }
         if (COMMIT_ID.matcher(branch).matches()) {
             return new Target(group, project, branch, branch.toLowerCase(java.util.Locale.ROOT));
         }

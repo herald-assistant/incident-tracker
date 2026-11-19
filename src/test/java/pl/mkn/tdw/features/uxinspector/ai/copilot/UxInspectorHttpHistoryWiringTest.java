@@ -11,6 +11,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.*;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolContextFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationEventPublisher;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparation;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorSystemUrlPatterns;
 import pl.mkn.tdw.features.uxinspector.ai.chat.*;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportFactory;
@@ -87,8 +88,10 @@ class UxInspectorHttpHistoryWiringTest {
         when(prepare.prepare(any())).thenReturn(prepared);
         var execution = mock(CopilotSdkExecutionGateway.class);
         when(execution.execute(prepared)).thenReturn(new CopilotExecutionResult("CRM answer", null));
+        var patterns = mock(UxInspectorSystemUrlPatterns.class);
+        when(patterns.render()).thenReturn("https://crm-test.example.com/api/contacts/**");
         var service = new UxInspectorFollowUpChatService(prompts, new UxInspectorCopilotToolSessionContextFactory(),
-                new UxInspectorTargetToolSetFactory(), store, http, factory, new CopilotRunAuthMapper(), prepare, execution);
+                new UxInspectorTargetToolSetFactory(), store, http, factory, new CopilotRunAuthMapper(), prepare, execution, patterns);
         service.chat(new UxInspectorFollowUpChatRequest("crm-chat-turn", request("Dlaczego?"), targetContext(), "CRM question",
                 "crm-session", AnalysisAiAuthRef.localToken(null), null, "crm-original"), null, null);
         verify(http).create("crm-original");
@@ -97,6 +100,8 @@ class UxInspectorHttpHistoryWiringTest {
         var run = org.mockito.ArgumentCaptor.forClass(CopilotRunRequest.class);
         verify(prepare).prepare(run.capture());
         assertThat(run.getValue().sessionConfigRequest().skillsEnabled()).isFalse();
-        assertThat(run.getValue().sessionConfigRequest().durableSystemInstructions()).contains("run_http_history_read_value");
+        assertThat(run.getValue().sessionConfigRequest().durableSystemInstructions())
+                .contains("run_http_history_read_value", "Branch wybrany w UI: main", "https://crm-test.example.com/api/contacts/**");
+        assertThat(run.getValue().prompt()).isEqualTo("CRM follow-up");
     }
 }

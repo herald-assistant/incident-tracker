@@ -10,6 +10,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGatewa
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.features.uxinspector.ai.copilot.*;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorSystemUrlPatterns;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.localworkspace.analysisruns.tools.RunStoreToolSetFactory;
 import pl.mkn.tdw.localworkspace.analysisruns.tools.RunHttpHistoryToolSetFactory;
@@ -33,6 +34,7 @@ public class UxInspectorFollowUpChatService {
     private final CopilotRunAuthMapper authMapper;
     private final CopilotRunPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
+    private final UxInspectorSystemUrlPatterns systemUrlPatterns;
 
     public CopilotExecutionResult chat(UxInspectorFollowUpChatRequest request,
                                        AnalysisAiToolEvidenceListener evidenceListener,
@@ -55,7 +57,9 @@ public class UxInspectorFollowUpChatService {
                 context.copilotSessionId(), policy.enabledTools(), policy.availableToolNames(),
                 new CopilotModelSelection(request.initialRequest().model(), request.initialRequest().reasoningEffort()),
                 "Use only enabled read-only Operational Context tools, scoped UX Inspector research, store, HTTP history and report tools.", !storeCallbacks.isEmpty()
-        ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp(!storeCallbacks.isEmpty(), request.storeRunId()));
+        ).withDurableSystemInstructions(UxInspectorDurableSystemInstructions.followUp(!storeCallbacks.isEmpty(), request.storeRunId())
+                + "\n\nBranch wybrany w UI: " + request.context().sourceScope().ref()
+                + "\n\n" + systemUrlPatterns.render());
         var run = new CopilotRunRequest(
                 context.analysisRunId(), authMapper.toRunAuth(request.authRef()),
                 CopilotSessionTarget.existing(context.copilotSessionId()), prompt, config, Map.of(), null

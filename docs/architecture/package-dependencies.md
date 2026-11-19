@@ -295,9 +295,12 @@ importowania UI Explorera.
 target resolution, source binding,
 kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek
 oraz jego neutralne formatowanie przez `common`,
-session-bound `uxi_*` target tools oraz policy dla neutralnych GitLab
-navigation/search/read tools nad calym wybranym repozytorium. Posiada report z
-jedna sekcja, job i scisly import/export. Typowane DTO capture i opcjonalnych
+narzędzia `uxi_*` przypisane do wybranego elementu oraz politykę odczytu
+repozytoriów w skonfigurowanej grupie GitLab i jej podgrupach. Z katalogu
+Operational Context pobiera wzorce URL, które pomagają AI wybrać repozytorium
+backendu. Narzędzia trasy i symboli TypeScript działają w wybranym frontendzie.
+Pakiet odpowiada też za raport z jedną sekcją, job oraz import i eksport.
+Typowane DTO capture i opcjonalnych
 blokow, lokalny scisly Jackson, Bean Validation oraz sanitizery pozostaja
 wewnatrz feature'a. Wspolny reader koperty stosuje ten sam preflight capture
 przy imporcie, eksporcie zapisanego runu i continuation; nie zmienia globalnego

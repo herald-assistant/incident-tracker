@@ -1,8 +1,16 @@
 package pl.mkn.tdw.features.uxinspector.context;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
+import pl.mkn.tdw.features.uxinspector.ai.copilot.UxInspectorCopilotToolSessionContextFactory;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalog;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationRegistration;
+import pl.mkn.tdw.integrations.gitlab.GitLabSettingsPort;
 import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendDiscoveryException;
 import pl.mkn.tdw.integrations.gitlab.contract.frontend.GitLabFrontendReachabilityComponent;
 import pl.mkn.tdw.integrations.gitlab.service.frontend.GitLabFrontendScreenReachabilityService;
@@ -20,6 +28,34 @@ import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.features.uxinspector.UxInspectorTestFixtures.*;
 
 class UxInspectorTargetResolverTest {
+    private final GitLabSettingsPort settings = mock(GitLabSettingsPort.class);
+
+    @BeforeEach
+    void configureMainGroup() {
+        when(settings.getGroup()).thenReturn("CRM");
+    }
+
+    @Test
+    void keepsViewCoordinatesInItsSubgroupAndResolvesRepositoryToolsFromTheMainGroup() {
+        var frontend = new FrontendApplicationRegistration("crm-portal", "CRM Portal", "", "crm-ui",
+                "CRM/web/portal", "CRM/web", "portal", "test", "whole-repository", List.of());
+        var applications = mock(FrontendApplicationCatalogService.class);
+        when(applications.loadCatalog()).thenReturn(new FrontendApplicationCatalog("crm", List.of(frontend), List.of()));
+        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of()));
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
+        var target = resolver.resolve("crm-portal", "test", VIEW_ID, capture());
+        var hidden = new UxInspectorCopilotToolSessionContextFactory().create("crm-scope", target).hiddenContext();
+        assertEquals("CRM/web", hidden.get(AgentToolContextKeys.GITLAB_GROUP));
+        assertEquals("portal", hidden.get(GitLabFrontendToolContextKeys.PROJECT_NAME));
+        var repositories = assertInstanceOf(GitLabRepositoryToolScope.class,
+                hidden.get(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE));
+        assertEquals("CRM/web/portal", repositories.selectedProjectPath());
+        assertEquals("CRM/services/contacts", repositories.projectPath("services/contacts"));
+        assertEquals("test", repositories.selectedBranch());
+        when(settings.getGroup()).thenReturn("CRM/we");
+        assertThrows(UxInspectorContextException.class, () -> resolver.resolve("crm-portal", "test", VIEW_ID, capture()));
+    }
 
     @Test
     void shouldResolveAtLeastEightyPercentOfTwelveFocusedCrmFixtures() {
@@ -34,7 +70,7 @@ class UxInspectorTargetResolverTest {
                     "crm-target-" + index, "CRM target " + index, index + 1));
         }
         when(reachability.buildFocused(any(), any())).thenReturn(graph(components));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
 
         var correct = 0;
         for (var index = 0; index < components.size(); index++) {
@@ -64,7 +100,7 @@ class UxInspectorTargetResolverTest {
                 actionComponent("contact-primary", "primary-action", "doPrimary", 1),
                 actionComponent("contact-secondary", "secondary-action", "doSecondary", 2)
         )));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
 
         var ambiguous = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 capture("cap_crm_ambiguous", "button", "Wykonaj", null));
@@ -90,7 +126,7 @@ class UxInspectorTargetResolverTest {
                 actionComponent("contact-primary", "crm-primary-action", "doPrimary", 1),
                 actionComponent("contact-secondary", "crm-secondary-action", "doSecondary", 2)
         )));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
         var selected = withFingerprint(capture("cap_crm_selector", "button", "Wykonaj", null),
                 Map.of(), List.of("button[class~=\"crm-primary-action\"]"), List.of());
 
@@ -104,6 +140,71 @@ class UxInspectorTargetResolverTest {
     }
 
     @Test
+    void shouldResolveOnlyTheMatchingElementAndKeepNeighbouringActionsOutOfItsBinding() {
+        var applications = mock(FrontendApplicationCatalogService.class);
+        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
+        when(applications.loadCatalog()).thenReturn(frontendCatalog());
+        var action = new GitLabTypeScriptTemplateBinding(GitLabTypeScriptTemplateBindingKind.EVENT,
+                "click", "reloadCard()", List.of("reloadCard"), 1);
+        var parent = targetComponent("page", "<div>Contact card <button class='card' (click)='reloadCard()'>"
+                + "Refresh card</button></div><crm-summary></crm-summary>", List.of(action));
+        var child = targetComponent("summary", "<button (click)='reloadCard()'>Refresh card</button>"
+                + "<!-- <div class='card'> --><div class='Card card-extra'></div>"
+                + "<div title=\"x > y\"\n class='wide card'>{{ title }}</div>",
+                List.of(action));
+        var selected = withFingerprint(capture("cap_crm_tile", "div", "Sample contact", null),
+                Map.of(), List.of("div[class~=\"card\"]"), List.of("crm-summary", "crm-page"));
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(parent, child)), graph(List.of(parent)));
+
+        var result = resolver.resolve("crm-agent-portal", "main", VIEW_ID, selected);
+
+        assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, result.status());
+        assertEquals("summary", result.sourceBinding().componentId());
+        assertTrue(result.candidates().get(0).matchReasons().contains("component boundary matched at distance 1"));
+        assertEquals("<div title=\"x > y\"\n class='wide card'>", result.sourceBinding().elementSnippet());
+        assertEquals(1, result.sourceBinding().templateLineStart());
+        assertEquals(2, result.sourceBinding().templateLineEnd());
+        assertTrue(result.sourceBinding().elementBindings().isEmpty());
+        assertFalse(result.candidates().get(1).matchReasons().contains("selector class matched"));
+
+        var missingChild = resolver.resolve("crm-agent-portal", "main", VIEW_ID, selected);
+        assertNotEquals(UxInspectorTargetResolutionStatus.RESOLVED, missingChild.status());
+        assertNull(missingChild.sourceBinding());
+    }
+
+    @Test
+    void shouldKeepRepeatedClassAmbiguousUntilAnotherAttributeIdentifiesTheElement() {
+        var applications = mock(FrontendApplicationCatalogService.class);
+        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
+        when(applications.loadCatalog()).thenReturn(frontendCatalog());
+        var component = targetComponent("summary", "<div class='tile' data-testid='one'></div>"
+                + "<div class='tile' data-testid='two'></div>", List.of());
+        when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(component)));
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
+        var capture = capture("cap_crm_tiles", "div", "Runtime label", null);
+        var selectors = List.of("div[class~=\"tile\"]", "button[data-testid=\"one\"]");
+        var boundaries = List.of("crm-summary");
+
+        var ambiguous = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
+                withFingerprint(capture, Map.of(), selectors, boundaries));
+        var resolved = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
+                withFingerprint(capture, Map.of("data-testid", "two"), selectors, boundaries));
+
+        assertEquals(UxInspectorTargetResolutionStatus.AMBIGUOUS, ambiguous.status());
+        assertNull(ambiguous.sourceBinding());
+        assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, resolved.status());
+        assertEquals("<div class='tile' data-testid='two'>", resolved.sourceBinding().elementSnippet());
+    }
+
+    private GitLabFrontendReachabilityComponent targetComponent(String id, String template,
+                                                               List<GitLabTypeScriptTemplateBinding> bindings) {
+        return new GitLabFrontendReachabilityComponent(id, 1, 0, true, "RUNTIME_COMPONENT_BOUNDARY",
+                "CrmComponent", "crm-" + id + "[visible]", "src/app/" + id + ".ts", null, template, "RESOLVED",
+                bindings, List.of(), List.of(), List.of(), List.of(), "", 0, 0, false, List.of());
+    }
+
+    @Test
     void shouldPreferTheNearestComponentBoundaryAndPreserveItsOrder() {
         var applications = mock(FrontendApplicationCatalogService.class);
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
@@ -112,7 +213,7 @@ class UxInspectorTargetResolverTest {
                 actionComponent("inner", "inner-action", "inside", 1),
                 actionComponent("outer", "outer-action", "outside", 2)
         )));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
         var base = capture("cap_crm_boundary", "div", "Runtime only", null);
 
         var innerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
@@ -133,7 +234,7 @@ class UxInspectorTargetResolverTest {
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
         when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(genericDivComponent())));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
         var selected = withFingerprint(capture("cap_crm_generic", "div", "Runtime only", null),
                 Map.of(), List.of(), List.of("crm-container"));
 
@@ -171,7 +272,7 @@ class UxInspectorTargetResolverTest {
                 "export class LoginComponent { email = ''; doLogin() {} }", 120, 120, false, List.of()
         );
         when(reachability.buildFocused(any(), any())).thenReturn(graph(List.of(component)));
-        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var resolver = new UxInspectorTargetResolver(applications, reachability, settings);
 
         var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID,
                 capture("cap_crm_email", "input", "Email", "email"));

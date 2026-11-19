@@ -56,6 +56,12 @@ ręcznej edycji i przeglądu w UI, nie pytania do operatora. Nie dodawaj pola
 
 ## Dobór propozycji
 
+Gdy operator poda adresy HTTP systemu wewnętrznego lub potwierdzi je
+odczytana konfiguracja, zaproponuj `matchSignals.strong.urlPatterns` według
+reguł maintenance. Dla każdego środowiska oprzyj wzorzec na wskazanym źródle.
+Pomiń niepotwierdzone adresy. Przy aktualizacji pola `matchSignals` skopiuj
+bieżące sygnały do `after` i zmień tylko uzgodnione wartości.
+
 - `CREATE_AREA` bez `operatorFacts`: rozpoznaj opis w dziewięciu typach
   katalogu. Możesz utworzyć nowe wpisy lub poprawić istniejące, jeśli ich
   bieżące wartości widzisz w pełnym katalogu. Sprawdź duplikaty, istniejące

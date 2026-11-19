@@ -250,11 +250,15 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
                 .filter(value -> value.contains("-"))
                 .distinct()
                 .toList();
-        for (var selector : normalizedSelectors) {
-            var alreadyLoaded = discovered.stream()
-                    .anyMatch(descriptor -> descriptor.selectors().stream()
-                            .anyMatch(candidate -> selectorMatchesElement(candidate, selector)));
-            if (alreadyLoaded) continue;
+        // Load enclosing components first so a child's declaration can be reached through its parent's imports.
+        for (int index = normalizedSelectors.size() - 1; index >= 0; index--) {
+            var selector = normalizedSelectors.get(index);
+            if (discovered.stream().anyMatch(descriptor -> matchesBoundary(descriptor, selector))) continue;
+            var imported = importedBoundaryDescriptors(selector, discovered, sourceIndex);
+            if (!imported.isEmpty()) {
+                discovered.addAll(imported);
+                continue;
+            }
             for (var path : sourceIndex.findSelectorCandidates(selector)) {
                 addDescriptorsFromPath(path, sourceIndex, discovered);
             }
@@ -264,11 +268,34 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
         if (root != null) focused.put(root.componentId(), root);
         for (var selector : normalizedSelectors) {
             discovered.stream()
-                    .filter(descriptor -> descriptor.selectors().stream()
-                            .anyMatch(candidate -> selectorMatchesElement(candidate, selector)))
+                    .filter(descriptor -> matchesBoundary(descriptor, selector))
                     .forEach(descriptor -> focused.putIfAbsent(descriptor.componentId(), descriptor));
         }
         return List.copyOf(focused.values());
+    }
+
+    private boolean matchesBoundary(ComponentDescriptor descriptor, String selector) {
+        return descriptor.selectors().stream().anyMatch(candidate -> GitLabFrontendReachabilityComponent.selectorMatchesTag(candidate, selector));
+    }
+
+    private List<ComponentDescriptor> importedBoundaryDescriptors(
+            String selector, List<ComponentDescriptor> owners, SourceIndex sourceIndex
+    ) {
+        var matches = new LinkedHashMap<String, ComponentDescriptor>();
+        for (var owner : owners) {
+            if (!templateUses(owner.template(), selector)) continue;
+            var imports = sourceIndex.importBindings(owner.sourcePath());
+            for (var symbol : standaloneComponentImports(owner.source())) {
+                var module = imports.get(symbol);
+                if (!StringUtils.hasText(module) || module.startsWith("@angular/")) continue;
+                for (var path : sourceIndex.importResolver.resolve(owner.sourcePath(), module)) {
+                    var target = sourceIndex.resolveReExport(path, symbol, new LinkedHashSet<>());
+                    componentDescriptors(target, sourceIndex.content(target), sourceIndex, owners.size(), selector).stream()
+                            .forEach(descriptor -> matches.putIfAbsent(descriptor.componentId(), descriptor));
+                }
+            }
+        }
+        return List.copyOf(matches.values());
     }
 
     private List<ComponentDescriptor> componentDescriptors(
@@ -281,7 +308,7 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
             if (!file.path().endsWith(".ts") && !file.path().endsWith(".tsx")) {
                 continue;
             }
-            var parsed = componentDescriptors(file.path(), file.content(), sourceIndex, sourceOrder);
+            var parsed = componentDescriptors(file.path(), file.content(), sourceIndex, sourceOrder, null);
             result.addAll(parsed);
             sourceOrder += parsed.size();
         }
@@ -292,7 +319,8 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
             String sourcePath,
             String source,
             SourceIndex sourceIndex,
-            int sourceOrder
+            int sourceOrder,
+            String requiredTag
     ) {
         var result = new ArrayList<ComponentDescriptor>();
         var matcher = COMPONENT_DECORATOR.matcher(source);
@@ -310,6 +338,8 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
             var metadata = source.substring(open + 1, close);
             var symbol = classMatcher.group(1);
             var selectors = selectorValues(metadata);
+            if (requiredTag != null && selectors.stream().noneMatch(selector ->
+                    GitLabFrontendReachabilityComponent.selectorMatchesTag(selector, requiredTag))) continue;
             var templatePath = templatePath(sourcePath, metadata);
             var template = StringUtils.hasText(templatePath)
                     ? sourceIndex.content(templatePath)
@@ -346,8 +376,7 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
         while (tags.find()) {
             var selector = tags.group(1).toLowerCase(Locale.ROOT);
             if (!selector.contains("-") || descriptors.stream()
-                    .anyMatch(descriptor -> descriptor.selectors().stream()
-                            .anyMatch(candidate -> selectorMatchesElement(candidate, selector)))) {
+                    .anyMatch(descriptor -> matchesBoundary(descriptor, selector))) {
                 continue;
             }
             for (var path : sourceIndex.findSelectorCandidates(selector)) {
@@ -372,7 +401,7 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
                 .filter(descriptor -> descriptor.sourcePath().equals(path))
                 .map(ComponentDescriptor::symbol)
                 .collect(java.util.stream.Collectors.toSet());
-        componentDescriptors(path, source, sourceIndex, descriptors.size()).stream()
+        componentDescriptors(path, source, sourceIndex, descriptors.size(), null).stream()
                 .filter(descriptor -> !existing.contains(descriptor.symbol()))
                 .forEach(descriptors::add);
     }
@@ -1069,11 +1098,6 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
         return false;
     }
 
-    private boolean selectorMatchesElement(String selector, String elementName) {
-        var matcher = Pattern.compile("^([A-Za-z][A-Za-z0-9_.:-]*)").matcher(selector.trim());
-        return matcher.find() && matcher.group(1).equalsIgnoreCase(elementName);
-    }
-
     private boolean hasTemplateAttribute(String attributes, String attribute) {
         return Pattern.compile(
                 "(?s)(?:^|\\s)(?:\\[\\(?|\\()?" + Pattern.quote(attribute)
@@ -1532,7 +1556,7 @@ public class GitLabFrontendScreenReachabilityService implements GitLabFrontendSc
                 for (var quote : List.of("'", "\"")) {
                     repositoryPort.searchRepositoryFilesByContent(
                                     scope.group(), scope.projectName(), scope.ref(),
-                                    List.of("selector: " + quote + selector), 10
+                                    List.of(quote + selector), 10
                             ).stream()
                             .map(candidate -> normalize(candidate.filePath()))
                             .filter(path -> path.endsWith(".ts") || path.endsWith(".tsx"))

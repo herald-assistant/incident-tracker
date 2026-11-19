@@ -315,6 +315,24 @@ describe('ContextStructuredFieldEditorComponent', () => {
     });
   });
 
+  it('adds, changes and removes CRM URL patterns while keeping other system signals', async () => {
+    const original = { exact: { serviceNames: ['crm-contacts'] }, strong: { routes: ['/contacts'] } };
+    const fixture = await createFixture('system', 'matchSignals', original);
+    const editor = fixture.componentInstance;
+    editor.valueChange.subscribe(value => fixture.componentRef.setInput('value', value));
+    expect(fixture.nativeElement.querySelector('datalist option[value="urlPatterns"]')).toBeTruthy();
+
+    editor.addSignal();
+    editor.updateSignal(2, 'key', 'urlPatterns');
+    const testUrl = 'https://crm-test.example.com/api/contacts/**';
+    const productionUrl = 'https://crm.example.com/api/contacts/**';
+    editor.updateSignalValues(2, testUrl);
+    editor.updateSignalValues(2, [testUrl, productionUrl].join('\n'));
+    expect(editor.value()).toEqual({ ...original, strong: { ...original.strong, urlPatterns: [testUrl, productionUrl] } });
+    editor.removeSignal(2);
+    expect(editor.value()).toEqual(original);
+  });
+
   it('edits canonical CRM team signals by confidence', async () => {
     const fixture = await createFixture('team', 'matchSignals', {
       strong: { emailAliases: ['crm-team@example.invalid'] }

@@ -111,6 +111,22 @@ Odczytal `CRM_SAVE_FAILED`, `retryable=false` i potwierdzil `hasMore=true`
 dla obu fragmentow. Jest to dowod pracy narzedzi z modelem oraz continuation
 po restarcie; target resolution i integracje GitLab pokrywaja testy backendu.
 
+## Przejście od karty w UI do backendu
+
+W próbie z 19 listopada 2026 dwa modele odpowiedziały na to samo pytanie
+o źródło danych karty klienta. W obu analizach początkowych narzędzia odczytały
+klienta HTTP we frontendzie i implementację endpointu w osobnym projekcie
+backendu. Po poprawce resolvera odtworzenie obu zapisanych wyborów na źródłach
+z tych analiz wskazało komponent karty i jej tag otwierający. Akcja sąsiedniego
+przycisku pozostała przy przycisku.
+
+Oba zapisy miały status historii HTTP `UNAVAILABLE` z powodem `GETTER_MISSING`
+i pustą historię chatu. Osobnej próby wymaga pełna ścieżka od zarejestrowanego
+żądania do kodu w follow-upie. Do jej weryfikacji wybierz element po wywołaniu
+API i sprawdź w podglądzie capture metodę oraz pełny URL. Po analizie zapytaj
+w chacie, który system obsługuje to żądanie. Porównaj adres z zapisanym
+wzorcem systemu oraz sprawdź projekt, rewizję i kod endpointu w odczytach GitLaba.
+
 ## Lokalne dane i wydanie
 
 Inwentaryzacja przy pilocie `tdw-data/index.json` i `runs/**/run.json` nie wykazala

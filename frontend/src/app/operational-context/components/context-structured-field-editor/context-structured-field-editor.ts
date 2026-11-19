@@ -116,7 +116,7 @@ const SIGNAL_STRENGTHS: Array<{ key: SignalStrength; label: string }> = [
 ];
 
 const SIGNAL_KEY_SUGGESTIONS: Partial<Record<OperationalContextWritableType, string[]>> = {
-  system: ['serviceNames', 'deploymentNames', 'applicationNames', 'routes', 'endpoints', 'projectNames', 'projectPaths', 'businessTerms', 'aliases', 'configKeys'],
+  system: ['serviceNames', 'deploymentNames', 'applicationNames', 'routes', 'endpoints', 'urlPatterns', 'projectNames', 'projectPaths', 'businessTerms', 'aliases', 'configKeys'],
   repository: ['projectPaths', 'projectNames', 'buildCoordinates', 'groupIds', 'artifactIds', 'configKeys', 'aliases'],
   process: ['businessTerms', 'routes', 'operationNames', 'eventNames', 'exchanges', 'routingKeys', 'aliases'],
   integration: ['routes', 'endpoints', 'operationNames', 'bindings', 'exchanges', 'routingKeys', 'consumerGroups', 'hostPatterns', 'configKeys', 'artifactIds', 'businessTerms'],

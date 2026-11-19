@@ -193,6 +193,15 @@ Runtime resolution and catalogue search compare evidence with these values.
 AI tools expose the signals to explain why an entity matched. Put a value in a
 stronger bucket only when the evidence is reliably identifying.
 
+For an HTTP-facing internal system, `matchSignals.strong.urlPatterns` helps
+UX Inspector find the implementation behind a browser request. Enter one
+origin and path glob per line, including the gateway prefix when present.
+`*` matches within one segment and `**` spans path segments. Omit query
+strings and fragments. For example, `https://crm-test.example.com/api/contacts/**`
+matches requests to the contacts API in the test environment. Add another environment only when supported by
+a source or the operator. Leave the list empty when no address is known.
+A match suggests a system to investigate. Verify routing and behavior in code.
+
 Strength is not an access boundary. GitLab application-to-system matching uses
 all system signal values, including `weak`, plus aliases and `useFor`, without
 weighting their strength. A value colliding with another system identity can
@@ -211,7 +220,7 @@ an actual evidence source emits that field.
 
 | Entity type | Guided signal-key suggestions |
 | --- | --- |
-| `system` | `serviceNames`, `deploymentNames`, `applicationNames`, `routes`, `endpoints`, `projectNames`, `projectPaths`, `businessTerms`, `aliases`, `configKeys` |
+| `system` | `serviceNames`, `deploymentNames`, `applicationNames`, `routes`, `endpoints`, `urlPatterns`, `projectNames`, `projectPaths`, `businessTerms`, `aliases`, `configKeys` |
 | `repository` | `projectPaths`, `projectNames`, `buildCoordinates`, `groupIds`, `artifactIds`, `configKeys`, `aliases` |
 | `process` | `businessTerms`, `routes`, `operationNames`, `eventNames`, `exchanges`, `routingKeys`, `aliases` |
 | `integration` | `routes`, `endpoints`, `operationNames`, `bindings`, `exchanges`, `routingKeys`, `consumerGroups`, `hostPatterns`, `configKeys`, `artifactIds`, `businessTerms` |

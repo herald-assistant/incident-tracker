@@ -327,8 +327,9 @@ buduje pozostalego grafu ani rekurencyjnych dependencies przed AI; dalszy kod
 jest doczytywany celowo przez neutralne repository tools.
 Materialne skille sa doczytywane przez
 neutralne file-read tools, ktore wraz z navigation/search maja read-only
-dostep do calego wybranego repozytorium. Polityka sesji wymusza project i
-branch, hidden scope ogranicza projekt i branch. UX Inspector nie przygotowuje ani nie
+dostęp do repozytoriów w głównej grupie GitLab i jej podgrupach.
+Wzorce URL systemów pomagają powiązać żądanie HTTP z kodem backendu.
+UX Inspector nie przygotowuje ani nie
 klasyfikuje report references; niepotwierdzone twierdzenia pozostaja jawnymi
 gaps albo visibility limits.
 Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje

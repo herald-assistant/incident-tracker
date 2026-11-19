@@ -24,14 +24,15 @@ class UxInspectorPromptAndSkillsTest {
     void shouldKeepCatalogKnowledgeSeparateFromSourceAndRuntimeInInitialAndResumedSessions() {
         var guidance = UxInspectorDurableSystemInstructions.operationalContextGuidance();
         assertThat(service.prepare(request("Co oznacza preferencja kontaktu CRM?"), targetContext()).prompt())
-                .contains(guidance);
+                .contains(guidance, "https://crm-test.example.com/api/contacts/**");
         assertThat(UxInspectorDurableSystemInstructions.followUp()).contains(guidance);
         assertThat(UxInspectorDurableSystemInstructions.followUp(true, "crm-run")).contains(guidance);
         assertThat(guidance).contains("opctx_get_scope", "opctx_list_entities", "opctx_search", "opctx_get_entity",
                 "nieaktualny i niekompletny", "pierwszenstwo ma zweryfikowany kod odczytanej rewizji",
                 "Brak wpisu nie dowodzi braku funkcji",
                 "bez relacji z frontendem", "kolejnych stron", "capture/store", "regula procesowa nie dowodzi",
-                "nie rozszerza dostepu do kodu", "nie blokuje dotychczasowej analizy");
+                "urlPatterns", "gitlab_list_repository_branches", "także bez wpisu w katalogu",
+                "We wszystkich repozytoriach zacznij od brancha wybranego w UI", "nie blokuje dotychczasowej analizy");
     }
 
     @Test
@@ -96,13 +97,15 @@ class UxInspectorPromptAndSkillsTest {
             mock(UxInspectorRepositoryGuidanceArtifactService.class);
     private final UxInspectorComponentSourcePackArtifactService componentSourcePackArtifactService =
             mock(UxInspectorComponentSourcePackArtifactService.class);
+    private final UxInspectorSystemUrlPatterns urlPatterns = mock(UxInspectorSystemUrlPatterns.class);
     private final UxInspectorPromptPreparationService service =
             new UxInspectorPromptPreparationService(
                     new ObjectMapper().findAndRegisterModules(), repositoryTreeArtifactService,
-                    repositoryGuidanceArtifactService, componentSourcePackArtifactService);
+                    repositoryGuidanceArtifactService, componentSourcePackArtifactService, urlPatterns);
 
     @BeforeEach
     void setUp() {
+        when(urlPatterns.render()).thenReturn("https://crm-test.example.com/api/contacts/**");
         when(repositoryTreeArtifactService.prepare(any())).thenReturn(new UxInspectorRepositoryTreeArtifact("""
                 repository: CRM/crm-ui
                 branch: main

@@ -78,24 +78,12 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
   Potrzebę wyboru okresu opisuje [zakres dat](needs/release-summary-date-range.md).
 
-- Użycie Operational Context przez UI Explorer i UX Inspector opisują ich
-  kanoniczne [runtime UI](architecture/ui-explorer-runtime-flow.md) oraz
-  [runtime UX](architecture/ux-inspector-runtime-flow.md). Indeks odwołuje się
-  do bieżących kontraktów, bez linków do usuniętych planów.
-
-- [Runtime UX Inspectora](architecture/ux-inspector-runtime-flow.md) opisuje
-  pojedynczy upload capture przez REST, snapshot przed startem, zwijany podglad,
-  historie HTTP oraz typowany odczyt z walidacja i niezaleznymi blokami opcjonalnymi.
-  [Weryfikacja i pilot](ux-inspector-http-history-verification.md) zawiera
-  wyniki testow, zakres pilotow oraz ich ograniczenia, w tym odczyt duzych body
-  i dzialanie narzedzi z modelem po restarcie.
-- UI Explorer oraz UX Inspector nie utrzymuja zakonczonych potrzeb i planow
-  jako archiwum. Ich aktualne kontrakty, runtime, follow-up chat, historia,
-  import/export i granice bezpieczenstwa opisuja odpowiednio
-  `architecture/ui-explorer-runtime-flow.md` oraz
-  `architecture/ux-inspector-runtime-flow.md`.
-- `needs/ui-explorer-ngmodule-routing.md` i
-  `plans/ui-explorer-ngmodule-routing.md` opisuja trwajacy zakres UI Explorera.
+- Rozpoznanie elementu z capture, przejście od żądania HTTP do kodu backendu
+  i wznowienie rozmowy z historii opisuje [przepływ UX Inspectora](architecture/ux-inspector-runtime-flow.md).
+  Zakres wykonanych testów i prób z modelem opisuje [weryfikacja capture i historii HTTP](ux-inspector-http-history-verification.md).
+- Zapis wzorców URL przy systemie opisuje [model Operational Context](architecture/operational-context-model-tools-and-usage.md#system).
+  Sposób sprawdzenia propozycji i opublikowanego wpisu opisuje [diagnostyka asysty AI](operational-context-assistance-diagnostics.md).
+- Analizę całego widoku i jego routingu opisuje [przepływ UI Explorera](architecture/ui-explorer-runtime-flow.md).
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.

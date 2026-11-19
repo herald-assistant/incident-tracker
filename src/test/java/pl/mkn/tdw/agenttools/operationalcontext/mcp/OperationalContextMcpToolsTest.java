@@ -184,7 +184,8 @@ class OperationalContextMcpToolsTest {
         assertTrue(result.overview().get("runtime").toString().contains("crm/notifications"));
         assertTrue(result.relations().containsKey("references"));
         assertEquals("CRM managed platform provider", result.relations().get("externalOwner"));
-        assertTrue(result.signals().containsKey("matchSignals"));
+        assertEquals(List.of("https://crm.example.com/api/notifications/**"), objectMapper.convertValue(
+                objectMapper.valueToTree(result.signals()).at("/matchSignals/strong/urlPatterns"), List.class));
         assertEquals(1, result.signals().size());
         assertTrue(result.codeSearch().containsKey("codeSearchScopes"));
         assertFalse(result.codeSearch().containsKey("localCodeSearchScope"));
@@ -486,7 +487,8 @@ class OperationalContextMcpToolsTest {
                         : map(),
                 "matchSignals", map(
                         "strong", map(
-                                "markers", List.of(alias)
+                                "markers", List.of(alias),
+                                "urlPatterns", List.of("https://crm.example.com/api/" + id + "/**")
                         )
                 ),
                 "sourceCoverage", map(

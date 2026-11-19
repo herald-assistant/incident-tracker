@@ -90,8 +90,8 @@ Nie obejmuje:
   tych samych projektów. Snapshot można odtworzyć bez ponownego rozwiązywania
   branchy/tagów; restore nie pozwala nadpisać istniejącego przypięcia.
   Pełny SHA nie wymaga wcześniejszego discovery. Granice grupy i projektu
-  pozostają niezależne od wyboru rewizji. Tryb `forBranch` UX Inspectora
-  ogranicza projekt, a jego branche/tagi również są przypinane do SHA.
+  pozostają niezależne od wyboru rewizji. `forBranch` przypina każdy badany
+  projekt/ref w skonfigurowanej grupie przy pierwszym odczycie.
   Tree/list/search
   zwracaja sciezki, nie `sourceRef`; pelny odczyt i odczyt fragmentu z
   przypietego commita rejestruja ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie

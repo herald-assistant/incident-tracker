@@ -95,7 +95,10 @@ class GitLabHistoryMcpToolsTest {
         assertThatThrownBy(() -> f.list(List.of("src/../password.txt"), null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> f.list(IntStream.range(0, 11).mapToObj(i -> "src/" + i).toList(), null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> f.tools.readCommitDiff("other", SHA, null, null, "Sprawdzam CRM.", f.context))
+        when(f.history.readDiff("CRM", "services/contacts", SHA, 1)).thenReturn(new GitLabCommitDiffPage(List.of(), null));
+        assertThat(f.tools.readCommitDiff("services/contacts", SHA, null, null, "Sprawdzam CRM.", f.context).commitId())
+                .isEqualTo(SHA);
+        assertThatThrownBy(() -> f.tools.readCommitDiff("../other", SHA, null, null, "Sprawdzam CRM.", f.context))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -150,7 +153,7 @@ class GitLabHistoryMcpToolsTest {
                 .thenReturn(new GitLabRepositoryFileChunk("CRM", "customer", PARENT, PHONE, 1, 2, 1, 1, 1, "old", false));
         assertThat(reads.readRepositoryFileChunk("customer", PARENT, null, PHONE, 1, 2, 100, "Sprawdzam CRM.", f.context).content()).isEqualTo("old");
         verifyNoInteractions(f.history);
-        assertThatThrownBy(() -> reads.readRepositoryFile("other", SHA, null, PHONE, null, "Sprawdzam CRM.", f.context))
+        assertThatThrownBy(() -> reads.readRepositoryFile("../other", SHA, null, PHONE, null, "Sprawdzam CRM.", f.context))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -24,6 +24,7 @@ import java.util.Set;
 public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolicy {
 
     private static final Set<String> REPOSITORY_TOOLS = Set.of(
+            GitLabToolNames.LIST_REPOSITORY_BRANCHES,
             GitLabToolNames.LIST_REPOSITORY_TREE,
             GitLabToolNames.LIST_REPOSITORY_FILES,
             GitLabToolNames.SEARCH_REPOSITORY_FILES,
@@ -54,7 +55,7 @@ public class UxInspectorCopilotScopePolicy implements CopilotToolInvocationPolic
 
         var applicationNames = arguments.get("applicationNames");
         if (applicationNames != null && (!applicationNames.isArray() || applicationNames.size() != 0)) {
-            reject(request, "applicationNames must be omitted because the selected repository is session-bound.", true);
+            reject(request, "Omit applicationNames and identify the repository by projectName.", true);
         }
 
         if (GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE.equals(request.toolName())) {

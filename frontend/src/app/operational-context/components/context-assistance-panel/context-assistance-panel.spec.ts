@@ -787,6 +787,30 @@ describe('ContextAssistancePanelComponent', () => {
     expect(panel.effectiveAfter(0, references)).toEqual(['system/customer-api']);
   });
 
+  it('submits corrected CRM URL patterns and preserves the other signals in the reviewed field', async () => {
+    const original = job('COMPLETED');
+    const proposal = original.draft!.proposals[0];
+    const before = { exact: { serviceNames: ['crm-contacts'] } };
+    const testUrl = 'https://crm-test.example.com/api/contacts/**';
+    const after = { ...before, strong: { urlPatterns: [testUrl] } };
+    const change = { ...proposal.changes[0], path: 'matchSignals', before, after };
+    proposal.operation = 'UPDATE';
+    proposal.changes = [change];
+    const previewBatch = vi.fn(() => of({ expectedDigest: 'old', candidateDigest: 'crm-reviewed',
+      valid: true, entities: [], violations: [] }));
+    const panel = (await batchFixture(original, { previewBatch })).componentInstance;
+    const corrected = { ...before, strong: { urlPatterns: [testUrl, 'https://crm.example.com/api/contacts/**'] } };
+
+    panel.beginFieldEdit(0, proposal, change);
+    panel.editValueControl.setValue(JSON.stringify(corrected));
+    panel.saveFieldEdit(0, proposal, change);
+    panel.setConfirmed(0, 'matchSignals', true);
+    panel.previewSelection();
+    expect(previewBatch).toHaveBeenCalledWith('job-1', { decisions: [{ action: 'APPLY',
+      selectedPaths: ['matchSignals'], confirmedPaths: ['matchSignals'], editedValues: { matchSignals: corrected } }] });
+    expect(panel.canSave()).toBe(true);
+  });
+
   it('requires current whole-batch preview and confirmations before saving', async () => {
     const original = job('COMPLETED');
     const proposal = original.draft!.proposals[0];
