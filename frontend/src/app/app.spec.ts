@@ -123,7 +123,7 @@ describe('App', () => {
       await router.navigateByUrl('/?special=true');
       fixture.detectChanges();
       expect(compiled.querySelector('#platformLandingTitle')?.textContent).toContain(
-        'Mniej szukania po systemach'
+        'Koniec z naradami.'
       );
       expect(compiled.querySelector('app-special-theme-banner')).toBeNull();
       const standardBanner = compiled.querySelector('.platform-landing__intro');
@@ -131,7 +131,7 @@ describe('App', () => {
         .toBe('true');
       expect(standardBanner?.querySelector('img')).toBeNull();
       expect(standardBanner?.querySelector('.platform-landing__description')?.textContent)
-        .toContain('formie dopasowanej do zadania.');
+        .toContain('Odzyskaj czas. Poszerz swoje możliwości i przejmij inicjatywę.');
       const activeNav = compiled.querySelector('.app-shell__nav-item--active[aria-current="page"]');
       expect(activeNav?.getAttribute('href')).toBe('/');
       http.verify();
