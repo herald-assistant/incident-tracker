@@ -131,7 +131,7 @@ describe('App', () => {
         .toBe('true');
       expect(standardBanner?.querySelector('img')).toBeNull();
       expect(standardBanner?.querySelector('.platform-landing__description')?.textContent)
-        .toContain('Odzyskaj czas. Poszerz swoje możliwości i przejmij inicjatywę.');
+        .toContain('Odzyskaj czas. Rozbuduj swój warsztat i przejmij inicjatywę.');
       const activeNav = compiled.querySelector('.app-shell__nav-item--active[aria-current="page"]');
       expect(activeNav?.getAttribute('href')).toBe('/');
       http.verify();
