@@ -18,6 +18,13 @@ import { buildExportEnvelope } from '../../core/utils/analysis-import-export.uti
 import { AnalysisHistoryPageComponent } from './analysis-history-page';
 
 describe('AnalysisHistoryPageComponent', () => {
+  it('opens a saved System Assistant conversation through its chat page', async () => {
+    const {fixture} = await createComponent();
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    fixture.componentInstance.openRun({analysisId: 'saved-chat', feature: 'system-assistant', name: 'Rozmowa o kliencie', status: 'IN_PROGRESS',
+      createdAt: '2026-11-21T10:00:00Z', updatedAt: '2026-11-21T10:01:00Z', completedAt: ''});
+    expect(open).toHaveBeenCalledWith('/system-assistant?localRunId=saved-chat', '_blank', 'noopener,noreferrer');
+  });
   it.each(['QUEUED', 'RUNNING', 'PARTIAL'])('opens a %s Release summary through its feature route', async (status) => {
     const {fixture} = await createComponent();
     const open = vi.spyOn(window, 'open').mockReturnValue(null);

@@ -1,5 +1,5 @@
 <section class="analysis-card browser-tools-setup" aria-labelledby="browserToolsSetupTitle">
-  <h2 id="browserToolsSetupTitle">Wskaż element na badanej stronie</h2>
+  <h2 id="browserToolsSetupTitle">{{ title() }}</h2>
   <ol>
     <li>Pokaż pasek zakładek w Chrome skrótem <kbd>Ctrl+Shift+B</kbd>.</li>
     <li>
@@ -12,12 +12,16 @@
           title="Przeciągnij na pasek zakładek Chrome"
           (click)="$event.preventDefault()"
         >
-          <span class="material-symbols-outlined" aria-hidden="true">drag_indicator</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+            <circle cx="9" cy="5" r="2" /><circle cx="15" cy="5" r="2" />
+            <circle cx="9" cy="12" r="2" /><circle cx="15" cy="12" r="2" />
+            <circle cx="9" cy="19" r="2" /><circle cx="15" cy="19" r="2" />
+          </svg>
           TDW Browser Tools
         </a>
       </div>
     </li>
-    <li>Otwórz badaną stronę HTTP(S), kliknij zapisaną zakładkę, wybierz UX Inspector i wskaż element.</li>
+    <li>{{ instruction() }}</li>
   </ol>
   <p class="browser-tools-setup__note">
     Zakładka uruchamia kod z tej instancji TDW na czas użycia narzędzia.

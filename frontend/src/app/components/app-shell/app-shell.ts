@@ -98,6 +98,9 @@ const NAV_GROUPS: NavGroup[] = [
         reloadOnActiveClick: true
       },
       {
+        label: 'System Assistant', route: '/system-assistant', icon: 'forum', reloadOnActiveClick: false
+      },
+      {
         label: 'Change Verification',
         route: '/change-verification',
         icon: 'fact_check',
@@ -200,7 +203,8 @@ export class AppShellComponent {
     const releaseSummaryEnabled = this.uiConfig.config().releaseSummaryEnabled;
     return NAV_GROUPS.map(group => ({
       ...group,
-      items: this.navOrder()[group.id].filter(item => releaseSummaryEnabled || item.route !== '/release-summary')
+      items: this.navOrder()[group.id].filter(item => (releaseSummaryEnabled || item.route !== '/release-summary')
+        && (this.uiConfig.config().systemAssistantEnabled || item.route !== '/system-assistant'))
     }));
   });
   protected readonly navItemKey = navItemKey;

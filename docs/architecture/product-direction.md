@@ -123,6 +123,20 @@ komponentu, a nie lokalna kopia.
 
 ## Rodziny feature'ow
 
+### System Assistant — konfigurowalny asystent pracy
+
+Konfigurowalny chat pracy w systemie: operator sam utrzymuje zestaw OpenAPI
+YAML i skilli, a następna tura korzysta z bieżących treści bez restartu.
+Browser Tools pozwala rozpocząć rozmowę w kontekście strony lub wybrać
+wcześniejszą rozmowę z historii w tym samym panelu. Operator może podłączyć
+API HTTP(S) dowolnego systemu, bez ograniczenia do lokalnego demo lub loopback.
+Feature jest domyślnie wyłączony flagą
+`system-assistant.enabled`. Nie ma wersjonowania konfiguracji, source auth,
+profili ani załączników. Rozmowy są trwale zapisywane w historii;
+kontynuacja odtwarza kontekst, ale używa bieżących instrukcji i narzędzi. Jest to rozszerzenie platformy
+o pracę operacyjną; pozostałe analizy zachowują swoje kontrakty.
+Szczegóły: [runtime System Assistant](system-assistant-runtime-flow.md).
+
 ### Incident analysis
 
 Operator wybiera Elasticsearch i podaje `correlationId` albo zalacza plik CSV

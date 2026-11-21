@@ -51,6 +51,11 @@ need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
   Opisuje też pojedynczy nagłówek wyniku, nawigację, interpretację pokrycia,
   kontynuację i eksport V1. Kod jest w
   `features.releasesummary` oraz `frontend/src/app/features/release-summary`.
+- [system-assistant-runtime-flow.md](system-assistant-runtime-flow.md)
+  konfigurowalny chat operacyjny, dynamiczny katalog OpenAPI/MCP, bieżące skille,
+  nowa sesja SDK na turę, trwała historia i jej kontynuacja w Browser Tools.
+  Konfigurację i pracę z chatem
+  opisuje [instrukcja obsługi](../system-assistant.md).
 - `package-dependencies.md`
   dozwolony graf zaleznosci backendu i frontendu.
 - `operational-context-model-tools-and-usage.md`
@@ -160,11 +165,14 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
 - `frontend/src/app/features`
   strony i prezentacja specyficzna dla feature'ow.
 - `frontend/public/browser-tools`
-  loader, protocol v1 i efemeryczny runtime dwoch akcji na badanej stronie;
-  bookmarklet jest dostepny w sekcji startowej UX Inspectora. UX Inspector ma
+  loader, protocol v1 i efemeryczny runtime UX Inspectora, UI Explorera
+  oraz opcjonalnego System Assistant na badanej stronie. Bookmarklet jest
+  dostępny w UX Inspectorze i System Assistant. UX Inspector ma
   wybor zakresu danych i wysyla jeden POST capture przez fetch do TDW.
   UI Explorer otwiera widok bez selekcji elementu, zachowujac handshake
-  page-context przez postMessage. Oba transfery nie korzystaja ze storage.
+  page-context przez postMessage. System Assistant osadza listę historii
+  i chat w iframe TDW; zachowuje kontekst wybranej rozmowy i używa aktualnej
+  konfiguracji. Transfery między stroną a TDW nie korzystają ze storage.
 - shell i routing aplikacji
   composition root nawigacji oraz rejestracji feature'ow.
 

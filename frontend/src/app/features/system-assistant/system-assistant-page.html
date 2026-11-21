@@ -1,0 +1,143 @@
+<main class="assistant-workspace" [class.assistant-workspace--embedded]="embedded">
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @if (ready()) {
+    @if (embedded) {
+      @if (historyOpen()) {
+        <app-assistant-conversation-picker [disabled]="busy()" [currentId]="conversation()?.id || ''" [selectionError]="historyError()"
+          (selected)="continueConversation($event)" (newConversation)="newConversation()" (cancelled)="historyOpen.set(false)" />
+      }
+      <ng-container [ngTemplateOutlet]="chatView" />
+    } @else {
+    <app-analysis-result-tabs [tabs]="workspaceTabs" [activeTabId]="workspaceView()"
+      idPrefix="system-assistant-view" ariaLabel="Widoki System Assistant" (tabSelected)="workspaceView.set($event)">
+      <div tabActions class="assistant-configuration-transfer" role="group" aria-label="Import i eksport konfiguracji">
+        <input #configurationFileInput class="assistant-configuration-file" type="file" accept=".json,application/json" hidden (change)="importConfiguration($event)" />
+        <button class="secondary-button" type="button" aria-label="Importuj konfigurację" matTooltip="Importuj konfigurację" [disabled]="configurationBusy()" (click)="configurationFileInput.click()">
+          <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+        </button>
+        <button class="secondary-button" type="button" aria-label="Eksportuj konfigurację" matTooltip="Eksportuj konfigurację" [disabled]="configurationBusy()" (click)="exportConfiguration()">
+          <span class="material-symbols-outlined" aria-hidden="true">download</span>
+        </button>
+      </div>
+      <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
+        @if (workspaceView() === 'skills') {
+          <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
+            @for (item of configuration().skills; track $index; let i = $index) {
+              <section class="assistant-definition">
+                <app-text-field [disabled]="configurationBusy()" label="ID skilla" [value]="item.id" (valueChange)="updateSkill(i, 'id', $event)" />
+                <app-text-field [disabled]="configurationBusy()" label="Nazwa skilla" [value]="item.name" (valueChange)="updateSkill(i, 'name', $event)" />
+                <app-text-field [disabled]="configurationBusy()" label="Instrukcje Markdown" type="textarea" [rows]="6" [value]="item.content" (valueChange)="updateSkill(i, 'content', $event)" />
+                <button class="secondary-button" type="button" (click)="remove('skills', i)">Usuń skill {{item.name}}</button>
+              </section>
+            } @empty { <p class="assistant-empty">Dodaj instrukcje określające sposób pracy asystenta.</p> }
+          </fieldset>
+        } @else if (workspaceView() === 'contracts') {
+          <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-api" aria-labelledby="system-assistant-view-tab-contracts">
+            <ul class="assistant-contracts" aria-label="Zaimportowane kontrakty">
+              @for (item of configuration().apis; track item.id; let i = $index) {
+                <li class="assistant-contract">
+                  <h3>{{item.name}}</h3>
+                  <div class="assistant-contract-actions">
+                    @if (contractActivity().get(item.id); as activity) {
+                      <span class="assistant-contract-count" tabindex="0" [matTooltip]="activity.tooltip"
+                        matTooltipClass="analysis-rich-tooltip" [attr.aria-label]="item.name + ': ' + activity.tooltip">{{activity.count === null ? '—' : activity.count}}</span>
+                    }
+                    <button class="secondary-button" type="button" matTooltip="Podgląd" [disabled]="configurationBusy()" (click)="viewContract(item)" [attr.aria-label]="'Podgląd kontraktu ' + item.name">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    </button>
+                    <button class="secondary-button" type="button" matTooltip="Eksportuj YAML" [disabled]="configurationBusy()" (click)="exportContract(item)" [attr.aria-label]="'Eksportuj kontrakt ' + item.name">
+                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                    </button>
+                    <button class="secondary-button" type="button" matTooltip="Usuń" [disabled]="configurationBusy()" (click)="remove('apis', i)" [attr.aria-label]="'Usuń kontrakt ' + item.name">
+                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                    </button>
+                  </div>
+                </li>
+              } @empty { <li class="assistant-empty">Nie dodano kontraktów. Wczytaj plik i wybierz potrzebne operacje.</li> }
+            </ul>
+          </fieldset>
+          @if (toolsError()) { <p role="alert">{{toolsError()}}</p> }
+        }
+        @if (notice()) { <p role="status">{{notice()}}</p> }
+        @if (saveError()) { <p role="alert">{{saveError()}}</p> }
+        <div class="assistant-configuration-actions">
+          @if (workspaceView() === 'skills') {
+            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().skills.length >= 20" (click)="addSkill()">Dodaj skill</button>
+          } @else if (workspaceView() === 'contracts') {
+            <input #newContractFile type="file" accept=".yaml,.yml" hidden (change)="readNewOpenApi($event)" />
+            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().apis.length >= 12" (click)="newContractFile.click()">Dodaj OpenAPI</button>
+          }
+          <button class="primary-button" type="button" [disabled]="configurationBusy() || !dirty()" (click)="save()">{{saving() ? 'Zapisywanie…' : 'Zapisz'}}</button>
+        </div>
+      </section>
+      <ng-container [ngTemplateOutlet]="chatView" />
+      <section class="assistant-launch assistant-view" [hidden]="workspaceView() !== 'launch'" aria-labelledby="system-assistant-view-tab-launch">
+        <app-browser-tools-setup data-form-tour="assistant-launch" title="Otwórz rozmowę z aplikacji"
+          instruction="Otwórz aplikację, kliknij zapisaną zakładkę i wybierz System Assistant. Rozmowa otworzy się w panelu na tej stronie." />
+      </section>
+    </app-analysis-result-tabs>
+    }
+  }
+  <ng-template #chatView>
+      <section class="assistant-chat assistant-view" [class.assistant-chat--with-aside]="!embedded && messages().length > 0" [hidden]="(embedded && historyOpen()) || (!embedded && workspaceView() !== 'conversation')" [attr.aria-labelledby]="embedded ? null : 'system-assistant-view-tab-conversation'" [attr.aria-label]="embedded ? 'Rozmowa System Assistant' : null">
+        @if (restoring()) { <p role="status">Wczytywanie rozmowy…</p> }
+        @if (ingress.status() === 'waiting') { <p role="status">Oczekiwanie na kontekst strony…</p> }
+        @if (ingress.error()) { <p role="alert">{{ingress.error()}}</p> }
+        @if (catalogError()) { <p role="alert">{{catalogError()}}</p> }
+        @if (dirty()) { <p role="status">Masz niezapisane zmiany. Chat korzysta z ostatniego poprawnie zapisanego zestawu.</p> }
+        <app-analysis-follow-up-chat data-form-tour="assistant-chat" [messages]="messages()" [canUseChat]="canChat()" [isSubmitting]="submitting()"
+          [error]="chatError()" [needsAuth]="!authReady()" [compact]="true" [staticPanel]="true" [openByDefault]="true"
+          ariaLabel="Rozmowa System Assistant" emptyText=""
+          placeholder="Wiadomość…" unavailableMessage="Sprawdź dostępność feature'a, model i PAT Copilota w Workspace Settings."
+          (sendMessage)="send($event)" (clearError)="chatError.set('')" (connectAuth)="auth.openSettings()">
+        <div chatActions class="assistant-ai-controls" data-form-tour="assistant-model">
+          <app-ai-execution-controls [compact]="true" [catalog]="catalog()" [model]="model()" [reasoningEffort]="reasoningEffort()"
+            [allowDefaultSelection]="true" [loading]="catalogLoading()" [error]="catalogError()" [disabled]="busy()"
+            (modelChange)="chooseModel($event)" (reasoningEffortChange)="reasoningEffort.set($event)" />
+        </div>
+          @if (embedded) {
+            <button chatActions class="assistant-chat-action" type="button" aria-label="Historia rozmów" matTooltip="Historia rozmów" [disabled]="busy()" (click)="openConversationHistory()">
+              <span class="material-symbols-outlined" aria-hidden="true">history</span>
+            </button>
+          }
+          @if (pageContext(); as page) {
+            <button chatActions class="assistant-chat-action" type="button" aria-label="Kontekst strony przy otwarciu"
+              [matTooltip]="page.title + ' · ' + page.origin + page.pathname + ' · ' + page.capturedAt">
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </button>
+          }
+          <button chatActions class="assistant-chat-action" type="button" aria-label="Nowa rozmowa" matTooltip="Nowa rozmowa"
+            [disabled]="busy() || (!conversation() && !restoreError())" (click)="newConversation()">
+            <span class="material-symbols-outlined" aria-hidden="true">add_comment</span>
+          </button>
+          @if (ingress.error()) {
+            <button chatActions class="assistant-chat-action" type="button" aria-label="Kontynuuj bez kontekstu" matTooltip="Kontynuuj bez kontekstu" (click)="ingress.dismiss()">
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+            </button>
+          }
+          @if (conversation()?.busy && chatError()) {
+            <button chatActions class="assistant-chat-action" type="button" aria-label="Wznów odświeżanie" matTooltip="Wznów odświeżanie" (click)="startPolling()">
+              <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            </button>
+          }
+          @if (unsentMessage() && chatError()) {
+            <button chatActions class="assistant-chat-action" type="button" aria-label="Przywróć do pola wiadomości" matTooltip="Przywróć wiadomość bez potwierdzenia przyjęcia" [disabled]="busy()" (click)="restoreMessage()">
+              <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+            </button>
+          }
+          @if (restoreError()) {
+            <button chatActions class="assistant-chat-action" type="button" aria-label="Ponów wczytanie rozmowy" matTooltip="Ponów wczytanie rozmowy" (click)="restoreConversation()">
+              <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            </button>
+          }
+        </app-analysis-follow-up-chat>
+        @if (!embedded && workspaceView() === 'conversation' && messages().length) {
+          <app-analysis-feature-aside [showProgress]="false" [showChat]="false" [showFeedback]="false" [aiActive]="busy()"
+            [aiCount]="activities().length" [chatMessages]="messages()">
+            <div aiPanel><app-analysis-steps-panel [aiActivityEvents]="activities()" [toolEvidenceSections]="evidence()"
+              [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+          </app-analysis-feature-aside>
+        }
+      </section>
+  </ng-template>
+</main>

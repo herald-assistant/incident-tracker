@@ -33,6 +33,21 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "swagger-ui-bundle.js",
+                "input": "node_modules/swagger-ui-dist",
+                "output": "openapi-viewer/vendor"
+              },
+              {
+                "glob": "swagger-ui.css",
+                "input": "node_modules/swagger-ui-dist",
+                "output": "openapi-viewer/vendor"
+              },
+              {
+                "glob": "{LICENSE,NOTICE,swagger-ui-bundle.js.LICENSE.txt}",
+                "input": "node_modules/swagger-ui-dist",
+                "output": "openapi-viewer/vendor"
               }
             ],
             "styles": [

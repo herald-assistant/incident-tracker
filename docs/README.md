@@ -21,6 +21,8 @@ tworzenia oraz aktualizowania dokumentow sa w `AGENTS.md`.
   instrukcja opt-in diagnostyki sesji Copilot SDK w lokalnym Agent Scanner.
 - `operational-context-assistance-diagnostics.md`
   diagnostyka asysty Operational Context i scenariusze recznej weryfikacji.
+- [system-assistant.md](system-assistant.md)
+  instrukcja konfiguracji, rozmowy, historii i uruchamiania Browser Tools.
 - `presentations/`
   materialy prezentacyjne i ich zrodla.
 
@@ -60,6 +62,20 @@ instrukcje `frontend/**/AGENTS.md`.
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
 implementacje niezatwierdzonego planu.
+
+## System Assistant
+
+[Instrukcja obsługi](system-assistant.md) opisuje cztery widoki: Skille,
+Kontrakty, Rozmowę i Uruchamianie w systemie. Feature udostępnia import
+wybranych operacji OpenAPI, podgląd Swagger UI, eksport YAML i przenoszenie
+całego zestawu konfiguracji. Trwałą rozmowę można kontynuować z Analysis
+History lub bezpośrednio w panelu Browser Tools, z pierwotnym kontekstem
+i aktualnymi skillami oraz narzędziami.
+
+[Runtime](architecture/system-assistant-runtime-flow.md) określa kontrakty,
+zapis konfiguracji i rozmów, podzbiór OpenAPI oraz granice platformy.
+Feature jest domyślnie wyłączony. Obsługuje hosty HTTP(S) bez ograniczenia
+do loopback; source auth, profile i załączniki pozostają poza bieżącym zakresem.
 
 ## Aktualne potrzeby i plany
 

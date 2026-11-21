@@ -26,7 +26,7 @@ class UiConfigControllerTest {
                 "CRM Operations Workspace",
                 "Team Delivery Workspace",
                 "Team Delivery Workspace",
-                "crm-release", true
+                "crm-release", true, false
         ));
 
         mockMvc.perform(get("/api/ui/config"))

@@ -30,14 +30,14 @@ describe('AppUiConfigService', () => {
       title: 'CRM Operations Workspace',
       subtitle: 'Team Delivery Workspace',
       defaultTitle: 'Team Delivery Workspace',
-      defaultBranch: 'crm-release', releaseSummaryEnabled: true
+      defaultBranch: 'crm-release', systemAssistantEnabled: false, releaseSummaryEnabled: true
     });
 
     expect(service.config()).toEqual({
       title: 'CRM Operations Workspace',
       subtitle: 'Team Delivery Workspace',
       defaultTitle: 'Team Delivery Workspace',
-      defaultBranch: 'crm-release', releaseSummaryEnabled: true
+      defaultBranch: 'crm-release', systemAssistantEnabled: false, releaseSummaryEnabled: true
     });
   });
 
@@ -49,14 +49,14 @@ describe('AppUiConfigService', () => {
       title: ' ',
       subtitle: ' ',
       defaultTitle: 'Team Delivery Workspace',
-      defaultBranch: ' ', releaseSummaryEnabled: false
+      defaultBranch: ' ', systemAssistantEnabled: false, releaseSummaryEnabled: false
     });
 
     expect(service.config()).toEqual({
       title: 'Team Delivery Workspace',
       subtitle: null,
       defaultTitle: 'Team Delivery Workspace',
-      defaultBranch: '', releaseSummaryEnabled: false
+      defaultBranch: '', systemAssistantEnabled: false, releaseSummaryEnabled: false
     });
   });
 });

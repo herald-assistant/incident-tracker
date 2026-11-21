@@ -1,0 +1,47 @@
+<header>
+  <h2 id="openApiPickerTitle">Wybierz udostępniane operacje</h2>
+  <button type="button" class="secondary-button picker-close" aria-label="Zamknij wybór operacji" (click)="dialog.close()">
+    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+  </button>
+</header>
+@if (error()) { <p class="picker-error" role="alert">{{error()}}</p> }
+@if (loading()) { <p role="status">Odczytywanie operacji z pliku…</p> }
+@if (!loading() && !preview()) { <button type="button" class="secondary-button" (click)="load()">Spróbuj ponownie</button> }
+@if (preview(); as document) {
+  <div class="picker-filters">
+    <app-text-field label="Szukaj operacji" type="search" placeholder="Ścieżka, opis, operationId lub tag" [value]="query()" [disabled]="applying()" (valueChange)="query.set($event); page.set(0)" />
+    <app-choice-select label="Metoda HTTP" [options]="methods()" [value]="method()" [disabled]="applying()" (valueChange)="method.set($event); page.set(0)" />
+    <app-choice-select label="Tag" [options]="tags()" [value]="tag()" [disabled]="applying()" (valueChange)="tag.set($event); page.set(0)" />
+    <div class="picker-toolbar">
+      <label><input type="checkbox" [checked]="onlySelected()" [disabled]="applying()" (change)="onlySelected.set($any($event.target).checked); page.set(0)" /> Tylko wybrane</label>
+      <button type="button" class="secondary-button picker-icon-button" aria-label="Zaznacz wszystko" matTooltip="Zaznacz wszystko" [disabled]="applying() || !selectableOperations().length" (click)="selectAll()">
+        <span class="material-symbols-outlined" aria-hidden="true">select_all</span>
+      </button>
+      <button type="button" class="secondary-button picker-icon-button" aria-label="Odznacz wszystko" matTooltip="Odznacz wszystko" [disabled]="applying() || !selected().size" (click)="resetSelection()">
+        <span class="material-symbols-outlined" aria-hidden="true">deselect</span>
+      </button>
+    </div>
+  </div>
+  @if (exceedsLimit()) { <p class="picker-error" role="alert">Przekroczono limit {{document.maxSelected}} operacji. Zmniejsz wybór.</p> }
+  @if (rows().length) {
+    <app-openapi-renderer class="picker-documentation" [specification]="renderedSpecification()" [selection]="renderedSelection()"
+      title="Wybór operacji OpenAPI" (selectionChange)="changeSelection($event)" (closeRequested)="dialog.close()" />
+  } @else { <p class="picker-empty">Brak operacji pasujących do filtrów.</p> }
+  @if (pages() > 1) {
+    <nav class="picker-pagination" aria-label="Strony operacji">
+      <button type="button" class="secondary-button" [disabled]="currentPage() === 0" (click)="page.set(currentPage() - 1)">Poprzednia</button>
+      <span>Strona {{currentPage() + 1}} z {{pages()}}</span>
+      <button type="button" class="secondary-button" [disabled]="currentPage() + 1 >= pages()" (click)="page.set(currentPage() + 1)">Następna</button>
+    </nav>
+  }
+}
+<footer>
+  <span aria-live="polite">Wybrane operacje: {{selected().size}}</span>
+  <div class="picker-footer-actions">
+    <button type="button" class="secondary-button" (click)="dialog.close()">Anuluj</button>
+    @if (preview()) {
+      <app-text-field class="picker-contract-name" label="Nazwa kontraktu" [value]="contractName()" [maxLength]="100" [required]="true" [disabled]="applying()" (valueChange)="contractName.set($event)" />
+    }
+    <button type="button" class="primary-button" [disabled]="!canApply()" (click)="apply()">{{applying() ? 'Przygotowywanie…' : 'Użyj wybranych operacji'}}</button>
+  </div>
+</footer>

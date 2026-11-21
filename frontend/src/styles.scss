@@ -1551,6 +1551,7 @@ body .flow-tree-node__badges .confidence-pill,
 }
 
 .chat-message__content .markdown-content {
+  font-size: var(--chat-message-font-size, inherit);
   line-height: 1.46;
 }
 

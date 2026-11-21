@@ -3,7 +3,7 @@
 TDW Browser Tools jest dostarczany razem z frontendem Team Delivery Workspace.
 Nie jest rozszerzeniem Chrome i nie ma stalego dostepu do odwiedzanych stron.
 Menu udostepnia UX Inspector dla wskazanego elementu oraz UI Explorer dla
-biezacego widoku.
+biezacego widoku. Włączony flagą System Assistant dodaje kafelek rozmów i historii.
 
 ## Uruchomienie
 
@@ -23,13 +23,21 @@ biezacego widoku.
 6. Potwierdz Application, Branch i sugerowany View. Rewizja pochodzi z
    katalogu kodu; doprecyzuj scenariusz i uruchom job recznie.
 
+Przy pracy z `npm start` zakladka jest przypieta do originu dev servera,
+np. `http://localhost:4200`. Dev proxy przekazuje dynamiczny
+`/browser-tools/availability.js` do backendu, tak samo jak `/api`.
+Loader, protocol i runtime sa serwowane z aktualnych zrodel frontendu.
+Zmiana `proxy.conf.json` wymaga ponownego uruchomienia dev servera.
+Brak tej trasy daje 404 availability.js i ogolny komunikat o nieudanym
+pobraniu Browser Tools; nie jest to sam w sobie dowod blokady CSP.
+
 Przycisk `X` w modalu instalacyjnym zamyka modal. Ikona `X` w naglowku menu
 usuwa Browser Tools i wszystkie jego listenery z badanej strony.
 
 ## Granica zaufania
 
 - Kod zakladki zawiera jedynie publiczny origin TDW i adres statycznego
-  `loader.js`. Loader pobiera `protocol.js` oraz `runtime.js` z tego samego
+  `loader.js`. Loader pobiera publiczną flagę `availability.js`, `protocol.js` oraz `runtime.js` z tego samego
   originu i ustawia `referrerPolicy=no-referrer`.
 - Shell wyswietla publiczny `assets/brand/main-logo.png` z tego samego originu
   TDW, rowniez z `referrerPolicy=no-referrer`.
@@ -93,3 +101,36 @@ i duzym body oraz przelacznik store'a. Serwuj katalog demo z innego originu
 HTTP i uruchom na nim zakladke swojej instancji TDW. Przykladowy cel odczytu:
 entryId=101, part=responseBody, pointer=/customer/permissions/editable.
 Pelny kontrakt opisuje `docs/architecture/ux-inspector-runtime-flow.md`.
+
+## System Assistant
+
+Akcja jest widoczna przy `system-assistant.enabled=true`, niezależnie od
+adresu nasłuchiwania TDW.
+Otwiera panel na badanej stronie z iframe TDW pod `/system-assistant/chat`.
+Na pierwsze otwarcie pokazuje listę zapisanych rozmów z wyszukiwaniem oraz
+akcją nowej rozmowy. Wybór otwiera ten sam transkrypt i pierwotny kontekst
+strony, także po restarcie TDW. Każda następna tura używa aktualnych skilli
+i narzędzi. Ikona historii w chacie wraca do listy bez otwierania pełnego TDW.
+Ramka korzysta ze wspólnego widoku chatu bez sidebaru i konfiguracji.
+Nie pokazuje toku AI ani kosztów; pełny ekran TDW zachowuje te dane.
+Zamknięcie panelu chowa ramkę; ponowne otwarcie zachowuje rozmowę i wpisaną
+wiadomość. Usunięcie Browser Tools usuwa też ramkę.
+Przekazuje wyłącznie origin, pathname,
+tytuł i czas otwarcia; bez query/hash, capture elementu, formularzy, store,
+historii HTTP i autentykacji. Handshake V1 sprawdza origin, source, nonce
+i dokładne pola między rodzicem a ramką. Strona źródłowa nie otrzymuje
+listy rozmów, ich tytułów, wiadomości ani stanu TDW. CSP frame-src lub polityka osadzania może blokować
+ramkę; panel pokazuje wtedy błąd, ponowienie i ręczny link do pełnego TDW.
+Instalator jest też dostępny w zakładce `Uruchamianie w systemie` ekranu
+System Assistant. Przeciągany link ma nazwę `TDW Browser Tools`; ikona nie
+dodaje tekstu do nazwy zapisywanej zakładki. Instrukcja obsługi:
+`docs/system-assistant.md`; runtime: `docs/architecture/system-assistant-runtime-flow.md`.
+
+## Rozmiar panelu System Assistant
+
+Przeciągnij lewą krawędź, aby zmienić szerokość. Przycisk obok zamknięcia
+maksymalizuje panel; ponowne kliknięcie przywraca poprzednią szerokość.
+Rozmowa i szkic pozostają w tej samej ramce. Rozmiar jest pamiętany do
+usunięcia Browser Tools lub przeładowania strony, bez zapisu w storage.
+Uchwyt działa też z klawiatury: strzałki lewo/prawo (Shift: większy krok),
+Home i End. Panel zawsze mieści się w oknie przeglądarki.

@@ -333,12 +333,12 @@ test('protocol rejects forged fields and unsupported versions while allowing lar
   dom.window.close();
 });
 
-test('remote loader derives TDW origin and loads protocol before runtime', async () => {
+test('remote loader derives TDW origin and loads protocol before runtime', {timeout: 2000}, async (context) => {
   const dom = new JSDOM(
     `<!doctype html><html><head></head><body>
       <script
         id="tdw-loader"
-        src="https://tdw.example.com/browser-tools/loader.js?v=1.7.0"
+        src="https://tdw.example.com/browser-tools/loader.js?v=1.12.0"
         data-tdw-feature-id="browser-tools"
       ></script>
     </body></html>`,
@@ -350,9 +350,12 @@ test('remote loader derives TDW origin and loads protocol before runtime', async
   );
   const { window } = dom;
   const loader = window.document.getElementById('tdw-loader');
+  context.after(() => dom.window.close());
   const loadedAssets = [];
   const alerts = [];
   let runtimeConfig = null;
+  let finishRuntimeLoad;
+  const runtimeLoaded = new Promise(resolve => { finishRuntimeLoad = resolve; });
   Object.defineProperty(window.document, 'currentScript', {
     configurable: true,
     value: loader
@@ -373,15 +376,17 @@ test('remote loader derives TDW origin and loads protocol before runtime', async
           );
         }
         node.dispatchEvent(new window.Event('load'));
+        if (assetUrl.pathname.endsWith('/runtime.js')) finishRuntimeLoad();
       }, 0);
     }
     return appended;
   };
 
   window.eval(loaderSource);
-  await new Promise((resolve) => window.setTimeout(resolve, 30));
+  await runtimeLoaded;
 
   assert.deepEqual(loadedAssets, [
+    '/browser-tools/availability.js',
     '/browser-tools/protocol.js',
     '/browser-tools/runtime.js'
   ]);
@@ -406,7 +411,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.7.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.12.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -513,7 +518,7 @@ test('new runtime replaces an older Browser Tools instance on the same page', ()
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]')
       ?.getAttribute('data-tdw-browser-tool-version'),
-    '1.7.0'
+    '1.12.0'
   );
   dom.window.close();
 });

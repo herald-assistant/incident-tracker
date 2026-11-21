@@ -1,10 +1,10 @@
-<app-choice-select size="descriptive"
-  [inputId]="modelInputId()" label="Model AI"
-  tooltip="Model używany do analizy. Dostępne modele pochodzą z konfiguracji workspace’u."
+<app-choice-select [size]="compact() ? 'standard' : 'descriptive'" [class.is-compact]="compact()"
+  [inputId]="modelInputId()" [label]="compact() ? '' : 'Model AI'" ariaLabel="Model AI"
+  [tooltip]="compact() ? '' : 'Model używany do analizy. Dostępne modele pochodzą z konfiguracji workspace’u.'"
   [options]="modelOptions()" [value]="model()" [disabled]="modelLocked()" [loading]="loading()" [error]="error()"
   (valueChange)="selectModel($event)" (touched)="modelTouched.emit()" (opened)="opened.emit()" />
-<app-choice-select size="descriptive"
-  [inputId]="reasoningInputId()" label="Reasoning effort"
-  tooltip="Poziom rozumowania udostępniony przez wybrany model. Wyższy poziom może wydłużyć analizę."
+<app-choice-select [size]="compact() ? 'standard' : 'descriptive'" [class.is-compact]="compact()"
+  [inputId]="reasoningInputId()" [label]="compact() ? '' : 'Reasoning effort'" ariaLabel="Reasoning effort"
+  [tooltip]="compact() ? '' : 'Poziom rozumowania udostępniony przez wybrany model. Wyższy poziom może wydłużyć analizę.'"
   [options]="reasoningOptions()" [value]="reasoningEffort()" [disabled]="reasoningLocked()" [loading]="loading()"
   (valueChange)="selectReasoning($event)" (touched)="reasoningTouched.emit()" (opened)="opened.emit()" />

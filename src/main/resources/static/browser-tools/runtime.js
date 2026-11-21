@@ -4,11 +4,13 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.7.0';
+  const RUNTIME_VERSION = '1.12.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
   const rawConfig = global[CONFIG_KEY];
+  const assistantEnabled = global.__TDW_BROWSER_TOOLS_AVAILABILITY__?.systemAssistantEnabled === true;
+  try { delete global.__TDW_BROWSER_TOOLS_AVAILABILITY__; } catch { /* Page-owned global. */ }
 
   try {
     delete global[CONFIG_KEY];
@@ -34,7 +36,7 @@
   const existing = global[SINGLETON_KEY];
   if (existing && existing.host?.getAttribute?.('data-tdw-browser-tool-version') === RUNTIME_VERSION
       && typeof existing.reveal === 'function') {
-    existing.reveal(configResult.value);
+    existing.reveal(configResult.value, assistantEnabled);
     return;
   }
   if (existing && typeof existing.dispose === 'function') {
@@ -49,7 +51,8 @@
     [
       'ui-explorer',
       (config, onExit) => new UiExplorer(config, onExit)
-    ]
+    ],
+    ['system-assistant', (config, onExit) => new EmbeddedAssistant(config, onExit)]
   ]);
   if (configResult.value.featureId !== 'browser-tools' && !featureFactories.has(configResult.value.featureId)) {
     console.error('[TDW Browser Tools] Unknown feature: ' + configResult.value.featureId);
@@ -58,9 +61,11 @@
 
   function TdwBrowserTools(config) {
     this.config = config;
+    this.assistantEnabled = assistantEnabled;
     this.state = 'bootstrapping';
     this.disposed = false;
     this.activeFeature = null;
+    this.assistantPanel = null;
     this.menuFocusTimer = null;
     this.captureProfile = 'ELEMENT_CONTEXT';
 
@@ -150,7 +155,22 @@
     explorerArrow.setAttribute('aria-hidden', 'true');
     this.explorerButton.append(explorerIcon, explorerCopy, explorerArrow);
 
-    this.menu.append(menuHeader, this.inspectorButton, this.profileFieldset, this.explorerButton);
+    this.assistantButton = button('tdw-tool-action', '');
+    this.assistantButton.setAttribute('aria-label', 'Otwórz System Assistant: nowa rozmowa lub historia');
+    const assistantIcon = element('span', 'tdw-tool-action__icon');
+    assistantIcon.setAttribute('aria-hidden', 'true');
+    const chatIcon = svgElement('svg', { viewBox: '0 0 24 24', focusable: 'false' });
+    chatIcon.append(svgElement('path', { d: 'M4 4h16v12H9l-5 4zM8 8h8M8 12h5',
+      fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    assistantIcon.append(chatIcon);
+    const assistantCopy = element('span', 'tdw-tool-action__copy');
+    assistantCopy.append(element('strong', '', 'System Assistant'), element('span', '', 'Otwórz nową lub wcześniejszą rozmowę'));
+    const assistantArrow = element('span', 'tdw-tool-action__arrow', '→');
+    assistantArrow.setAttribute('aria-hidden', 'true');
+    this.assistantButton.append(assistantIcon, assistantCopy, assistantArrow);
+    this.assistantButton.dataset.featureId = 'system-assistant';
+    this.assistantButton.hidden = !this.assistantEnabled;
+    this.menu.append(menuHeader, this.inspectorButton, this.profileFieldset, this.explorerButton, this.assistantButton);
 
     this.launcherButton = button('tdw-tools-launcher', '');
     this.launcherButton.setAttribute('aria-label', 'Otwórz TDW Browser Tools');
@@ -167,6 +187,7 @@
     this.onInspectorClick = this.toggleInspectorOptions.bind(this);
     this.onRunInspectorClick = this.startFeature.bind(this, 'ux-inspector');
     this.onExplorerClick = this.startFeature.bind(this, 'ui-explorer');
+    this.onAssistantClick = this.startFeature.bind(this, 'system-assistant');
     this.onProfileChange = this.onProfileChange.bind(this);
     this.onRemoveClick = this.dispose.bind(this, 'user-removed');
     this.onDocumentPointerDown = this.onDocumentPointerDown.bind(this);
@@ -185,6 +206,7 @@
     this.inspectorButton.addEventListener('click', this.onInspectorClick);
     this.runInspectorButton.addEventListener('click', this.onRunInspectorClick);
     this.explorerButton.addEventListener('click', this.onExplorerClick);
+    this.assistantButton.addEventListener('click', this.onAssistantClick);
     this.profileInputs.forEach(({ input }) =>
       input.addEventListener('change', this.onProfileChange)
     );
@@ -192,9 +214,16 @@
     this.state = 'dock-idle';
   };
 
-  TdwBrowserTools.prototype.reveal = function reveal() {
+  TdwBrowserTools.prototype.reveal = function reveal(_config, enabled = this.assistantEnabled) {
+    this.assistantEnabled = enabled; this.assistantButton.hidden = !enabled;
     if (this.disposed) {
       return;
+    }
+    if (!enabled && this.assistantPanel) {
+      this.assistantPanel.dispose('feature-disabled'); this.assistantPanel = null;
+    }
+    if (this.activeFeature === this.assistantPanel && this.activeFeature) {
+      this.activeFeature.start(); return;
     }
     if (this.activeFeature) {
       this.activeFeature.dispose('launcher-reopened');
@@ -285,6 +314,7 @@
     if (this.disposed || this.activeFeature) {
       return;
     }
+    if (featureId === 'system-assistant' && !this.assistantEnabled) return;
     const featureFactory = featureFactories.get(featureId);
     if (!featureFactory) {
       console.error('[TDW Browser Tools] Unknown feature: ' + featureId);
@@ -293,16 +323,17 @@
     this.closeMenu(false);
     this.host.hidden = true;
     this.state = 'feature-active';
-    const feature = featureFactory(
+    const feature = (featureId === 'system-assistant' && this.assistantPanel) || featureFactory(
       this.config,
-      () => this.onFeatureExit(feature),
+      (outcome) => this.onFeatureExit(feature, outcome),
       { captureProfile: this.captureProfile }
     );
+    if (featureId === 'system-assistant') this.assistantPanel = feature;
     this.activeFeature = feature;
     feature.start();
   };
 
-  TdwBrowserTools.prototype.onFeatureExit = function onFeatureExit(feature) {
+  TdwBrowserTools.prototype.onFeatureExit = function onFeatureExit(feature, outcome) {
     if (this.activeFeature !== feature) {
       return;
     }
@@ -312,6 +343,7 @@
     }
     this.host.hidden = false;
     this.state = 'dock-idle';
+    if (outcome?.restoreFocus) this.launcherButton.focus({ preventScroll: true });
   };
 
   TdwBrowserTools.prototype.dispose = function dispose() {
@@ -326,11 +358,14 @@
     this.inspectorButton.removeEventListener('click', this.onInspectorClick);
     this.runInspectorButton.removeEventListener('click', this.onRunInspectorClick);
     this.explorerButton.removeEventListener('click', this.onExplorerClick);
+    this.assistantButton.removeEventListener('click', this.onAssistantClick);
     this.profileInputs.forEach(({ input }) =>
       input.removeEventListener('change', this.onProfileChange)
     );
     this.removeButton.removeEventListener('click', this.onRemoveClick);
     this.activeFeature?.dispose('shell-disposed');
+    this.assistantPanel?.dispose('shell-disposed');
+    this.assistantPanel = null;
     this.activeFeature = null;
     this.host.remove();
     if (global[SINGLETON_KEY] === this) {
@@ -722,98 +757,296 @@
   };
 
   function UiExplorer(config, onExit) {
-    this.config = config;
-    this.onExit = onExit;
-    this.disposed = false;
-    this.bridgeWindow = null;
-    this.bridgeNonce = '';
-    this.bridgeTimer = null;
-    this.context = null;
-    this.state = 'idle';
-    this.onBridgeMessage = this.onBridgeMessage.bind(this);
+    return new PopupContextTransfer(config, onExit, {
+      route: '/ui-explorer', label: 'UI Explorer', prefix: 'TDW_UI_EXPLORER',
+      capture: () => protocol.capturePageContext()
+    });
   }
 
-  UiExplorer.prototype.start = function start() {
-    try {
-      this.context = protocol.capturePageContext();
-    } catch (error) {
-      console.error('[TDW UI Explorer] Page context failed.', error);
-      this.fail('Nie udało się odczytać adresu i głównego komponentu widoku.');
-      return;
-    }
-    this.bridgeNonce = protocol.createNonce();
-    const targetUrl = new URL('/ui-explorer', this.config.tdwOrigin);
-    targetUrl.hash = new URLSearchParams({
-      nonce: this.bridgeNonce,
-      sourceOrigin: global.location.origin
-    }).toString();
-    global.addEventListener('message', this.onBridgeMessage, true);
-    this.bridgeWindow = global.open(targetUrl.toString(), `tdw-ui-explorer-${this.bridgeNonce}`);
-    if (!this.bridgeWindow) {
-      this.fail('Przeglądarka zablokowała otwarcie UI Explorera.');
-      return;
-    }
-    this.state = 'transferring';
-    this.resetTimer('Nie udało się potwierdzić połączenia z UI Explorerem.');
+  function EmbeddedAssistant(config, onExit) {
+    this.config = config; this.onExit = onExit; this.disposed = false;
+    this.state = 'idle'; this.timer = null; this.nonce = ''; this.contextId = ''; this.context = null;
+    this.normalWidth = 560; this.maximized = false; this.resizeGesture = null;
+    this.host = element('div', '');
+    this.host.dataset.tdwBrowserToolRoot = 'system-assistant';
+    this.shadowRoot = this.host.attachShadow({ mode: testMode ? 'open' : 'closed' });
+    const style = element('style', '', ASSISTANT_STYLES);
+    const panel = element('section', 'assistant-panel');
+    panel.setAttribute('role', 'region'); panel.setAttribute('aria-label', 'System Assistant');
+    const header = element('header', 'assistant-header');
+    const title = element('strong', '', 'System Assistant');
+    const settings = element('a', 'assistant-settings');
+    settings.href = new URL('/system-assistant', config.tdwOrigin).toString();
+    settings.target = '_blank'; settings.rel = 'noopener noreferrer';
+    settings.setAttribute('aria-label', 'Otwórz konfigurację System Assistant w TDW');
+    settings.title = 'Otwórz konfigurację System Assistant w TDW';
+    const settingsIcon = svgElement('svg', {viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false'});
+    settingsIcon.append(svgElement('path', {d: 'M5 19 19 5M9 5h10v10', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
+    settings.append(settingsIcon);
+    this.maximizeButton = iconButton('assistant-maximize', 'Maksymalizuj panel', '');
+    this.closeButton = iconButton('assistant-close', 'Zamknij panel rozmowy', '');
+    const closeIcon = svgElement('svg', {viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false'});
+    closeIcon.append(svgElement('path', {d: 'M6 6l12 12M18 6 6 18', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linecap': 'round'}));
+    this.closeButton.append(closeIcon);
+    const headerActions = element('div', 'assistant-header-actions');
+    headerActions.append(settings, this.maximizeButton, this.closeButton);
+    header.append(title, headerActions);
+    this.status = element('p', 'assistant-status', 'Łączenie z TDW…');
+    this.status.setAttribute('role', 'status');
+    this.retryButton = button('assistant-retry', 'Spróbuj ponownie'); this.retryButton.hidden = true;
+    this.frame = element('iframe', 'assistant-frame');
+    this.frame.title = 'Rozmowa System Assistant'; this.frame.referrerPolicy = 'no-referrer';
+    this.frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+    this.resizeHandle = element('div', 'assistant-resize-handle');
+    this.resizeHandle.tabIndex = 0;
+    this.resizeHandle.setAttribute('role', 'separator');
+    this.resizeHandle.setAttribute('aria-orientation', 'vertical');
+    this.resizeHandle.setAttribute('aria-label', 'Zmień szerokość panelu');
+    this.resizeHandle.title = 'Przeciągnij, aby zmienić szerokość. Strzałki lewo/prawo również zmieniają rozmiar.';
+    this.resizeShield = element('div', 'assistant-resize-shield'); this.resizeShield.hidden = true;
+    panel.append(header, this.status, this.retryButton, this.frame);
+    this.shadowRoot.append(style, panel, this.resizeShield, this.resizeHandle);
+    this.onClose = this.hide.bind(this); this.onRetry = this.connect.bind(this);
+    this.onMessage = this.receive.bind(this); this.onError = () => this.fail();
+    this.onMaximize = this.toggleMaximize.bind(this);
+    this.onResizeStart = this.startResize.bind(this); this.onResizeMove = this.moveResize.bind(this);
+    this.onResizeEnd = this.finishResize.bind(this); this.onResizeKey = this.resizeWithKeyboard.bind(this);
+    this.onResizeBlur = () => this.finishResize();
+    this.onViewportResize = () => { this.finishResize(); this.applyPanelSize(); };
+    this.closeButton.addEventListener('click', this.onClose);
+    this.maximizeButton.addEventListener('click', this.onMaximize);
+    this.resizeHandle.addEventListener('pointerdown', this.onResizeStart);
+    this.resizeHandle.addEventListener('lostpointercapture', this.onResizeEnd);
+    this.resizeHandle.addEventListener('keydown', this.onResizeKey);
+    global.addEventListener('resize', this.onViewportResize);
+    this.retryButton.addEventListener('click', this.onRetry);
+    this.frame.addEventListener('error', this.onError);
+    this.applyPanelSize();
+  }
+  EmbeddedAssistant.prototype.widthBounds = function widthBounds() {
+    const max = Math.max(0, (global.document.documentElement.clientWidth || global.innerWidth) - 16);
+    return { min: Math.min(320, max), max };
   };
-
-  UiExplorer.prototype.onBridgeMessage = function onBridgeMessage(event) {
-    if (event.origin !== this.config.tdwOrigin || event.source !== this.bridgeWindow ||
-        !this.bridgeNonce) return;
-    if (this.state === 'transferring' &&
-        protocol.isUiExplorerReadyMessage(event.data, this.bridgeNonce)) {
+  EmbeddedAssistant.prototype.panelWidth = function panelWidth() {
+    const bounds = this.widthBounds();
+    return Math.max(bounds.min, Math.min(bounds.max, this.normalWidth));
+  };
+  EmbeddedAssistant.prototype.applyPanelSize = function applyPanelSize() {
+    const bounds = this.widthBounds();
+    const width = this.maximized ? bounds.max : this.panelWidth();
+    this.host.style.setProperty('--assistant-panel-width', `${width}px`);
+    this.resizeHandle.hidden = this.maximized;
+    this.resizeHandle.setAttribute('aria-valuemin', String(bounds.min));
+    this.resizeHandle.setAttribute('aria-valuemax', String(bounds.max));
+    this.resizeHandle.setAttribute('aria-valuenow', String(width));
+    this.maximizeButton.setAttribute('aria-pressed', String(this.maximized));
+    const label = this.maximized ? 'Przywróć rozmiar panelu' : 'Maksymalizuj panel';
+    this.maximizeButton.setAttribute('aria-label', label); this.maximizeButton.title = label;
+    const icon = svgElement('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' });
+    icon.append(svgElement('path', { d: this.maximized ? 'M8 8V4h12v12h-4M4 8h12v12H4z' : 'M4 4h16v16H4z',
+      fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linejoin': 'round' }));
+    this.maximizeButton.replaceChildren(icon);
+  };
+  EmbeddedAssistant.prototype.toggleMaximize = function toggleMaximize() {
+    this.finishResize(); this.maximized = !this.maximized; this.applyPanelSize();
+  };
+  EmbeddedAssistant.prototype.startResize = function startResize(event) {
+    if (this.disposed || this.maximized || this.resizeGesture || event.button !== 0 || event.isPrimary === false) return;
+    event.preventDefault(); event.stopPropagation();
+    this.resizeGesture = { pointerId: event.pointerId, x: event.clientX, width: this.panelWidth() };
+    this.resizeHandle.focus({ preventScroll: true }); this.resizeShield.hidden = false;
+    this.host.setAttribute('data-resizing', '');
+    global.addEventListener('pointermove', this.onResizeMove, true);
+    global.addEventListener('pointerup', this.onResizeEnd, true);
+    global.addEventListener('pointercancel', this.onResizeEnd, true);
+    global.addEventListener('blur', this.onResizeBlur);
+    try { this.resizeHandle.setPointerCapture(event.pointerId); } catch { /* The drag shield also spans the viewport. */ }
+  };
+  EmbeddedAssistant.prototype.moveResize = function moveResize(event) {
+    const gesture = this.resizeGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const bounds = this.widthBounds();
+    this.normalWidth = Math.round(Math.max(bounds.min, Math.min(bounds.max, gesture.width + gesture.x - event.clientX)));
+    this.applyPanelSize();
+  };
+  EmbeddedAssistant.prototype.finishResize = function finishResize(event) {
+    const gesture = this.resizeGesture;
+    if (!gesture || (event && event.pointerId !== gesture.pointerId)) return;
+    this.resizeGesture = null;
+    global.removeEventListener('pointermove', this.onResizeMove, true);
+    global.removeEventListener('pointerup', this.onResizeEnd, true);
+    global.removeEventListener('pointercancel', this.onResizeEnd, true);
+    global.removeEventListener('blur', this.onResizeBlur);
+    this.resizeShield.hidden = true; this.host.removeAttribute('data-resizing');
+    if (this.resizeHandle.hasPointerCapture?.(gesture.pointerId)) this.resizeHandle.releasePointerCapture(gesture.pointerId);
+  };
+  EmbeddedAssistant.prototype.resizeWithKeyboard = function resizeWithKeyboard(event) {
+    if (this.maximized || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    const bounds = this.widthBounds(); const step = event.shiftKey ? 50 : 20;
+    this.normalWidth = event.key === 'Home' ? bounds.min : event.key === 'End' ? bounds.max
+      : Math.max(bounds.min, Math.min(bounds.max, this.panelWidth() + (event.key === 'ArrowLeft' ? step : -step)));
+    this.applyPanelSize();
+  };
+  EmbeddedAssistant.prototype.start = function start() {
+    if (this.disposed) return;
+    if (!this.host.isConnected) {
+      global.document.documentElement.append(this.host);
+      this.connect();
+    }
+    this.host.hidden = false;
+    this.closeButton.focus({ preventScroll: true });
+  };
+  EmbeddedAssistant.prototype.connect = function connect() {
+    if (this.disposed) return;
+    this.cleanup();
+    this.context = { origin: global.location.origin, pathname: global.location.pathname,
+      title: global.document.title.slice(0, 200), capturedAt: new Date().toISOString() };
+    this.contextId = protocol.createNonce(); this.nonce = protocol.createNonce();
+    const url = new URL('/system-assistant/chat', this.config.tdwOrigin);
+    url.hash = new URLSearchParams({ nonce: this.nonce, sourceOrigin: global.location.origin }).toString();
+    this.state = 'waiting'; this.status.hidden = false; this.status.setAttribute('role', 'status');
+    this.status.textContent = 'Łączenie z TDW…'; this.retryButton.hidden = true; this.frame.hidden = false;
+    global.addEventListener('message', this.onMessage, true);
+    this.frame.src = url.toString();
+    this.timer = global.setTimeout(() => this.fail(), testMode ? 80 : BRIDGE_TIMEOUT_MS);
+  };
+  EmbeddedAssistant.prototype.receive = function receive(event) {
+    const peer = this.frame.contentWindow;
+    if (this.disposed || !peer || event.origin !== this.config.tdwOrigin || event.source !== peer) return;
+    if (this.state === 'waiting' && validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'READY')) {
       try {
-        this.bridgeWindow.postMessage(
-          protocol.createMessage('TDW_UI_EXPLORER_CONTEXT', this.bridgeNonce, {
-            contextId: this.context.contextId,
-            context: this.context
-          }),
-          this.config.tdwOrigin
-        );
+        peer.postMessage(protocol.createMessage('TDW_SYSTEM_ASSISTANT_CONTEXT', this.nonce,
+          {contextId: this.contextId, context: this.context}), this.config.tdwOrigin);
         this.state = 'awaiting-receipt';
-        this.resetTimer('UI Explorer nie potwierdził odbioru widoku.');
-      } catch (error) {
-        console.error('[TDW UI Explorer] postMessage failed.', error);
-        this.fail('Nie udało się przekazać widoku do UI Explorera.');
-      }
-      return;
-    }
-    if (protocol.isUiExplorerErrorMessage(event.data, this.bridgeNonce)) {
-      this.fail('UI Explorer odrzucił widok: ' + event.data.code + '.');
-      return;
-    }
-    if (this.state === 'awaiting-receipt' &&
-        protocol.isUiExplorerReceivedMessage(event.data, this.bridgeNonce) &&
-        event.data.contextId === this.context?.contextId) {
+      } catch { this.fail(); }
+    } else if (this.state === 'awaiting-receipt'
+      && validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'RECEIVED')
+      && event.data.contextId === this.contextId) {
+      this.state = 'ready'; this.status.hidden = true; this.cleanup();
+    } else if (validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'ERROR')) this.fail();
+  };
+  EmbeddedAssistant.prototype.fail = function fail() {
+    if (this.disposed || this.state === 'ready') return;
+    this.cleanup(); this.state = 'failed'; this.frame.hidden = true; this.retryButton.hidden = false;
+    this.status.hidden = false; this.status.setAttribute('role', 'alert');
+    this.status.textContent = 'Nie udało się osadzić rozmowy TDW. Sprawdź dostępność TDW i czy strona zezwala na ramki (CSP frame-src). Możesz spróbować ponownie lub otworzyć TDW powyżej.';
+  };
+  EmbeddedAssistant.prototype.hide = function hide() {
+    if (this.disposed) return;
+    this.finishResize();
+    this.host.hidden = true; this.onExit?.({restoreFocus: true});
+  };
+  EmbeddedAssistant.prototype.cleanup = function cleanup() {
+    global.removeEventListener('message', this.onMessage, true);
+    if (this.timer !== null) global.clearTimeout(this.timer);
+    this.timer = null;
+  };
+  EmbeddedAssistant.prototype.dispose = function dispose() {
+    if (this.disposed) return;
+    this.disposed = true; this.cleanup();
+    this.finishResize(); global.removeEventListener('resize', this.onViewportResize);
+    this.closeButton.removeEventListener('click', this.onClose);
+    this.maximizeButton.removeEventListener('click', this.onMaximize);
+    this.resizeHandle.removeEventListener('pointerdown', this.onResizeStart);
+    this.resizeHandle.removeEventListener('lostpointercapture', this.onResizeEnd);
+    this.resizeHandle.removeEventListener('keydown', this.onResizeKey);
+    this.retryButton.removeEventListener('click', this.onRetry);
+    this.frame.removeEventListener('error', this.onError);
+    this.host.remove(); this.context = null; this.nonce = ''; this.onExit?.(); this.onExit = null;
+  };
+  const ASSISTANT_STYLES = `
+    :host { all: initial; display: block; position: fixed; right: 8px; bottom: 8px;
+      width: min(var(--assistant-panel-width, 560px), calc(100vw - 16px)); height: calc(100dvh - 16px);
+      z-index: 2147483646; font: 14px/1.45 system-ui, sans-serif; color: #172b4d; }
+    :host([hidden]), [hidden] { display: none !important; }
+    * { box-sizing: border-box; }
+    .assistant-panel { height: 100%; display: flex; flex-direction: column; overflow: hidden;
+      background: #fffdfa; border: 1px solid #c8c4bc; border-radius: 12px; box-shadow: 0 8px 32px #172b4d33; }
+    .assistant-header { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-bottom: 1px solid #dedbd5; }
+    .assistant-header strong { flex: 1; font-size: 13px; font-weight: 500; }
+    .assistant-header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .assistant-header-actions a, .assistant-header-actions button { display: grid; place-items: center; width: 28px; height: 28px;
+      padding: 0; margin: 0; border: 1px solid transparent; border-radius: 6px; line-height: 1; }
+    .assistant-settings { color: #174ea6; text-decoration: none; }
+    button { font: inherit; cursor: pointer; color: inherit; background: transparent; border: 1px solid #c8c4bc; border-radius: 8px; }
+    .assistant-header-actions svg { display: block; width: 18px; height: 18px; }
+    .assistant-header-actions a:hover, .assistant-header-actions button:hover { background: #172b4d0d; }
+    .assistant-resize-handle { position: absolute; top: 0; bottom: 0; left: -4px; width: 9px;
+      z-index: 3; cursor: ew-resize; touch-action: none; border-radius: 4px; }
+    .assistant-resize-handle::after { content: ''; position: absolute; top: calc(50% - 20px); left: 3px;
+      width: 3px; height: 40px; border-radius: 2px; background: #8d99ab; opacity: 0; }
+    .assistant-resize-handle:hover::after, .assistant-resize-handle:focus-visible::after,
+    :host([data-resizing]) .assistant-resize-handle::after { opacity: 1; }
+    .assistant-resize-handle:focus-visible { outline: 2px solid #2463eb; outline-offset: -2px; }
+    .assistant-resize-shield { position: fixed; inset: 0; z-index: 2; cursor: ew-resize; touch-action: none; }
+    :host([data-resizing]) { user-select: none; }
+    button:focus-visible, a:focus-visible { outline: 2px solid #2463eb; outline-offset: 2px; }
+    .assistant-status { margin: 12px; }
+    .assistant-retry { margin: 0 12px 12px; padding: 8px; }
+    .assistant-frame { display: block; flex: 1; width: 100%; min-height: 0; border: 0; background: #fffdfa; }
+  `;
+
+  function validTransferMessage(data, prefix, nonce, suffix) {
+    const fields = suffix === 'READY' ? ['type', 'protocolVersion', 'nonce']
+      : suffix === 'RECEIVED' ? ['type', 'protocolVersion', 'nonce', 'contextId']
+      : ['type', 'protocolVersion', 'nonce', 'code'];
+    return data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === fields.length &&
+      fields.every(key => Object.hasOwn(data, key)) && data.type === `${prefix}_${suffix}` &&
+      data.protocolVersion === 1 && data.nonce === nonce;
+  }
+
+  function PopupContextTransfer(config, onExit, options) {
+    this.config = config; this.onExit = onExit; this.options = options;
+    this.disposed = false; this.bridgeWindow = null; this.bridgeNonce = '';
+    this.bridgeTimer = null; this.context = null; this.state = 'idle';
+    this.onBridgeMessage = this.onBridgeMessage.bind(this);
+  }
+  PopupContextTransfer.prototype.start = function start() {
+    try { this.context = this.options.capture(); }
+    catch { this.fail('Nie udało się odczytać kontekstu strony.'); return; }
+    this.contextId = this.context.contextId || protocol.createNonce();
+    this.bridgeNonce = protocol.createNonce();
+    const url = new URL(this.options.route, this.config.tdwOrigin);
+    url.hash = new URLSearchParams({ nonce: this.bridgeNonce, sourceOrigin: global.location.origin }).toString();
+    global.addEventListener('message', this.onBridgeMessage, true);
+    this.bridgeWindow = global.open(url.toString(), `tdw-context-${this.bridgeNonce}`);
+    if (!this.bridgeWindow) { this.fail('Przeglądarka zablokowała otwarcie okna.'); return; }
+    this.state = 'transferring'; this.resetTimer();
+  };
+  PopupContextTransfer.prototype.valid = function valid(data, suffix) {
+    return validTransferMessage(data, this.options.prefix, this.bridgeNonce, suffix);
+  };
+  PopupContextTransfer.prototype.onBridgeMessage = function onBridgeMessage(event) {
+    if (event.origin !== this.config.tdwOrigin || event.source !== this.bridgeWindow || !this.bridgeNonce) return;
+    if (this.state === 'transferring' && this.valid(event.data, 'READY')) {
+      try {
+        this.bridgeWindow.postMessage(protocol.createMessage(`${this.options.prefix}_CONTEXT`, this.bridgeNonce,
+          { contextId: this.contextId, context: this.context }), this.config.tdwOrigin);
+        this.state = 'awaiting-receipt'; this.resetTimer();
+      } catch { this.fail('Nie udało się przekazać kontekstu.'); }
+    } else if (this.valid(event.data, 'ERROR')) this.fail('Odbiorca odrzucił kontekst.');
+    else if (this.state === 'awaiting-receipt' && this.valid(event.data, 'RECEIVED') && event.data.contextId === this.contextId)
       this.dispose('transferred');
-    }
   };
-
-  UiExplorer.prototype.resetTimer = function resetTimer(message) {
+  PopupContextTransfer.prototype.resetTimer = function resetTimer() {
     if (this.bridgeTimer !== null) global.clearTimeout(this.bridgeTimer);
-    this.bridgeTimer = global.setTimeout(() => this.fail(message), testMode ? 80 : BRIDGE_TIMEOUT_MS);
+    this.bridgeTimer = global.setTimeout(() => this.fail('Nie udało się potwierdzić połączenia z TDW.'), testMode ? 80 : BRIDGE_TIMEOUT_MS);
   };
-
-  UiExplorer.prototype.fail = function fail(message) {
+  PopupContextTransfer.prototype.fail = function fail(message) {
     if (this.disposed) return;
-    try { this.bridgeWindow?.close(); } catch { /* COOP may detach the window. */ }
-    if (typeof global.alert === 'function') global.alert('TDW UI Explorer\n\n' + message);
-    this.dispose('transfer-failed');
+    try { this.bridgeWindow?.close(); } catch { /* Detached popup. */ }
+    if (this.options.route === '/ui-explorer') {
+      global.alert?.('TDW UI Explorer\n\n' + message); this.dispose('transfer-failed');
+    } else this.dispose('transfer-failed');
   };
-
-  UiExplorer.prototype.dispose = function dispose(reason) {
+  PopupContextTransfer.prototype.dispose = function dispose(outcome) {
     if (this.disposed) return;
-    this.disposed = true;
-    global.removeEventListener('message', this.onBridgeMessage, true);
+    this.disposed = true; global.removeEventListener('message', this.onBridgeMessage, true);
     if (this.bridgeTimer !== null) global.clearTimeout(this.bridgeTimer);
-    this.bridgeTimer = null;
-    this.bridgeWindow = null;
-    this.bridgeNonce = '';
-    this.context = null;
-    this.state = 'disposed';
-    const onExit = this.onExit;
-    this.onExit = null;
-    onExit?.(reason);
+    this.bridgeTimer = null; this.bridgeWindow = null; this.bridgeNonce = ''; this.context = null; this.state = 'disposed';
+    const onExit = this.onExit; this.onExit = null; onExit?.(outcome);
   };
 
   function consumeEvent(event) {
@@ -1017,6 +1250,7 @@
 
     .tdw-tools-menu__header,
     .tdw-tools-menu__brand,
+    .tdw-tool-action[hidden] { display: none; }
     .tdw-tool-action {
       display: flex;
       align-items: center;
@@ -1131,6 +1365,7 @@
       line-height: 1.35;
     }
 
+    .tdw-tool-action[hidden] { display: none; }
     .tdw-tool-action {
       width: 100%;
       gap: 11px;

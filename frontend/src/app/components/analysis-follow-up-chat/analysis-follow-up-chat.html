@@ -1,3 +1,8 @@
+@if (compact()) {
+  <section class="analysis-chat" [attr.aria-label]="ariaLabel()">
+    <ng-container [ngTemplateOutlet]="chatBody" />
+  </section>
+} @else {
 <details
   class="analysis-chat panel-card collapsible-panel"
   [open]="staticPanel() || openByDefault()"
@@ -16,12 +21,18 @@
     </div>
   </summary>
 
+  <ng-container [ngTemplateOutlet]="chatBody" />
+</details>
+}
+<ng-template #chatBody>
   <div class="analysis-chat__body collapsible-panel__body">
-    <div class="analysis-chat__messages" aria-live="polite">
+    <div #messageList class="analysis-chat__messages" aria-live="polite" [attr.tabindex]="compact() && messages().length ? 0 : null" [attr.role]="compact() ? 'log' : null" aria-label="Historia rozmowy" (scroll)="trackScroll()">
       @if (!messages().length) {
+        @if (emptyText()) {
         <div class="empty-state">
           {{ emptyText() }}
         </div>
+        }
       } @else {
         @for (message of messages(); track message.id) {
           <article
@@ -141,44 +152,60 @@
     </div>
 
     <form class="analysis-chat__form" novalidate (submit)="submit($event)">
+      @if (compact() && displayedError()) {
+        <p class="form-error">{{ displayedError() }}</p>
+      }
+
       <app-text-field
-        label="{{ inputLabel() }}"
+        [label]="compact() ? '' : inputLabel()"
+        [ariaLabel]="inputLabel()"
         type="textarea"
         inputId="analysisFollowUpChatMessage"
         class="chat-input"
-        rows="4"
+        [rows]="compact() ? 2 : 4"
+        [autosize]="compact()" [minRows]="2" [maxRows]="4"
         [placeholder]="placeholder()"
         [value]="messageText()"
         [disabled]="!canUseChat() || isSubmitting() || hasActiveAssistantMessage()"
         (valueChange)="onMessageChanged($event)"
+        (keydown)="onMessageKeydown($event)"
       />
 
       <div class="analysis-chat__actions">
+        <ng-content select="[chatActions]" />
+        @if (compact() && needsAuth()) {
+          <button class="secondary-button secondary-button--accent" type="button" [attr.aria-label]="authActionLabel()" [title]="authActionLabel()" (click)="connectAuth.emit()">
+            @if (compact()) { <span class="material-symbols-outlined" aria-hidden="true">key</span> }
+            @else { {{ authActionLabel() }} }
+          </button>
+        }
         <button
           class="primary-button"
           type="submit"
           [disabled]="!canSubmit()"
           [class.is-loading]="isSubmitting()"
           [attr.aria-busy]="isSubmitting()"
+          [attr.aria-label]="isSubmitting() || hasActiveAssistantMessage() ? submittingLabel() : submitLabel()"
+          [title]="compact() ? submitLabel() + ' (Enter, Shift+Enter — nowa linia)' : submitLabel()"
         >
+          @if (compact()) {
+            <span class="material-symbols-outlined button-label" aria-hidden="true">send</span>
+          } @else {
           <span class="button-label">
             {{ isSubmitting() || hasActiveAssistantMessage() ? submittingLabel() : submitLabel() }}
           </span>
+          }
           <span class="button-spinner" aria-hidden="true"></span>
         </button>
       </div>
 
-      @if (displayedError()) {
-        <p class="form-error">{{ displayedError() }}</p>
-      }
-      @if (needsAuth()) {
-        <button class="secondary-button secondary-button--accent" type="button" (click)="connectAuth.emit()">
-          {{ authActionLabel() }}
-        </button>
+      @if (!compact() && displayedError()) { <p class="form-error">{{ displayedError() }}</p> }
+      @if (!compact() && needsAuth()) {
+        <button class="secondary-button secondary-button--accent" type="button" (click)="connectAuth.emit()">{{ authActionLabel() }}</button>
       }
     </form>
   </div>
-</details>
+</ng-template>
 
 <dialog #reportChangeDialog class="report-change-dialog" aria-labelledby="reportChangeTitle"
   (close)="reportChangeView.set(null)">

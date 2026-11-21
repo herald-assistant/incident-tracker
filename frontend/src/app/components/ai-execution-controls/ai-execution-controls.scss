@@ -1,2 +1,10 @@
 // The two controls stay in the feature's existing grid, including responsive layouts.
 :host { display: contents; }
+
+.is-compact {
+  min-width: 0;
+  --field-min-height: 32px;
+  --field-font-size: 12px;
+  --field-padding-inline: 8px;
+  --field-padding-block: 4px;
+}

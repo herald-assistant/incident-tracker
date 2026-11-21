@@ -198,4 +198,17 @@ describe('AiExecutionControlsComponent', () => {
     expect(modelChanged).not.toHaveBeenCalled();
     expect(effortChanged).not.toHaveBeenCalled();
   });
+
+  it('keeps accessible model and effort selection in the compact toolbar', async () => {
+    fixture.componentRef.setInput('compact', true); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#crm-model').getAttribute('aria-label')).toBe('Model AI');
+    expect(fixture.nativeElement.querySelector('#crm-effort').getAttribute('aria-label')).toBe('Reasoning effort');
+    expect(fixture.nativeElement.querySelector('.choice-select--descriptive')).toBeNull();
+    expect(await model.getValueText()).toBe('CRM Analysis');
+    await effort.open(); await (await effort.getOptions({text: 'Wysoki'}))[0].click();
+    expect(effortChanged).toHaveBeenCalledWith('high');
+    expect(modelChanged).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('disabled', true); fixture.detectChanges();
+    expect(await model.isDisabled()).toBe(true); expect(await effort.isDisabled()).toBe(true);
+  });
 });

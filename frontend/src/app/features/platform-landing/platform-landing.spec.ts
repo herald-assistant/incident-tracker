@@ -4,6 +4,18 @@ import { provideRouter } from '@angular/router';
 import { PlatformLandingPageComponent } from './platform-landing';
 
 describe('PlatformLandingPageComponent', () => {
+  it('shows exactly one System Assistant card when enabled and hides it otherwise', async () => {
+    await TestBed.configureTestingModule({imports: [PlatformLandingPageComponent], providers: [provideRouter([])]}).compileComponents();
+    const fixture = TestBed.createComponent(PlatformLandingPageComponent);
+    fixture.componentInstance.uiConfig.config.update(config => ({...config, systemAssistantEnabled: true}));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('a[href="/system-assistant"]')).toHaveLength(1);
+    fixture.componentInstance.uiConfig.config.update(config => ({...config, systemAssistantEnabled: false}));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('a[href="/system-assistant"]')).toHaveLength(0);
+    fixture.destroy();
+  });
+
   it('presents the hero and animations before the available feature cards', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],

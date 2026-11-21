@@ -2,6 +2,13 @@
 
 ## Cel i status
 
+Zatwierdzony System Assistant ma odmienny use case: chat jest
+pierwszym wynikiem, nie follow-upem initial analizy. Używa NEW per tura,
+instrukcji inline i bez `AnalysisReport`. Analysis History przechowuje jego
+transkrypt V1, odtwarzany przez feature API z bieżącą konfiguracją. Pozostałe reguły
+ownership, izolacji, obserwowalności i testów obowiązują. Ta wąska granica
+nie zmienia report-first ani continuation istniejących analiz.
+
 Ten dokument jest repozytoryjna instrukcja projektowania, implementowania,
 rozwijania i weryfikowania feature'a analitycznego w Team Delivery Workspace.
 Ma pomoc Codexowi i developerowi zarowno dostarczyc nowy pionowy feature, jak i

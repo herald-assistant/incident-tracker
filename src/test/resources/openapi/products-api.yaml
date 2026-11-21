@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: Products Test API
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1
+paths:
+  /products:
+    get:
+      operationId: listProducts
+      summary: Lista produktow
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Lista produktow
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      operationId: createProduct
+      summary: Utworz produkt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '201':
+          description: Produkt utworzony
+        '400':
+          description: Niepoprawne dane
+  /products/{productId}:
+    get:
+      operationId: getProduct
+      summary: Pobierz produkt
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Szczegoly produktu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Produkt nie istnieje
+components:
+  schemas:
+    Product:
+      type: object
+      required: [name, price]
+      properties:
+        id:
+          type: string
+          readOnly: true
+          example: prod-001
+        name:
+          type: string
+          example: Klawiatura
+        price:
+          type: number
+          minimum: 0
+          example: 149.99
+        available:
+          type: boolean
+          default: true

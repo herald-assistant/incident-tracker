@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info: {title: Fikcyjne kontakty CRM, version: '1'}
+servers:
+  - url: http://127.0.0.1:8099
+paths:
+  /contacts/{id}:
+    get:
+      operationId: getContact
+      summary: Odczytaj fikcyjny kontakt CRM
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Dane fikcyjnego kontaktu
+          content:
+            application/json:
+              schema: {type: object}

@@ -2,6 +2,51 @@
   display: block;
 }
 
+:host(.is-compact) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  --chat-message-font-size: 13px;
+
+  .analysis-chat {
+    display: block; width: 100%; height: 100%; min-height: 0;
+    margin: 0; padding: 0; border: 0; border-radius: 0;
+    background: transparent; box-shadow: none;
+  }
+  .analysis-chat__body {
+    display: flex; flex-direction: column; height: 100%; min-height: 0;
+    padding: 0; gap: 0;
+  }
+  .analysis-chat__messages {
+    flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain;
+    align-content: start; padding: 10px; gap: 12px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .chat-message { min-width: 0; }
+  .chat-message__text, .chat-message__pending, .chat-message__error { font-size: 13px; }
+  .analysis-chat__form {
+    flex: 0 0 auto; padding: 8px; gap: 6px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .chat-input {
+    --field-min-height: 60px;
+    --field-max-height: 120px;
+    --field-padding-block: 7px;
+    --field-padding-inline: 9px;
+    --field-font-size: 13px;
+    --field-line-height: 1.45;
+  }
+  .analysis-chat__actions { align-items: center; flex-wrap: nowrap; gap: 4px; min-width: 0; }
+  .primary-button, .secondary-button {
+    flex: 0 0 32px; width: 32px; min-width: 32px; height: 32px; min-height: 32px;
+    margin: 0; padding: 0; border-radius: 6px;
+    .material-symbols-outlined { font-size: 18px; }
+  }
+  .form-error { margin: 0; font-size: 12px; }
+}
+
 .analysis-chat {
   border-style: dashed;
   padding: 14px 16px;

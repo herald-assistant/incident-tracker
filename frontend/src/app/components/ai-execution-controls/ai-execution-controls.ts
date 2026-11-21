@@ -26,6 +26,7 @@ export class AiExecutionControlsComponent {
   readonly modelInputId = input(`${this.id}-model`);
   readonly reasoningInputId = input(`${this.id}-reasoning`);
   readonly catalog = input.required<AnalysisAiModelOptionsResponse>();
+  readonly compact = input(false);
   readonly model = input('');
   readonly reasoningEffort = input('');
   readonly loading = input(false);
@@ -73,7 +74,7 @@ export class AiExecutionControlsComponent {
       value: model.id, label: model.name || model.id, tooltip: model.id
     }));
     if (!this.model() || this.allowDefaultSelection()) {
-      options.unshift({ value: '', label: this.defaultModelLabel(), disabled: !this.allowDefaultSelection() });
+      options.unshift({ value: '', label: this.compact() && !this.catalog().defaultModel ? 'Model AI' : this.defaultModelLabel(), tooltip: this.defaultModelLabel(), disabled: !this.allowDefaultSelection() });
     }
     return this.withRestoredValue(options, this.model(), this.modelName(this.model()));
   });
@@ -82,7 +83,7 @@ export class AiExecutionControlsComponent {
     if (message) return [{ value: this.reasoningEffort(), label: message, disabled: true }];
     const options: ChoiceOption[] = this.efforts().map(value => ({ value, label: this.effortLabel(value), tooltip: value }));
     if (!this.reasoningEffort() || this.allowDefaultSelection()) {
-      options.unshift({ value: '', label: this.emptyReasoningLabel(), disabled: !this.allowDefaultSelection() });
+      options.unshift({ value: '', label: this.compact() ? (this.efforts().length ? 'Domyślne' : 'Reasoning') : this.emptyReasoningLabel(), tooltip: this.emptyReasoningLabel(), disabled: !this.allowDefaultSelection() });
     }
     return this.withRestoredValue(options, this.reasoningEffort(), this.effortLabel(this.reasoningEffort()));
   });

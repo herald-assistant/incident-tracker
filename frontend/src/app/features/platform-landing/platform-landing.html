@@ -197,7 +197,8 @@
         (scroll)="updateFeatureCarousel()"
       >
         @for (feature of features; track feature.route) {
-          @if (feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
+          @if ((feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) &&
+            (feature.route !== '/system-assistant' || uiConfig.config().systemAssistantEnabled)) {
             <li #featureSlide>
               <a
                 class="platform-landing__feature-card"

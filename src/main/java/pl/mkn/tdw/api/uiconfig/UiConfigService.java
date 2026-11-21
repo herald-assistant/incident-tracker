@@ -15,6 +15,8 @@ public class UiConfigService {
     private final PlatformSourceCodeProperties platformSourceCodeProperties;
     @org.springframework.beans.factory.annotation.Value("${release-summary.enabled:true}")
     private boolean releaseSummaryEnabled = true;
+    @org.springframework.beans.factory.annotation.Value("${system-assistant.enabled:false}")
+    private boolean systemAssistantEnabled;
 
     public UiConfigResponse currentConfig() {
         var configuredTitle = normalize(properties.getTitle());
@@ -23,7 +25,7 @@ public class UiConfigService {
                     DEFAULT_TITLE,
                     null,
                     DEFAULT_TITLE,
-                    platformSourceCodeProperties.getDefaultBranch(), releaseSummaryEnabled
+                    platformSourceCodeProperties.getDefaultBranch(), releaseSummaryEnabled, systemAssistantEnabled
             );
         }
 
@@ -31,7 +33,7 @@ public class UiConfigService {
                 configuredTitle,
                 DEFAULT_TITLE,
                 DEFAULT_TITLE,
-                platformSourceCodeProperties.getDefaultBranch(), releaseSummaryEnabled
+                platformSourceCodeProperties.getDefaultBranch(), releaseSummaryEnabled, systemAssistantEnabled
         );
     }
 

@@ -50,6 +50,40 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
+  it('shows System Assistant in shell and overview only when enabled', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+    await router.navigateByUrl('/'); fixture.detectChanges(); flushUiConfig(http);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('a.app-shell__nav-item[aria-label="System Assistant"]')).toBeNull();
+    expect(compiled.querySelector('.platform-landing__feature-card[href="/system-assistant"]')).toBeNull();
+    TestBed.inject(AppUiConfigService).config.update(value => ({ ...value, systemAssistantEnabled: true }));
+    fixture.detectChanges();
+    expect(compiled.querySelector('a.app-shell__nav-item[aria-label="System Assistant"]')).toBeTruthy();
+    expect(compiled.querySelector('.platform-landing__feature-card[href="/system-assistant"]')).toBeTruthy();
+    const route = routes.find(item => item.component === AppShellComponent)?.children?.find(item => item.path === 'system-assistant');
+    expect(route?.data?.['title']).toBe('System Assistant');
+  });
+
+  it('renders embedded System Assistant chat outside the application shell', async () => {
+    const fixture = TestBed.createComponent(App); const http = TestBed.inject(HttpTestingController);
+    await TestBed.inject(Router).navigateByUrl('/system-assistant/chat'); fixture.detectChanges();
+    http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: []});
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
+    http.expectOne('/api/auth/github/status').flush({configured: true, settingsUrl: '/workspace-settings'});
+    fixture.detectChanges();
+    http.expectOne('/api/analysis/runs').flush({runs: []}); fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(AppShellComponent))).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-assistant-conversation-picker')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.assistant-chat')?.hidden).toBe(true);
+    expect(fixture.nativeElement.querySelector('app-analysis-result-tabs')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.assistant-configuration')).toBeNull();
+    fixture.destroy();
+  });
+
   it('opens a feature from a scrolled Workspace Overview at the top', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
@@ -764,7 +798,7 @@ describe('App', () => {
     expect(sidebarLinks(fixture, 'analysis-features').slice(0, 2)).toEqual(['/incident-analysis', '/flow-explorer']);
 
     const config = TestBed.inject(AppUiConfigService).config;
-    config.update(value => ({ ...value, releaseSummaryEnabled: true }));
+    config.update(value => ({ ...value, systemAssistantEnabled: false, releaseSummaryEnabled: true }));
     fixture.detectChanges();
     expect(sidebarLinks(fixture, 'analysis-features').slice(0, 3)).toEqual([
       '/incident-analysis', '/release-summary', '/flow-explorer'

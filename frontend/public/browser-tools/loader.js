@@ -3,7 +3,7 @@
 
   const LOAD_KEY = '__TDW_BROWSER_TOOL_REMOTE_LOAD__';
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
-  const LOADER_VERSION = '1.7.0';
+  const LOADER_VERSION = '1.12.0';
   const LOAD_TIMEOUT_MS = 8000;
   const document = global.document;
   const loaderScript = document.currentScript;
@@ -45,6 +45,7 @@
 
   async function start() {
     try {
+      await loadScript('availability.js');
       await loadScript('protocol.js');
       global[CONFIG_KEY] = Object.freeze({
         schema: 'tdw.browser-tool-launcher',

@@ -44,13 +44,21 @@ class IntegrationPackageBoundaryTest {
                     .sorted()
                     .toList();
             assertEquals(List.of("confluence", "database", "dynatrace", "elasticsearch",
-                    "gitlab", "jira", "operationalcontext", "support"), directories);
+                    "gitlab", "jira", "openapi", "operationalcontext", "support"), directories);
         }
     }
 
     @Test
     void confluenceRootContainsOnlyPublicPorts() throws IOException {
         assertRootContainsOnlyPublicPorts(CONFLUENCE_ROOT, CONFLUENCE_PACKAGE, "ConfluencePagePort.java");
+    }
+
+    @Test
+    void openApiRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(INTEGRATIONS_ROOT.resolve("openapi"),
+                "pl.mkn.tdw.integrations.openapi", "OpenApiExecutionPort.java", "OpenApiImportPort.java", "OpenApiSelectionPort.java");
+        assertConsumersDependOnlyOnPortAndContract("pl.mkn.tdw.integrations.openapi",
+                null, "OpenApiExecutionPort", "OpenApiImportPort", "OpenApiSelectionPort");
     }
 
     @Test

@@ -1,0 +1,99 @@
+package pl.mkn.tdw.features.systemassistant.chat;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
+import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
+import pl.mkn.tdw.localworkspace.analysisruns.*;
+import pl.mkn.tdw.shared.error.UserFacingErrorType;
+
+import java.time.Instant;
+import java.util.List;
+
+/** Owns the transcript format; the workspace owns files and the shared history index. */
+@Component
+@RequiredArgsConstructor
+@ConditionalOnProperty(name = "system-assistant.enabled", havingValue = "true")
+public class SystemAssistantConversationHistory {
+    public static final String FEATURE = "system-assistant";
+    private static final String SCHEMA = "tdw.system-assistant-conversation";
+    private final LocalAnalysisRunStore store;
+    private final ObjectMapper mapper;
+    private final LocalWorkspaceProperties workspace;
+
+    public record Archive(String schema, int version, Instant createdAt, SystemAssistantConversation conversation) { }
+
+    public Archive load(String id) {
+        requireEnabled();
+        synchronized (store) {
+            if (store.listRuns().stream().noneMatch(entry -> entry.feature().equals(FEATURE) && entry.analysisId().equals(id)))
+                throw new SystemAssistantException("CONVERSATION_NOT_FOUND", UserFacingErrorType.NOT_FOUND, "Rozmowa nie istnieje lub została usunięta z historii.");
+            try {
+                var record = store.findById(id).orElseThrow();
+                var archive = mapper.treeToValue(record.exportEnvelope(), Archive.class);
+                if (!SCHEMA.equals(archive.schema()) || archive.version() != 1 || archive.createdAt() == null
+                        || archive.conversation() == null || !id.equals(archive.conversation().id())
+                        || archive.conversation().messages() == null) throw new IllegalArgumentException();
+                var messages = archive.conversation().messages();
+                if (messages.size() % 2 != 0) throw new IllegalArgumentException();
+                for (var i = 0; i < messages.size(); i++) {
+                    var message = messages.get(i);
+                    if (message == null || message.id() == null || message.content() == null || message.createdAt() == null
+                            || !(i % 2 == 0 ? "USER" : "ASSISTANT").equals(message.role())
+                            || !List.of("COMPLETED", "FAILED", "IN_PROGRESS").contains(message.status())
+                            || ("IN_PROGRESS".equals(message.status()) && i != messages.size() - 1)) throw new IllegalArgumentException();
+                }
+                if (archive.conversation().busy() != messages.stream().anyMatch(message -> "IN_PROGRESS".equals(message.status())))
+                    throw new IllegalArgumentException();
+                return archive;
+            } catch (Exception exception) {
+                throw new SystemAssistantException("CONVERSATION_UNAVAILABLE", UserFacingErrorType.SERVICE_UNAVAILABLE,
+                        "Nie udało się odczytać zapisu rozmowy. Nie odtworzono innej wersji.");
+            }
+        }
+    }
+
+    public List<String> interruptedIds() {
+        return store.listRuns().stream().filter(entry -> entry.feature().equals(FEATURE) && entry.status().equals("IN_PROGRESS"))
+                .map(LocalAnalysisRunIndexEntry::analysisId).toList();
+    }
+
+    public void save(Instant createdAt, SystemAssistantConversation conversation) {
+        requireEnabled();
+        try {
+            synchronized (store) {
+                var name = name(conversation);
+                var previous = store.listRuns().stream().filter(entry -> entry.analysisId().equals(conversation.id())).findFirst();
+                if (previous.isPresent()) {
+                    var old = load(conversation.id());
+                    if (!previous.get().name().equals(name(old.conversation()))) name = previous.get().name();
+                }
+                var last = conversation.messages().isEmpty() ? null : conversation.messages().get(conversation.messages().size() - 1);
+                var status = conversation.busy() ? "IN_PROGRESS" : last == null ? "PENDING" : last.status();
+                LocalAnalysisRunSnapshotWriter.save(store, mapper.valueToTree(new Archive(SCHEMA, 1, createdAt, conversation)), null,
+                        new LocalAnalysisRunSnapshotWriter.Metadata(conversation.id(), FEATURE, name, status, createdAt, Instant.now(),
+                                conversation.busy() || last == null ? null : last.completedAt()));
+            }
+        } catch (RuntimeException exception) {
+            throw new SystemAssistantException("CONVERSATION_SAVE_FAILED", UserFacingErrorType.SERVICE_UNAVAILABLE,
+                    "Nie udało się zapisać rozmowy w historii. Nie ponawiaj operacji w systemie; ustal stan rozmowy po przywróceniu zapisu.");
+        }
+    }
+
+    public void delete(String id) { load(id); store.delete(id); }
+
+    private void requireEnabled() {
+        if (!workspace.isEnabled()) throw new SystemAssistantException("CONVERSATION_HISTORY_DISABLED", UserFacingErrorType.SERVICE_UNAVAILABLE,
+                "Historia rozmów wymaga włączonego lokalnego workspace TDW.");
+    }
+
+    private String name(SystemAssistantConversation conversation) {
+        var first = conversation.messages().stream().filter(message -> "USER".equals(message.role())).findFirst();
+        var text = first.map(message -> message.content()).orElse(conversation.pageContext() == null ? "Nowa rozmowa" : conversation.pageContext().title());
+        text = text.replaceAll("\\s+", " ").trim();
+        return text.isEmpty() ? "Nowa rozmowa" : text.substring(0, Math.min(120, text.length()));
+    }
+}

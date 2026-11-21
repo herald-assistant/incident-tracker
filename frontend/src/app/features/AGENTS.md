@@ -1,5 +1,24 @@
 # Frontend Features AGENTS
 
+System Assistant (`system-assistant`) jest konfigurowalnym chatem od pierwszej
+wiadomości, bez initial raportu. Transkrypt jest we wspólnej historii analiz;
+localRunId otwiera istniejący chat z bieżącymi skillami i tools. Reuse shared chat,
+kontrolki, polling, activity/evidence i usage. Widoczność sidebar/landing
+zależy od `systemAssistantEnabled`; aktywny link nie remountuje rozmowy.
+Browser Tools setup ma parametry tekstowe z zachowaniem defaultów UX Inspectora.
+Cztery widoki używają jednego poziomu wspólnych zakładek: Skille (domyślna),
+Kontrakty, Rozmowa i Uruchamianie w systemie. Nie przywracaj nadrzędnej
+Konfiguracji ani wewnętrznego przełącznika. Zachowuj instancję shared chatu,
+szkic i polling podczas zmiany widoku. Nie pamiętaj wyboru w storage.
+Przewodnik pokazuje kontrolki aktywnego widoku. Skille i Kontrakty mają
+wspólny zapis całego zestawu oraz błąd bezpośrednio nad przyciskiem.
+Kontrakty dodawaj wyłącznie przez modal importu z nazwą i wyborem operacji; po imporcie mają
+podgląd lokalnym Swagger UI, eksport bieżącego YAML-a i usuwanie. Nie przywracaj edytora YAML,
+ręcznych pól kontraktu ani Try it out. Przełączanie zakładek zachowuje szkic.
+Import i podgląd reuse'ują feature-owned OpenApiRenderer. Checkboxy są pluginem
+Swagger UI, a stan wyboru, filtry i strony po 50 operacji należą do Angulara.
+Nie przywracaj równoległej listy endpointów ani wykonywania API w ramce.
+
 Przed utworzeniem dedicated feature'a albo zmiana L1-L3 istniejacego feature'a
 przeczytaj `docs/architecture/analysis-feature-delivery-playbook.md` i
 wykonaj baseline/conformance delta wymagane dla tego poziomu.
@@ -39,7 +58,8 @@ funkcji z ikonami zgodnymi z nawigacja i opisami w jezyku polskim.
   Tool Workbench i Delivery; etykiety, tooltipy, hinty i bledy przekazuj jako
   parametry. Wyszukiwalne lookupy zachowuja swoje zachowanie i wspolna oprawe.
 - Model AI i reasoning renderuj przez `app-ai-execution-controls`, bez
-  lokalnych mapperow opcji/komunikatow i bez zmniejszania wysokosci 58 px.
+  lokalnych mapperow opcji/komunikatow ani nadpisan wysokosci. Standard to
+  58 px; operacyjny chat korzysta z jawnego wariantu compact 32 px.
   Katalog, defaulty, reset reasoning i request pozostaja w feature.
 - Oba assessmenty Delivery nadal korzystaja z konfiguracji AI backendu;
   wspolny komponent nie jest powodem dodania im wyboru modelu.
@@ -174,3 +194,9 @@ Workbench endpointy nie powinny eksponowac `analysisRunId`. GitLab i Database
 Workbench nie powinny eksponowac `correlationId` jako incident/session scope'u.
 Elastic moze miec historyczny `correlationId` w helper payloadach; traktuj to
 jako drift, nie wzorzec dla nowych tools.
+
+Wyjątek dla operacyjnego chatu modal-first: shared `ai-execution-controls`
+obsługuje jawny `compact=true` (32 px). Shared chat posiada kompaktową
+historię/edytor i slot akcji. Osadzony panel nie renderuje aside, a pełny
+ekran używa standardowego aside. System Assistant
+używa tych wariantów w ramce i zakładce Rozmowa. Nie kopiuj ich lokalnie.

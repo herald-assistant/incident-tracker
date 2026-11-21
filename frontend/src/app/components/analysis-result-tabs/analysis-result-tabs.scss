@@ -26,7 +26,24 @@
   ));
 }
 
+.analysis-result-tabs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.analysis-result-tabs-actions {
+  display: flex;
+  flex: 0 0 auto;
+
+  &:empty { display: none; }
+}
+
 .analysis-result-tabs {
+  flex: 1;
+  min-width: 0;
   border-radius: inherit;
 }
 

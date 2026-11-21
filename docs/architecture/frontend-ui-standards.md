@@ -120,6 +120,7 @@ Przewodniki obejmują wszystkie dostępne ekrany Analysis Features.
 | Behavior Change Assessment | Projekt Jira i okres dostarczonych zmian zachowania |
 | Technical Change Assessment | Projekt Jira i okres dostarczonych zmian technicznych |
 | Delivery Trends | Import CSV oraz filtry dostępne po wczytaniu danych |
+| System Assistant | Import kontraktów OpenAPI, skille, preferencje AI i pierwsza wiadomość |
 
 Kroki są dobierane do stanu ekranu. Puste katalogi Flow Explorera,
 UX Inspectora i Release summary wskazują konfigurację źródeł. Wyłączenie
@@ -180,7 +181,8 @@ wyslania zmiany do feature'a.
 | --- | --- | --- |
 | `standard` | 44 px | Zwykle inputy, filtry i proste selecty |
 | `descriptive` | 58 px | Selecty z drugim wierszem opisu i pola w tym samym rzedzie |
-| Model AI / reasoning | 58 px, zawsze `descriptive` | Takze bez opisu i przy braku wyboru lub disabled |
+| Model AI / reasoning | 58 px, `descriptive` | Takze bez opisu i przy braku wyboru lub disabled |
+| Pasek chatu `compact` | 32 px | Jawny wariant shared AI controls, bez widocznych etykiet, z aria-label |
 
 Wysokosc obejmuje pole, bez etykiety i hintu. Textarea zachowuje liczbe
 wierszy lub autosize. Gestosc istniejacych edytorow mozna ustawic przez
@@ -250,6 +252,12 @@ widoczne jako niedostepna opcja, bez automatycznej zmiany i emisji eventu.
 
 ## Zakladki wynikow
 
+Wspolny `app-analysis-result-tabs` udostepnia opcjonalny slot `[tabActions]`
+na akcje obok paska zakladek. Akcje sa poza `tablist` i panelem; nie zmieniaja
+wyboru zakladki ani obslugi jej klawiatury. Feature dostarcza handlery, ikony,
+tooltipy i dostepne nazwy. Brak slota pozostawia pelna szerokosc nawigacji.
+System Assistant uzywa slota do importu i eksportu calego szkicu konfiguracji.
+
 `AnalysisResultTabsComponent` uzywa paginowanego naglowka Angular Material
 (`MatTabNav`) i powiazanego `MatTabNavPanel`. Po przekroczeniu szerokosci
 pojawiaja sie strzalki paginacji; nie dodawaj natywnego scrollbara ani
@@ -313,3 +321,17 @@ funkcjonalnosci bez osobnego wymagania.
 Uruchom testy i build frontendu zgodnie z [root AGENTS](../../AGENTS.md).
 Produkcyjny bundle w `src/main/resources/static` pochodzi z builda i jest
 commitowany razem ze zrodlami. Nie edytuj wygenerowanych plikow recznie.
+
+## Kompaktowy chat operacyjny
+
+System Assistant używa wspólnego `analysis-follow-up-chat` z `compact=true`
+w panelu Browser Tools i zakładce Rozmowa. Historia przewija się samodzielnie;
+edytor (2–4 wiersze) i jeden wiersz akcji pozostają na dole. Brak powtórzonego
+nagłówka i dużego empty state. Enter wysyła, Shift+Enter wstawia nową linię;
+kompozycja IME i blokady wykonania nie wysyłają wiadomości. Historia podąża za
+nowymi wiadomościami, dopóki operator nie przewinie jej do wcześniejszych.
+
+Para AI ma jawny shared wariant `compact` (32 px, tekst 12 px), z zachowaniem
+opcji i blokad. Nie zmniejszaj pary przez nadpisania w feature. Panel osadzony nie renderuje toku działania AI ani kosztów. Pełny ekran
+/system-assistant prezentuje te dane w standardowym fixed aside, jak inne
+feature’y. Nie ma specjalnego wariantu inline ani jego styli.

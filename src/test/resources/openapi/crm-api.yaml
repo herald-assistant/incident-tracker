@@ -1,0 +1,67 @@
+openapi: 3.0.3
+info:
+  title: Fikcyjny CRM do lokalnych prób System Assistant
+  version: '1'
+servers:
+  - url: http://127.0.0.1:8099
+paths:
+  /tickets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
+    get:
+      operationId: getTicket
+      summary: Odczytaj fikcyjne zgłoszenie CRM
+      responses:
+        '200':
+          description: Aktualne dane zgłoszenia
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Ticket'}
+    put:
+      operationId: updateTicket
+      summary: Zapisz tytuł i status fikcyjnego zgłoszenia
+      description: Wymaga obu pól. Po zapisie odczytaj zgłoszenie, aby potwierdzić efekt. Nie ponawiaj zapisu po nieustalonym wyniku.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Ticket'}
+      responses:
+        '200':
+          description: Wynik zapisu; oceń businessStatus
+          content:
+            application/json:
+              schema: {type: object}
+  /simulate:
+    post:
+      operationId: simulateCost
+      summary: Oblicz koszt wariantu bez zapisu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, months]
+              additionalProperties: false
+              properties:
+                amount: {type: number, minimum: 0, maximum: 100000}
+                months: {type: integer, minimum: 1, maximum: 60}
+      responses:
+        '200':
+          description: Suma rat; symulacja nie zapisuje zgłoszenia
+          content:
+            application/json:
+              schema: {type: object}
+components:
+  schemas:
+    Ticket:
+      type: object
+      required: [title, status]
+      additionalProperties: false
+      properties:
+        title: {type: string, minLength: 1, maxLength: 160}
+        status: {type: string, enum: [OPEN, IN_PROGRESS, CLOSED]}

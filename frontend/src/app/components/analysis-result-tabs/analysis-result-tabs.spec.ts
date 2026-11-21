@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TestKey } from '@angular/cdk/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
@@ -8,7 +9,36 @@ import { By } from '@angular/platform-browser';
 
 import { AnalysisResultTabsComponent } from './analysis-result-tabs';
 
+@Component({
+  imports: [AnalysisResultTabsComponent],
+  template: `<app-analysis-result-tabs [tabs]="tabs" [activeTabId]="selected" (tabSelected)="selected = $event">
+    <button tabActions (click)="actions = actions + 1">Export</button>
+    <p>Panel content</p>
+  </app-analysis-result-tabs>`
+})
+class TabsWithActionsHost {
+  tabs = [{id: 'first', tabLabel: 'First'}, {id: 'second', tabLabel: 'Second'}];
+  selected = 'first';
+  actions = 0;
+}
+
 describe('AnalysisResultTabsComponent', () => {
+  it('projects optional actions outside navigation and panel without selecting a tab', () => {
+    TestBed.configureTestingModule({imports: [TabsWithActionsHost]});
+    const fixture = TestBed.createComponent(TabsWithActionsHost); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const action = root.querySelector<HTMLButtonElement>('[tabActions]')!;
+    expect(root.querySelector('.analysis-result-tabs-header')?.contains(action)).toBe(true);
+    expect(root.querySelector('[role="tablist"]')?.contains(action)).toBe(false);
+    expect(root.querySelector('[role="tabpanel"]')?.contains(action)).toBe(false);
+    expect(root.querySelector('[role="tabpanel"]')?.textContent).toContain('Panel content');
+    action.click(); fixture.detectChanges();
+    expect(fixture.componentInstance.actions).toBe(1);
+    expect(fixture.componentInstance.selected).toBe('first');
+    root.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1].click(); fixture.detectChanges();
+    expect(fixture.componentInstance.selected).toBe('second');
+  });
+
   it('should render shared result tabs and emit the selected id', async () => {
     await TestBed.configureTestingModule({
       imports: [AnalysisResultTabsComponent]

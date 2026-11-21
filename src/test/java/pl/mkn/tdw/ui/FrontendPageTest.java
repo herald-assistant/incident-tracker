@@ -124,6 +124,13 @@ class FrontendPageTest {
     }
 
     @Test
+    void shouldServeEmbeddedSystemAssistantChatRoute() throws Exception {
+        mockMvc.perform(get("/system-assistant/chat"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
     void shouldServeOnlyPackagedBrowserToolsRuntimeAssets() throws Exception {
         mockMvc.perform(get("/browser-tools/install.html"))
                 .andExpect(status().isNotFound())
@@ -140,7 +147,7 @@ class FrontendPageTest {
                 .andExpect(content().string(containsString("/ux-inspector")))
                 .andExpect(content().string(containsString("tdw-tools-launcher")))
                 .andExpect(content().string(containsString("data-tdw-browser-tool-root")))
-                .andExpect(content().string(containsString("1.7.0")));
+                .andExpect(content().string(containsString("1.12.0")));
 
         mockMvc.perform(get("/browser-tools/protocol.js"))
                 .andExpect(status().isOk())
@@ -154,7 +161,7 @@ class FrontendPageTest {
                 .andExpect(content().string(containsString("Remote runtime loading failed")))
                 .andExpect(content().string(containsString("protocol.js")))
                 .andExpect(content().string(containsString("runtime.js")))
-                .andExpect(content().string(containsString("1.7.0")));
+                .andExpect(content().string(containsString("1.12.0")));
 
         mockMvc.perform(get("/browser-tools/demo.html"))
                 .andExpect(status().isNotFound())
@@ -173,6 +180,24 @@ class FrontendPageTest {
                 .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
 
         mockMvc.perform(get("/tdw-inspector/install.html"))
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
+    }
+
+    @Test
+    void shouldServeReadOnlyOpenApiViewerAndLocalLibraryAssets() throws Exception {
+        mockMvc.perform(get("/openapi-viewer/index.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("vendor/swagger-ui-bundle.js")))
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
+        for (String asset : new String[]{"viewer.js", "viewer.css", "vendor/swagger-ui-bundle.js",
+                "vendor/swagger-ui.css", "vendor/LICENSE", "vendor/NOTICE", "vendor/swagger-ui-bundle.js.LICENSE.txt"}) {
+            mockMvc.perform(get("/openapi-viewer/" + asset))
+                    .andExpect(status().isOk())
+                    .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
+        }
+        mockMvc.perform(get("/openapi-viewer/missing.js"))
                 .andExpect(status().isNotFound())
                 .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
     }

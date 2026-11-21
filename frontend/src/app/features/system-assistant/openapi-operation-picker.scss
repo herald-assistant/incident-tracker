@@ -1,0 +1,31 @@
+:host { display: flex; flex-direction: column; box-sizing: border-box; width: min(1240px, 96vw); max-height: 90dvh; overflow-y: auto; padding: 24px; gap: 14px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-card); }
+header, footer, .picker-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+header { flex-wrap: nowrap; }
+h2 { margin: 0; min-width: 0; font-size: 1.3rem; }
+.picker-close, .picker-icon-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; }
+p { margin: 0; }
+.picker-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 12px; }
+.picker-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 44px; }
+.picker-toolbar label { display: flex; gap: 8px; align-items: center; white-space: nowrap; font-size: .9rem; }
+.picker-footer-actions { display: flex; align-items: end; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.picker-contract-name { width: 240px; max-width: 100%; min-width: 0; }
+.picker-documentation { height: max(280px, 42dvh); flex: 1 0 auto; }
+input[type=checkbox] { width: 17px; height: 17px; margin: 0; accent-color: var(--color-primary); }
+input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.picker-error { font-size: .875rem; color: var(--color-danger); }
+.picker-empty { padding: 20px; color: var(--color-muted); }
+footer { position: sticky; bottom: -24px; z-index: 1; align-items: end; padding-block: 10px; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+footer > span, .picker-pagination { font-size: .85rem; }
+@media (max-width: 900px) {
+  .picker-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  :host { padding: 16px; gap: 10px; max-height: 94dvh; }
+  .picker-filters { grid-template-columns: minmax(0, 1fr); }
+  h2 { font-size: 1.1rem; }
+  .picker-footer-actions { width: 100%; flex-direction: column; align-items: stretch; }
+  .picker-contract-name { width: 100%; }
+  .picker-footer-actions > .secondary-button { align-self: end; }
+  footer { bottom: -16px; }
+  footer .primary-button { flex: 1; }
+}

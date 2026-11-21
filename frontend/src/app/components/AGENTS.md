@@ -120,3 +120,9 @@ z datami per repozytorium. Wtedy zamiast rodzaju refa pokazuje dd.MM.yyyy,
 bez godziny, z tooltipem znaczenia daty. Inni konsumenci bez tej opcji
 zachowuja dotychczasowe badge. Przy paginacji scalaj metadane tej samej nazwy
 ze wszystkich zaladowanych stron, bez gubienia repozytoriow i dat.
+
+Wyjątek dla operacyjnego chatu modal-first: shared `ai-execution-controls`
+obsługuje jawny `compact=true` (32 px). Shared chat posiada kompaktową
+historię/edytor i slot akcji. Osadzony panel nie renderuje aside, a pełny
+ekran używa standardowego aside. System Assistant
+używa tych wariantów w ramce i zakładce Rozmowa. Nie kopiuj ich lokalnie.

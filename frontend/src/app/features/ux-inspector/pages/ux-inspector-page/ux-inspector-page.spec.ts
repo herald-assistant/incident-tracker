@@ -40,7 +40,7 @@ describe('UxInspectorPageComponent', () => {
     const page = fixture.nativeElement as HTMLElement;
     expect(page.textContent).toContain('Wskaż element na badanej stronie');
     const bookmarklet = page.querySelector<HTMLAnchorElement>('app-browser-tools-setup a');
-    expect(bookmarklet?.textContent?.trim()).toContain('TDW Browser Tools');
+    expect(bookmarklet?.textContent?.trim()).toBe('TDW Browser Tools');
     expect(bookmarklet?.draggable).toBe(true);
     expect(bookmarklet?.getAttribute('href')).toMatch(/^javascript:/);
     expect(page.querySelector('.ux-inspector-composer')).toBeNull();
@@ -192,7 +192,7 @@ function captureSnapshot(): UxInspectorCaptureSnapshot {
       },
       ancestors: [], traversal: { observedDepth: 1, emittedNodeCount: 1, omittedNodeCount: 0, reachedDocumentRoot: true },
       signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] }, limits: [],
-      client: { name: 'TDW UX Inspector', version: '1.7.0', featureId: 'ux-inspector' }
+      client: { name: 'TDW UX Inspector', version: '1.8.0', featureId: 'ux-inspector' }
     },
     formFields: { status: 'AVAILABLE', fields: [], omittedSensitiveFields: 0, reason: null },
     store: { status: 'AVAILABLE', state: { contact: { editable: false } }, redactions: 0, reason: null },

@@ -7,6 +7,7 @@ export const DEFAULT_APP_TITLE = 'Team Delivery Workspace';
 
 const FALLBACK_UI_CONFIG: AppUiConfig = {
   releaseSummaryEnabled: false,
+  systemAssistantEnabled: false,
   title: DEFAULT_APP_TITLE,
   subtitle: null,
   defaultTitle: DEFAULT_APP_TITLE,
@@ -56,6 +57,7 @@ function normalizeUiConfig(config: Partial<AppUiConfig> | null | undefined): App
 
   return {
     releaseSummaryEnabled: config?.releaseSummaryEnabled === true,
+    systemAssistantEnabled: config?.systemAssistantEnabled === true,
     title,
     subtitle: subtitle === title ? null : subtitle,
     defaultTitle,

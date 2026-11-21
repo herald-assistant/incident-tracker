@@ -12,6 +12,16 @@ do definicji architektury.
 
 ## Model rozszerzalnosci
 
+System Assistant zachowuje ten sam kierunek: `features.systemassistant`
+komponuje `aiplatform`, `agenttools.openapi`, `integrations.openapi` i
+`localworkspace.storage` oraz `localworkspace.analysisruns` dla transkryptu
+i wspólnego indeksu historii. Porty importu, wyboru operacji i wykonania są w root integracji,
+modele w `contract`, parser/schema w `service`, RestClient w `adapter.rest`.
+Neutralny `agenttools.openapi.mcp.OpenApiMcpEndpoint` nie jest globalnym
+`McpSyncServer` beanem; feature-owned konfiguracja tworzy osobny endpoint
+tylko po włączeniu feature'a. Nie ma importów sibling feature'ów ani logiki
+System Assistant w platformie. [Runtime](system-assistant-runtime-flow.md).
+
 Produkt jest platforma AI-augmented system analysis. Dedykowane feature'y
 skladaja reusable capability, ale zadna warstwa reusable nie zna konkretnego
 feature'a.

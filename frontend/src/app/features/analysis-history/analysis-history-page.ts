@@ -219,6 +219,7 @@ export class AnalysisHistoryPageComponent {
   }
 
   protected featureLabel(feature: string): string {
+    if (feature === 'system-assistant') return 'System Assistant';
     if (feature === 'release-summary') return 'Release summary';
     if (feature === 'incident-analysis') {
       return 'Incident Analysis';
@@ -257,6 +258,7 @@ export class AnalysisHistoryPageComponent {
   }
 
   protected featureIcon(feature: string): string {
+    if (feature === 'system-assistant') return 'chat';
     if (feature === 'release-summary') return 'difference';
     if (feature === 'incident-analysis') {
       return 'troubleshoot';
@@ -360,6 +362,7 @@ function compareRunsByMostRecent(
 }
 
 function routeForFeature(feature: string): string | null {
+  if (feature === 'system-assistant') return '/system-assistant';
   if (feature === 'release-summary') return '/release-summary';
   if (feature === 'incident-analysis') {
     return '/incident-analysis';

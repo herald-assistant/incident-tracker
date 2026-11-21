@@ -5,6 +5,7 @@ public record UiConfigResponse(
         String subtitle,
         String defaultTitle,
         String defaultBranch,
-        boolean releaseSummaryEnabled
+        boolean releaseSummaryEnabled,
+        boolean systemAssistantEnabled
 ) {
 }

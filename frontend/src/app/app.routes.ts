@@ -10,9 +10,15 @@ import { pendingAiSkillChangesGuard } from './features/ai-skills/guards/pending-
 
 export const routes: Routes = [
   {
+    path: 'system-assistant/chat',
+    loadComponent: () => import('./features/system-assistant/system-assistant-page').then(m => m.SystemAssistantPage),
+    data: { title: 'System Assistant', embeddedChat: true }
+  },
+  {
     path: '',
     component: AppShellComponent,
     children: [
+      { path: 'system-assistant', loadComponent: () => import('./features/system-assistant/system-assistant-page').then(m => m.SystemAssistantPage), data: { section: 'Analysis Features', title: 'System Assistant' } },
       { path: 'release-summary', loadComponent: () => import('./features/release-summary/release-summary-page').then(m => m.ReleaseSummaryPageComponent), data: { section: 'Analysis Features', title: 'Release summary' } },
       {
         path: '',

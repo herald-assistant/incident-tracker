@@ -1,0 +1,57 @@
+import {HttpClient} from '@angular/common/http';
+import {inject, Injectable} from '@angular/core';
+import {
+  AssistantConfiguration,
+  AssistantConversation,
+  AssistantPageContext,
+  AssistantTool,
+  OpenApiDocument,
+  OpenApiOperationKey,
+  OpenApiPrepared,
+  OpenApiPreview
+} from './system-assistant.models';
+
+@Injectable({providedIn: 'root'})
+export class SystemAssistantApi {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/system-assistant';
+
+  configuration() {
+    return this.http.get<AssistantConfiguration>(`${this.base}/configuration`);
+  }
+
+  tools() {
+    return this.http.get<AssistantTool[]>(`${this.base}/configuration/tools`);
+  }
+
+  save(value: AssistantConfiguration) {
+    return this.http.put<AssistantConfiguration>(`${this.base}/configuration`, value);
+  }
+
+  previewOpenApi(id: string, yaml: string) {
+    return this.http.post<OpenApiPreview>(`${this.base}/configuration/openapi/preview`, {id, yaml});
+  }
+
+  documentOpenApi(id: string, yaml: string) {
+    return this.http.post<OpenApiDocument>(`${this.base}/configuration/openapi/document`, {id, yaml});
+  }
+
+  selectOpenApi(id: string, yaml: string, operations: OpenApiOperationKey[]) {
+    return this.http.post<OpenApiPrepared>(`${this.base}/configuration/openapi/selection`, {id, yaml, operations});
+  }
+
+  create(pageContext: AssistantPageContext | null = null) {
+    return this.http.post<AssistantConversation>(`${this.base}/conversations`, {pageContext});
+  }
+
+  conversation(id: string) {
+    return this.http.get<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}`);
+  }
+
+  send(id: string, message: string, model: string, reasoningEffort: string) {
+    return this.http.post<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}/messages`, {
+      message, ...(model ? {model} : {}), ...(reasoningEffort ? {reasoningEffort} : {})
+    });
+  }
+
+}

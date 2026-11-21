@@ -85,6 +85,23 @@ Przed wieksza zmiana zacznij od:
 
 ## Najwazniejsze niezmienniki
 
+- System Assistant (`system-assistant`, `features.systemassistant`) jest
+  konfigurowalnym chatem operacyjnym: NEW sesja SDK per tura, bieżące instrukcje
+  użytkownika inline przy `skillsEnabled=false`, bez initial AnalysisReport.
+  YAML-e i skille mają jeden aktualny zapis, bez rewizji i archiwum.
+  Zmiana działa od następnej przyjętej tury. Feature jest domyślnie wyłączony
+  i nie ustawia ani nie waliduje adresu nasłuchiwania TDW. Docelowe API HTTP(S)
+  mogą wskazywać dowolny poprawny host; nie dodawaj reguł loopback-only ani
+  założeń o fikcyjnych danych. Source auth, profile i załączniki pozostają
+  odrębnym zakresem. Parser/REST należy
+  do `integrations.openapi`, callbacki i neutralny MCP do `agenttools.openapi`.
+  Nie dodawaj tej semantyki do globalnego Copilot runtime lub skill root.
+  Rozmowy mają trwały transkrypt V1 we wspólnej historii. localRunId
+  przywraca kontekst i wiadomości; kolejna tura nadal używa bieżącej
+  konfiguracji i NEW SDK, bez przywracania dawnych tools/skilli. Panel
+  osadzony nie pokazuje toku AI/kosztów; pełny ekran używa standardowego aside.
+  Kontrakt opisuje `docs/architecture/system-assistant-runtime-flow.md`.
+
 - `POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy;
   przyjmuje `source`, dla `ELASTICSEARCH` wymagany `correlationId`, dla
   `CSV_UPLOAD` multipart `logFile`, opcjonalny opis objawu

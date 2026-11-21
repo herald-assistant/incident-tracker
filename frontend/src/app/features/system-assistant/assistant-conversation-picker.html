@@ -1,0 +1,32 @@
+<section aria-label="Historia rozmów System Assistant" class="conversation-picker">
+  <div class="picker-toolbar">
+    <button class="picker-action" type="button" aria-label="Wróć do rozmowy" matTooltip="Wróć do rozmowy" [disabled]="disabled()" (click)="cancelled.emit()">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+    </button>
+    <app-text-field type="search" ariaLabel="Szukaj rozmowy" placeholder="Szukaj rozmowy…" [value]="query()" (valueChange)="search($event)" />
+    <button class="picker-action" type="button" aria-label="Odśwież rozmowy" matTooltip="Odśwież rozmowy" [disabled]="disabled() || loading()" (click)="load()">
+      <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+    </button>
+    <button class="picker-action" type="button" aria-label="Nowa rozmowa" matTooltip="Nowa rozmowa" [disabled]="disabled()" (click)="newConversation.emit()">
+      <span class="material-symbols-outlined" aria-hidden="true">add_comment</span>
+    </button>
+  </div>
+  @if (selectionError() || error()) { <p role="alert" class="picker-error">{{selectionError() || error()}}</p> }
+  @if (disabled()) { <p role="status" class="picker-notice">Wczytywanie rozmowy…</p> }
+  <div class="picker-list">
+    @if (loading()) { <p role="status" class="picker-notice">Wczytywanie historii…</p> }
+    @else {
+      <ul aria-label="Zapisane rozmowy">
+        @for (run of visible(); track run.analysisId) {
+          <li>
+            <button type="button" class="conversation-row" [class.is-current]="run.analysisId === currentId()" [disabled]="disabled()" (click)="choose(run.analysisId)">
+              <span class="conversation-copy"><span class="conversation-name">{{run.name}}</span><time [attr.datetime]="run.updatedAt">{{dateTime(run.updatedAt || run.createdAt)}}</time></span>
+              <span class="material-symbols-outlined" aria-hidden="true">{{run.analysisId === currentId() ? 'chat' : 'arrow_forward'}}</span>
+            </button>
+          </li>
+        } @empty { <li class="picker-notice">{{query().trim() ? 'Brak pasujących rozmów.' : 'Nie ma jeszcze rozmów. Rozpocznij nową przyciskiem powyżej.'}}</li> }
+      </ul>
+      @if (visible().length < filtered().length) { <button class="picker-more" type="button" [disabled]="disabled()" (click)="limit.set(limit() + 50)">Pokaż kolejne rozmowy</button> }
+    }
+  </div>
+</section>

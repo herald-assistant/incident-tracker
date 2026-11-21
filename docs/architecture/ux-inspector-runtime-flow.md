@@ -26,6 +26,9 @@ w calym dokumencie strony w chwili capture.
 
 - Sekcja startowa na /ux-inspector udostepnia przeciagany bookmarklet Browser Tools.
   Menu pozwala wybrac profil UX Inspectora albo uruchomic UI Explorera.
+  Włączony flagą [System Assistant](system-assistant-runtime-flow.md) dodaje
+  panel nowej rozmowy lub kontynuacji z historii z małym page-context;
+  nie używa capture UX Inspectora.
 - POST /api/ux-inspector/captures jest jedynym zapisem obserwacji. Przyjmuje
   jeden JSON z capture, formFields, store i httpHistory, waliduje i redaguje dane,
   nadaje UUID i zwraca 201 z captureId. Klient nie nadaje ID.

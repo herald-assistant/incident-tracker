@@ -19,10 +19,10 @@ import { parseReleaseSummaryImport, releaseSummaryExport } from './release-summa
 describe('ReleaseSummary workspace',()=>{
   let api: {applications: ReturnType<typeof vi.fn>; branches: ReturnType<typeof vi.fn>; preview: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>;
     chat:ReturnType<typeof vi.fn>; edit:ReturnType<typeof vi.fn>; export:ReturnType<typeof vi.fn>};
-  const config=signal({releaseSummaryEnabled:true});
+  const config=signal({systemAssistantEnabled: false, releaseSummaryEnabled:true});
   let progress:Subject<ReleaseSummarySnapshot>;
   beforeEach(()=>{
-    config.set({releaseSummaryEnabled:true});progress=new Subject();
+    config.set({systemAssistantEnabled: false, releaseSummaryEnabled:true});progress=new Subject();
     api={applications:vi.fn(()=>of([{systemId:'crm',name:'CRM Customers'}])),
       preview:vi.fn(()=>of(releaseRange())),branches:vi.fn(()=>of({branches:[],warnings:[],truncated:false,nextPage:null})),
       start:vi.fn(()=>of(releaseSnapshot('QUEUED'))),get:vi.fn(()=>of(releaseSnapshot())),
@@ -207,7 +207,7 @@ describe('ReleaseSummary workspace',()=>{
     expect(fixture.componentInstance.shareDocument()).toBeNull();
   });
   it('respects disabled starts while keeping saved results visible',()=>{
-    config.set({releaseSummaryEnabled:false});
+    config.set({systemAssistantEnabled: false, releaseSummaryEnabled:false});
     const fixture=TestBed.createComponent(ReleaseSummaryPageComponent);
     const job=releaseSnapshot('NO_CHANGES');job.report=releaseReport();
     job.report.sections=[{...job.report.sections.find(section=>section.id==='OVERVIEW')!,markdown:'Brak zmian bazodanowych.'}];

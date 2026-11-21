@@ -1,0 +1,122 @@
+package pl.mkn.tdw.features.systemassistant;
+
+import com.sun.net.httpserver.HttpServer;
+import io.modelcontextprotocol.client.McpClient;
+import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import io.modelcontextprotocol.spec.McpSchema;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.annotation.DirtiesContext;
+import pl.mkn.tdw.agenttools.openapi.mcp.OpenApiMcpEndpoint;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.time.Duration;
+import java.util.*;
+import static org.assertj.core.api.Assertions.*;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        "system-assistant.enabled=true", "analysis.ai.copilot.telemetry.enabled=false"
+})
+@DirtiesContext
+class SystemAssistantMcpWireTest {
+    @Test
+    void publishesNullableArgumentsAndCallsAnApiThroughLocalhost() throws Exception {
+        var received = new java.util.concurrent.atomic.AtomicReference<String>();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/orders", exchange -> {
+            received.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            var bytes = "{\"id\":\"order-1\",\"status\":\"NEW\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(201, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var yaml = Files.readString(Path.of("src/test/resources/openapi/orders-api.yaml"))
+                    .replace(":8081", ":" + api.getAddress().getPort());
+            configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("orders", "Orders", yaml)), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.PATH).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var tool = client.listTools().tools().stream().filter(item -> item.name().equals("oa_orders_createOrder")).findFirst().orElseThrow();
+                var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                var properties = mapper.valueToTree(tool.inputSchema()).path("properties").path("body").path("properties");
+                assertThat(properties.path("note").path("type").toString()).isEqualTo("[\"string\",\"null\"]");
+                assertThat(properties.path("customerEmail").path("format").asText()).isEqualTo("email");
+                var body = new HashMap<String, Object>(); body.put("customerEmail", "tester@example.com"); body.put("note", null);
+                body.put("items", List.of(Map.of("productId", "p1", "quantity", 2)));
+                var result = client.callTool(new McpSchema.CallToolRequest(tool.name(), Map.of("body", body)));
+                assertThat(result.isError()).isFalse(); assertThat(result.content().toString()).contains("NEW");
+                assertThat(mapper.readTree(received.get()).get("note").isNull()).isTrue();
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @TempDir static Path workspace;
+    @DynamicPropertySource static void settings(DynamicPropertyRegistry registry) {
+        registry.add("tdw.workspace.directory", () -> workspace.toString());
+    }
+    @LocalServerPort int port;
+    @Autowired SystemAssistantConfigurationService configurations;
+    @Autowired pl.mkn.tdw.integrations.openapi.OpenApiSelectionPort selections;
+
+    @Test
+    void listsCallsAndReloadsOnlyUserToolsOverRealMcpTransport() throws Exception {
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/tickets", exchange -> {
+            var bytes = "{\"title\":\"Fikcyjne zgłoszenie\",\"status\":\"OPEN\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.createContext("/changed", exchange -> {
+            var bytes = "{\"source\":\"changed-handler\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-api.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", yaml)), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port)
+                    .endpoint(OpenApiMcpEndpoint.PATH).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var tools = client.listTools().tools();
+                assertThat(tools).hasSize(3).allSatisfy(tool -> assertThat(tool.name()).startsWith("oa_crm_"));
+                var name = tools.stream().filter(tool -> tool.name().endsWith("getTicket")).findFirst().orElseThrow().name();
+                var result = client.callTool(new McpSchema.CallToolRequest(name, Map.of("path", Map.of("id", "CRM-101"))));
+                assertThat(result.isError()).isFalse();
+                assertThat(result.content().toString()).contains("OPEN");
+                configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo",
+                        yaml.replace("Odczytaj fikcyjne zgłoszenie", "NOWY OPIS")
+                                .replace("/tickets/{id}", "/changed/{id}")
+                                .replace("schema: {type: string}", "schema: {type: string, enum: [CRM-202]}"))), List.of()));
+                var changed = client.listTools().tools();
+                assertThat(changed).hasSize(3);
+                var changedRead = changed.stream().filter(tool -> tool.name().equals(name)).findFirst().orElseThrow();
+                assertThat(changedRead.description()).contains("NOWY OPIS");
+                assertThat(changedRead.inputSchema().toString()).contains("CRM-202");
+                assertThat(client.callTool(new McpSchema.CallToolRequest(name, Map.of("path", Map.of("id", "CRM-101")))).isError()).isTrue();
+                var changedResult = client.callTool(new McpSchema.CallToolRequest(name, Map.of("path", Map.of("id", "CRM-202"))));
+                assertThat(changedResult.isError()).isFalse();
+                assertThat(changedResult.content().toString()).contains("changed-handler");
+                var subset = selections.select("crm", yaml, List.of(new pl.mkn.tdw.integrations.openapi.contract.OpenApiSelection.OperationKey("GET", "/tickets/{id}")));
+                configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", subset.yaml())), List.of()));
+                assertThat(client.listTools().tools()).extracting(tool -> tool.name()).containsExactly("oa_crm_getTicket");
+                assertThatThrownBy(() -> client.callTool(new McpSchema.CallToolRequest("oa_crm_updateTicket", Map.of())))
+                        .isInstanceOf(RuntimeException.class);
+                configurations.save(SystemAssistantConfiguration.empty());
+                assertThat(client.listTools().tools()).isEmpty();
+                assertThatThrownBy(() -> client.callTool(new McpSchema.CallToolRequest(name, Map.of("path", Map.of("id", "CRM-101")))))
+                        .isInstanceOf(RuntimeException.class);
+            }
+        } finally { api.stop(0); }
+    }
+}

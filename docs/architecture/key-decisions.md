@@ -1,5 +1,28 @@
 # Key Decisions
 
+## System Assistant: konfigurowalny chat operacyjny
+
+System Assistant jest konfigurowalnym feature'em chat-first, bez
+initial analizy i `AnalysisReport`. Każda tura tworzy NEW sesję SDK z bieżącymi
+narzędziami, instrukcjami użytkownika inline (`skillsEnabled=false`) i jawną
+historią rozmowy. Nie zmienia to report-first ani continuation innych analiz.
+Skille robocze i YAML-e mają jeden aktualny stan, bez archiwum i rewizji.
+Docelowy host HTTP(S) pochodzi z kontraktu operatora, bez ograniczenia do
+loopback i fikcyjnych systemów. Source auth i workflow zatwierdzania są
+odrębnym zakresem. Nie ma automatycznych redirectów ani retry mutacji.
+Schema argumentów SDK/MCP jest projekcją requestu: pomija readOnly, mapuje
+nullable na null i zachowuje format jako adnotację. Wykonanie waliduje
+oryginalny schema OpenAPI. YAML zachowuje adnotacje także w podglądzie
+i eksporcie. Ekspozycja MCP pozostaje odrębna od istniejącego katalogu.
+
+Transkrypt V1 jest trwałym wpisem wspólnej Analysis History. Powrót do chatu
+z pełnego TDW lub panelu Browser Tools odtwarza pierwotny kontekst strony
+i wiadomości, a następna tura pobiera aktualny zestaw skilli i narzędzi.
+Nie odtwarza konfiguracji ani sesji SDK z historii. `Nowa rozmowa` zachowuje
+poprzedni wpis, a restart nie ponawia przerwanych operacji API.
+Panel osadzony nie pokazuje toku AI i kosztów; pełny ekran używa wspólnego aside.
+Kontrakty i szczegóły: [runtime System Assistant](system-assistant-runtime-flow.md).
+
 ## Odczyt dużych wyników narzędzi Copilota
 
 Platforma udostępnia `tool_output_read_chunk` w create i resume. CLI

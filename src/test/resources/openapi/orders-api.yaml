@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Orders Test API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+paths:
+  /orders:
+    post:
+      operationId: createOrder
+      summary: Zloz zamowienie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrder'
+            example:
+              customerEmail: tester@example.com
+              items:
+                - productId: prod-001
+                  quantity: 2
+      responses:
+        '201':
+          description: Zamowienie utworzone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '422':
+          description: Blad walidacji
+  /orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getOrder
+      summary: Pobierz zamowienie
+      responses:
+        '200':
+          description: Zamowienie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Nie znaleziono zamowienia
+    delete:
+      operationId: cancelOrder
+      summary: Anuluj zamowienie
+      responses:
+        '204':
+          description: Anulowano
+        '409':
+          description: Zamowienie zostalo juz wyslane
+components:
+  schemas:
+    CreateOrder:
+      type: object
+      required: [customerEmail, items]
+      properties:
+        customerEmail:
+          type: string
+          format: email
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+        note:
+          type: string
+          nullable: true
+    Order:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [NEW, PAID, SHIPPED, CANCELLED]
+        createdAt:
+          type: string
+          format: date-time

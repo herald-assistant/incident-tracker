@@ -92,7 +92,8 @@ const FEATURES: readonly OverviewFeature[] = [
     route: '/delivery-complexity-trends',
     icon: 'finance',
     image: '/assets/brand/workspace-overview-delivery-trends.jpg'
-  }
+  },
+  { title: 'System Assistant', task: 'Zapytaj o dane i wykonaj zadanie w systemie', route: '/system-assistant', icon: 'forum' }
 ];
 
 const TOOL_ICONS = [

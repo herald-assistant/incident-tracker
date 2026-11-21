@@ -95,7 +95,7 @@ describe('Analysis feature form tours', () => {
 
   it('keeps Release summary import guidance available when new runs are disabled', async () => {
     await openPage('/release-summary', {
-      '/api/ui/config': { ...startupResponses()['/api/ui/config'], releaseSummaryEnabled: false }
+      '/api/ui/config': { ...startupResponses()['/api/ui/config'], systemAssistantEnabled: false, releaseSummaryEnabled: false }
     });
     await walkTour('app-release-summary-page', 1);
     http.verify();
@@ -172,7 +172,7 @@ function startupResponses(): Record<string, Record<string, unknown> | object[]> 
     shortName: 'CRM', kind: 'internal-application', lifecycleStatus: 'active', operationalStatus: 'healthy',
     criticality: 'medium', aliases: [], repositoryCount: 1, codeSearchScopeCount: 1, ownerTeamIds: [] };
   return {
-    '/api/ui/config': { title: 'CRM Workspace', defaultTitle: 'Team Delivery Workspace', defaultBranch: 'main', releaseSummaryEnabled: true },
+    '/api/ui/config': { title: 'CRM Workspace', defaultTitle: 'Team Delivery Workspace', defaultBranch: 'main', systemAssistantEnabled: false, releaseSummaryEnabled: true },
     '/api/auth/github/status': { configured: false, settingsUrl: '/workspace-settings' },
     '/api/analysis/ai/options': { defaultModel: 'crm-model', defaultReasoningEffort: 'low',
       defaultReasoningEfforts: ['low'], models: [{ id: 'crm-model', name: 'CRM Model', supportsReasoningEffort: true,

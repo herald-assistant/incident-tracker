@@ -12,6 +12,11 @@ natural-language data diagnostics.
 
 ## Zasady
 
+- `features.systemassistant` jest konfigurowalnym chat-first use case'em, nie
+  analizą initial/report-first. Posiada bieżący zestaw konfiguracji i NEW
+  per tura; reusable OpenAPI pozostaje w integrations/agenttools, a shared
+  modele i UI rozmowy są reuse'owane. Nie kopiuj tego wyjątku do analiz.
+
 - Przed utworzeniem feature'a albo zmiana L1-L3 istniejacego feature'a
   przeczytaj `docs/architecture/analysis-feature-delivery-playbook.md` i
   wykonaj baseline/conformance delta wymagane dla tego poziomu.

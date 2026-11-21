@@ -1,5 +1,6 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { TextFieldComponent } from '../text-field/text-field';
-import { Component, DestroyRef, ElementRef, computed, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, afterRenderEffect, computed, inject, input, output, signal, viewChild } from '@angular/core';
 
 import {
   AnalysisAiToolFeedback,
@@ -23,9 +24,10 @@ interface ReportChangeGroup {
 
 @Component({
   selector: 'app-analysis-follow-up-chat',
-  imports: [TextFieldComponent, MarkdownContentComponent, AttributeNamePipe],
+  imports: [NgTemplateOutlet, TextFieldComponent, MarkdownContentComponent, AttributeNamePipe],
   templateUrl: './analysis-follow-up-chat.html',
-  styleUrl: './analysis-follow-up-chat.scss'
+  styleUrl: './analysis-follow-up-chat.scss',
+  host: { '[class.is-compact]': 'compact()' }
 })
 export class AnalysisFollowUpChatComponent {
   private readonly destroyRef = inject(DestroyRef);
@@ -33,11 +35,13 @@ export class AnalysisFollowUpChatComponent {
   readonly messages = input<AnalysisChatMessageResponse[]>([]);
   readonly error = input('');
   readonly canUseChat = input(false);
+  readonly unavailableMessage = input('Chat jest dostępny dopiero dla zakończonej analizy uruchomionej w backendzie.');
   readonly isSubmitting = input(false);
   readonly needsAuth = input(false);
   readonly authActionLabel = input('Workspace Settings');
   readonly openByDefault = input(false);
   readonly staticPanel = input(false);
+  readonly compact = input(false);
   readonly eyebrow = input('Follow-up');
   readonly title = input('Kontynuacja analizy');
   readonly emptyText = input('Po zakończeniu analizy możesz dopytać AI o wynik albo zlecić dodatkową weryfikację.');
@@ -57,6 +61,8 @@ export class AnalysisFollowUpChatComponent {
   readonly copiedChatMessageId = signal<string | null>(null);
   protected readonly reportChangeView = signal<ReportChangeGroup[] | null>(null);
   private readonly reportChangeDialog = viewChild<ElementRef<HTMLDialogElement>>('reportChangeDialog');
+  private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
+  private readonly followLatest = signal(true);
 
   readonly hasActiveAssistantMessage = computed(() =>
     this.messages().some((message) => message.role === 'ASSISTANT' && message.status === 'IN_PROGRESS')
@@ -73,6 +79,22 @@ export class AnalysisFollowUpChatComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.clearCopyFeedback());
+    afterRenderEffect(() => {
+      this.messages();
+      const list = this.messageList()?.nativeElement;
+      if (this.compact() && this.followLatest() && list) list.scrollTop = list.scrollHeight;
+    });
+  }
+
+  protected trackScroll(): void {
+    const list = this.messageList()?.nativeElement;
+    if (list) this.followLatest.set(list.scrollHeight - list.scrollTop - list.clientHeight < 48);
+  }
+
+  protected onMessageKeydown(event: KeyboardEvent): void {
+    if (!this.compact() || event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    event.preventDefault();
+    if (this.canSubmit()) this.submit(event);
   }
 
   protected onMessageChanged(value: string): void {
@@ -98,7 +120,7 @@ export class AnalysisFollowUpChatComponent {
       return;
     }
     if (!this.canUseChat()) {
-      this.localError.set('Chat jest dostępny dopiero dla zakończonej analizy uruchomionej w backendzie.');
+      this.localError.set(this.unavailableMessage());
       return;
     }
     if (this.hasActiveAssistantMessage()) {
@@ -107,6 +129,7 @@ export class AnalysisFollowUpChatComponent {
     }
 
     this.localError.set('');
+    this.followLatest.set(true);
     this.sendMessage.emit(message);
     this.messageText.set('');
   }

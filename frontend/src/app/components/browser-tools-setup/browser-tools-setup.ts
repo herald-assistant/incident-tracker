@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 import { buildBrowserToolsBookmarkletUrl } from '../../core/utils/browser-tools-bookmarklet.utils';
@@ -10,6 +10,8 @@ import { buildBrowserToolsBookmarkletUrl } from '../../core/utils/browser-tools-
   styleUrl: './browser-tools-setup.scss'
 })
 export class BrowserToolsSetupComponent {
+  readonly title = input('Wskaż element na badanej stronie');
+  readonly instruction = input('Otwórz badaną stronę HTTP(S), kliknij zapisaną zakładkę, wybierz UX Inspector i wskaż element.');
   private readonly document = inject(DOCUMENT);
   private readonly sanitizer = inject(DomSanitizer);
 

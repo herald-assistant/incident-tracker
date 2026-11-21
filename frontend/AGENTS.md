@@ -48,7 +48,8 @@ Glowny shell ma trzy grupy nawigacji:
 - Pola formularzy, filtrow, chatu i edytorow korzystaja ze wspolnych
   `form-field`, `choice-select`, `text-field` oraz mixinow
   `src/styles/_form-controls.scss`. Model/reasoning prezentuje zawsze
-  `ai-execution-controls`; oba pola maja 58 px, takze bez opisu i disabled.
+  `ai-execution-controls`; oba pola maja 58 px w zwyklych formularzach, takze bez opisu i disabled.
+  Operacyjny chat uzywa jawnego wspolnego wariantu compact 32 px.
 - Zachowaj pojedynczy wewnetrzny focus formularza. Nie nadpisuj lokalnie
   ramek, typografii ani komunikatow wspolnych kontrolek; gestosc ustawiaj
   przez udostepnione warianty i zmienne CSS.
@@ -110,3 +111,9 @@ Po zmianach UI uruchom adekwatnie:
 
 Build produkcyjny aktualizuje `src/main/resources/static`. Nie edytuj
 wygenerowanego bundle recznie; generuj go przez build.
+
+Wyjątek dla operacyjnego chatu modal-first: shared `ai-execution-controls`
+obsługuje jawny `compact=true` (32 px). Shared chat posiada kompaktową
+historię/edytor i slot akcji. Osadzony panel nie renderuje aside, a pełny
+ekran używa standardowego aside. System Assistant
+używa tych wariantów w ramce i zakładce Rozmowa. Nie kopiuj ich lokalnie.

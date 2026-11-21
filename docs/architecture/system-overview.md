@@ -9,6 +9,16 @@ poprzedza rozmowę. Zasady commit/diff/verified reads opisuje
 
 ## Cel projektu
 
+System Assistant (`system-assistant.enabled=false` domyślnie) używa
+neutralnego importera/REST `integrations.openapi`, callbacków i osobnego MCP
+`agenttools.openapi`. Chat-first feature `features.systemassistant` posiada
+bieżącą konfigurację i tworzy NEW per tura bez raportu analitycznego.
+Trwałe rozmowy są zapisywane we wspólnej Analysis History. Browser Tools
+pozwala wybrać nową lub wcześniejszą rozmowę w osadzonym panelu bez pełnego TDW.
+Kontynuacja zachowuje pierwotny kontekst, a narzędzia i skille pobiera z aktualnej
+konfiguracji. Obecne analizy i globalny katalog
+MCP pozostają odrębne. [Pełny runtime](system-assistant-runtime-flow.md).
+
 Projekt rozwija platforme do AI-augmented system analysis. Aplikacja ma
 laczyc deterministic context gathering, curated operational context, reusable
 agent tools i sesje AI, zeby pomagac operatorom, analitykom i developerom
