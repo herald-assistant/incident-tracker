@@ -829,7 +829,6 @@
     scale(var(--source-scale));
 }
 
-.platform-landing__story-feature-face,
 .platform-landing__orbit-result {
   border-radius: var(--tile-radius, 23%);
   background: var(--color-surface);
@@ -866,6 +865,7 @@
 }
 
 .platform-landing__story-feature-face {
+  position: relative;
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
@@ -883,7 +883,7 @@
   align-content: center;
   gap: 1.6cqi;
   padding: 1.8cqi;
-  color: var(--primary-dark);
+  color: var(--color-sidebar-bg);
   text-align: center;
   transform: rotateY(0.5turn);
 }
@@ -931,7 +931,9 @@
     rotateZ(calc(-2deg * sin(var(--angle)) * (1 - var(--tool-result-position))));
 }
 
-.platform-landing__tool-surface {
+.platform-landing__tool-surface,
+.platform-landing__story-feature-face,
+.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result {
   --enamel-blue: var(--tdw-symbol, 1);
   --enamel-light: color-mix(in srgb, #f5faff calc(100% * (1 - var(--enamel-blue))), #76c3ff);
   --enamel-face: color-mix(in srgb, #e5eef9 calc(100% * (1 - var(--enamel-blue))), #126ee7);
@@ -943,12 +945,16 @@
   box-shadow: none;
 }
 
-.platform-landing__tool-surface::before {
+.platform-landing__tool-surface::before,
+.platform-landing__story-feature-face::before,
+.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result::before {
   position: absolute;
   z-index: -2;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(115deg, #73c5ff, var(--enamel-edge) 34%, #010a30 78%, #285ba5);
+  background: linear-gradient(115deg,
+    var(--enamel-edge-light, #73c5ff), var(--enamel-edge) 34%,
+    var(--enamel-edge-dark, #010a30) 78%, var(--enamel-edge-end, #285ba5));
   box-shadow:
     inset 1px 0 1px rgb(197 235 255 / 45%),
     0 4px 7px rgb(0 5 28 / 16%),
@@ -959,11 +965,13 @@
   content: '';
 }
 
-.platform-landing__tool-surface::after {
+.platform-landing__tool-surface::after,
+.platform-landing__story-feature-face::after,
+.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result::after {
   position: absolute;
   z-index: -1;
   inset: 0;
-  border: 1px solid rgb(210 239 255 / 42%);
+  border: 1px solid var(--enamel-rim, rgb(210 239 255 / 42%));
   border-radius: inherit;
   background:
     radial-gradient(ellipse at calc(28% + 18% * cos(var(--angle, 0deg))) 0%,
@@ -977,12 +985,39 @@
 }
 
 .platform-landing__tool-surface .platform-landing__orbit-tool-icon {
-  width: 62%;
   filter: drop-shadow(0 1px 1px rgb(0 16 55 / 15%));
+}
+
+.platform-landing__tool-surface .platform-landing__orbit-tool-icon {
+  width: 62%;
 }
 
 .platform-landing__tool-surface .platform-landing__orbit-tdw-icon {
   filter: brightness(0) invert(1) drop-shadow(0 2px 2px rgb(0 16 65 / 18%));
+}
+
+.platform-landing__story-feature-face > img,
+.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result > img {
+  filter: brightness(0.58) saturate(0.7) drop-shadow(0 1px 1px rgb(11 45 99 / 12%));
+}
+
+.platform-landing__story-feature-face,
+.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result {
+  --enamel-light: #b8d0e3;
+  --enamel-face: #98b7ce;
+  --enamel-base: #789bb9;
+  --enamel-edge-light: #d6e3ed;
+  --enamel-edge: #6d899f;
+  --enamel-edge-dark: #38556e;
+  --enamel-edge-end: #789bb9;
+  --enamel-rim: rgb(239 246 252 / 65%);
+  --enamel-depth: 3px;
+}
+
+.platform-landing__story-feature-face--details {
+  --enamel-light: #f5f7fa;
+  --enamel-face: #eaf0f5;
+  --enamel-base: #dce5ee;
 }
 
 .platform-landing__story-card[data-scene='tools'] .platform-landing__orbit {
@@ -1052,8 +1087,12 @@
   --feature-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--feature-scene-progress) - 0.08) / 0.26, 1);
   --slogan-finale: var(--feature-finale);
-  --story-surface: #0b263c;
-  --story-light: #459cda;
+  --story-surface: #071c3a;
+  --story-light: #639cd5;
+  --story-accent: #c7ddf9;
+  background:
+    radial-gradient(ellipse at 72% 10%, rgb(35 81 122 / 65%), transparent 65%),
+    linear-gradient(130deg, #030d21, var(--story-surface) 58%, #123b66);
 }
 
 .platform-landing__story-card[data-scene='guidance'] {
