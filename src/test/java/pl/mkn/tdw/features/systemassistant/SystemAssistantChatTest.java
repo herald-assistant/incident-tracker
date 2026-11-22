@@ -48,11 +48,11 @@ class SystemAssistantChatTest {
             var id = new ObjectMapper().readTree(created.getResponse().getContentAsString()).path("id").asText();
             var messages = base + "/" + id + "/messages";
             mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(messages)
-                    .contentType("application/json").content("{\"message\":\"Demo\"}"))
+                    .contentType("application/json").content("{\"message\":\"Demo\",\"profileId\":\"test_profile\"}"))
                     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isAccepted());
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(messages)
-                    .contentType("application/json").content("{\"message\":\"Duplicate\"}"))
+                    .contentType("application/json").content("{\"message\":\"Duplicate\",\"profileId\":\"test_profile\"}"))
                     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isConflict());
             release.countDown();
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
@@ -64,9 +64,9 @@ class SystemAssistantChatTest {
     }
 
     private SystemAssistantConfiguration config(String instructions) {
-        return new SystemAssistantConfiguration(List.of(), List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", instructions)));
+        return SystemAssistantTestSupport.config(List.of(), List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", instructions)));
     }
-    private SystemAssistantMessageRequest message(String text) { return new SystemAssistantMessageRequest(text, null, null); }
+    private SystemAssistantMessageRequest message(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null); }
 
     @Test
     void freezesAcceptedTurnAndUsesCurrentSkillsOnNextMessage() throws Exception {

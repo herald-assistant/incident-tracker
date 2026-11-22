@@ -45,7 +45,7 @@ class SystemAssistantOpenApiSelectionTest {
                     .andExpect(jsonPath("$.specification.paths.length()").value(1));
             verify(store, never()).write(any());
             mvc.perform(get(base + "/tools")).andExpect(jsonPath("$.length()").value(0));
-            var configuration = new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", subset)), List.of());
+            var configuration = SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", subset)), List.of());
             mvc.perform(put(base).contentType("application/json").content(mapper.writeValueAsString(configuration))).andExpect(status().isOk());
             verify(store).write(configuration);
             mvc.perform(get(base + "/tools")).andExpect(jsonPath("$.length()").value(1))

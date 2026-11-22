@@ -9,7 +9,7 @@ z zapisanej aktualnej treści. Ekran: `/system-assistant`.
 
 Operator może podłączyć HTTP(S) API dowolnego systemu, z hostem DNS, IP lub
 localhost, w obsługiwanym podzbiorze OpenAPI 3.0.x opisanym poniżej.
-Bieżący zakres obsługuje jedną osobę w workspace. Nie obejmuje source auth, profili, załączników,
+Bieżący zakres obsługuje jedną osobę w workspace. Nie obejmuje source auth, załączników,
 approval workflow ani integracji CLP.
 Konfigurację, rozmowę i testy opisuje [instrukcja obsługi](../system-assistant.md).
 Skille określają sposób pracy AI, nie egzekwują uprawnień biznesowych.
@@ -62,7 +62,7 @@ odrębny.
 
 | Endpoint | Kontrakt |
 | --- | --- |
-| `GET /api/system-assistant/configuration` | Bieżące `{apis, skills}`; uszkodzony zapis daje 503 `CONFIGURATION_UNAVAILABLE` |
+| `GET /api/system-assistant/configuration` | Bieżące `{apis, skills, profiles}`; uszkodzony zapis daje 503 `CONFIGURATION_UNAVAILABLE` |
 | `PUT /api/system-assistant/configuration` | Zastępuje cały aktualny zestaw po walidacji i skutecznym zapisie |
 | `POST /api/system-assistant/configuration/openapi/preview` | `{id, yaml}`; katalog operacji, limit wyboru i specification (kopia JSON do dokumentacji), bez aktywacji |
 | `POST /api/system-assistant/configuration/openapi/document` | `{id, yaml}`; zwalidowany dokument JSON do podglądu, bez zapisu i publikacji |
@@ -70,7 +70,7 @@ odrębny.
 | `GET /api/system-assistant/configuration/tools` | ID kontraktu `apiId`, wygenerowane nazwy, opisy, metody, ścieżki i input schema |
 | `POST /api/system-assistant/conversations` | `{pageContext}` lub null context; `201` i pusta rozmowa bez AI |
 | `GET /api/system-assistant/conversations/{id}` | ID, busy, przypięty pageContext i neutralne wiadomości |
-| `POST /api/system-assistant/conversations/{id}/messages` | `{message, model?, reasoningEffort?}`; `202` i natychmiastowy snapshot |
+| `POST /api/system-assistant/conversations/{id}/messages` | `{message, profileId, model?, reasoningEffort?}`; `202` i natychmiastowy snapshot |
 | `DELETE /api/system-assistant/conversations/{id}` | `204`; aktywna tura daje `409` |
 | `GET /api/analysis/runs` | Wspólny indeks historii; rozmowy mają `feature=system-assistant` |
 | `GET /api/analysis/runs/{id}/export` | Archiwalny JSON transkryptu; bez konfiguracji API/skilli |
@@ -168,8 +168,8 @@ lub nazwy zaimportowanego kontraktu.
 
 ## Widoki pracy i podgląd kontraktów
 
-Wspólne `analysis-result-tabs` mają jeden poziom: Skille, Kontrakty, Rozmowa
-oraz Uruchamianie w systemie. Bezpośrednie `/system-assistant` zaczyna od Skilli;
+Wspólne `analysis-result-tabs` mają jeden poziom: Skille, Kontrakty, Profile,
+Rozmowa oraz Uruchamianie w systemie. Bezpośrednie `/system-assistant` zaczyna od Skilli;
 wejście z `localRunId` otwiera Rozmowę, a osadzony route Browser Tools zaczyna
 od wyboru nowej lub zapisanej rozmowy, bez zakładek konfiguracji.
 Nie ma nadrzędnej zakładki Konfiguracja ani drugiego przełącznika.
@@ -241,32 +241,65 @@ ETag ani archiwalnych kopii. Restart odtwarza wyłącznie bieżący zestaw.
 Uszkodzony plik blokuje użycie konfiguracji i chat, ale UI pozwala zapisać
 poprawny zestaw. Nie stosuje się migracji ani cichego fallbacku do pustych danych.
 
+## Profile i przypisania
+
+Konfiguracja zawiera wspólne katalogi API/skilli oraz maksymalnie 20 profili:
+`{id,name,urlPattern,apiIds,skillIds}`. ID nadawane w UI jest stałe, nazwa
+jest edytowalna i ma limit 100 znaków. Wzorzec ma domyślną wartość `*`
+oraz limit 2300 znaków. Przypisania są referencjami do aktualnych
+zasobów, nie kopiami. Jeden zapis aktywuje cały zestaw. Stary kształt V1
+bez profiles nie jest obsługiwany ani migrowany.
+
+Zakładka Profile ma edytor nazwy i wzorca oraz listy checkboxów API i skilli.
+Usunięcie zasobu pozostawia jego ID w przypisaniu. Ikona ostrzeżenia
+w konfiguracji profilu pokazuje brakujące ID w tooltipie; operator może
+usunąć przypisanie. Braki nie blokują zapisu ani rozmowy, również gdy
+profil nie ma już żadnych dostępnych zasobów. Nie omija to walidacji
+istniejących kontraktów YAML.
+
+W chacie select Profil jest obok modelu/reasoningu. Wybór jest roboczym
+stanem UI, bez zapisu w historii. Wymagane profileId jest wysyłane per tura.
+Snapshot.forProfile wybiera istniejące przypisane API i skille oraz ich
+operacje. Nieistniejący profil jest odrzucany przed przyjęciem wiadomości.
+Nie ma fallbacku do całego katalogu. Trwająca tura używa zamrożonego zestawu,
+zmiana profilu lub zasobu wpływa na następną przyjętą turę. Globalny katalog
+MCP nie jest filtrowany wyborem jednego chatu.
+
+W panelu lista profili jest filtrowana przez pełne origin + pathname
+przekazane przy uruchomieniu ramki, niezależnie od kontekstu rozmowy wybranej
+z historii. Wildcard `*` dopasowuje dowolny ciąg, reszta znaków jest literalna;
+dopasowanie całego ciągu rozróżnia wielkość liter i nie zawiera query/hash.
+Brak poprawnego ingress dopuszcza tylko dokładny wzorzec `*`. Pełny ekran
+zawsze pokazuje wszystkie profile. Brak wyboru lub dopasowań wymaga wyboru
+lub konfiguracji, bez automatycznego wskazania profilu. Select odświeża
+zapisane profile przy otwarciu; niezapisany szkic ich nie podmienia.
+
 ## Import i eksport konfiguracji
 
 Obok wspólnego paska zakładek są ikony importu i eksportu całej konfiguracji
 z tooltipami. Eksport `system-assistant-configuration.json` zawiera bieżący
-szkic: `{version:1, configuration:{apis,skills}}`, z polami API `id,name,yaml`
+szkic: `{version:1, configuration:{apis,skills,profiles}}`, z polami API `id,name,yaml`
 i skilla `id,name,content`. Nie obejmuje rozmów, kontekstu strony, preferencji
 AI ani autentykacji. Eksport zachowuje treść YAML/Markdown także przed zapisem.
 Import zastępuje cały szkic i otwiera Skille; nie zapisuje ani nie publikuje
 narzędzi. Dopiero `Zapisz` waliduje i aktywuje zestaw. Parser pliku wymaga
-dokładnych pól i typów, wersji 1, do 12 API i 20 skilli oraz limitu 10000000
+dokładnych pól i typów, wersji 1, do 12 API, 20 skilli i 20 profili oraz limitu 10000000
 bajtów. Pozwala odtworzyć niekompletne pola tekstowe; walidacja biznesowa
 kontraktów pozostaje na serwerze przy zapisie. Błędny plik zachowuje szkic.
 Podczas odczytu blokowana jest edycja konfiguracji i zapis, bez zatrzymywania
-rozmowy. Nie ma migracji, rewizji ani importu profili.
+rozmowy. Nie ma migracji ani rewizji; import obejmuje też profile i przypisania.
 Eksport konfiguracji jest odrębny od eksportu transkryptu ze wspólnej
 Analysis History. Nie ma importu rozmowy z pliku.
 
 ## Tura AI
 
 1. API sprawdza PAT Copilota i przyjmuje jedną aktywną turę na rozmowę.
-2. Pod blokadą rozmowy pobiera aktualny snapshot konfiguracji, dopisuje USER
+2. Pod blokadą rozmowy pobiera aktualny snapshot konfiguracji i rozwiązuje profileId, dopisuje USER
    i IN_PROGRESS assistant, a następnie oddaje wykonanie do lokalnej kolejki.
 3. Callbacki tury zamykają jej niemutowalne operacje. Późniejsza edycja nie
    zmienia ich hosta, schema ani handlera.
-4. Feature składa NEW `CopilotRunRequest`: wyłącznie aktualne tools, bieżące
-   skille inline jako durable instructions, `skillsEnabled=false`, jawny
+4. Feature składa NEW `CopilotRunRequest`: wyłącznie aktualne tools i
+   skille przypisane do profilu inline jako durable instructions, `skillsEnabled=false`, jawny
    transcript i mały kontekst strony. Nie używa SDK attachments.
 5. Instrukcje jawnie podają aktualną listę tools i ich liczbę, także zero.
    Historia zawiera wiadomości i wyniki działań, bez dawnych promptów,

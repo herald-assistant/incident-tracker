@@ -70,7 +70,7 @@ describe('App', () => {
   it('renders embedded System Assistant chat outside the application shell', async () => {
     const fixture = TestBed.createComponent(App); const http = TestBed.inject(HttpTestingController);
     await TestBed.inject(Router).navigateByUrl('/system-assistant/chat'); fixture.detectChanges();
-    http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: []});
+    http.expectOne('/api/system-assistant/configuration').flush({profiles: [], apis: [], skills: []});
     http.expectOne('/api/system-assistant/configuration/tools').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
     http.expectOne('/api/auth/github/status').flush({configured: true, settingsUrl: '/workspace-settings'});

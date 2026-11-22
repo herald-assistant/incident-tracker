@@ -35,11 +35,11 @@ class SystemAssistantConversationHistoryTest {
         return new FileSystemLocalAnalysisRunStore(properties, new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
     }
     SystemAssistantConversationHistory history(LocalAnalysisRunStore store) { return new SystemAssistantConversationHistory(store, mapper, properties); }
-    SystemAssistantMessageRequest request(String text) { return new SystemAssistantMessageRequest(text, null, null); }
+    SystemAssistantMessageRequest request(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null); }
 
     @Test void reopensPersistedTranscriptWithOriginalPageAndCurrentSkillsAndTools() throws Exception {
         var store = store(); var configurations = mock(SystemAssistantConfigurationService.class);
-        var old = new SystemAssistantConfigurationService.Snapshot(new SystemAssistantConfiguration(List.of(),
+        var old = new SystemAssistantConfigurationService.Snapshot(SystemAssistantTestSupport.config(List.of(),
                 List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "OLD_SKILL"))), List.of(), Map.of());
         when(configurations.snapshot()).thenReturn(old);
         var seen = new AtomicReference<SystemAssistantConfigurationService.Snapshot>();
@@ -60,14 +60,14 @@ class SystemAssistantConversationHistoryTest {
             assertThat(entry.feature()).isEqualTo("system-assistant"); assertThat(entry.name()).isEqualTo("Pierwsze pytanie");
         });
         assertThat(store.findById(id).orElseThrow().exportEnvelope().toString()).doesNotContain("OLD_SKILL");
-        var tool = mock(OpenApiOperation.class);
-        var current = new SystemAssistantConfigurationService.Snapshot(new SystemAssistantConfiguration(List.of(),
-                List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "CURRENT_SKILL"))), List.of(tool), Map.of());
+        var tool = mock(OpenApiOperation.class); when(tool.name()).thenReturn("oa_crm_read");
+        var current = new SystemAssistantConfigurationService.Snapshot(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "CRM", "yaml")),
+                List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "CURRENT_SKILL"))), List.of(tool), Map.of("oa_crm_read", "crm"));
         when(configurations.snapshot()).thenReturn(current);
         try (var reopened = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history(store()), new LocalAnalysisRunOperationGuard()))) {
             assertThat(reopened.service.get(id).messages()).hasSize(2);
             reopened.service.send(id, request("Kontynuacja")); await().until(() -> !reopened.service.get(id).busy());
-            assertThat(seen.get()).isSameAs(current); assertThat(seenPage.get()).isEqualTo(page);
+            assertThat(seen.get()).isEqualTo(current); assertThat(seenPage.get()).isEqualTo(page);
             assertThat(transcript.get()).extracting(AnalysisChatMessageResponse::content).containsExactly("Pierwsze pytanie", "Odpowiedź", "Kontynuacja");
             assertThat(reopened.service.get(id).messages()).hasSize(4);
             store.rename(id, "Moja rozmowa"); reopened.service.send(id, request("Dalej")); await().until(() -> !reopened.service.get(id).busy());

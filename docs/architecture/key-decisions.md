@@ -21,6 +21,12 @@ i wiadomości, a następna tura pobiera aktualny zestaw skilli i narzędzi.
 Nie odtwarza konfiguracji ani sesji SDK z historii. `Nowa rozmowa` zachowuje
 poprzedni wpis, a restart nie ponawia przerwanych operacji API.
 Panel osadzony nie pokazuje toku AI i kosztów; pełny ekran używa wspólnego aside.
+Profile są referencjami do wspólnych katalogów. Wymagane profileId jest
+rozwiązywane do bieżących istniejących zasobów przy przyjęciu tury, bez
+fallbacku do całego katalogu i bez kopiowania konfiguracji do historii.
+Brakujące przypisania są pomijane i sygnalizowane w edytorze. Wybór w jednym
+chacie nie zmienia globalnego MCP. Wzorzec URL filtruje wyłącznie select
+w ramce, na podstawie ingress; pełny ekran pokazuje wszystkie profile.
 Kontrakty i szczegóły: [runtime System Assistant](system-assistant-runtime-flow.md).
 
 ## Odczyt dużych wyników narzędzi Copilota

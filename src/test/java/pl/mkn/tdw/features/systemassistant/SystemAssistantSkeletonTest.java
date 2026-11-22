@@ -22,7 +22,7 @@ class SystemAssistantSkeletonTest {
                 id.equals("crm") ? "oa_crm_a_read" : "oa_crm_a_write", "Demo", "GET",
                 java.net.URI.create("http://127.0.0.1:8099"), "/" + id, List.of(), schema, schema));
         var service = SystemAssistantTestSupport.configuration(importer);
-        service.save(new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration(List.of(
+        service.save(SystemAssistantTestSupport.config(List.of(
                 new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration.ApiDefinition("crm", "CRM", "yaml"),
                 new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration.ApiDefinition("crm_a", "Other", "yaml")), List.of()));
         var mvc = MockMvcBuilders.standaloneSetup(new SystemAssistantConfigurationController(service)).build();
@@ -45,7 +45,7 @@ class SystemAssistantSkeletonTest {
                     .content("{\"apis\":null,\"skills\":[]}"))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
             mvc.perform(put("/api/system-assistant/configuration").contentType("application/json")
-                    .content("{\"apis\":[],\"skills\":[]}"))
+                    .content("{\"apis\":[],\"skills\":[],\"profiles\":[]}"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.apis").isEmpty());
         }
     }

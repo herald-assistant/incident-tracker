@@ -40,7 +40,7 @@ class SystemAssistantMcpWireTest {
         try {
             var yaml = Files.readString(Path.of("src/test/resources/openapi/orders-api.yaml"))
                     .replace(":8081", ":" + api.getAddress().getPort());
-            configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("orders", "Orders", yaml)), List.of()));
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("orders", "Orders", yaml)), List.of()));
             var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.PATH).build();
             try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
                 client.initialize();
@@ -83,7 +83,7 @@ class SystemAssistantMcpWireTest {
         try {
             var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-api.yaml"))
                     .replace(":8099", ":" + api.getAddress().getPort());
-            configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", yaml)), List.of()));
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", yaml)), List.of()));
             var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port)
                     .endpoint(OpenApiMcpEndpoint.PATH).build();
             try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
@@ -94,7 +94,7 @@ class SystemAssistantMcpWireTest {
                 var result = client.callTool(new McpSchema.CallToolRequest(name, Map.of("path", Map.of("id", "CRM-101"))));
                 assertThat(result.isError()).isFalse();
                 assertThat(result.content().toString()).contains("OPEN");
-                configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo",
+                configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo",
                         yaml.replace("Odczytaj fikcyjne zgłoszenie", "NOWY OPIS")
                                 .replace("/tickets/{id}", "/changed/{id}")
                                 .replace("schema: {type: string}", "schema: {type: string, enum: [CRM-202]}"))), List.of()));
@@ -108,7 +108,7 @@ class SystemAssistantMcpWireTest {
                 assertThat(changedResult.isError()).isFalse();
                 assertThat(changedResult.content().toString()).contains("changed-handler");
                 var subset = selections.select("crm", yaml, List.of(new pl.mkn.tdw.integrations.openapi.contract.OpenApiSelection.OperationKey("GET", "/tickets/{id}")));
-                configurations.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", subset.yaml())), List.of()));
+                configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", subset.yaml())), List.of()));
                 assertThat(client.listTools().tools()).extracting(tool -> tool.name()).containsExactly("oa_crm_getTicket");
                 assertThatThrownBy(() -> client.callTool(new McpSchema.CallToolRequest("oa_crm_updateTicket", Map.of())))
                         .isInstanceOf(RuntimeException.class);

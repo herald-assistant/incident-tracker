@@ -113,6 +113,12 @@ strony, także po restarcie TDW. Każda następna tura używa aktualnych skilli
 i narzędzi. Ikona historii w chacie wraca do listy bez otwierania pełnego TDW.
 Ramka korzysta ze wspólnego widoku chatu bez sidebaru i konfiguracji.
 Nie pokazuje toku AI ani kosztów; pełny ekran TDW zachowuje te dane.
+Select Profil obok modelu/reasoningu pokazuje zapisane profile pasujące
+wzorcem do origin + pathname strony uruchomienia. Domyślne * pasuje wszędzie,
+pozostałe znaki są literalne. Wybranie rozmowy z historii nie podmienia
+kontekstu służącego temu filtrowi. Każda tura wymaga wyboru profilu i korzysta
+z aktualnych istniejących przypisań; brakujące API/skille są pomijane.
+Pełny ekran TDW pokazuje wszystkie profile bez filtrowania URL.
 Zamknięcie panelu chowa ramkę; ponowne otwarcie zachowuje rozmowę i wpisaną
 wiadomość. Usunięcie Browser Tools usuwa też ramkę.
 Przekazuje wyłącznie origin, pathname,

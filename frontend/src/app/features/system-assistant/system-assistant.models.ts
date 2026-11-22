@@ -2,7 +2,8 @@ import { AnalysisChatMessageResponse } from '../../core/models/analysis.models';
 
 export interface AssistantApiDefinition { id: string; name: string; yaml: string; }
 export interface AssistantSkill { id: string; name: string; content: string; }
-export interface AssistantConfiguration { apis: AssistantApiDefinition[]; skills: AssistantSkill[]; }
+export interface AssistantProfile { id: string; name: string; urlPattern: string; apiIds: string[]; skillIds: string[]; }
+export interface AssistantConfiguration { apis: AssistantApiDefinition[]; skills: AssistantSkill[]; profiles: AssistantProfile[]; }
 export interface AssistantTool { apiId: string; name: string; description: string; method: string; path: string; inputSchema: unknown; }
 export interface AssistantPageContext { origin: string; pathname: string; title: string; capturedAt: string; }
 export interface AssistantConversation { id: string; busy: boolean; pageContext: AssistantPageContext | null; messages: AnalysisChatMessageResponse[]; }

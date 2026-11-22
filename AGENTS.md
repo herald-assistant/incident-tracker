@@ -88,11 +88,14 @@ Przed wieksza zmiana zacznij od:
 - System Assistant (`system-assistant`, `features.systemassistant`) jest
   konfigurowalnym chatem operacyjnym: NEW sesja SDK per tura, bieżące instrukcje
   użytkownika inline przy `skillsEnabled=false`, bez initial AnalysisReport.
-  YAML-e i skille mają jeden aktualny zapis, bez rewizji i archiwum.
+  YAML-e, skille i profile mają jeden aktualny zapis, bez rewizji i archiwum.
+  Profil zawiera przypisania do wspólnych katalogów, bez kopii treści.
+  Wymagane profileId wybiera bieżące zasoby per tura; braki są pomijane,
+  bez blokowania profilu i bez fallbacku do całego katalogu.
   Zmiana działa od następnej przyjętej tury. Feature jest domyślnie wyłączony
   i nie ustawia ani nie waliduje adresu nasłuchiwania TDW. Docelowe API HTTP(S)
   mogą wskazywać dowolny poprawny host; nie dodawaj reguł loopback-only ani
-  założeń o fikcyjnych danych. Source auth, profile i załączniki pozostają
+  założeń o fikcyjnych danych. Source auth i załączniki pozostają
   odrębnym zakresem. Parser/REST należy
   do `integrations.openapi`, callbacki i neutralny MCP do `agenttools.openapi`.
   Nie dodawaj tej semantyki do globalnego Copilot runtime lub skill root.

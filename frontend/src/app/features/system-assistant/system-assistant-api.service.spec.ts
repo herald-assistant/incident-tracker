@@ -23,16 +23,16 @@ describe('SystemAssistantApi', () => {
     expect(document.request.body).toEqual({id: 'crm', yaml: 'selected YAML'}); document.flush({specification: {}});
   });
   it('sends only selected AI preferences and encodes conversation IDs', () => {
-    api.send('a/b', 'Pytanie', '', '').subscribe();
+    api.send('a/b', 'Pytanie', 'crm', '', '').subscribe();
     const request = http.expectOne('/api/system-assistant/conversations/a%2Fb/messages');
-    expect(request.request.body).toEqual({ message: 'Pytanie' }); request.flush({});
-    api.send('id', 'Dalej', 'model', 'high').subscribe();
+    expect(request.request.body).toEqual({ message: 'Pytanie', profileId: 'crm' }); request.flush({});
+    api.send('id', 'Dalej', 'crm', 'model', 'high').subscribe();
     const selected = http.expectOne('/api/system-assistant/conversations/id/messages');
-    expect(selected.request.body).toEqual({ message: 'Dalej', model: 'model', reasoningEffort: 'high' }); selected.flush({});
+    expect(selected.request.body).toEqual({ message: 'Dalej', profileId: 'crm', model: 'model', reasoningEffort: 'high' }); selected.flush({});
   });
   it('replaces the current configuration without revision fields', () => {
-    api.save({ apis: [], skills: [] }).subscribe();
+    api.save({profiles: [],  apis: [], skills: [] }).subscribe();
     const request = http.expectOne('/api/system-assistant/configuration');
-    expect(request.request.method).toBe('PUT'); expect(request.request.body).toEqual({ apis: [], skills: [] }); request.flush({});
+    expect(request.request.method).toBe('PUT'); expect(request.request.body).toEqual({profiles: [],  apis: [], skills: [] }); request.flush({});
   });
 });

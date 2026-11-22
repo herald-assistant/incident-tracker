@@ -6,8 +6,8 @@ localRunId otwiera istniejący chat z bieżącymi skillami i tools. Reuse shared
 kontrolki, polling, activity/evidence i usage. Widoczność sidebar/landing
 zależy od `systemAssistantEnabled`; aktywny link nie remountuje rozmowy.
 Browser Tools setup ma parametry tekstowe z zachowaniem defaultów UX Inspectora.
-Cztery widoki używają jednego poziomu wspólnych zakładek: Skille (domyślna),
-Kontrakty, Rozmowa i Uruchamianie w systemie. Nie przywracaj nadrzędnej
+Pięć widoków używa jednego poziomu wspólnych zakładek: Skille (domyślna),
+Kontrakty, Profile, Rozmowa i Uruchamianie w systemie. Nie przywracaj nadrzędnej
 Konfiguracji ani wewnętrznego przełącznika. Zachowuj instancję shared chatu,
 szkic i polling podczas zmiany widoku. Nie pamiętaj wyboru w storage.
 Przewodnik pokazuje kontrolki aktywnego widoku. Skille i Kontrakty mają

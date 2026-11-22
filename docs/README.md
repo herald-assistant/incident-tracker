@@ -65,8 +65,8 @@ implementacje niezatwierdzonego planu.
 
 ## System Assistant
 
-[Instrukcja obsługi](system-assistant.md) opisuje cztery widoki: Skille,
-Kontrakty, Rozmowę i Uruchamianie w systemie. Feature udostępnia import
+[Instrukcja obsługi](system-assistant.md) opisuje pięć widoków: Skille,
+Kontrakty, Profile, Rozmowę i Uruchamianie w systemie. Feature udostępnia import
 wybranych operacji OpenAPI, podgląd Swagger UI, eksport YAML i przenoszenie
 całego zestawu konfiguracji. Trwałą rozmowę można kontynuować z Analysis
 History lub bezpośrednio w panelu Browser Tools, z pierwotnym kontekstem
@@ -75,7 +75,7 @@ i aktualnymi skillami oraz narzędziami.
 [Runtime](architecture/system-assistant-runtime-flow.md) określa kontrakty,
 zapis konfiguracji i rozmów, podzbiór OpenAPI oraz granice platformy.
 Feature jest domyślnie wyłączony. Obsługuje hosty HTTP(S) bez ograniczenia
-do loopback; source auth, profile i załączniki pozostają poza bieżącym zakresem.
+do loopback; source auth i załączniki pozostają poza bieżącym zakresem.
 
 ## Aktualne potrzeby i plany
 

@@ -19,7 +19,7 @@
           <span class="material-symbols-outlined" aria-hidden="true">download</span>
         </button>
       </div>
-      <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
+      <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts' && workspaceView() !== 'profiles'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
         @if (workspaceView() === 'skills') {
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
             @for (item of configuration().skills; track $index; let i = $index) {
@@ -30,6 +30,33 @@
                 <button class="secondary-button" type="button" (click)="remove('skills', i)">Usuń skill {{item.name}}</button>
               </section>
             } @empty { <p class="assistant-empty">Dodaj instrukcje określające sposób pracy asystenta.</p> }
+          </fieldset>
+        } @else if (workspaceView() === 'profiles') {
+          <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-profiles" aria-labelledby="system-assistant-view-tab-profiles">
+            @for (item of configuration().profiles; track item.id; let i = $index) {
+              <section class="assistant-definition assistant-profile">
+                <div class="assistant-profile-heading"><span>{{item.name}}</span>
+                  @if (profileWarning(item); as warning) {
+                    <span class="material-symbols-outlined assistant-profile-warning" role="img" tabindex="0" aria-label="Brakujące zasoby profilu" [matTooltip]="warning">warning</span>
+                  }
+                </div>
+                <app-text-field label="Nazwa profilu" [value]="item.name" [maxLength]="100" [required]="true" [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'name', $event)" />
+                <app-text-field label="Wzorzec URL" [value]="item.urlPattern" [maxLength]="2300" [required]="true" hint="* oznacza dowolny ciąg. Dopasowanie do origin + ścieżka, bez query i hash." [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'urlPattern', $event)" />
+                <div class="assistant-profile-resources">
+                  <fieldset><legend>Skille</legend>
+                    @for (resource of profileResources(item, 'skills'); track resource.id) {
+                      <label><input type="checkbox" [checked]="item.skillIds.includes(resource.id)" (change)="toggleProfileResource(i, 'skillIds', resource.id, $any($event.target).checked)" />{{resource.name}}</label>
+                    } @empty { <p>Nie dodano skilli.</p> }
+                  </fieldset>
+                  <fieldset><legend>API</legend>
+                    @for (resource of profileResources(item, 'apis'); track resource.id) {
+                      <label><input type="checkbox" [checked]="item.apiIds.includes(resource.id)" (change)="toggleProfileResource(i, 'apiIds', resource.id, $any($event.target).checked)" />{{resource.name}}</label>
+                    } @empty { <p>Nie dodano API.</p> }
+                  </fieldset>
+                </div>
+                <button class="secondary-button" type="button" (click)="remove('profiles', i)">Usuń profil {{item.name}}</button>
+              </section>
+            } @empty { <p>Nie dodano profili.</p> }
           </fieldset>
         } @else if (workspaceView() === 'contracts') {
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-api" aria-labelledby="system-assistant-view-tab-contracts">
@@ -63,6 +90,8 @@
         <div class="assistant-configuration-actions">
           @if (workspaceView() === 'skills') {
             <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().skills.length >= 20" (click)="addSkill()">Dodaj skill</button>
+          } @else if (workspaceView() === 'profiles') {
+            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().profiles.length >= 20" (click)="addProfile()">Dodaj profil</button>
           } @else if (workspaceView() === 'contracts') {
             <input #newContractFile type="file" accept=".yaml,.yml" hidden (change)="readNewOpenApi($event)" />
             <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().apis.length >= 12" (click)="newContractFile.click()">Dodaj OpenAPI</button>
@@ -85,12 +114,20 @@
         @if (ingress.error()) { <p role="alert">{{ingress.error()}}</p> }
         @if (catalogError()) { <p role="alert">{{catalogError()}}</p> }
         @if (dirty()) { <p role="status">Masz niezapisane zmiany. Chat korzysta z ostatniego poprawnie zapisanego zestawu.</p> }
+        @if (!selectedProfileId() && !historyOpen()) {
+          <p role="status">{{profileNotice()}}
+            @if (embedded) { <a href="/system-assistant" target="_blank" rel="noopener noreferrer">Konfiguracja profili</a> }
+            @else { <button type="button" class="assistant-chat-action" aria-label="Otwórz konfigurację profili" (click)="workspaceView.set('profiles')"><span class="material-symbols-outlined" aria-hidden="true">settings</span></button> }
+          </p>
+        }
         <app-analysis-follow-up-chat data-form-tour="assistant-chat" [messages]="messages()" [canUseChat]="canChat()" [isSubmitting]="submitting()"
           [error]="chatError()" [needsAuth]="!authReady()" [compact]="true" [staticPanel]="true" [openByDefault]="true"
           ariaLabel="Rozmowa System Assistant" emptyText=""
           placeholder="Wiadomość…" unavailableMessage="Sprawdź dostępność feature'a, model i PAT Copilota w Workspace Settings."
           (sendMessage)="send($event)" (clearError)="chatError.set('')" (connectAuth)="auth.openSettings()">
         <div chatActions class="assistant-ai-controls" data-form-tour="assistant-model">
+          <app-choice-select class="assistant-profile-select" ariaLabel="Profil" placeholder="Profil" [options]="profileOptions()" [value]="selectedProfileId()"
+            [disabled]="busy()" (valueChange)="profileId.set($event)" (opened)="refreshProfiles()" />
           <app-ai-execution-controls [compact]="true" [catalog]="catalog()" [model]="model()" [reasoningEffort]="reasoningEffort()"
             [allowDefaultSelection]="true" [loading]="catalogLoading()" [error]="catalogError()" [disabled]="busy()"
             (modelChange)="chooseModel($event)" (reasoningEffortChange)="reasoningEffort.set($event)" />

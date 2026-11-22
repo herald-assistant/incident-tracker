@@ -10,8 +10,8 @@ niezależny od tej flagi. AI wymaga skonfigurowanego PAT Copilota w Workspace Se
 
 ## Konfiguracja
 
-Otwórz `/system-assistant`. Ekran zaczyna od `Skilli` i ma cztery zakładki:
-`Skille`, `Kontrakty`, `Rozmowa` oraz `Uruchamianie w systemie`.
+Otwórz `/system-assistant`. Ekran zaczyna od `Skilli` i ma pięć zakładek:
+`Skille`, `Kontrakty`, `Profile`, `Rozmowa` oraz `Uruchamianie w systemie`.
 W zakładce `Skille` dodaj instrukcje pracy
 asystenta. W zakładce `Kontrakty` wybierz `Dodaj OpenAPI` i wskaż plik YAML
 swojego API. W modalu wybierz operacje, nadaj nazwę kontraktu i użyj
@@ -39,6 +39,27 @@ Eksport obejmuje cały bieżący szkic kontraktów i skilli, również niezapisa
 Import zastępuje szkic; wymaga `Zapisz`, aby aktywować zestaw. Niepoprawny
 plik nie zmienia szkicu. Rozmowy, preferencje AI i autentykacja pozostają
 poza tym eksportem.
+
+## Profile
+
+W zakładce `Profile` dodaj profil, nadaj nazwę i przypisz istniejące API oraz
+skille checkboxami. Domyślny `Wzorzec URL` to `*`. Możesz wpisać np.
+`https://crm.example.com/customers/*`, aby profil pojawiał się tylko na
+pasujących stronach w Browser Tools. Gwiazdka oznacza dowolny ciąg; pozostałe
+znaki są literalne. Dopasowanie obejmuje origin i ścieżkę, bez query/hash.
+Pełny ekran TDW zawsze pokazuje wszystkie profile.
+
+Kliknij `Zapisz`, a w chacie wybierz profil obok modelu i reasoningu.
+Przełączenie zachowuje rozmowę i jej kontekst. Kolejna tura używa bieżących
+treści przypisanych zasobów; rozpoczęta kończy pracę na swoim zestawie.
+Wybór profilu nie jest zapisywany w historii — po ponownym wejściu wybierz
+profil do następnej wiadomości. Nie ma automatycznego wyboru pierwszego.
+
+Usunięte API lub skill nie blokuje profilu. W edytorze zobaczysz ikonę
+ostrzeżenia z tooltipem zawierającym brakujące ID. Możesz usunąć takie
+przypisanie; pozostałe zasoby nadal działają. Profil bez dostępnych zasobów
+pozwala rozmawiać bez narzędzi. Import/eksport konfiguracji obejmuje również
+profile; bieżący format V1 wymaga listy profiles i nie importuje starego kształtu.
 
 ## Rozmowa i Browser Tools
 
@@ -83,7 +104,7 @@ wyniku operacji sprawdź stan systemu przed ponownym zleceniem zapisu.
 Błąd odświeżania chatu pozwala ponowić odczyt, bez ponawiania polecenia.
 
 Feature nie obsługuje uwierzytelniania do podłączonych API, przejmowania
-logowania ze strony, profili konfiguracji ani załączników. Skille są
+logowania ze strony, załączników. Skille są
 instrukcjami pracy, nie mechanizmem nadawania uprawnień. Importer obsługuje
 wybrane konstrukcje OpenAPI, w tym readOnly, format i nullable;
 pełna macierz i limity są w [runtime flow](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).

@@ -5,9 +5,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ChoiceSelectComponent } from '../../components/choice-select/choice-select';
+import { matchesProfileUrl, missingProfileResources } from './assistant-profiles';
 import { TextFieldComponent } from '../../components/text-field/text-field';
 import { SystemAssistantApi } from './system-assistant-api.service';
-import { AssistantApiDefinition, AssistantConfiguration, AssistantTool } from './system-assistant.models';
+import { AssistantApiDefinition, AssistantConfiguration, AssistantTool, AssistantProfile } from './system-assistant.models';
 import { OpenApiOperationPicker, OpenApiPickerResult } from './openapi-operation-picker';
 import { OpenApiContractViewer } from './openapi-contract-viewer';
 import { AnalysisResultTabsComponent } from '../../components/analysis-result-tabs/analysis-result-tabs';
@@ -30,7 +32,7 @@ import { ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NA
 
 @Component({
   selector: 'app-system-assistant-page',
-  imports: [AssistantConversationPicker, NgTemplateOutlet, AnalysisResultTabsComponent, DialogModule, TextFieldComponent, MatTooltipModule, AnalysisFollowUpChatComponent, AiExecutionControlsComponent, AnalysisFeatureAsideComponent, AnalysisStepsPanelComponent, BrowserToolsSetupComponent],
+  imports: [ChoiceSelectComponent, AssistantConversationPicker, NgTemplateOutlet, AnalysisResultTabsComponent, DialogModule, TextFieldComponent, MatTooltipModule, AnalysisFollowUpChatComponent, AiExecutionControlsComponent, AnalysisFeatureAsideComponent, AnalysisStepsPanelComponent, BrowserToolsSetupComponent],
   providers: [SystemAssistantIngress],
   templateUrl: './system-assistant-page.html',
   styleUrl: './system-assistant-page.scss'
@@ -48,7 +50,18 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private restoredId = this.route?.snapshot.queryParamMap?.get('localRunId') || '';
   protected readonly api = inject(SystemAssistantApi);
   protected readonly destroyRef = inject(DestroyRef);
-  readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [] });
+  readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [] });
+  readonly activeProfiles = signal<AssistantProfile[]>([]);
+  readonly profileId = signal('');
+  readonly availableProfiles = computed(() => this.activeProfiles().filter(profile => {
+    if (!this.embedded) return true;
+    const page = this.ingress.context();
+    return page ? matchesProfileUrl(profile.urlPattern, page.origin + page.pathname) : profile.urlPattern === '*';
+  }));
+  readonly profileOptions = computed(() => this.availableProfiles().map(profile => ({value: profile.id, label: profile.name})));
+  readonly selectedProfileId = computed(() => this.availableProfiles().some(profile => profile.id === this.profileId()) ? this.profileId() : '');
+  readonly profileNotice = computed(() => this.availableProfiles().length ? 'Wybierz profil przed wysłaniem wiadomości.'
+    : this.embedded ? 'Brak profili pasujących do strony. Dodaj lub popraw profil w konfiguracji TDW.' : 'Dodaj profil w zakładce Profile.');
   readonly tools = signal<AssistantTool[]>([]);
   readonly toolsLoading = signal(false);
   readonly toolsError = signal('');
@@ -64,6 +77,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly workspaceTabs = [
     {id: 'skills', tabLabel: 'Skille'},
     {id: 'contracts', tabLabel: 'Kontrakty'},
+    {id: 'profiles', tabLabel: 'Profile'},
     {id: 'conversation', tabLabel: 'Rozmowa'},
     {id: 'launch', tabLabel: 'Uruchamianie w systemie'}
   ];
@@ -87,6 +101,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (this.workspaceView() === 'skills') return [
       {anchor: 'assistant-skills', title: 'Instrukcje pracy', description: 'Dodaj lub popraw skill i zapisz aktualny zestaw.'}
     ];
+    if (this.workspaceView() === 'profiles') return [{anchor: 'assistant-profiles', title: 'Profile', description: 'Nazwij zestaw i przypisz istniejące skille oraz API. Zapisz, aby go aktywować.'}];
     if (this.workspaceView() === 'contracts') return [
       {anchor: 'assistant-api', title: 'Kontrakty OpenAPI', description: 'Wczytaj kontrakt w modalu i wybierz operacje. Podgląd pokazuje dokumentację i schematy.'}
     ];
@@ -110,7 +125,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly evidence = computed(() => this.messages().flatMap(message => message.toolEvidenceSections));
   readonly busy = computed(() => this.restoring() || this.submitting() || !!this.conversation()?.busy);
   readonly canChat = computed(() => !this.historyOpen() && !this.restoring() && !this.restoreError() && this.configurationAvailable() && this.ingress.status() !== 'waiting' && this.authReady() && !this.catalogLoading() && !this.catalogError()
-    && !!(this.model() || this.catalog().defaultModel));
+    && !!this.selectedProfileId() && !!(this.model() || this.catalog().defaultModel));
   private readonly polling = inject(AnalysisJobPollingService);
   private readonly optionsApi = inject(AiOptionsApiService);
   protected readonly auth = inject(GithubAuthService);
@@ -126,7 +141,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.ingress.start();
     if (!this.embedded && this.restoredId) this.restoreConversation();
     this.api.configuration().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: value => { this.configuration.set(value); this.ready.set(true); this.configurationAvailable.set(true); this.loadTools(); this.loadAi(); },
+      next: value => { this.configuration.set(value); this.activeProfiles.set(value.profiles); this.ready.set(true); this.configurationAvailable.set(true); this.loadTools(); this.loadAi(); },
       error: error => {
         this.error.set(this.message(error));
         if (error.error?.code === 'CONFIGURATION_UNAVAILABLE') { this.ready.set(true); this.loadAi(); }
@@ -161,7 +176,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private submitMessage(id: string, message: string): void {
     const generation = this.conversationGeneration;
     const previousMessageIds = new Set(this.conversation()?.messages.map(item => item.id) ?? []);
-    this.api.send(id, message, this.model(), this.reasoningEffort()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.send(id, message, this.selectedProfileId(), this.model(), this.reasoningEffort()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: snapshot => { this.conversation.set(snapshot); this.unsentMessage.set(''); this.submitting.set(false); this.startPolling(); },
       error: error => {
         this.submitting.set(false); this.chatError.set(this.message(error));
@@ -250,6 +265,35 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       error: () => { this.toolsLoading.set(false); this.toolsError.set('Nie udało się pobrać aktywnych operacji. Odśwież stronę, aby spróbować ponownie.'); }
     });
   }
+  refreshProfiles(): void {
+    this.api.configuration().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: value => this.activeProfiles.set(value.profiles),
+      error: error => this.chatError.set(this.message(error))
+    });
+  }
+  addProfile(): void {
+    if (this.configurationBusy() || this.configuration().profiles.length >= 20) return;
+    this.configuration.update(value => ({...value, profiles: [...value.profiles,
+      {id: crypto.randomUUID(), name: 'Nowy profil', urlPattern: '*', apiIds: [], skillIds: []}]}));
+    this.dirty.set(true); this.notice.set('');
+  }
+  updateProfile(index: number, key: 'name' | 'urlPattern', content: string): void {
+    if (this.configurationBusy()) return;
+    this.configuration.update(value => ({...value, profiles: value.profiles.map((item, i) => i === index ? {...item, [key]: content} : item)}));
+    this.dirty.set(true); this.notice.set('');
+  }
+  toggleProfileResource(index: number, key: 'apiIds' | 'skillIds', id: string, checked: boolean): void {
+    if (this.configurationBusy()) return;
+    this.configuration.update(value => ({...value, profiles: value.profiles.map((item, i) => i === index
+      ? {...item, [key]: checked ? [...new Set([...item[key], id])] : item[key].filter(current => current !== id)} : item)}));
+    this.dirty.set(true); this.notice.set('');
+  }
+  profileWarning(profile: AssistantProfile): string { return missingProfileResources(profile, this.configuration()); }
+  profileResources(profile: AssistantProfile, kind: 'apis' | 'skills') {
+    const resources = this.configuration()[kind].map(item => ({id: item.id, name: item.name}));
+    const ids = kind === 'apis' ? profile.apiIds : profile.skillIds;
+    return [...resources, ...ids.filter(id => !resources.some(item => item.id === id)).map(id => ({id, name: 'Brak: ' + id}))];
+  }
   addSkill(): void {
     if (this.configurationBusy()) return;
     const id = `skill_${crypto.randomUUID().slice(0, 8)}`;
@@ -261,7 +305,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.configuration.update(value => ({...value, skills: value.skills.map((item, i) => i === index ? {...item, [key]: content} : item)}));
     this.dirty.set(true); this.notice.set('');
   }
-  remove(kind: 'apis' | 'skills', index: number): void {
+  remove(kind: 'apis' | 'skills' | 'profiles', index: number): void {
     if (this.configurationBusy()) return;
     this.configuration.update(value => ({ ...value, [kind]: value[kind].filter((_, i) => i !== index) }));
     this.dirty.set(true); this.notice.set('');
@@ -281,7 +325,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       if (this.destroyRef.destroyed) return;
       const configuration = parseConfigurationFile(value);
       this.configuration.set(configuration); this.dirty.set(true); this.saveError.set('');
-      this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}). Zapisz, aby ją aktywować.`);
+      this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}). Zapisz, aby ją aktywować.`);
       this.workspaceView.set('skills');
     } catch (error) {
       if (!this.destroyRef.destroyed) this.error.set(error instanceof Error ? error.message : 'Nie udało się odczytać pliku konfiguracji.');
@@ -338,7 +382,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.saving.set(true); this.error.set(''); this.saveError.set(''); this.notice.set('');
     this.api.save(this.configuration()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: value => {
-        this.configuration.set(value); this.configurationAvailable.set(true); this.saving.set(false); this.dirty.set(false);
+        this.configuration.set(value); this.activeProfiles.set(value.profiles); this.configurationAvailable.set(true); this.saving.set(false); this.dirty.set(false);
         this.notice.set('Zapisano. Kolejna tura użyje bieżącego zestawu API i skilli.'); this.loadTools();
       },
       error: error => { this.saving.set(false); this.saveError.set(this.message(error)); }

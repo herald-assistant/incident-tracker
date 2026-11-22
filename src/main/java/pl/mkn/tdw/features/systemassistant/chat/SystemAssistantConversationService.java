@@ -90,7 +90,7 @@ public class SystemAssistantConversationService {
                 if (conversation.dirty) persist(conversation);
                 if (conversation.messages.size() >= 40)
                     throw error("CHAT_LIMIT", UserFacingErrorType.BAD_REQUEST, "Limit 20 tur. Rozpocznij nową rozmowę.");
-                var configuration = configurations.snapshot();
+                var configuration = configurations.snapshot().forProfile(request.profileId());
                 var user = AnalysisChatMessageState.completedUser(UUID.randomUUID().toString(), request.message(), Instant.now());
                 var assistant = AnalysisChatMessageState.inProgressAssistant(UUID.randomUUID().toString(), Instant.now());
                 conversation.messages.add(user.snapshot());

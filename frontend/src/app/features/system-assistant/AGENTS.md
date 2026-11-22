@@ -3,10 +3,10 @@
 Chat-first konfigurowalny feature. Reuse shared chat, steps/activity/evidence,
 usage, preferencje AI i kontrolki. Ekran posiada bieżący szkic konfiguracji,
 walidację i requesty. Nie importuje innych feature'ów. Konfiguracja to jeden
-aktualny zestaw, bez wersjonowania. Bez auth źródłowego, profili i załączników.
+aktualny zestaw, bez wersjonowania. Bez auth źródłowego i załączników.
 Browser Tools przekazuje wyłącznie mały page-context przez sprawdzony handshake.
 Akcja osadza chat TDW w iframe /system-assistant/chat poza AppShell. Reuse
-jednego template'u rozmowy; pełny ekran zachowuje cztery zakładki. Transfer V1
+jednego template'u rozmowy; pełny ekran ma zakładki Skille, Kontrakty, Profile, Rozmowa i Uruchamianie w systemie. Transfer V1
 sprawdza parent/contentWindow, origin, nonce i dokładne pola; nie przywracaj
 opener/popup dla System Assistant. Schowanie panelu zachowuje ramkę i stan,
 a usunięcie Browser Tools usuwa panel i listenery. Nie osłabiaj CSP.
@@ -39,3 +39,12 @@ nie dostaje metadanych ani wiadomości. Ikona historii wraca do listy, wybór
 nie remountuje iframe. Zachowuj szkice/błędy/wiadomości bez potwierdzenia
 per ID; stare odpowiedzi HTTP nie mogą nadpisać nowego wyboru. Aktywna tura
 blokuje przełączanie. Pełny ekran i kontrakt V1 pozostają bez zmian.
+
+Profile są przypisaniami do wspólnych katalogów API/skilli. Per tura wymagane
+profileId rozwiązuje bieżące zasoby i pomija brakujące; nie blokuje profilu
+bez narzędzi. Nie ma fallbacku do wszystkich zasobów. Wybór nie zmienia
+transkryptu, pierwotnego pageContext ani globalnego MCP. Braki są ostrzeżeniem
+w konfiguracji. Select chatu jest feature-owned; pełny ekran pokazuje wszystkie
+profile, ramka filtruje po ingress origin + pathname wildcardem *, niezależnie
+od historycznego kontekstu rozmowy. Konfiguracja/import V1 wymaga profiles;
+nie dodawaj migracji ani wersjonowania.

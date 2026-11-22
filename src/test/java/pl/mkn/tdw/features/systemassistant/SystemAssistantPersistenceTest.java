@@ -19,13 +19,13 @@ class SystemAssistantPersistenceTest {
     @TempDir Path directory;
     private final ObjectMapper mapper = new ObjectMapper();
     private SystemAssistantConfiguration configuration(String text) {
-        return new SystemAssistantConfiguration(List.of(), List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", text)));
+        return SystemAssistantTestSupport.config(List.of(), List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", text)));
     }
     @Test
     void rejectsCollidingGeneratedNamesAndKeepsAcceptedCallbacksUnchanged() throws Exception {
         var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-api.yaml"));
         var service = SystemAssistantTestSupport.configuration(new OpenApiImporter(mapper));
-        var original = new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Demo", yaml)), List.of());
+        var original = SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Demo", yaml)), List.of());
         service.save(original);
         var seen = new java.util.concurrent.atomic.AtomicReference<String>();
         var factory = new pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory((op, args) -> {
@@ -34,11 +34,11 @@ class SystemAssistantPersistenceTest {
         }, mapper);
         var accepted = factory.create(service.snapshot().operations()).get(0);
         var colliding = yaml.replace("operationId: ", "operationId: a_");
-        assertThatThrownBy(() -> service.save(new SystemAssistantConfiguration(List.of(original.apis().get(0),
+        assertThatThrownBy(() -> service.save(SystemAssistantTestSupport.config(List.of(original.apis().get(0),
                 new SystemAssistantConfiguration.ApiDefinition("crm", "Collision", colliding)), List.of())))
                 .isInstanceOf(SystemAssistantException.class).hasMessageContaining("powtórzone nazwy");
         assertThat(service.current()).isEqualTo(original);
-        service.save(new SystemAssistantConfiguration(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Edited",
+        service.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Edited",
                 yaml.replace("/tickets/{id}", "/changed/{id}"))), List.of()));
         accepted.call("{\"path\":{\"id\":\"CRM-101\"}}");
         assertThat(seen.get()).isEqualTo("/tickets/{id}");

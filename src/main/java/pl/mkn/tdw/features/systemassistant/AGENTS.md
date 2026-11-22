@@ -16,7 +16,7 @@ feature'ów. API i orkiestracja należą do feature'a; parser/REST do
   AnalysisReport. Nowa rozmowa nie usuwa poprzedniej z historii.
 - Przyjęcie zapisujemy przed AI; aktywna tura używa wspólnego operation guard
   z historią. Restart oznacza przerwaną turę błędem, nigdy nie ponawia API.
-- Auth API, profile, załączniki i obowiązkowy approval są odrębnym zakresem.
+- Auth API, załączniki i obowiązkowy approval są odrębnym zakresem.
 - Nie zakładaj fikcyjnych danych ani lokalnego demo; timeout nie uprawnia do retry.
 
 Kontrakt: `docs/architecture/system-assistant-runtime-flow.md`.
@@ -26,3 +26,12 @@ MCP wire, frontend, Browser Tools oraz architecture guards.
 Import przez modal zapisuje tylko wybrane operacje i ich zależności. Preview
 oraz selection API nie zmieniają konfiguracji; publikacja następuje dopiero
 przy istniejącym zapisie. Nie zachowuj pełnego źródła ani historii importów.
+
+Profile są przypisaniami do wspólnych katalogów API/skilli. Per tura wymagane
+profileId rozwiązuje bieżące zasoby i pomija brakujące; nie blokuje profilu
+bez narzędzi. Nie ma fallbacku do wszystkich zasobów. Wybór nie zmienia
+transkryptu, pierwotnego pageContext ani globalnego MCP. Braki są ostrzeżeniem
+w konfiguracji. Select chatu jest feature-owned; pełny ekran pokazuje wszystkie
+profile, ramka filtruje po ingress origin + pathname wildcardem *, niezależnie
+od historycznego kontekstu rozmowy. Konfiguracja/import V1 wymaga profiles;
+nie dodawaj migracji ani wersjonowania.

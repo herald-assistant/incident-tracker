@@ -95,10 +95,10 @@ class SystemAssistantCopilotLiveTest {
         var apis = new ArrayList<SystemAssistantConfiguration.ApiDefinition>();
         if (yaml != null) apis.add(new SystemAssistantConfiguration.ApiDefinition("crm", "Demo", yaml));
         if (contacts != null) apis.add(new SystemAssistantConfiguration.ApiDefinition("contacts", "Kontakty", contacts));
-        return new SystemAssistantConfiguration(apis, List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", skill)));
+        return SystemAssistantTestSupport.config(apis, List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", skill)));
     }
     private pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse turn(String id, String text, String model) {
-        chats.send(id, new SystemAssistantMessageRequest(text, model, null));
+        chats.send(id, new SystemAssistantMessageRequest(text, "test_profile", model, null));
         await().atMost(Duration.ofMinutes(3)).pollInterval(Duration.ofMillis(250)).until(() -> !chats.get(id).busy());
         var result = chats.get(id).messages().get(chats.get(id).messages().size() - 1);
         assertThat(result.status()).as(result.errorCode() + ": " + result.errorMessage()).isEqualTo("COMPLETED");

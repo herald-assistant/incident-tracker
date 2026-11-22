@@ -27,6 +27,19 @@ public class SystemAssistantConfigurationService {
             operations = List.copyOf(operations);
             operationApiIds = Map.copyOf(operationApiIds);
         }
+
+        public Snapshot forProfile(String profileId) {
+            var profile = configuration.profiles().stream().filter(item -> item.id().equals(profileId)).findFirst()
+                    .orElseThrow(() -> new SystemAssistantException("PROFILE_NOT_FOUND", UserFacingErrorType.BAD_REQUEST,
+                            "Wybierz istniejący profil przed wysłaniem wiadomości."));
+            var apis = configuration.apis().stream().filter(item -> profile.apiIds().contains(item.id())).toList();
+            var skills = configuration.skills().stream().filter(item -> profile.skillIds().contains(item.id())).toList();
+            var apiIds = apis.stream().map(SystemAssistantConfiguration.ApiDefinition::id).collect(java.util.stream.Collectors.toSet());
+            var selected = operations.stream().filter(item -> apiIds.contains(operationApiIds.get(item.name()))).toList();
+            var mapping = new HashMap<String, String>();
+            selected.forEach(item -> mapping.put(item.name(), operationApiIds.get(item.name())));
+            return new Snapshot(new SystemAssistantConfiguration(apis, skills, List.of(profile)), selected, mapping);
+        }
     }
 
     @jakarta.annotation.PostConstruct
@@ -67,6 +80,14 @@ public class SystemAssistantConfigurationService {
         for (var api : value.apis()) if (!ids.add(api.id())) duplicate();
         ids.clear();
         for (var skill : value.skills()) if (!ids.add(skill.id())) duplicate();
+        ids.clear();
+        for (var profile : value.profiles()) {
+            if (!ids.add(profile.id())) duplicate();
+            if (new HashSet<>(profile.apiIds()).size() != profile.apiIds().size()
+                    || new HashSet<>(profile.skillIds()).size() != profile.skillIds().size())
+                throw new SystemAssistantException("DUPLICATE_REFERENCE", UserFacingErrorType.BAD_REQUEST,
+                        "Przypisania API i skilli w profilu nie mogą się powtarzać.");
+        }
         var operations = new ArrayList<OpenApiOperation>();
         var operationApiIds = new HashMap<String, String>();
         for (var api : value.apis()) {

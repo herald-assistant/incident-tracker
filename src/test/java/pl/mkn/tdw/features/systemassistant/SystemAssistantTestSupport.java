@@ -7,6 +7,12 @@ import pl.mkn.tdw.integrations.openapi.OpenApiImportPort;
 import static org.mockito.Mockito.*;
 
 final class SystemAssistantTestSupport {
+    static SystemAssistantConfiguration config(java.util.List<SystemAssistantConfiguration.ApiDefinition> apis,
+            java.util.List<SystemAssistantConfiguration.Skill> skills) {
+        return new SystemAssistantConfiguration(apis, skills, java.util.List.of(new SystemAssistantConfiguration.Profile(
+                "test_profile", "Test CRM", "*", apis.stream().map(SystemAssistantConfiguration.ApiDefinition::id).toList(),
+                skills.stream().map(SystemAssistantConfiguration.Skill::id).toList())));
+    }
     static pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationHistory history(java.nio.file.Path directory) {
         var properties = new pl.mkn.tdw.localworkspace.LocalWorkspaceProperties(); properties.setDirectory(directory.toString());
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
@@ -18,9 +24,11 @@ final class SystemAssistantTestSupport {
 
     static SystemAssistantConfigurationStore store() {
         var store = mock(SystemAssistantConfigurationStore.class);
-        when(store.read()).thenReturn(SystemAssistantConfiguration.empty()); return store;
+        when(store.read()).thenReturn(config(java.util.List.of(), java.util.List.of())); return store;
     }
     static SystemAssistantConfigurationService configuration(OpenApiImportPort importer) {
-        return new SystemAssistantConfigurationService(importer, store(), new OpenApiToolCatalog());
+        var service = new SystemAssistantConfigurationService(importer, store(), new OpenApiToolCatalog());
+        service.load();
+        return service;
     }
 }

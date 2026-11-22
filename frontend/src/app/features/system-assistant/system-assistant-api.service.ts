@@ -48,9 +48,9 @@ export class SystemAssistantApi {
     return this.http.get<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}`);
   }
 
-  send(id: string, message: string, model: string, reasoningEffort: string) {
+  send(id: string, message: string, profileId: string, model: string, reasoningEffort: string) {
     return this.http.post<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}/messages`, {
-      message, ...(model ? {model} : {}), ...(reasoningEffort ? {reasoningEffort} : {})
+      message, profileId, ...(model ? {model} : {}), ...(reasoningEffort ? {reasoningEffort} : {})
     });
   }
 
