@@ -93,7 +93,13 @@ const FEATURES: readonly OverviewFeature[] = [
     icon: 'finance',
     image: '/assets/brand/workspace-overview-delivery-trends.jpg'
   },
-  { title: 'System Assistant', task: 'Zapytaj o dane i wykonaj zadanie w systemie', route: '/system-assistant', icon: 'forum' }
+  {
+    title: 'System Assistant',
+    task: 'Zapytaj o dane i wykonaj zadanie w systemie',
+    route: '/system-assistant',
+    icon: 'forum',
+    image: '/assets/brand/workspace-overview-system-assistant.jpg'
+  }
 ];
 
 const TOOL_ICONS = [
