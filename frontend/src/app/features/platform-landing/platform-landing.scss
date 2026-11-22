@@ -933,7 +933,7 @@
 
 .platform-landing__tool-surface,
 .platform-landing__story-feature-face,
-.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result {
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result {
   --enamel-blue: var(--tdw-symbol, 1);
   --enamel-light: color-mix(in srgb, #f5faff calc(100% * (1 - var(--enamel-blue))), #76c3ff);
   --enamel-face: color-mix(in srgb, #e5eef9 calc(100% * (1 - var(--enamel-blue))), #126ee7);
@@ -947,7 +947,7 @@
 
 .platform-landing__tool-surface::before,
 .platform-landing__story-feature-face::before,
-.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result::before {
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result::before {
   position: absolute;
   z-index: -2;
   inset: 0;
@@ -967,7 +967,7 @@
 
 .platform-landing__tool-surface::after,
 .platform-landing__story-feature-face::after,
-.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result::after {
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result::after {
   position: absolute;
   z-index: -1;
   inset: 0;
@@ -997,7 +997,7 @@
 }
 
 .platform-landing__story-feature-face > img,
-.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result > img {
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result > img {
   filter: brightness(0.58) saturate(0.7) drop-shadow(0 1px 1px rgb(11 45 99 / 12%));
 }
 
@@ -1018,6 +1018,18 @@
   --enamel-light: #f5f7fa;
   --enamel-face: #eaf0f5;
   --enamel-base: #dce5ee;
+}
+
+.platform-landing__story-card[data-scene='guidance'] .platform-landing__orbit-result {
+  --enamel-light: #d5d0e6;
+  --enamel-face: #b4accd;
+  --enamel-base: #8e82ae;
+  --enamel-edge-light: #e6e0f0;
+  --enamel-edge: #75668f;
+  --enamel-edge-dark: #3e3158;
+  --enamel-edge-end: #8c7ba8;
+  --enamel-rim: rgb(242 236 252 / 60%);
+  --enamel-depth: 3px;
 }
 
 .platform-landing__story-card[data-scene='tools'] .platform-landing__orbit {
@@ -1100,9 +1112,12 @@
   --guidance-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--guidance-progress) - 0.13) / 0.48, 1);
   --slogan-finale: var(--guidance-finale);
-  --story-surface: #2b1b44;
-  --story-light: #8f68c7;
-  --story-accent: #e7d6ff;
+  --story-surface: #201a32;
+  --story-light: #736990;
+  --story-accent: #e3ddf3;
+  background:
+    radial-gradient(ellipse at 68% 8%, rgb(126 112 171 / 18%), transparent 65%),
+    linear-gradient(130deg, #0e0d1c, var(--story-surface) 58%, #2e2848);
 }
 
 .platform-landing__story-card[data-scene='closing'] {
@@ -1341,7 +1356,7 @@
   grid-template-columns: 20cqi auto;
   justify-content: space-evenly;
   align-items: center;
-  color: var(--primary-dark);
+  color: #3a4163;
   opacity: var(--guidance-reveal);
 }
 
@@ -1368,6 +1383,8 @@
 
 .platform-landing__guidance-document-result .material-symbols-outlined {
   font-size: 12cqi;
+  color: #535884;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 65%);
 }
 
 .platform-landing__guidance-steps {
@@ -1399,11 +1416,11 @@
 }
 
 .platform-landing__guidance-step::before {
-  background: var(--color-border);
+  background: #c9c8dc;
 }
 
 .platform-landing__guidance-step::after {
-  background: var(--primary);
+  background: linear-gradient(90deg, #526ba3, #8a7cc2);
   scale: var(--step-progress) 1;
   transform-origin: left center;
 }
@@ -1417,8 +1434,16 @@
   width: 13cqi;
   aspect-ratio: 1;
   place-items: center;
+  border: 1px solid rgb(242 239 255 / 58%);
   border-radius: 50%;
-  background: var(--primary);
+  background:
+    radial-gradient(ellipse at 25% 12%, rgb(255 255 255 / 65%), transparent 65%),
+    linear-gradient(145deg, #b8b6df, #7b82b8 60%, #535c95);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 70%),
+    inset 0 -1px 1px rgb(35 37 72 / 18%),
+    0 3px 0 #414a7d,
+    0 8px 12px rgb(22 19 44 / 25%);
   color: var(--color-surface);
 }
 
@@ -1429,7 +1454,7 @@
 .platform-landing__guidance-action::after {
   position: absolute;
   inset: 0;
-  border: 1px solid var(--primary);
+  border: 1px solid #8990bf;
   border-radius: inherit;
   opacity: calc(sin(var(--pulse) * 180deg) * 0.7);
   transform: scale(calc(1 + 0.75 * var(--pulse)));
@@ -1458,7 +1483,7 @@
   --arrival: clamp(0, (var(--guidance-progress) - var(--guidance-click) + 0.125) / 0.125, 1);
   position: absolute;
   inset: 49% auto auto 52%;
-  color: var(--primary-dark);
+  color: #273a60;
   text-shadow: 0 0 2px var(--color-surface);
   opacity: clamp(0, min(var(--arrival) * 2,
     (var(--guidance-click) + 0.16 - var(--guidance-progress)) / 0.12), 1);
