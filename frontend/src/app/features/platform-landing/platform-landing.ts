@@ -120,6 +120,19 @@ const STORY_SCENES = [
   { id: 'closing', duration: 3600, lines: ['Czas na Twój ruch.', 'Wybierz pierwsze zadanie.'] }
 ] as const;
 const STORY_CAPTION_HOLD_MS = 1400;
+const STORY_TOOLS_RECOGNITION_HOLD_MS = 1200;
+const STORY_TOOLS_TRANSFORMATION_EXTRA_MS = 1200;
+
+const INTRO_QUESTION = 'W czym możesz mi pomóc?';
+const INTRO_REPLY_LINES = [
+  { text: 'Witaj! 👋', emphasis: '' },
+  { text: 'Odkryję zależności w Twoim systemie.', emphasis: 'Odkryję' },
+  { text: 'Opiszę działanie funkcji biznesowych i technicznych.', emphasis: 'Opiszę' },
+  { text: 'Wyjaśnię problemy w działaniu systemu.', emphasis: 'Wyjaśnię' },
+  { text: 'Zweryfikuję zmianę przed wdrożeniem.', emphasis: 'Zweryfikuję' },
+  { text: 'Pomogę udokumentować system.', emphasis: 'Pomogę udokumentować' },
+  { text: 'Od czego zaczynamy? 🚀', emphasis: '' }
+] as const;
 
 @Component({
   selector: 'app-platform-landing-page',
@@ -131,16 +144,44 @@ export class PlatformLandingPageComponent {
   readonly uiConfig = inject(AppUiConfigService);
   readonly activeTheme = inject(SpecialThemeService).activeTheme;
   readonly features = FEATURES;
+  protected readonly introQuestionText = INTRO_QUESTION;
+  protected readonly introQuestion = Array.from(INTRO_QUESTION);
+  protected readonly introDescription = INTRO_REPLY_LINES.map(line => line.text).join(' ');
+  protected readonly introReplyLines = (() => {
+    let letterIndex = 0;
+    return INTRO_REPLY_LINES.map(({ text, emphasis }) => {
+      const startIndex = letterIndex;
+      let wordStart = 0;
+      const words = text.split(' ').map(word => {
+        const emphasized = wordStart < emphasis.length;
+        wordStart += word.length + 1;
+        return {
+          emphasized,
+          letters: Array.from(word, value => ({ value, index: letterIndex++ }))
+        };
+      });
+      letterIndex += 8;
+      return { text, startIndex, words };
+    });
+  })();
   protected readonly storyFeatures = FEATURES.slice(0, 6);
   readonly toolIcons = TOOL_ICONS;
   protected readonly toolOrbitResultIndex = 2;
-  protected readonly storyScenes = STORY_SCENES.map(({ lines, duration, ...scene }) => ({
-    ...scene,
-    duration: duration + STORY_CAPTION_HOLD_MS,
-    motionShare: duration / (duration + STORY_CAPTION_HOLD_MS),
-    label: lines.join(' '),
-    lines: lines.map(line => Array.from(line))
-  }));
+  protected readonly storyScenes = STORY_SCENES.map(({ lines, duration, ...scene }) => {
+    const recognitionHold = scene.id === 'tools' ? STORY_TOOLS_RECOGNITION_HOLD_MS : 0;
+    const transformationExtra = scene.id === 'tools' ? STORY_TOOLS_TRANSFORMATION_EXTRA_MS : 0;
+    const motionDuration = duration + recognitionHold + transformationExtra;
+    return {
+      ...scene,
+      duration: motionDuration + STORY_CAPTION_HOLD_MS,
+      motionShare: motionDuration / (motionDuration + STORY_CAPTION_HOLD_MS),
+      motionScale: motionDuration / duration,
+      recognitionHoldShare: recognitionHold / duration,
+      transformationExtraShare: transformationExtra / duration,
+      label: lines.join(' '),
+      lines: lines.map(line => Array.from(line))
+    };
+  });
   protected readonly storyIndex = signal(0);
   protected readonly storyPlaying = signal(false);
   protected readonly storyFinished = signal(false);
@@ -148,9 +189,11 @@ export class PlatformLandingPageComponent {
   protected readonly canScrollForward = signal(true);
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly intro = viewChild<ElementRef<HTMLElement>>('intro');
   private readonly featureList = viewChild.required<ElementRef<HTMLUListElement>>('featureList');
   private readonly featureSlides = viewChildren<ElementRef<HTMLLIElement>>('featureSlide');
   private readonly benefitsStory = viewChild.required<ElementRef<HTMLElement>>('benefitsStory');
+  private readonly featuresSection = viewChild.required<ElementRef<HTMLElement>>('featuresSection');
   private storyInView = false;
   private storyElapsed = 0;
   private storyFrame: number | undefined;
@@ -158,6 +201,14 @@ export class PlatformLandingPageComponent {
 
   constructor() {
     this.uiConfig.load();
+    afterRenderEffect({
+      mixedReadWrite: (onCleanup) => {
+        const intro = this.intro()?.nativeElement;
+        if (intro) {
+          onCleanup(this.connectIntroAnimation(intro));
+        }
+      }
+    });
     afterRenderEffect({
       read: (onCleanup) => {
         const firstSlide = this.featureSlides()[0]?.nativeElement;
@@ -175,6 +226,50 @@ export class PlatformLandingPageComponent {
       }
     });
     afterNextRender(() => this.connectStoryPlayback());
+  }
+
+  private connectIntroAnimation(intro: HTMLElement): () => void {
+    const events = new AbortController();
+    let inView = false;
+    const syncPlayback = () => {
+      intro.toggleAttribute('data-intro-playing', inView && document.visibilityState !== 'hidden');
+    };
+    const updateViewportOffset = () => {
+      const offset = Math.max(0, intro.getBoundingClientRect().top + window.scrollY);
+      intro.style.setProperty('--landing-intro-offset', `${offset}px`);
+    };
+    const visibility = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(([entry]) => {
+          inView = entry.isIntersecting;
+          syncPlayback();
+        })
+      : undefined;
+    const size = typeof ResizeObserver === 'function'
+      ? new ResizeObserver(updateViewportOffset)
+      : undefined;
+
+    inView = !visibility;
+    visibility?.observe(intro);
+    size?.observe(intro);
+    window.addEventListener('resize', updateViewportOffset, { signal: events.signal });
+    document.addEventListener('visibilitychange', syncPlayback, { signal: events.signal });
+    updateViewportOffset();
+    syncPlayback();
+
+    return () => {
+      events.abort();
+      visibility?.disconnect();
+      size?.disconnect();
+    };
+  }
+
+  protected scrollToOverviewSection(target: 'story' | 'features'): void {
+    const section = target === 'story'
+      ? this.benefitsStory().nativeElement
+      : this.featuresSection().nativeElement;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    section.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
+    section.focus({ preventScroll: true });
   }
 
   protected updateFeatureCarousel(): void {

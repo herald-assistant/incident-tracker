@@ -5,11 +5,12 @@
 }
 
 .platform-landing {
+  --landing-page-gap: clamp(28px, 4vw, 52px);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  row-gap: clamp(28px, 4vw, 52px);
-  padding-block-end: clamp(28px, 5svh, 56px);
+  row-gap: var(--landing-page-gap);
   container-type: inline-size;
+  container-name: platform-landing;
 }
 
 .platform-landing__content,
@@ -24,90 +25,433 @@
 }
 
 .platform-landing__intro {
-  --landing-hero-background: #171c24;
-  --landing-hero-heading: #f5f7fa;
-  --landing-hero-text: #c8ced7;
+  --landing-hero-background-start: #dbe6f2;
+  --landing-hero-background-middle: #9bb2cf;
+  --landing-hero-background: #4f729e;
+  --landing-hero-heading: #22252a;
+  --landing-hero-text: #6b7077;
+  --landing-hero-accent: #52759e;
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  min-block-size: max(560px, 48cqw);
-  overflow: hidden;
-  border-block-end: 1px solid var(--color-border);
-  background: var(--landing-hero-background);
-  box-shadow: 0 6px 12px -9px color-mix(in srgb, var(--color-text) 25%, transparent);
+  min-block-size: calc(100svh - var(--landing-intro-offset, 64px));
+  overflow: clip;
+  background:
+    radial-gradient(ellipse at 78% 38%, rgb(235 246 255 / 24%), transparent 52%),
+    linear-gradient(
+      120deg,
+      var(--landing-hero-background-start),
+      var(--landing-hero-background-middle) 60%,
+      var(--landing-hero-background)
+    );
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', var(--font-sans);
+  font-optical-sizing: auto;
+}
+
+.platform-landing__intro::before,
+.platform-landing__intro::after {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgb(255 255 255 / 24%);
+  pointer-events: none;
+  content: '';
+}
+
+.platform-landing__intro::before {
+  inset-block-start: -45%;
+  inset-inline-end: -20%;
+  width: clamp(320px, 70cqw, 1040px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 9%);
+}
+
+.platform-landing__intro::after {
+  inset-block-end: -45%;
+  inset-inline-start: -30%;
+  width: clamp(440px, 80cqw, 1200px);
+  aspect-ratio: 1.5;
+  border-radius: clamp(56px, 10cqw, 140px);
+  background: rgb(255 255 255 / 12%);
+  transform: rotate(-24deg);
 }
 
 .platform-landing__copy {
-  position: relative;
-  z-index: 1;
   display: grid;
-  align-content: start;
-  justify-items: start;
-  gap: clamp(20px, 2cqw, 30px);
-  width: 65%;
+  align-content: center;
+  justify-items: center;
+  width: min(100%, 1280px);
   min-width: 0;
-  padding: clamp(32px, 4.2cqw, 64px);
+  margin-inline: auto;
+  padding-inline: clamp(24px, 5.6cqw, 80px);
+  padding-block: clamp(48px, 8svh, 88px);
+  container-type: inline-size;
+  text-align: center;
+}
+
+.platform-landing__intro-heading {
+  min-width: 0;
 }
 
 .platform-landing__copy h2 {
   margin: 0;
-  color: var(--landing-hero-heading);
-  overflow-wrap: anywhere;
-  font-size: clamp(2.75rem, 5cqw, 5rem);
-  line-height: 1.02;
+  color: var(--color-sidebar-bg);
+  font-size: clamp(2rem, 7.6cqw, 6rem);
+  font-weight: 700;
+  line-height: 1.04;
   letter-spacing: -0.045em;
 }
 
-.platform-landing__copy p {
-  margin: 0;
-  color: var(--landing-hero-text);
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-  font-size: clamp(1.125rem, 1.5cqw, 1.5rem);
+.platform-landing__copy h2 > span {
+  display: block;
 }
 
-.platform-landing__copy .platform-landing__description {
-  max-width: 44ch;
+.platform-landing__intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-block-start: clamp(24px, 3svh, 32px);
 }
 
-.platform-landing__brand-visual {
-  position: absolute;
-  inset: auto 0 0;
-  aspect-ratio: 1748 / 624;
-  min-width: 0;
-  background: url('/assets/brand/workspace-overview-evolution-cutout.png') center / contain no-repeat;
-  filter: brightness(0.8);
-  pointer-events: none;
+.platform-landing__intro-actions > button {
+  min-height: 44px;
+  padding-inline: 20px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
-@container (max-width: 820px) {
-  .platform-landing__intro {
-    grid-template-columns: minmax(0, 1fr);
-    min-block-size: 0;
-  }
+.platform-landing__intro-actions > .secondary-button {
+  border-color: rgb(255 255 255 / 65%);
+  background: rgb(255 255 255 / 24%);
+  color: var(--color-sidebar-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
 
+.platform-landing__intro-actions > .secondary-button:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 85%);
+  background: rgb(255 255 255 / 42%);
+}
+
+.platform-landing__intro-actions > .primary-button {
+  background: var(--color-sidebar-bg);
+}
+
+.platform-landing__intro-actions > .primary-button:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.platform-landing__intro-chat {
+  --intro-agent-start: 1700ms;
+  --intro-reply-start: 2700ms;
+  --intro-letter-step: 24ms;
+  position: relative;
+  display: grid;
+  align-content: center;
+  width: min(100%, 40rem);
+  min-block-size: 21rem;
+  margin-block-start: clamp(28px, 4svh, 44px);
+  text-align: start;
+  font-size: clamp(0.9375rem, 1.5cqw, 1.125rem);
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+@container platform-landing (min-width: 1000px) {
   .platform-landing__copy {
-    width: auto;
-    padding: clamp(20px, 4.5cqw, 36px) clamp(18px, 4.5cqw, 36px) 4px;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    column-gap: clamp(40px, 5cqw, 72px);
+    align-items: center;
+    justify-items: stretch;
+    text-align: start;
   }
 
   .platform-landing__copy h2 {
-    font-size: clamp(2rem, 5cqw, 2.75rem);
+    font-size: clamp(2.5rem, 5.3cqw, 4.5rem);
   }
 
-  .platform-landing__brand-visual {
-    position: relative;
-    inset: auto;
+  .platform-landing__intro-actions {
+    justify-content: flex-start;
+  }
+
+  .platform-landing__intro-chat {
     width: 100%;
-    aspect-ratio: 1748 / 624;
+    margin-block-start: 0;
+  }
+}
+
+.platform-landing__intro-thread {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+.platform-landing__intro-user {
+  grid-template-columns: minmax(0, 1fr) 30px;
+  align-items: start;
+  column-gap: 10px;
+  max-width: 100%;
+  animation: landing-intro-message 300ms 150ms both;
+  animation-play-state: paused;
+}
+
+.platform-landing__intro-user .chat-message__content {
+  padding: 12px 18px;
+  border: 1px solid rgb(255 255 255 / 48%);
+  border-radius: 18px 18px 5px 18px;
+  background: rgb(230 240 255 / 34%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  backdrop-filter: blur(20px) saturate(120%);
+  color: var(--color-text);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 24%), 0 6px 20px rgb(18 43 78 / 8%);
+}
+
+.platform-landing__intro-user .platform-landing__letter {
+  --intro-typing-start: 400ms;
+  --intro-letter-step: 35ms;
+  white-space: pre;
+}
+
+.platform-landing__intro-agent {
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
+  animation: landing-intro-message 300ms var(--intro-agent-start) both;
+  animation-play-state: paused;
+}
+
+.platform-landing__intro-avatar {
+  width: 30px;
+  height: 30px;
+  margin-block-start: 10px;
+  object-fit: contain;
+}
+
+.platform-landing__intro-avatar--user {
+  display: grid;
+  place-items: center;
+  color: var(--color-sidebar-bg);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.platform-landing__intro-agent-body {
+  min-width: 0;
+}
+
+.platform-landing__intro-agent .chat-message__content {
+  display: grid;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 66px;
+  padding: 14px 18px;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 5px 18px 18px;
+  background: linear-gradient(145deg, rgb(255 255 255 / 42%), rgb(235 245 255 / 32%));
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  backdrop-filter: blur(20px) saturate(120%);
+  color: var(--landing-hero-heading);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 30%), 0 16px 40px rgb(18 43 78 / 12%);
+}
+
+.platform-landing__intro-typing,
+.platform-landing__intro-reply {
+  grid-area: 1 / 1;
+}
+
+.platform-landing__intro-typing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  animation: landing-intro-thinking 1000ms var(--intro-agent-start) step-end both;
+  animation-play-state: paused;
+}
+
+.platform-landing__intro-typing > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--landing-hero-accent);
+  animation: landing-intro-dot 600ms var(--intro-agent-start) infinite alternate;
+  animation-play-state: paused;
+}
+
+.platform-landing__intro-typing > span:nth-child(2) {
+  animation-delay: calc(var(--intro-agent-start) + 120ms);
+}
+
+.platform-landing__intro-typing > span:nth-child(3) {
+  animation-delay: calc(var(--intro-agent-start) + 240ms);
+}
+
+.platform-landing__accessible-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.platform-landing__intro-reply-line {
+  --intro-line-gap: 4px;
+  position: relative;
+  max-block-size: 0;
+  margin: 0;
+  overflow: hidden;
+  line-height: 1.5;
+  animation: landing-intro-line 80ms linear both;
+  animation-delay: calc(var(--intro-reply-start) + var(--letter-index) * var(--intro-letter-step));
+  animation-play-state: paused;
+}
+
+.platform-landing__intro-reply-line:nth-child(2) {
+  --intro-line-gap: 8px;
+}
+
+.platform-landing__intro-reply-line:first-child {
+  --intro-line-gap: 0px;
+}
+
+.platform-landing__intro-closing {
+  --intro-line-gap: 12px;
+}
+
+.platform-landing__intro-agent .platform-landing__letter {
+  --intro-typing-start: var(--intro-reply-start);
+}
+
+.platform-landing__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.platform-landing__word + .platform-landing__word {
+  margin-inline-start: 0.26em;
+}
+
+.platform-landing__word--emphasized {
+  font-weight: 650;
+}
+
+.platform-landing__letter {
+  display: inline-block;
+  animation: landing-intro-letter-type 60ms linear both;
+  animation-delay: calc(var(--intro-typing-start) + var(--letter-index) * var(--intro-letter-step));
+  animation-play-state: paused;
+}
+
+.platform-landing__intro[data-intro-playing] .platform-landing__intro-user,
+.platform-landing__intro[data-intro-playing] .platform-landing__intro-agent,
+.platform-landing__intro[data-intro-playing] .platform-landing__intro-typing,
+.platform-landing__intro[data-intro-playing] .platform-landing__intro-typing > span,
+.platform-landing__intro[data-intro-playing] .platform-landing__intro-reply-line,
+.platform-landing__intro[data-intro-playing] .platform-landing__letter {
+  animation-play-state: running;
+}
+
+@keyframes landing-intro-message {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landing-intro-thinking {
+  from {
+    visibility: visible;
+  }
+
+  to {
+    visibility: hidden;
+  }
+}
+
+@keyframes landing-intro-dot {
+  from {
+    opacity: 0.35;
+    transform: translateY(1px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes landing-intro-line {
+  from {
+    max-block-size: 0;
+    margin-block-start: 0;
+    opacity: 0;
+  }
+
+  to {
+    max-block-size: 8em;
+    margin-block-start: var(--intro-line-gap);
+    opacity: 1;
+  }
+}
+
+@keyframes landing-intro-letter-type {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .platform-landing__intro-user,
+  .platform-landing__intro-agent,
+  .platform-landing__intro-typing > span,
+  .platform-landing__intro-reply-line,
+  .platform-landing__letter {
+    animation: none;
+  }
+
+  .platform-landing__intro-reply-line {
+    max-block-size: none;
+    margin-block-start: var(--intro-line-gap);
+  }
+
+  .platform-landing__intro-typing {
+    display: none;
+  }
+}
+
+.platform-landing__features-surface {
+  --features-heading-spacing: 88px;
+  padding-block-start: max(0px, calc(var(--features-heading-spacing) - var(--landing-page-gap)));
+  padding-block-end: clamp(40px, 6svh, 72px);
+  background: #e9eef5;
+}
+
+@container platform-landing (max-width: 700px) {
+  .platform-landing__features-surface {
+    --features-heading-spacing: 48px;
   }
 }
 
 .platform-landing__features {
   display: grid;
+  align-content: start;
   gap: var(--landing-section-gap);
   min-width: 0;
+  min-block-size: calc(100svh - 80px);
   scroll-margin-top: 80px;
 }
 
@@ -276,6 +620,7 @@
   --story-gap: clamp(10px, 1.5vw, 24px);
   --story-row-gap: clamp(6px, 1svh, 12px);
   --story-card-block-padding: clamp(18px, 3svh, 32px);
+  scroll-margin-top: 80px;
 }
 
 .platform-landing__story-header .platform-landing__section-title {
@@ -306,7 +651,9 @@
 
 .platform-landing__story-track::before,
 .platform-landing__story-track::after {
-  background-color: #e1d2c5;
+  background:
+    radial-gradient(ellipse at 70% 20%, rgb(88 127 179 / 20%), transparent 65%),
+    linear-gradient(130deg, #061326, var(--color-sidebar-bg));
   content: '';
 }
 
@@ -499,8 +846,6 @@
     scale(var(--source-scale));
 }
 
-.platform-landing__orbit-tool,
-.platform-landing__story-feature-face,
 .platform-landing__orbit-result {
   border-radius: var(--tile-radius, 23%);
   background: var(--color-surface);
@@ -537,6 +882,7 @@
 }
 
 .platform-landing__story-feature-face {
+  position: relative;
   grid-area: 1 / 1;
   display: grid;
   place-items: center;
@@ -554,7 +900,7 @@
   align-content: center;
   gap: 1.6cqi;
   padding: 1.8cqi;
-  color: var(--primary-dark);
+  color: var(--color-sidebar-bg);
   text-align: center;
   transform: rotateY(0.5turn);
 }
@@ -582,6 +928,135 @@
 
 .platform-landing__orbit-result img {
   width: 74%;
+}
+
+.platform-landing__orbit-tool {
+  border-radius: var(--tile-radius, 20%);
+}
+
+.platform-landing__tool-surface {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border-radius: inherit;
+  // Tilt the material separately so the orbit and collection keep their geometry.
+  transform: perspective(460px)
+    rotateX(calc(-10deg * (1 - var(--tool-result-position))))
+    rotateY(calc(14deg * cos(var(--angle)) * (1 - var(--tool-result-position))))
+    rotateZ(calc(-2deg * sin(var(--angle)) * (1 - var(--tool-result-position))));
+}
+
+.platform-landing__tool-surface,
+.platform-landing__story-feature-face,
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result {
+  --enamel-blue: var(--tdw-symbol, 1);
+  --enamel-light: color-mix(in srgb, #f5faff calc(100% * (1 - var(--enamel-blue))), #76c3ff);
+  --enamel-face: color-mix(in srgb, #e5eef9 calc(100% * (1 - var(--enamel-blue))), #126ee7);
+  --enamel-base: color-mix(in srgb, #bed2e9 calc(100% * (1 - var(--enamel-blue))), #0730a7);
+  --enamel-edge: color-mix(in srgb, #446b98 calc(100% * (1 - var(--enamel-blue))), #020e4b);
+  --enamel-depth: calc(2px + 2px * var(--enamel-blue));
+  isolation: isolate;
+  background: transparent;
+  box-shadow: none;
+}
+
+.platform-landing__tool-surface::before,
+.platform-landing__story-feature-face::before,
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result::before {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg,
+    var(--enamel-edge-light, #73c5ff), var(--enamel-edge) 34%,
+    var(--enamel-edge-dark, #010a30) 78%, var(--enamel-edge-end, #285ba5));
+  box-shadow:
+    inset 1px 0 1px rgb(197 235 255 / 45%),
+    0 4px 7px rgb(0 5 28 / 16%),
+    0 calc(var(--tile-shadow-offset, 9px) + 5px)
+      calc(var(--tile-shadow-blur, 17px) + 8px) rgb(0 5 28 / 24%);
+  transform: translate(1px, var(--enamel-depth));
+  pointer-events: none;
+  content: '';
+}
+
+.platform-landing__tool-surface::after,
+.platform-landing__story-feature-face::after,
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid var(--enamel-rim, rgb(210 239 255 / 42%));
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at calc(28% + 18% * cos(var(--angle, 0deg))) 0%,
+      rgb(255 255 255 / 40%), transparent 58%),
+    linear-gradient(155deg, var(--enamel-light), var(--enamel-face) 52%, var(--enamel-base));
+  box-shadow:
+    inset 1px 1px 1px rgb(255 255 255 / 58%),
+    inset -1px -1px 2px rgb(0 18 72 / 23%);
+  pointer-events: none;
+  content: '';
+}
+
+.platform-landing__tool-surface .platform-landing__orbit-tool-icon {
+  filter: drop-shadow(0 1px 1px rgb(0 16 55 / 15%));
+}
+
+.platform-landing__tool-surface .platform-landing__orbit-tool-icon {
+  width: 62%;
+}
+
+.platform-landing__tool-surface .platform-landing__orbit-tdw-icon {
+  filter: brightness(0) invert(1) drop-shadow(0 2px 2px rgb(0 16 65 / 18%));
+}
+
+.platform-landing__story-feature-face > img,
+.platform-landing__story-card:is([data-scene='features'], [data-scene='guidance']) .platform-landing__orbit-result > img {
+  filter: brightness(0.58) saturate(0.7) drop-shadow(0 1px 1px rgb(11 45 99 / 12%));
+}
+
+.platform-landing__story-feature-face,
+.platform-landing__story-card[data-scene='features'] .platform-landing__orbit-result {
+  --enamel-light: #b8d0e3;
+  --enamel-face: #98b7ce;
+  --enamel-base: #789bb9;
+  --enamel-edge-light: #d6e3ed;
+  --enamel-edge: #6d899f;
+  --enamel-edge-dark: #38556e;
+  --enamel-edge-end: #789bb9;
+  --enamel-rim: rgb(239 246 252 / 65%);
+  --enamel-depth: 3px;
+}
+
+.platform-landing__story-feature-face--details {
+  --enamel-light: #f5f7fa;
+  --enamel-face: #eaf0f5;
+  --enamel-base: #dce5ee;
+}
+
+.platform-landing__story-card[data-scene='guidance'] .platform-landing__orbit-result {
+  --enamel-light: #d5d0e6;
+  --enamel-face: #b4accd;
+  --enamel-base: #8e82ae;
+  --enamel-edge-light: #e6e0f0;
+  --enamel-edge: #75668f;
+  --enamel-edge-dark: #3e3158;
+  --enamel-edge-end: #8c7ba8;
+  --enamel-rim: rgb(242 236 252 / 60%);
+  --enamel-depth: 3px;
+}
+
+.platform-landing__story-card[data-scene='tools'] .platform-landing__orbit {
+  --orbit-radius-block: 27cqi;
+  --orbit-tile-span: 142cqi;
+  // Orbit uses elapsed time, so the logos keep moving while their transformation is delayed.
+  --tool-orbit-progress: clamp(0,
+    (var(--tool-elapsed-progress) - 0.26 * var(--story-tool-motion-share)) /
+    ((var(--tool-collection-start) - 0.26) * var(--story-tool-motion-share) +
+      var(--scene-recognition-hold) + var(--scene-transformation-extra)), 1);
 }
 
 .platform-landing__story-card {
@@ -615,12 +1090,25 @@
 
 .platform-landing__story-card[data-scene='tools'] {
   --scene-preview: 0.43;
-  --story-surface: #153c2c;
-  --story-light: #6eb587;
-  --story-accent: #bee7ca;
-  --tool-scene-progress: var(--scene-progress);
+  --story-surface: #062b7e;
+  --story-light: #3d91ff;
+  --story-accent: #b7dfff;
+  --tool-elapsed-progress: calc(var(--scene-progress) * var(--scene-motion-scale));
+  // Delay the transformation after arrival; orbital movement follows its own continuous clock.
+  --tool-recognition-progress: min(var(--tool-elapsed-progress),
+    max(0.23, var(--tool-elapsed-progress) - var(--scene-recognition-hold)));
+  // Stretch only the interval from the first logo morph to the last completed morph.
+  --tool-transformation-progress: clamp(0,
+    (var(--tool-recognition-progress) - 0.36 * var(--story-tool-motion-share)) /
+    ((0.64 - 0.36) * var(--story-tool-motion-share) + var(--scene-transformation-extra)), 1);
+  --tool-scene-progress: calc(var(--tool-recognition-progress) -
+    var(--tool-transformation-progress) * var(--scene-transformation-extra));
   --slogan-progress: clamp(0, (var(--tool-progress) - 0.32) / 0.24, 1);
   --slogan-finale: var(--tool-finale);
+  background:
+    radial-gradient(ellipse at 72% 12%, rgb(23 116 255 / 74%), transparent 64%),
+    radial-gradient(ellipse at 18% 100%, rgb(0 6 39 / 90%), transparent 70%),
+    linear-gradient(120deg, #03163c, var(--story-surface) 55%, #0646b1);
 }
 
 .platform-landing__story-card[data-scene='features'] {
@@ -628,8 +1116,12 @@
   --feature-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--feature-scene-progress) - 0.08) / 0.26, 1);
   --slogan-finale: var(--feature-finale);
-  --story-surface: #0b263c;
-  --story-light: #459cda;
+  --story-surface: #071c3a;
+  --story-light: #639cd5;
+  --story-accent: #c7ddf9;
+  background:
+    radial-gradient(ellipse at 72% 10%, rgb(35 81 122 / 65%), transparent 65%),
+    linear-gradient(130deg, #030d21, var(--story-surface) 58%, #123b66);
 }
 
 .platform-landing__story-card[data-scene='guidance'] {
@@ -637,9 +1129,12 @@
   --guidance-scene-progress: var(--scene-progress);
   --slogan-progress: clamp(0, (var(--guidance-progress) - 0.13) / 0.48, 1);
   --slogan-finale: var(--guidance-finale);
-  --story-surface: #2b1b44;
-  --story-light: #8f68c7;
-  --story-accent: #e7d6ff;
+  --story-surface: #201a32;
+  --story-light: #736990;
+  --story-accent: #e3ddf3;
+  background:
+    radial-gradient(ellipse at 68% 8%, rgb(126 112 171 / 18%), transparent 65%),
+    linear-gradient(130deg, #0e0d1c, var(--story-surface) 58%, #2e2848);
 }
 
 .platform-landing__story-card[data-scene='closing'] {
@@ -731,7 +1226,7 @@
   --tool-result-position: calc(var(--tool-result-progress) * var(--tool-result-progress) *
     (3 - 2 * var(--tool-result-progress)));
   --tools-complete: clamp(0, (var(--tool-progress) - var(--tool-result-ready)) / 0.02, 1);
-  --tool-logo-visible: max(var(--tools-complete), clamp(0, (0.12 - var(--tool-progress)) / 0.08, 1));
+  --tool-logo-visible: var(--tools-complete);
   --guidance-reveal: calc(clamp(0, (var(--guidance-progress) - 0.06) / 0.12, 1) *
     clamp(0, 1 - var(--guidance-return) / 0.6, 1));
   --guidance-click: 0.31;
@@ -752,6 +1247,8 @@
 
 .platform-landing__orbit-tool {
   --turn: calc(var(--tool-turns) * 1turn);
+  --base-source-scale: calc(0.84 + 0.16 * var(--appearance, 1) +
+    0.18 * var(--size-depth, var(--orbit-depth)) * var(--entry-radius, 1));
   // All three stages follow the same clockwise sequence, ending with the result tile.
   --clockwise-order: mod(calc(var(--source-index) - var(--tool-result-index) - 1), var(--source-count));
   --appearance: clamp(0, (var(--tool-progress) - 0.04 -
@@ -769,11 +1266,11 @@
 .platform-landing__orbit-tool--result {
   --radius: calc(var(--entry-radius) * (1 - var(--tool-result-position)));
   --source-scale: calc(var(--base-source-scale) + (1 - var(--base-source-scale)) * var(--tool-result-position));
-  --tile-radius: calc(23% + 2% * var(--tool-result-position));
+  --tile-radius: calc(20% + 5% * var(--tool-result-position));
   width: calc(var(--source-width) * (1 - var(--tool-result-position)) +
     100cqi * (1 - 2 * var(--orbit-result-inset)) * var(--tool-result-position));
-  // Keep the last tile visible until the shared center tile covers it.
-  opacity: calc(var(--appearance) * (1 - clamp(0, (var(--tool-progress) - 0.99) / 0.01, 1)));
+  // The arriving tile remains the final tile, retaining its light and shadow.
+  opacity: var(--appearance);
 }
 
 .platform-landing__orbit-tool--result img {
@@ -876,7 +1373,7 @@
   grid-template-columns: 20cqi auto;
   justify-content: space-evenly;
   align-items: center;
-  color: var(--primary-dark);
+  color: #3a4163;
   opacity: var(--guidance-reveal);
 }
 
@@ -903,6 +1400,8 @@
 
 .platform-landing__guidance-document-result .material-symbols-outlined {
   font-size: 12cqi;
+  color: #535884;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 65%);
 }
 
 .platform-landing__guidance-steps {
@@ -934,11 +1433,11 @@
 }
 
 .platform-landing__guidance-step::before {
-  background: var(--color-border);
+  background: #c9c8dc;
 }
 
 .platform-landing__guidance-step::after {
-  background: var(--primary);
+  background: linear-gradient(90deg, #526ba3, #8a7cc2);
   scale: var(--step-progress) 1;
   transform-origin: left center;
 }
@@ -952,8 +1451,16 @@
   width: 13cqi;
   aspect-ratio: 1;
   place-items: center;
+  border: 1px solid rgb(242 239 255 / 58%);
   border-radius: 50%;
-  background: var(--primary);
+  background:
+    radial-gradient(ellipse at 25% 12%, rgb(255 255 255 / 65%), transparent 65%),
+    linear-gradient(145deg, #b8b6df, #7b82b8 60%, #535c95);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 70%),
+    inset 0 -1px 1px rgb(35 37 72 / 18%),
+    0 3px 0 #414a7d,
+    0 8px 12px rgb(22 19 44 / 25%);
   color: var(--color-surface);
 }
 
@@ -964,7 +1471,7 @@
 .platform-landing__guidance-action::after {
   position: absolute;
   inset: 0;
-  border: 1px solid var(--primary);
+  border: 1px solid #8990bf;
   border-radius: inherit;
   opacity: calc(sin(var(--pulse) * 180deg) * 0.7);
   transform: scale(calc(1 + 0.75 * var(--pulse)));
@@ -993,7 +1500,7 @@
   --arrival: clamp(0, (var(--guidance-progress) - var(--guidance-click) + 0.125) / 0.125, 1);
   position: absolute;
   inset: 49% auto auto 52%;
-  color: var(--primary-dark);
+  color: #273a60;
   text-shadow: 0 0 2px var(--color-surface);
   opacity: clamp(0, min(var(--arrival) * 2,
     (var(--guidance-click) + 0.16 - var(--guidance-progress)) / 0.12), 1);

@@ -4,28 +4,94 @@
       <app-special-theme-banner [banner]="banner" headingId="platformLandingTitle" />
     </div>
   } @else {
-    <section class="platform-landing__intro" aria-labelledby="platformLandingTitle">
+    <section #intro class="platform-landing__intro" aria-labelledby="platformLandingTitle">
       <div class="platform-landing__copy">
-        <h2 id="platformLandingTitle">
-          Koniec z naradami.<br />
-          Czas na akcję!
-        </h2>
-        <p class="platform-landing__description">
-          Odzyskaj czas. Rozbuduj swój warsztat i przejmij inicjatywę.
-        </p>
+        <div class="platform-landing__intro-heading">
+          <h2 id="platformLandingTitle">
+            <span>Twój osobisty</span>
+            <span>zespół ekspertów.</span>
+          </h2>
+          <div class="platform-landing__intro-actions">
+            <button
+              type="button"
+              class="secondary-button"
+              aria-controls="platformLandingStory"
+              (click)="scrollToOverviewSection('story')"
+            >Jak działa platforma</button>
+            <button
+              type="button"
+              class="primary-button"
+              aria-controls="platformLandingFeatures"
+              (click)="scrollToOverviewSection('features')"
+            >Wybierz pierwsze zadanie</button>
+          </div>
+        </div>
+        <div class="platform-landing__intro-chat" role="group" aria-label="Przykładowa rozmowa">
+          <div class="platform-landing__accessible-description">
+            <p>Ty: {{ introQuestionText }}</p>
+            <p>Team Delivery Workspace: {{ introDescription }}</p>
+          </div>
+          <div class="platform-landing__intro-thread" aria-hidden="true">
+            <article class="chat-message chat-message--user platform-landing__intro-user">
+              <div class="chat-message__content">
+                <p class="chat-message__text">
+                  @for (letter of introQuestion; track $index) {
+                    <span class="platform-landing__letter" [style.--letter-index]="$index">{{ letter }}</span>
+                  }
+                </p>
+              </div>
+              <span
+                class="platform-landing__intro-avatar platform-landing__intro-avatar--user material-symbols-outlined"
+              >account_circle</span>
+            </article>
+            <article class="chat-message chat-message--assistant platform-landing__intro-agent">
+              <img class="platform-landing__intro-avatar" src="assets/brand/main-logo.png" alt="" />
+              <div class="platform-landing__intro-agent-body">
+                <div class="chat-message__content">
+                  <div class="platform-landing__intro-typing">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div class="platform-landing__intro-reply">
+                    @for (line of introReplyLines; track line.text) {
+                      <p
+                        class="platform-landing__intro-reply-line"
+                        [class.platform-landing__intro-closing]="$last"
+                        [style.--letter-index]="line.startIndex"
+                      >
+                        @for (word of line.words; track $index) {
+                          <span
+                            class="platform-landing__word"
+                            [class.platform-landing__word--emphasized]="word.emphasized"
+                          >
+                            @for (letter of word.letters; track letter.index) {
+                              <span
+                                class="platform-landing__letter"
+                                [style.--letter-index]="letter.index"
+                              >{{ letter.value }}</span>
+                            }
+                          </span>
+                        }
+                      </p>
+                    }
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
       </div>
-
-      <div class="platform-landing__brand-visual" aria-hidden="true"></div>
     </section>
   }
 
   <section
     #benefitsStory
+    id="platformLandingStory"
     class="platform-landing__capabilities"
     aria-labelledby="platformLandingStoryTitle"
+    tabindex="-1"
   >
     <header class="platform-landing__story-header">
-      <h3 id="platformLandingStoryTitle" class="platform-landing__section-title">Zobacz Workspace w akcji</h3>
+      <h3 id="platformLandingStoryTitle" class="platform-landing__section-title">Jak działa Team Delivery Workspace</h3>
     </header>
     <div class="platform-landing__story-viewport">
       <div class="platform-landing__story-track" [style.--scene-index]="storyIndex()">
@@ -38,6 +104,9 @@
             [attr.data-past]="$index < storyIndex() ? '' : null"
             [attr.aria-hidden]="$index === storyIndex() ? null : 'true'"
             [style.--scene-motion-share]="scene.motionShare"
+            [style.--scene-motion-scale]="scene.motionScale"
+            [style.--scene-recognition-hold]="scene.recognitionHoldShare"
+            [style.--scene-transformation-extra]="scene.transformationExtraShare"
           >
             <div class="platform-landing__benefits-art">
               <div
@@ -54,12 +123,14 @@
                       [style.--source-index]="$index"
                       [style.--source-count]="toolIcons.length"
                     >
-                      <img
-                        class="platform-landing__orbit-tool-icon"
-                        [src]="'assets/brand/tool-icons/' + icon"
-                        alt=""
-                      />
-                      <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+                      <div class="platform-landing__tool-surface">
+                        <img
+                          class="platform-landing__orbit-tool-icon"
+                          [src]="'assets/brand/tool-icons/' + icon"
+                          alt=""
+                        />
+                        <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+                      </div>
                     </div>
                   }
                 }
@@ -80,37 +151,39 @@
                     }
                   </div>
                 }
-                <div class="platform-landing__orbit-result">
-                  <img src="assets/brand/main-logo.png" alt="" />
-                  @if (scene.id === 'guidance') {
-                    <div class="platform-landing__guidance-card">
-                      <div class="platform-landing__guidance-document">
-                        <div class="platform-landing__guidance-steps">
-                          <span class="platform-landing__guidance-step" style="--step-duration: 0.62">
-                            <span class="material-symbols-outlined">search</span>
-                          </span>
-                          <span class="platform-landing__guidance-step" style="--step-duration: 0.79">
-                            <span class="material-symbols-outlined">construction</span>
-                          </span>
-                          <span class="platform-landing__guidance-step" style="--step-duration: 1">
-                            <span class="material-symbols-outlined">auto_awesome</span>
+                @if (scene.id !== 'tools') {
+                  <div class="platform-landing__orbit-result">
+                    <img src="assets/brand/main-logo.png" alt="" />
+                    @if (scene.id === 'guidance') {
+                      <div class="platform-landing__guidance-card">
+                        <div class="platform-landing__guidance-document">
+                          <div class="platform-landing__guidance-steps">
+                            <span class="platform-landing__guidance-step" style="--step-duration: 0.62">
+                              <span class="material-symbols-outlined">search</span>
+                            </span>
+                            <span class="platform-landing__guidance-step" style="--step-duration: 0.79">
+                              <span class="material-symbols-outlined">construction</span>
+                            </span>
+                            <span class="platform-landing__guidance-step" style="--step-duration: 1">
+                              <span class="material-symbols-outlined">auto_awesome</span>
+                            </span>
+                          </div>
+                          <div class="platform-landing__guidance-document-result">
+                            <span class="material-symbols-outlined">markdown_document</span>
+                          </div>
+                        </div>
+                        <div class="platform-landing__guidance-action">
+                          <span class="platform-landing__guidance-start material-symbols-outlined">play_arrow</span>
+                          <span class="platform-landing__guidance-pending material-symbols-outlined">more_horiz</span>
+                          <span class="platform-landing__guidance-done material-symbols-outlined">check</span>
+                          <span class="platform-landing__guidance-pointer material-symbols-outlined">
+                            arrow_selector_tool
                           </span>
                         </div>
-                        <div class="platform-landing__guidance-document-result">
-                          <span class="material-symbols-outlined">markdown_document</span>
-                        </div>
                       </div>
-                      <div class="platform-landing__guidance-action">
-                        <span class="platform-landing__guidance-start material-symbols-outlined">play_arrow</span>
-                        <span class="platform-landing__guidance-pending material-symbols-outlined">more_horiz</span>
-                        <span class="platform-landing__guidance-done material-symbols-outlined">check</span>
-                        <span class="platform-landing__guidance-pointer material-symbols-outlined">
-                          arrow_selector_tool
-                        </span>
-                      </div>
-                    </div>
-                  }
-                </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
             <h4
@@ -159,77 +232,81 @@
       </button>
     </div>
   </section>
-  <div class="platform-landing__content">
-    <section
-      id="platformLandingFeatures"
-      class="platform-landing__features"
-      aria-labelledby="platformLandingFeaturesTitle"
-    >
-      <div class="platform-landing__features-header">
-        <h3 id="platformLandingFeaturesTitle" class="platform-landing__section-title">Wybierz, co chcesz załatwić</h3>
-        <div class="platform-landing__carousel-controls">
-          <button
-            type="button"
-            aria-label="Poprzednia karta"
-            aria-controls="platformLandingFeatureList"
-            [disabled]="!canScrollBack()"
-            (click)="scrollFeatureCarousel(-1)"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Następna karta"
-            aria-controls="platformLandingFeatureList"
-            [disabled]="!canScrollForward()"
-            (click)="scrollFeatureCarousel(1)"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
-          </button>
-        </div>
-      </div>
-
-      <ul
-        #featureList
-        id="platformLandingFeatureList"
-        class="platform-landing__feature-list"
-        role="list"
-        (scroll)="updateFeatureCarousel()"
+  <div class="platform-landing__features-surface">
+    <div class="platform-landing__content">
+      <section
+        #featuresSection
+        id="platformLandingFeatures"
+        class="platform-landing__features"
+        aria-labelledby="platformLandingFeaturesTitle"
+        tabindex="-1"
       >
-        @for (feature of features; track feature.route) {
-          @if ((feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) &&
-            (feature.route !== '/system-assistant' || uiConfig.config().systemAssistantEnabled)) {
-            <li #featureSlide>
-              <a
-                class="platform-landing__feature-card"
-                [routerLink]="feature.route"
-                [attr.aria-labelledby]="'overview-feature-title-' + $index"
-                [attr.aria-describedby]="'overview-feature-name-' + $index"
-              >
-                <div
-                  class="platform-landing__feature-visual"
-                  [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
-                  aria-hidden="true"
+        <div class="platform-landing__features-header">
+          <h3 id="platformLandingFeaturesTitle" class="platform-landing__section-title">Wybierz, co chcesz załatwić</h3>
+          <div class="platform-landing__carousel-controls">
+            <button
+              type="button"
+              aria-label="Poprzednia karta"
+              aria-controls="platformLandingFeatureList"
+              [disabled]="!canScrollBack()"
+              (click)="scrollFeatureCarousel(-1)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Następna karta"
+              aria-controls="platformLandingFeatureList"
+              [disabled]="!canScrollForward()"
+              (click)="scrollFeatureCarousel(1)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
+        <ul
+          #featureList
+          id="platformLandingFeatureList"
+          class="platform-landing__feature-list"
+          role="list"
+          (scroll)="updateFeatureCarousel()"
+        >
+          @for (feature of features; track feature.route) {
+            @if ((feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) &&
+              (feature.route !== '/system-assistant' || uiConfig.config().systemAssistantEnabled)) {
+              <li #featureSlide>
+                <a
+                  class="platform-landing__feature-card"
+                  [routerLink]="feature.route"
+                  [attr.aria-labelledby]="'overview-feature-title-' + $index"
+                  [attr.aria-describedby]="'overview-feature-name-' + $index"
                 >
-                  @if (!feature.image) {
-                    <span class="platform-landing__feature-icon material-symbols-outlined">
-                      {{ feature.icon }}
-                    </span>
-                  }
-                </div>
-                <div class="platform-landing__feature-copy">
-                  <h4 class="platform-landing__feature-task" [id]="'overview-feature-title-' + $index">
-                    {{ feature.task }}
-                  </h4>
-                  <p class="platform-landing__feature-name" [id]="'overview-feature-name-' + $index">
-                    {{ feature.title }}
-                  </p>
-                </div>
-              </a>
-            </li>
+                  <div
+                    class="platform-landing__feature-visual"
+                    [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
+                    aria-hidden="true"
+                  >
+                    @if (!feature.image) {
+                      <span class="platform-landing__feature-icon material-symbols-outlined">
+                        {{ feature.icon }}
+                      </span>
+                    }
+                  </div>
+                  <div class="platform-landing__feature-copy">
+                    <h4 class="platform-landing__feature-task" [id]="'overview-feature-title-' + $index">
+                      {{ feature.task }}
+                    </h4>
+                    <p class="platform-landing__feature-name" [id]="'overview-feature-name-' + $index">
+                      {{ feature.title }}
+                    </p>
+                  </div>
+                </a>
+              </li>
+            }
           }
-        }
-      </ul>
-    </section>
+        </ul>
+      </section>
+    </div>
   </div>
 </main>

@@ -157,15 +157,16 @@ describe('App', () => {
       await router.navigateByUrl('/?special=true');
       fixture.detectChanges();
       expect(compiled.querySelector('#platformLandingTitle')?.textContent).toContain(
-        'Koniec z naradami.'
+        'Twój osobisty'
       );
       expect(compiled.querySelector('app-special-theme-banner')).toBeNull();
       const standardBanner = compiled.querySelector('.platform-landing__intro');
-      expect(standardBanner?.querySelector('.platform-landing__brand-visual')?.getAttribute('aria-hidden'))
+      expect(standardBanner?.querySelector('.platform-landing__intro-thread')?.getAttribute('aria-hidden'))
         .toBe('true');
-      expect(standardBanner?.querySelector('img')).toBeNull();
-      expect(standardBanner?.querySelector('.platform-landing__description')?.textContent)
-        .toContain('Odzyskaj czas. Rozbuduj swój warsztat i przejmij inicjatywę.');
+      expect(standardBanner?.querySelector('.platform-landing__intro-agent img')?.getAttribute('src'))
+        .toBe('assets/brand/main-logo.png');
+      expect(standardBanner?.querySelector('.platform-landing__accessible-description')?.textContent)
+        .toContain('Odkryję zależności w Twoim systemie.');
       const activeNav = compiled.querySelector('.app-shell__nav-item--active[aria-current="page"]');
       expect(activeNav?.getAttribute('href')).toBe('/');
       http.verify();
