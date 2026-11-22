@@ -65,7 +65,7 @@ implementacje niezatwierdzonego planu.
 
 ## System Assistant
 
-[Instrukcja obsługi](system-assistant.md) opisuje pięć widoków: Skille,
+[Instrukcja obsługi](system-assistant.md) opisuje sześć widoków: Skille,
 Kontrakty, Profile, Rozmowę i Uruchamianie w systemie. Feature udostępnia import
 wybranych operacji OpenAPI, podgląd Swagger UI, eksport YAML i przenoszenie
 całego zestawu konfiguracji. Trwałą rozmowę można kontynuować z Analysis
@@ -78,7 +78,8 @@ Samodzielna [instrukcja tworzenia konfiguracji przez AI](system-assistant-config
 pozwala przygotować cały plik importu na podstawie repozytoriów lub dokumentów
 w zewnętrznym chacie, np. Codex lub VS Code.
 Feature jest domyślnie wyłączony. Obsługuje hosty HTTP(S) bez ograniczenia
-do loopback; source auth i załączniki pozostają poza bieżącym zakresem.
+do loopback. [Auth API](architecture/http-api-authentication.md) obejmuje Basic,
+Bearer, OAuth2 i OIDC; załączniki pozostają poza bieżącym zakresem.
 
 ## Aktualne potrzeby i plany
 

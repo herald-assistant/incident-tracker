@@ -35,12 +35,12 @@ class OpenApiIntegrationTest {
         server.start();
         try {
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper);
+            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
             var read = operations.stream().filter(op -> op.method().equals("GET")).findFirst().orElseThrow();
-            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"IN_PROGRESS\"}}"));
+            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"IN_PROGRESS\"}}"), null);
             assertThat(result.outcome()).isEqualTo("OUTCOME_UNKNOWN");
-            assertThat(executor.execute(read, args("{\"path\":{\"id\":\"CRM-101\"}}")).body().path("status").asText()).isEqualTo("IN_PROGRESS");
+            assertThat(executor.execute(read, args("{\"path\":{\"id\":\"CRM-101\"}}"), null).body().path("status").asText()).isEqualTo("IN_PROGRESS");
             assertThat(writes).hasValue(1);
         } finally { server.stop(0); workers.shutdownNow(); }
     }
@@ -64,10 +64,10 @@ class OpenApiIntegrationTest {
         });
         server.start();
         try {
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper);
+            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
-            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"OPEN\"}}"));
+            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"OPEN\"}}"), null);
             assertThat(result.outcome()).isEqualTo("OUTCOME_UNKNOWN"); assertThat(calls).hasValue(1);
             var queryYaml = """
                     openapi: 3.0.3
@@ -84,7 +84,7 @@ class OpenApiIntegrationTest {
                             '200': {description: Demo, content: {application/json: {schema: {type: object}}}}
                     """.formatted(server.getAddress().getPort());
             var lookup = importer.parse("crm", queryYaml).get(0);
-            executor.execute(lookup, args("{\"path\":{\"q0\":\"CRM-101\"},\"query\":{\"search\":\"A&B #1\"}}"));
+            executor.execute(lookup, args("{\"path\":{\"q0\":\"CRM-101\"},\"query\":{\"search\":\"A&B #1\"}}"), null);
             assertThat(querySeen.get()).isEqualTo("search=A%26B%20%231");
         } finally { server.stop(0); }
     }
@@ -132,17 +132,17 @@ class OpenApiIntegrationTest {
         server.start();
         try {
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper);
+            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var read = operations.stream().filter(op -> op.method().equals("GET")).findFirst().orElseThrow();
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
-            assertThat(executor.execute(read, args("{\"path\":{\"id\":\"CRM-101\"}}")).body().path("status").asText()).isEqualTo("OPEN");
-            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"New\",\"status\":\"CLOSED\"}}"));
+            assertThat(executor.execute(read, args("{\"path\":{\"id\":\"CRM-101\"}}"), null).body().path("status").asText()).isEqualTo("OPEN");
+            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"New\",\"status\":\"CLOSED\"}}"), null);
             assertThat(result.body().path("title").asText()).isEqualTo("New");
             assertThat(bodyLength).hasValue(mapper.writeValueAsBytes(result.body()).length);
-            assertThatThrownBy(() -> executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"X\",\"status\":\"OTHER\"}}")))
+            assertThatThrownBy(() -> executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"X\",\"status\":\"OTHER\"}}"), null))
                     .isInstanceOf(OpenApiException.class);
             var simulation = operations.stream().filter(op -> op.path().equals("/simulate")).findFirst().orElseThrow();
-            assertThat(executor.execute(simulation, args("{\"body\":{\"amount\":12,\"months\":2}}")).statusCode()).isEqualTo(302);
+            assertThat(executor.execute(simulation, args("{\"body\":{\"amount\":12,\"months\":2}}"), null).statusCode()).isEqualTo(302);
             assertThat(calls).hasValue(3);
         } finally { server.stop(0); }
     }

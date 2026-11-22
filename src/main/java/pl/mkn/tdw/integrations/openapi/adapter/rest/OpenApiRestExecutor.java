@@ -24,9 +24,12 @@ import java.util.LinkedHashMap;
 public class OpenApiRestExecutor implements OpenApiExecutionPort {
     private final RestClient client;
     private final ObjectMapper mapper;
+    private final pl.mkn.tdw.integrations.httpauth.HttpAuthenticationPort authentication;
 
-    public OpenApiRestExecutor(RestClient.Builder builder, ObjectMapper mapper) {
+    public OpenApiRestExecutor(RestClient.Builder builder, ObjectMapper mapper,
+                               pl.mkn.tdw.integrations.httpauth.HttpAuthenticationPort authentication) {
         this.mapper = mapper;
+        this.authentication = authentication;
         var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build());
         factory.setReadTimeout(Duration.ofSeconds(8));
@@ -34,7 +37,7 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
     }
 
     @Override
-    public OpenApiResult execute(OpenApiOperation operation, OpenApiArguments requestArguments) {
+    public OpenApiResult execute(OpenApiOperation operation, OpenApiArguments requestArguments, pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile authentication) {
         var arguments = requestArguments.json();
         OpenApiSchema.validate(operation.validationSchema(), arguments, "arguments");
         var base = operation.server().toString().replaceAll("/+$", "");
@@ -59,8 +62,14 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
         OpenApiTarget.uri(target.getScheme() + "://" + target.getRawAuthority());
         if (!target.getAuthority().equals(operation.server().getAuthority()))
             throw new OpenApiException("Zmiana hosta jest zabroniona.");
+        final String authorization;
+        try { authorization = this.authentication.authorization(authentication); }
+        catch (pl.mkn.tdw.integrations.httpauth.contract.HttpAuthException failure) {
+            return new OpenApiResult("AUTH_REQUIRED", null, mapper.nullNode(), failure.getMessage());
+        }
         try {
             var request = client.method(HttpMethod.valueOf(operation.method())).uri(target).accept(MediaType.APPLICATION_JSON);
+            if (authorization != null) request.header(org.springframework.http.HttpHeaders.AUTHORIZATION, authorization);
             if (arguments.has("body")) request.contentType(MediaType.APPLICATION_JSON)
                     .body(mapper.writeValueAsBytes(arguments.get("body")));
             return request.exchange((sent, response) -> {

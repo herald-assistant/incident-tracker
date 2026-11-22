@@ -28,21 +28,20 @@ class SystemAssistantPersistenceTest {
         var original = SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Demo", yaml)), List.of());
         service.save(original);
         var seen = new java.util.concurrent.atomic.AtomicReference<String>();
-        var factory = new pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory((op, args) -> {
+        var factory = new pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory((op, args, authentication) -> {
             seen.set(op.path());
             return new pl.mkn.tdw.integrations.openapi.contract.OpenApiResult("RESPONSE_RECEIVED", 200, mapper.createObjectNode(), "Demo");
         }, mapper);
-        var accepted = factory.create(service.snapshot().operations()).get(0);
+        var accepted = factory.create(service.snapshot().executions()).get(0);
         var colliding = yaml.replace("operationId: ", "operationId: a_");
         assertThatThrownBy(() -> service.save(SystemAssistantTestSupport.config(List.of(original.apis().get(0),
                 new SystemAssistantConfiguration.ApiDefinition("crm", "Collision", colliding)), List.of())))
                 .isInstanceOf(SystemAssistantException.class).hasMessageContaining("powtórzone nazwy");
         assertThat(service.current()).isEqualTo(original);
-        service.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Edited",
-                yaml.replace("/tickets/{id}", "/changed/{id}"))), List.of()));
+        service.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Edited", yaml.replace("/tickets/{id}", "/changed/{id}"))), List.of()));
         accepted.call("{\"path\":{\"id\":\"CRM-101\"}}");
         assertThat(seen.get()).isEqualTo("/tickets/{id}");
-        factory.create(service.snapshot().operations()).get(0).call("{\"path\":{\"id\":\"CRM-101\"}}");
+        factory.create(service.snapshot().executions()).get(0).call("{\"path\":{\"id\":\"CRM-101\"}}");
         assertThat(seen.get()).isEqualTo("/changed/{id}");
     }
 
@@ -74,6 +73,7 @@ class SystemAssistantPersistenceTest {
         doThrow(new IllegalStateException("synthetic disk failure")).when(store).write(configuration("NEW"));
         assertThatThrownBy(() -> service.save(configuration("NEW"))).isInstanceOf(IllegalStateException.class);
         assertThat(service.current().skills().get(0).content()).isEqualTo("OLD");
-        assertThat(catalog.current()).isEmpty();
+        assertThat(catalog.current()).containsOnlyKeys("test_profile");
+        assertThat(catalog.current().get("test_profile")).isEmpty();
     }
 }

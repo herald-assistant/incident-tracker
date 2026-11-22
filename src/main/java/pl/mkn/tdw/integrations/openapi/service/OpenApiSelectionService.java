@@ -57,6 +57,15 @@ public class OpenApiSelectionService implements OpenApiSelectionPort {
         }
         result.set("paths", paths);
         var components = reachableComponents(source, paths);
+        var securityNames = OpenApiSecurity.usedSchemes(source, paths);
+        if (!securityNames.isEmpty()) {
+            var schemes = components.putObject("securitySchemes");
+            for (var name : securityNames) {
+                var scheme = source.path("components").path("securitySchemes").get(name);
+                if (scheme == null) fail("Nieznany securityScheme: " + name);
+                schemes.set(name, scheme.deepCopy());
+            }
+        }
         if (components.isEmpty()) result.remove("components"); else result.set("components", components);
         var usedTags = new HashSet<String>();
         chosen.forEach(key -> usedTags.addAll(candidates.get(key).tags()));

@@ -28,17 +28,36 @@ public class SystemAssistantConfigurationService {
             operationApiIds = Map.copyOf(operationApiIds);
         }
 
+        public List<pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution> executions() {
+            if (configuration.profiles().size() != 1) throw new IllegalStateException("Wykonanie wymaga jednego wybranego profilu.");
+            var auth = new HashMap<String, pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile>();
+            configuration.authProfiles().forEach(profile -> auth.put(profile.id(), profile));
+            var bindings = new HashMap<String, SystemAssistantConfiguration.ApiBinding>();
+            configuration.profiles().get(0).apiBindings().forEach(binding -> bindings.put(binding.apiId(), binding));
+            return operations.stream().filter(operation -> bindings.containsKey(operationApiIds.get(operation.name())))
+                    .map(operation -> new pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution(operation,
+                            auth.get(bindings.get(operationApiIds.get(operation.name())).authProfileId()))).toList();
+        }
+
+        public Map<String, List<pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution>> executionsByProfile() {
+            var result = new LinkedHashMap<String, List<pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution>>();
+            configuration.profiles().forEach(profile -> result.put(profile.id(), forProfile(profile.id()).executions()));
+            return Map.copyOf(result);
+        }
+
         public Snapshot forProfile(String profileId) {
             var profile = configuration.profiles().stream().filter(item -> item.id().equals(profileId)).findFirst()
                     .orElseThrow(() -> new SystemAssistantException("PROFILE_NOT_FOUND", UserFacingErrorType.BAD_REQUEST,
                             "Wybierz istniejący profil przed wysłaniem wiadomości."));
-            var apis = configuration.apis().stream().filter(item -> profile.apiIds().contains(item.id())).toList();
+            var apis = configuration.apis().stream().filter(item -> profile.apiBindings().stream().anyMatch(binding -> binding.apiId().equals(item.id()))).toList();
             var skills = configuration.skills().stream().filter(item -> profile.skillIds().contains(item.id())).toList();
             var apiIds = apis.stream().map(SystemAssistantConfiguration.ApiDefinition::id).collect(java.util.stream.Collectors.toSet());
             var selected = operations.stream().filter(item -> apiIds.contains(operationApiIds.get(item.name()))).toList();
             var mapping = new HashMap<String, String>();
             selected.forEach(item -> mapping.put(item.name(), operationApiIds.get(item.name())));
-            return new Snapshot(new SystemAssistantConfiguration(apis, skills, List.of(profile)), selected, mapping);
+            var authIds = profile.apiBindings().stream().map(SystemAssistantConfiguration.ApiBinding::authProfileId).filter(Objects::nonNull).toList();
+            var auth = configuration.authProfiles().stream().filter(item -> authIds.contains(item.id())).toList();
+            return new Snapshot(new SystemAssistantConfiguration(apis, skills, List.of(profile), auth), selected, mapping);
         }
     }
 
@@ -47,7 +66,7 @@ public class SystemAssistantConfigurationService {
         try {
             var value = store.read();
             var prepared = prepare(value);
-            catalog.replace(prepared.operations(), () -> {
+            catalog.replace(prepared.executionsByProfile(), () -> {
             });
             snapshot = prepared;
             unavailable = false;
@@ -69,13 +88,21 @@ public class SystemAssistantConfigurationService {
 
     public synchronized SystemAssistantConfiguration save(SystemAssistantConfiguration value) {
         var prepared = prepare(value);
-        catalog.replace(prepared.operations(), () -> store.write(value));
+        catalog.replace(prepared.executionsByProfile(), () -> store.write(value));
         snapshot = prepared;
         unavailable = false;
         return snapshot.configuration();
     }
 
     private Snapshot prepare(SystemAssistantConfiguration value) {
+        if (value == null || value.authProfiles() == null)
+            throw new SystemAssistantException("CONFIGURATION_INVALID", UserFacingErrorType.BAD_REQUEST,
+                    "Wymagana bieżąca konfiguracja z authProfiles.");
+        var authIds = new HashSet<String>();
+        for (var auth : value.authProfiles()) {
+            auth.validate();
+            if (!authIds.add(auth.id())) duplicate();
+        }
         var ids = new HashSet<String>();
         for (var api : value.apis()) if (!ids.add(api.id())) duplicate();
         ids.clear();
@@ -83,11 +110,16 @@ public class SystemAssistantConfigurationService {
         ids.clear();
         for (var profile : value.profiles()) {
             if (!ids.add(profile.id())) duplicate();
-            if (new HashSet<>(profile.apiIds()).size() != profile.apiIds().size()
+            if (profile.apiBindings() == null) throw new SystemAssistantException("CONFIGURATION_INVALID", UserFacingErrorType.BAD_REQUEST, "Wymagane przypisania apiBindings w profilu.");
+            if (profile.apiBindings().stream().map(SystemAssistantConfiguration.ApiBinding::apiId).distinct().count() != profile.apiBindings().size()
                     || new HashSet<>(profile.skillIds()).size() != profile.skillIds().size())
                 throw new SystemAssistantException("DUPLICATE_REFERENCE", UserFacingErrorType.BAD_REQUEST,
                         "Przypisania API i skilli w profilu nie mogą się powtarzać.");
         }
+        for (var profile : value.profiles()) for (var binding : profile.apiBindings())
+            if (binding.authProfileId() != null && !authIds.contains(binding.authProfileId()))
+                throw new SystemAssistantException("AUTH_PROFILE_NOT_FOUND", UserFacingErrorType.BAD_REQUEST,
+                        "Profil „" + profile.name() + "”, API „" + binding.apiId() + "” wskazuje nieistniejące uwierzytelnianie. Wybierz Auth albo No Auth.");
         var operations = new ArrayList<OpenApiOperation>();
         var operationApiIds = new HashMap<String, String>();
         for (var api : value.apis()) {

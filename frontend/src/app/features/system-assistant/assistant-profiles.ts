@@ -14,7 +14,7 @@ export function matchesProfileUrl(pattern: string, url: string): boolean {
 }
 
 export function missingProfileResources(profile: AssistantProfile, configuration: AssistantConfiguration): string {
-  const missingApis = profile.apiIds.filter(id => !configuration.apis.some(api => api.id === id));
+  const missingApis = profile.apiBindings.map(binding => binding.apiId).filter(id => !configuration.apis.some(api => api.id === id));
   const missingSkills = profile.skillIds.filter(id => !configuration.skills.some(skill => skill.id === id));
   const parts = [missingApis.length ? `Brak API: ${missingApis.join(', ')}.` : '',
     missingSkills.length ? `Brak skilli: ${missingSkills.join(', ')}.` : ''].filter(Boolean);

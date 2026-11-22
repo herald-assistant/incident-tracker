@@ -28,11 +28,14 @@ import { SystemAssistantIngress } from './system-assistant-ingress.service';
 import { AssistantConversationPicker } from './assistant-conversation-picker';
 import { BrowserToolsSetupComponent } from '../../components/browser-tools-setup/browser-tools-setup';
 import { downloadJsonFile, readJsonFile, sanitizeFileNamePart } from '../../core/utils/json-file.utils';
+import { AssistantAuthProfiles } from './assistant-auth-profiles';
+import { AssistantAuthProfile, AssistantOidcConnection } from './system-assistant.models';
+import { AUTH_TYPES, authErrors, newAuthProfile } from './assistant-auth';
 import { ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NAME, configurationFile, parseConfigurationFile } from './system-assistant-configuration-file';
 
 @Component({
   selector: 'app-system-assistant-page',
-  imports: [ChoiceSelectComponent, AssistantConversationPicker, NgTemplateOutlet, AnalysisResultTabsComponent, DialogModule, TextFieldComponent, MatTooltipModule, AnalysisFollowUpChatComponent, AiExecutionControlsComponent, AnalysisFeatureAsideComponent, AnalysisStepsPanelComponent, BrowserToolsSetupComponent],
+  imports: [AssistantAuthProfiles, ChoiceSelectComponent, AssistantConversationPicker, NgTemplateOutlet, AnalysisResultTabsComponent, DialogModule, TextFieldComponent, MatTooltipModule, AnalysisFollowUpChatComponent, AiExecutionControlsComponent, AnalysisFeatureAsideComponent, AnalysisStepsPanelComponent, BrowserToolsSetupComponent],
   providers: [SystemAssistantIngress],
   templateUrl: './system-assistant-page.html',
   styleUrl: './system-assistant-page.scss'
@@ -50,7 +53,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private restoredId = this.route?.snapshot.queryParamMap?.get('localRunId') || '';
   protected readonly api = inject(SystemAssistantApi);
   protected readonly destroyRef = inject(DestroyRef);
-  readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [] });
+  readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [], authProfiles: [] });
   readonly activeProfiles = signal<AssistantProfile[]>([]);
   readonly profileId = signal('');
   readonly availableProfiles = computed(() => this.activeProfiles().filter(profile => {
@@ -77,6 +80,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly workspaceTabs = [
     {id: 'skills', tabLabel: 'Skille'},
     {id: 'contracts', tabLabel: 'Kontrakty'},
+    {id: 'auth', tabLabel: 'Auth'},
     {id: 'profiles', tabLabel: 'Profile'},
     {id: 'conversation', tabLabel: 'Rozmowa'},
     {id: 'launch', tabLabel: 'Uruchamianie w systemie'}
@@ -92,6 +96,11 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly importing = signal(false);
   readonly configurationBusy = computed(() => this.saving() || this.importing());
   readonly dirty = signal(false);
+  readonly authConnections = signal<Record<string, AssistantOidcConnection>>({});
+  readonly authBusyId = signal('');
+  readonly authStatusError = signal('');
+  readonly authValidationVisible = signal(false);
+  private authStatusGeneration = 0;
   readonly conversation = signal<AssistantConversation | null>(null);
   readonly chatError = signal('');
   readonly unsentMessage = signal('');
@@ -101,6 +110,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (this.workspaceView() === 'skills') return [
       {anchor: 'assistant-skills', title: 'Instrukcje pracy', description: 'Dodaj lub popraw skill i zapisz aktualny zestaw.'}
     ];
+    if (this.workspaceView() === 'auth') return [{anchor: 'assistant-auth', title: 'Uwierzytelnianie API', description: 'Dodaj nazwane uwierzytelnianie i zapisz. Wybierz je przy API w zakładce Profile. OIDC wymaga logowania przez stronę dostawcy.'}];
     if (this.workspaceView() === 'profiles') return [{anchor: 'assistant-profiles', title: 'Profile', description: 'Nazwij zestaw i przypisz istniejące skille oraz API. Zapisz, aby go aktywować.'}];
     if (this.workspaceView() === 'contracts') return [
       {anchor: 'assistant-api', title: 'Kontrakty OpenAPI', description: 'Wczytaj kontrakt w modalu i wybierz operacje. Podgląd pokazuje dokumentację i schematy.'}
@@ -139,9 +149,15 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
 
   ngOnInit(): void {
     this.ingress.start();
+    const authReturn = this.route?.snapshot.queryParamMap?.get('auth');
+    if (!this.embedded && authReturn) {
+      this.workspaceView.set('auth');
+      this.notice.set(authReturn === 'success' ? 'Zalogowano. API może korzystać z połączenia OIDC.' : 'Nie udało się zalogować. Sprawdź konfigurację i rozpocznij logowanie ponownie.');
+      void this.router?.navigate([], {relativeTo: this.route, queryParams: {auth: null}, queryParamsHandling: 'merge', replaceUrl: true});
+    }
     if (!this.embedded && this.restoredId) this.restoreConversation();
     this.api.configuration().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: value => { this.configuration.set(value); this.activeProfiles.set(value.profiles); this.ready.set(true); this.configurationAvailable.set(true); this.loadTools(); this.loadAi(); },
+      next: value => { this.configuration.set(value); this.activeProfiles.set(value.profiles); this.ready.set(true); this.configurationAvailable.set(true); this.loadTools(); this.loadAi(); this.loadAuthStatus(); },
       error: error => {
         this.error.set(this.message(error));
         if (error.error?.code === 'CONFIGURATION_UNAVAILABLE') { this.ready.set(true); this.loadAi(); }
@@ -274,7 +290,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   addProfile(): void {
     if (this.configurationBusy() || this.configuration().profiles.length >= 20) return;
     this.configuration.update(value => ({...value, profiles: [...value.profiles,
-      {id: crypto.randomUUID(), name: 'Nowy profil', urlPattern: '*', apiIds: [], skillIds: []}]}));
+      {id: crypto.randomUUID(), name: 'Nowy profil', urlPattern: '*', apiBindings: [], skillIds: []}]}));
     this.dirty.set(true); this.notice.set('');
   }
   updateProfile(index: number, key: 'name' | 'urlPattern', content: string): void {
@@ -282,7 +298,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.configuration.update(value => ({...value, profiles: value.profiles.map((item, i) => i === index ? {...item, [key]: content} : item)}));
     this.dirty.set(true); this.notice.set('');
   }
-  toggleProfileResource(index: number, key: 'apiIds' | 'skillIds', id: string, checked: boolean): void {
+  toggleProfileResource(index: number, key: 'skillIds', id: string, checked: boolean): void {
     if (this.configurationBusy()) return;
     this.configuration.update(value => ({...value, profiles: value.profiles.map((item, i) => i === index
       ? {...item, [key]: checked ? [...new Set([...item[key], id])] : item[key].filter(current => current !== id)} : item)}));
@@ -291,7 +307,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   profileWarning(profile: AssistantProfile): string { return missingProfileResources(profile, this.configuration()); }
   profileResources(profile: AssistantProfile, kind: 'apis' | 'skills') {
     const resources = this.configuration()[kind].map(item => ({id: item.id, name: item.name}));
-    const ids = kind === 'apis' ? profile.apiIds : profile.skillIds;
+    const ids = kind === 'apis' ? profile.apiBindings.map(binding => binding.apiId) : profile.skillIds;
     return [...resources, ...ids.filter(id => !resources.some(item => item.id === id)).map(id => ({id, name: 'Brak: ' + id}))];
   }
   addSkill(): void {
@@ -325,7 +341,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       if (this.destroyRef.destroyed) return;
       const configuration = parseConfigurationFile(value);
       this.configuration.set(configuration); this.dirty.set(true); this.saveError.set('');
-      this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}). Zapisz, aby ją aktywować.`);
+      this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}, Auth: ${configuration.authProfiles.length}). Zapisz, aby ją aktywować.`);
       this.workspaceView.set('skills');
     } catch (error) {
       if (!this.destroyRef.destroyed) this.error.set(error instanceof Error ? error.message : 'Nie udało się odczytać pliku konfiguracji.');
@@ -379,6 +395,10 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   save(): void {
     if (this.configurationBusy()) return;
+    this.authValidationVisible.set(true);
+    if (this.configuration().authProfiles.some(profile => Object.keys(authErrors(profile)).length)) {
+      this.workspaceView.set('auth'); this.saveError.set('Uzupełnij zaznaczone pola uwierzytelniania.'); return;
+    }
     this.saving.set(true); this.error.set(''); this.saveError.set(''); this.notice.set('');
     this.api.save(this.configuration()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: value => {
@@ -386,6 +406,63 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
         this.notice.set('Zapisano. Kolejna tura użyje bieżącego zestawu API i skilli.'); this.loadTools();
       },
       error: error => { this.saving.set(false); this.saveError.set(this.message(error)); }
+    });
+  }
+  addAuth(): void {
+    if (this.configurationBusy() || this.configuration().authProfiles.length >= 20) return;
+    const profile = newAuthProfile('BASIC', `auth_${crypto.randomUUID().slice(0, 8)}`, 'Nowe uwierzytelnianie', window.location.origin);
+    this.updateAuthProfiles([...this.configuration().authProfiles, profile]);
+  }
+  updateAuthProfiles(authProfiles: AssistantAuthProfile[]): void {
+    if (this.configurationBusy()) return;
+    this.configuration.update(value => ({...value, authProfiles})); this.dirty.set(true); this.notice.set('');
+  }
+  profileHasApi(profile: AssistantProfile, apiId: string): boolean { return profile.apiBindings.some(binding => binding.apiId === apiId); }
+  profileApiAuth(profile: AssistantProfile, apiId: string): string { return profile.apiBindings.find(binding => binding.apiId === apiId)?.authProfileId || ''; }
+  apiAuthOptions(profile: AssistantProfile, apiId: string) {
+    const options = [{value: '', label: 'No Auth'}, ...this.configuration().authProfiles.map(auth => ({value: auth.id,
+      label: auth.name || 'Nowe uwierzytelnianie', hint: AUTH_TYPES.find(type => type.value === auth.type)?.label || auth.type}))];
+    const selected = this.profileApiAuth(profile, apiId);
+    return selected && !options.some(option => option.value === selected)
+      ? [...options, {value: selected, label: 'Niedostępne uwierzytelnianie'}] : options;
+  }
+  toggleProfileApi(index: number, apiId: string, checked: boolean): void {
+    if (this.configurationBusy()) return;
+    this.configuration.update(value => ({...value, profiles: value.profiles.map((profile, i) => i !== index ? profile : {...profile,
+      apiBindings: checked ? this.profileHasApi(profile, apiId) ? profile.apiBindings : [...profile.apiBindings, {apiId, authProfileId: null}]
+        : profile.apiBindings.filter(binding => binding.apiId !== apiId)})}));
+    this.dirty.set(true); this.notice.set('');
+  }
+  updateProfileApiAuth(index: number, apiId: string, authProfileId: string): void {
+    if (this.configurationBusy()) return;
+    this.configuration.update(value => ({...value, profiles: value.profiles.map((profile, i) => i !== index ? profile : {...profile,
+      apiBindings: profile.apiBindings.map(binding => binding.apiId === apiId ? {...binding, authProfileId: authProfileId || null} : binding)})}));
+    this.dirty.set(true); this.notice.set('');
+  }
+  loadAuthStatus(): void {
+    const generation = ++this.authStatusGeneration;
+    if (this.embedded || !this.configuration().authProfiles.some(profile => profile.type === 'OIDC')) {
+      this.authConnections.set({}); this.authStatusError.set(''); return;
+    }
+    this.api.authStatus().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: statuses => { if (generation === this.authStatusGeneration) { this.authConnections.set(statuses); this.authStatusError.set(''); } },
+      error: error => { if (generation === this.authStatusGeneration) this.authStatusError.set(this.message(error)); }
+    });
+  }
+  loginAuth(id: string): void {
+    if (this.dirty() || this.configurationBusy() || this.authBusyId()) return;
+    this.authBusyId.set(id); this.saveError.set('');
+    this.api.loginAuth(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => window.location.assign(result.authorizationUrl),
+      error: error => { this.authBusyId.set(''); this.saveError.set(this.message(error)); }
+    });
+  }
+  disconnectAuth(id: string): void {
+    if (this.dirty() || this.configurationBusy() || this.authBusyId()) return;
+    this.authBusyId.set(id); this.saveError.set('');
+    this.api.disconnectAuth(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => { this.authBusyId.set(''); this.loadAuthStatus(); },
+      error: error => { this.authBusyId.set(''); this.saveError.set(this.message(error)); }
     });
   }
   protected message(error: unknown): string {

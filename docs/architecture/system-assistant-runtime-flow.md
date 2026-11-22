@@ -9,12 +9,13 @@ z zapisanej aktualnej treści. Ekran: `/system-assistant`.
 
 Operator może podłączyć HTTP(S) API dowolnego systemu, z hostem DNS, IP lub
 localhost, w obsługiwanym podzbiorze OpenAPI 3.0.x opisanym poniżej.
-Bieżący zakres obsługuje jedną osobę w workspace. Nie obejmuje source auth, załączników,
+Bieżący zakres obsługuje jedną osobę w workspace. Obsługuje source auth Basic/Bearer/OAuth2/OIDC. Nie obejmuje załączników,
 approval workflow ani integracji CLP.
 Konfigurację, rozmowę i testy opisuje [instrukcja obsługi](../system-assistant.md).
 Skille określają sposób pracy AI, nie egzekwują uprawnień biznesowych.
 Kontrakt operatora lub jego proxy może ograniczać i orkiestrować wywołania API;
-TDW nie posiada osobnego silnika polityk ani delegacji tożsamości źródłowej.
+TDW nie posiada osobnego silnika polityk. OIDC uzyskuje własny access token
+operatora; nie przejmuje sesji strony źródłowej.
 
 ## Włączenie i wyłączenie
 
@@ -46,6 +47,7 @@ operacji; ich stan trzeba ustalić w systemie źródłowym.
 | --- | --- |
 | `features.systemassistant` | Konfiguracja użytkownika, rozmowy, kolejka tur, prompt, transcript, skille robocze i kompozycja ekspozycji MCP |
 | `integrations.openapi` | Porty importu i wykonania; typowane operacje i wyniki; parser, walidacja schema, RestClient |
+| `integrations.httpauth` | Neutralne Basic/Bearer/OAuth2/OIDC, transport dostawcy i pamięciowy stan tokenów |
 | `agenttools.openapi` | Generowane callbacki oraz aktualny katalog runtime |
 | `agenttools.openapi.mcp` | Neutralny serwer Streamable HTTP; brak zależności od feature'a i Copilota |
 | `aiplatform.copilot` | Istniejący runtime NEW, jawna allowlista/hook, invocation events, usage i cleanup sesji |
@@ -62,7 +64,7 @@ odrębny.
 
 | Endpoint | Kontrakt |
 | --- | --- |
-| `GET /api/system-assistant/configuration` | Bieżące `{apis, skills, profiles}`; uszkodzony zapis daje 503 `CONFIGURATION_UNAVAILABLE` |
+| `GET /api/system-assistant/configuration` | Bieżące `{apis, skills, profiles, authProfiles}`; uszkodzony zapis daje 503 `CONFIGURATION_UNAVAILABLE` |
 | `PUT /api/system-assistant/configuration` | Zastępuje cały aktualny zestaw po walidacji i skutecznym zapisie |
 | `POST /api/system-assistant/configuration/openapi/preview` | `{id, yaml}`; katalog operacji, limit wyboru i specification (kopia JSON do dokumentacji), bez aktywacji |
 | `POST /api/system-assistant/configuration/openapi/document` | `{id, yaml}`; zwalidowany dokument JSON do podglądu, bez zapisu i publikacji |
@@ -74,11 +76,29 @@ odrębny.
 | `DELETE /api/system-assistant/conversations/{id}` | `204`; aktywna tura daje `409` |
 | `GET /api/analysis/runs` | Wspólny indeks historii; rozmowy mają `feature=system-assistant` |
 | `GET /api/analysis/runs/{id}/export` | Archiwalny JSON transkryptu; bez konfiguracji API/skilli |
-| `/api/openapi-tools/mcp` | Osobny Streamable HTTP MCP z initialize, list/call i powiadomieniem o zmianie tools |
+| `/api/openapi-tools/{profileId}/mcp` | Osobny Streamable HTTP MCP z initialize, list/call i powiadomieniem o zmianie tools |
 
 API definition to `{id, name, yaml}`, skill to `{id, name, content}`.
 ID elementu nie jest rewizją. Duplikaty ID i kolizje nazw tools blokują
 aktywację. Pusty zestaw jest poprawny i pozwala rozmawiać bez API.
+Profil przechowuje `apiBindings` z parami `{apiId, authProfileId}`
+(null = No Auth) oraz `skillIds`. Definicja API nie wybiera uwierzytelniania.
+Ten sam kontrakt może mieć różne Auth w różnych profilach.
+
+MCP używa jawnego profilu z adresu endpointu; katalogi i sesje poszczególnych
+profili są izolowane. Nieznany profil i stary nieskopowany adres nie otrzymują
+fallbacku. Adres MCP wynika z ID profilu i nie jest prezentowany w formularzu.
+
+## Uwierzytelnianie źródłowych API
+
+Zakładka Auth utrzymuje Basic, Bearer, OAuth2 Client Credentials i OIDC.
+Każde przypisanie API w profilu ma select Auth domyślnie No Auth. Pola są jawne we wspólnym JSON-ie,
+a wykonawca wiąże je z operacją poza argumentami modelu. Logowanie OIDC
+odbywa się przez pełny ekran i powrót /api/system-assistant/auth/callback;
+stan tokenów jest pamięciowy. Status, login, callback i disconnect są
+feature-owned API pod /api/system-assistant/auth.
+Kontrakt, mechanikę i ograniczenia opisuje
+[uwierzytelnianie HTTP API](http-api-authentication.md).
 
 ## Importowany podzbiór OpenAPI
 
@@ -97,7 +117,7 @@ z lokalizacją przed zapisem.
 | Schema | Jawny type object/array/string/number/integer/boolean; properties/items/required/enum/additionalProperties boolean; minimum/maximum, min/maxLength i min/maxItems; readOnly, nullable, format; metadata description/title/example/default | oneOf/anyOf/allOf, pattern, dodatkowe keywords i schema-valued additionalProperties |
 | References | Lokalne acykliczne `#/components/schemas/...`, bez rodzeństwa `$ref` | Zewnętrzne refs i cykle; rozwinięcie ponad 10000 węzłów lub 20 poziomów |
 | Responses | Kody liczbowe 100–599 lub default, description, opcjonalne JSON content/schema | Response refs, headers, links, inne content types |
-| Auth | Brak credentials; puste security | Wymagania security i components.securitySchemes |
+| Auth | security i components.securitySchemes dla Basic/Bearer/OAuth2/openIdConnect; wykonanie według wybranego profilu Auth | apiKey, digest, credentials w URL i model-facing Authorization |
 
 Nazwa narzędzia: `oa_<apiId>_<operationId>`, do 64 znaków. Schema argumentów
 grupuje parametry w `path`, `query` i `body`. Required, typy, enum i limity
@@ -168,7 +188,7 @@ lub nazwy zaimportowanego kontraktu.
 
 ## Widoki pracy i podgląd kontraktów
 
-Wspólne `analysis-result-tabs` mają jeden poziom: Skille, Kontrakty, Profile,
+Wspólne `analysis-result-tabs` mają jeden poziom: Skille, Kontrakty, Auth, Profile,
 Rozmowa oraz Uruchamianie w systemie. Bezpośrednie `/system-assistant` zaczyna od Skilli;
 wejście z `localRunId` otwiera Rozmowę, a osadzony route Browser Tools zaczyna
 od wyboru nowej lub zapisanej rozmowy, bez zakładek konfiguracji.
@@ -181,7 +201,7 @@ i rozmowę. Panel shared chatu jest ukrywany atrybutem hidden, więc zachowuje
 wpisaną wiadomość; polling trwa również poza widokiem Rozmowa. Przełączenie
 nie zapisuje konfiguracji i nie tworzy ani nie wysyła rozmowy.
 
-Skille i Kontrakty korzystają ze wspólnej oprawy zapisu całego zestawu.
+Skille, Kontrakty, Auth i Profile korzystają ze wspólnej oprawy zapisu całego zestawu.
 Akcje `Dodaj skill` lub `Dodaj OpenAPI` oraz wyróżniony `Zapisz` są na dole,
 wyrównane do prawej; `Zapisz` jest ostatni. Komunikaty konfiguracji i błąd
 zapisu są nad tym paskiem. Pierwszy widok
@@ -244,13 +264,15 @@ poprawny zestaw. Nie stosuje się migracji ani cichego fallbacku do pustych dany
 ## Profile i przypisania
 
 Konfiguracja zawiera wspólne katalogi API/skilli oraz maksymalnie 20 profili:
-`{id,name,urlPattern,apiIds,skillIds}`. ID nadawane w UI jest stałe, nazwa
+`{id,name,urlPattern,apiBindings,skillIds}`. ID nadawane w UI jest stałe, nazwa
 jest edytowalna i ma limit 100 znaków. Wzorzec ma domyślną wartość `*`
 oraz limit 2300 znaków. Przypisania są referencjami do aktualnych
 zasobów, nie kopiami. Jeden zapis aktywuje cały zestaw. Stary kształt V1
 bez profiles nie jest obsługiwany ani migrowany.
 
 Zakładka Profile ma edytor nazwy i wzorca oraz listy checkboxów API i skilli.
+Przy wybranym API ma select Auth, domyślnie No Auth. Każde API występuje
+w danym profilu najwyżej raz. Brak wskazanego wpisu Auth blokuje zapis.
 Usunięcie zasobu pozostawia jego ID w przypisaniu. Ikona ostrzeżenia
 w konfiguracji profilu pokazuje brakujące ID w tooltipie; operator może
 usunąć przypisanie. Braki nie blokują zapisu ani rozmowy, również gdy
@@ -262,8 +284,9 @@ stanem UI, bez zapisu w historii. Wymagane profileId jest wysyłane per tura.
 Snapshot.forProfile wybiera istniejące przypisane API i skille oraz ich
 operacje. Nieistniejący profil jest odrzucany przed przyjęciem wiadomości.
 Nie ma fallbacku do całego katalogu. Trwająca tura używa zamrożonego zestawu,
-zmiana profilu lub zasobu wpływa na następną przyjętą turę. Globalny katalog
-MCP nie jest filtrowany wyborem jednego chatu.
+zmiana profilu lub zasobu wpływa na następną przyjętą turę. Katalog MCP
+danego profilu wynika z adresu endpointu i bieżącej konfiguracji. Wybór
+w chacie nie przełącza profilu używanego przez odrębnego klienta MCP.
 
 W panelu lista profili jest filtrowana przez pełne origin + pathname
 przekazane przy uruchomieniu ramki, niezależnie od kontekstu rozmowy wybranej
@@ -278,16 +301,17 @@ zapisane profile przy otwarciu; niezapisany szkic ich nie podmienia.
 
 Obok wspólnego paska zakładek są ikony importu i eksportu całej konfiguracji
 z tooltipami. Eksport `system-assistant-configuration.json` zawiera bieżący
-szkic: `{version:1, configuration:{apis,skills,profiles}}`, z polami API `id,name,yaml`
+szkic: `{version:1, configuration:{apis,skills,profiles,authProfiles}}`, z polami API `id,name,yaml`
 i skilla `id,name,content`. Nie obejmuje rozmów, kontekstu strony, preferencji
-AI ani autentykacji. Eksport zachowuje treść YAML/Markdown także przed zapisem.
+AI ani runtime access/refresh tokenów. Obejmuje jawne pola katalogu Auth. Eksport zachowuje treść YAML/Markdown także przed zapisem.
 Import zastępuje cały szkic i otwiera Skille; nie zapisuje ani nie publikuje
 narzędzi. Dopiero `Zapisz` waliduje i aktywuje zestaw. Parser pliku wymaga
-dokładnych pól i typów, wersji 1, do 12 API, 20 skilli i 20 profili oraz limitu 10000000
+dokładnych pól i typów, wersji 1, do 12 API, 20 skilli, 20 profili i 20 konfiguracji Auth oraz limitu 10000000
 bajtów. Pozwala odtworzyć niekompletne pola tekstowe; walidacja biznesowa
 kontraktów pozostaje na serwerze przy zapisie. Błędny plik zachowuje szkic.
 Podczas odczytu blokowana jest edycja konfiguracji i zapis, bez zatrzymywania
-rozmowy. Nie ma migracji ani rewizji; import obejmuje też profile i przypisania.
+rozmowy. Nie ma migracji ani rewizji; import obejmuje profile i przypisania Auth.
+Poprzedni kształt V1 bez authProfiles nie jest obsługiwany.
 Eksport konfiguracji jest odrębny od eksportu transkryptu ze wspólnej
 Analysis History. Nie ma importu rozmowy z pliku.
 
@@ -296,7 +320,7 @@ Analysis History. Nie ma importu rozmowy z pliku.
 1. API sprawdza PAT Copilota i przyjmuje jedną aktywną turę na rozmowę.
 2. Pod blokadą rozmowy pobiera aktualny snapshot konfiguracji i rozwiązuje profileId, dopisuje USER
    i IN_PROGRESS assistant, a następnie oddaje wykonanie do lokalnej kolejki.
-3. Callbacki tury zamykają jej niemutowalne operacje. Późniejsza edycja nie
+3. Callbacki tury zamykają jej niemutowalne operacje i przypisania Auth. Późniejsza edycja nie
    zmienia ich hosta, schema ani handlera.
 4. Feature składa NEW `CopilotRunRequest`: wyłącznie aktualne tools i
    skille przypisane do profilu inline jako durable instructions, `skillsEnabled=false`, jawny

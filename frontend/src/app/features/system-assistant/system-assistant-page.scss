@@ -55,3 +55,4 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .assistant-profile-resources fieldset { display: grid; gap: 8px; align-content: start; }
 .assistant-profile-resources label { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .assistant-profile-resources { grid-template-columns: minmax(0, 1fr); } }
+.assistant-profile-api { display: grid; gap: .5rem; padding-bottom: .5rem; }

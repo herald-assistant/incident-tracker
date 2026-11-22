@@ -77,13 +77,13 @@ class OpenApiCompatibilityTest {
         });
         server.start();
         try {
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper);
+            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var order = importer.parse("orders", fixture("orders").replace(":8081", ":" + server.getAddress().getPort())).get(0);
             var arguments = new OpenApiArguments(mapper.readTree("{\"body\":{\"customerEmail\":\"tester@example.com\",\"items\":[{\"productId\":\"p1\",\"quantity\":2}],\"note\":null}}"));
-            assertThat(executor.execute(order, arguments).statusCode()).isEqualTo(201);
+            assertThat(executor.execute(order, arguments, null).statusCode()).isEqualTo(201);
             assertThat(mapper.readTree(received.get()).has("note")).isTrue(); assertThat(mapper.readTree(received.get()).get("note").isNull()).isTrue();
             var product = importer.parse("products", fixture("products")).stream().filter(op -> op.method().equals("POST")).findFirst().orElseThrow();
-            assertThatThrownBy(() -> executor.execute(product, new OpenApiArguments(mapper.readTree("{\"body\":{\"id\":\"forbidden\",\"name\":\"Product\",\"price\":1}}"))))
+            assertThatThrownBy(() -> executor.execute(product, new OpenApiArguments(mapper.readTree("{\"body\":{\"id\":\"forbidden\",\"name\":\"Product\",\"price\":1}}")), null))
                     .isInstanceOf(OpenApiException.class).hasMessageContaining("readOnly");
         } finally { server.stop(0); }
     }

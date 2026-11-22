@@ -22,9 +22,9 @@ class SystemAssistantProfilesTest {
         var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-api.yaml"));
         return new SystemAssistantConfiguration(List.of(new ApiDefinition("crm", "CRM", yaml), new ApiDefinition("other", "Other CRM", yaml)),
                 List.of(new Skill("shared", "Shared", content), new Skill("private", "Private", "PRIVATE")),
-                List.of(new Profile("first", "First", "*", List.of("crm", "deleted"), List.of("shared", "removed")),
-                        new Profile("second", "Second", "*", List.of("crm"), List.of("shared", "private")),
-                        new Profile("empty", "Empty", "*", List.of("missing"), List.of("missing"))));
+                List.of(new Profile("first", "First", "*", (List.of("crm", "deleted")).stream().map(apiId -> new SystemAssistantConfiguration.ApiBinding((String) apiId, null)).toList(), List.of("shared", "removed")),
+                        new Profile("second", "Second", "*", (List.of("crm")).stream().map(apiId -> new SystemAssistantConfiguration.ApiBinding((String) apiId, null)).toList(), List.of("shared", "private")),
+                        new Profile("empty", "Empty", "*", (List.of("missing")).stream().map(apiId -> new SystemAssistantConfiguration.ApiBinding((String) apiId, null)).toList(), List.of("missing"))), List.of());
     }
 
     @Test void resolvesOnlyAssignedCurrentResourcesWithoutChangingGlobalCatalogOrAcceptedSnapshots() throws Exception {
@@ -40,16 +40,16 @@ class SystemAssistantProfilesTest {
         assertThat(configurations.snapshot().forProfile("empty").operations()).isEmpty();
         assertThat(configurations.snapshot().forProfile("empty").configuration().skills()).isEmpty();
         var current = configuration("UPDATED");
-        configurations.save(new SystemAssistantConfiguration(List.of(), current.skills(), current.profiles()));
+        configurations.save(new SystemAssistantConfiguration(List.of(), current.skills(), current.profiles(), List.of()));
         assertThat(configurations.snapshot().forProfile("first").operations()).isEmpty();
-        assertThat(configurations.current().profiles().get(0).apiIds()).contains("crm", "deleted");
+        assertThat(configurations.current().profiles().get(0).apiBindings().stream().map(SystemAssistantConfiguration.ApiBinding::apiId).toList()).contains("crm", "deleted");
     }
 
     @Test void rejectsMissingProfileAndDuplicateReferencesWithoutPublishingAnotherConfiguration() throws Exception {
         var current = configuration("CURRENT"); configurations.save(current);
         assertThatThrownBy(() -> configurations.snapshot().forProfile("deleted-profile")).isInstanceOf(SystemAssistantException.class);
         assertThatThrownBy(() -> configurations.save(new SystemAssistantConfiguration(current.apis(), current.skills(),
-                List.of(new Profile("bad", "Bad", "*", List.of("crm", "crm"), List.of())))))
+                List.of(new Profile("bad", "Bad", "*", (List.of("crm", "crm")).stream().map(apiId -> new SystemAssistantConfiguration.ApiBinding((String) apiId, null)).toList(), List.of())), List.of())))
                 .isInstanceOf(SystemAssistantException.class);
         assertThat(configurations.current()).isEqualTo(current);
     }

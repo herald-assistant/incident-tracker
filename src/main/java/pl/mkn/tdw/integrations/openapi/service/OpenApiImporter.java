@@ -21,8 +21,8 @@ public class OpenApiImporter implements OpenApiImportPort {
         var root = OpenApiYaml.read(mapper, yaml, 100_000);
         fields(root, "", "openapi", "info", "servers", "paths", "components", "tags", "externalDocs", "security");
         if (!root.path("openapi").asText().matches("3\\.0\\.[0-9]+")) error("/openapi", "Wspierane OpenAPI 3.0.x.");
-        noSecurity(root, "");
-        fields(root.path("components"), "/components", "schemas");
+        OpenApiSecurity.validate(root);
+        fields(root.path("components"), "/components", "schemas", "securitySchemes");
         var servers = root.path("servers");
         if (!servers.isArray() || servers.size() != 1) error("/servers", "Wymagany dokładnie jeden server.");
         fields(servers.get(0), "/servers/0", "url", "description");
@@ -42,7 +42,6 @@ public class OpenApiImporter implements OpenApiImportPort {
                 var op = item.get(method);
                 fields(op, path + "/" + method, "operationId", "summary", "description", "parameters", "requestBody",
                         "responses", "tags", "deprecated", "externalDocs", "security");
-                noSecurity(op, path);
                 var operationId = op.path("operationId").asText();
                 if (("oa_" + id + "_" + operationId).length() > 64) error(path, "Nazwa narzędzia (oa_ID_operationId) przekracza 64 znaki.");
                 if (!operationId.matches("[a-zA-Z][a-zA-Z0-9_]{0,63}") || !names.add(operationId))
@@ -149,9 +148,7 @@ public class OpenApiImporter implements OpenApiImportPort {
         var result = mapper.createObjectNode(); result.put("type", "object");
         result.putObject("properties"); result.putArray("required"); result.put("additionalProperties", false); return result;
     }
-    private static void noSecurity(JsonNode node, String pointer) {
-        if (node.has("security") && (!node.get("security").isArray() || !node.get("security").isEmpty())) error(pointer, "Kontrakt wymaga uwierzytelniania API, którego konfiguracja nie jest jeszcze obsługiwana.");
-    }
+
     private static void fields(JsonNode node, String pointer, String... allowed) {
         if (node.isMissingNode()) return;
         if (!node.isObject()) error(pointer, "Wymagany obiekt.");

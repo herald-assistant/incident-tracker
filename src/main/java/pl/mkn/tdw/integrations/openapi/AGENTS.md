@@ -7,6 +7,11 @@ API HTTP(S) mogą wskazywać dowolny poprawny host (DNS, IP, localhost), bez
 listy hostów ani trybu lokalnego. Base URL nie zawiera credentials, query
 ani fragmentu. Nie dodawaj redirectów, retry ani pobierania zewnętrznych refs.
 Nie klasyfikuj skutków po samym HTTP. Nie wyłączaj walidacji TLS.
+Wykonanie przyjmuje typowany profil integrations.httpauth poza argumentami
+narzędzia. No Auth nie dodaje Authorization. Security metadata Basic/Bearer/
+OAuth2/openIdConnect są walidowane i domykane w selekcji; nie wybierają
+poświadczeń operatora. Błąd Auth przed requestem nie jest nieustalonym zapisem
+i nie uprawnia do retry operacji biznesowej.
 OpenApiOperation rozdziela schema walidacyjny OpenAPI od projekcji argumentów
 JSON Schema: readOnly jest pomijane w narzędziu i odrzucane w żądaniu,
 nullable dopuszcza null zgodnie z required/enum, a format jest adnotacją.

@@ -44,7 +44,7 @@ class IntegrationPackageBoundaryTest {
                     .sorted()
                     .toList();
             assertEquals(List.of("confluence", "database", "dynatrace", "elasticsearch",
-                    "gitlab", "jira", "openapi", "operationalcontext", "support"), directories);
+                    "gitlab", "httpauth", "jira", "openapi", "operationalcontext", "support"), directories);
         }
     }
 
@@ -59,6 +59,14 @@ class IntegrationPackageBoundaryTest {
                 "pl.mkn.tdw.integrations.openapi", "OpenApiExecutionPort.java", "OpenApiImportPort.java", "OpenApiSelectionPort.java");
         assertConsumersDependOnlyOnPortAndContract("pl.mkn.tdw.integrations.openapi",
                 null, "OpenApiExecutionPort", "OpenApiImportPort", "OpenApiSelectionPort");
+    }
+
+    @Test
+    void httpAuthRootContainsOnlyPublicPorts() throws IOException {
+        assertRootContainsOnlyPublicPorts(INTEGRATIONS_ROOT.resolve("httpauth"),
+                "pl.mkn.tdw.integrations.httpauth", "HttpAuthenticationPort.java", "OidcLoginPort.java");
+        assertConsumersDependOnlyOnPortAndContract("pl.mkn.tdw.integrations.httpauth",
+                null, "HttpAuthenticationPort", "OidcLoginPort");
     }
 
     @Test

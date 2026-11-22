@@ -5,6 +5,7 @@ import {
   AssistantConversation,
   AssistantPageContext,
   AssistantTool,
+  AssistantOidcConnection,
   OpenApiDocument,
   OpenApiOperationKey,
   OpenApiPrepared,
@@ -27,6 +28,10 @@ export class SystemAssistantApi {
   save(value: AssistantConfiguration) {
     return this.http.put<AssistantConfiguration>(`${this.base}/configuration`, value);
   }
+
+  authStatus() { return this.http.get<Record<string, AssistantOidcConnection>>(`${this.base}/auth/status`); }
+  loginAuth(id: string) { return this.http.post<{authorizationUrl: string}>(`${this.base}/auth/${encodeURIComponent(id)}/login`, {}); }
+  disconnectAuth(id: string) { return this.http.post<void>(`${this.base}/auth/${encodeURIComponent(id)}/disconnect`, {}); }
 
   previewOpenApi(id: string, yaml: string) {
     return this.http.post<OpenApiPreview>(`${this.base}/configuration/openapi/preview`, {id, yaml});

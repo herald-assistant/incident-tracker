@@ -95,8 +95,8 @@ Przed wieksza zmiana zacznij od:
   Zmiana działa od następnej przyjętej tury. Feature jest domyślnie wyłączony
   i nie ustawia ani nie waliduje adresu nasłuchiwania TDW. Docelowe API HTTP(S)
   mogą wskazywać dowolny poprawny host; nie dodawaj reguł loopback-only ani
-  założeń o fikcyjnych danych. Source auth i załączniki pozostają
-  odrębnym zakresem. Parser/REST należy
+  założeń o fikcyjnych danych. Auth API obsługuje Basic, Bearer, OAuth2 i OIDC przez pary API–Auth przypisane w profilu asystenta;
+  jawne pola są w tym samym JSON-ie konfiguracji. Załączniki pozostają odrębnym zakresem. Parser/REST należy
   do `integrations.openapi`, callbacki i neutralny MCP do `agenttools.openapi`.
   Nie dodawaj tej semantyki do globalnego Copilot runtime lub skill root.
   Rozmowy mają trwały transkrypt V1 we wspólnej historii. localRunId

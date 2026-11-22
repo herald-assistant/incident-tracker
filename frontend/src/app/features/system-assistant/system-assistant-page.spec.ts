@@ -11,6 +11,8 @@ import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatTooltipHarness } from '@angular/material/tooltip/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import {choice} from '../../../testing/form-controls';
+import {newAuthProfile} from './assistant-auth';
 
 function savedConversation(): AssistantConversation {
   return {id: 'saved-chat', busy: false, pageContext: {origin: 'https://crm.example', pathname: '/customers/C-100', title: 'Klient', capturedAt: '2026-11-21T10:00:00Z'},
@@ -29,10 +31,10 @@ describe('SystemAssistantPage', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
-  const testProfile = {id: 'test_profile', name: 'Test CRM', urlPattern: '*', apiIds: [], skillIds: []};
+  const testProfile = {id: 'test_profile', name: 'Test CRM', urlPattern: '*', apiBindings: [], skillIds: []};
   function ready(runs: LocalAnalysisRunListItemResponse[] = []) {
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
-    http.expectOne('/api/system-assistant/configuration').flush({profiles: [testProfile], apis: [], skills: []});
+    http.expectOne('/api/system-assistant/configuration').flush({authProfiles: [], profiles: [testProfile], apis: [], skills: []});
     http.expectOne('/api/system-assistant/configuration/tools').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({ defaultModel: 'test-model', defaultReasoningEffort: '', defaultReasoningEfforts: [], models: [] });
     http.expectOne('/api/auth/github/status').flush({ configured: true, settingsUrl: '/workspace-settings' });
@@ -40,6 +42,41 @@ describe('SystemAssistantPage', () => {
     if (fixture.componentInstance.embedded) { http.expectOne('/api/analysis/runs').flush({runs}); fixture.detectChanges(); }
     return fixture;
   }
+  it('assigns independent API authentication in two profiles through the shared select', async () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    const auth = {...newAuthProfile('BASIC', 'crm_auth', 'CRM access', 'http://localhost'), username: 'operator', password: 'public-test-password'};
+    page.configuration.update(value => ({...value, authProfiles: [auth], apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}],
+      profiles: [testProfile, {...testProfile, id: 'other', name: 'Other CRM', apiBindings: [{apiId: 'crm', authProfileId: null}]}]}));
+    page.toggleProfileApi(0, 'crm', true); page.workspaceView.set('profiles'); fixture.detectChanges();
+    expect(page.configuration().profiles[0].apiBindings).toEqual([{apiId: 'crm', authProfileId: null}]);
+    const select = await choice(fixture, '.assistant-profile:first-child .assistant-profile-api mat-select');
+    expect(await select.getValueText()).toBe('No Auth');
+    await select.open(); await select.clickOptions({text: /CRM access/});
+    expect(page.configuration().profiles[0].apiBindings[0].authProfileId).toBe('crm_auth');
+    expect(page.configuration().profiles[1].apiBindings[0].authProfileId).toBeNull();
+    expect(page.dirty()).toBe(true); http.expectNone('/api/system-assistant/configuration');
+    page.save(); const save = http.expectOne('/api/system-assistant/configuration');
+    expect(save.request.body.authProfiles[0].password).toBe('public-test-password');
+    expect(save.request.body.apis[0]).not.toHaveProperty('authProfileId');
+    expect(save.request.body.profiles[0].apiBindings[0].authProfileId).toBe('crm_auth'); save.flush(page.configuration());
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]); fixture.destroy();
+  });
+  it('keeps incomplete Auth in the draft and shows field errors before saving', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.addAuth(); page.save(); fixture.detectChanges();
+    expect(page.workspaceView()).toBe('auth'); expect(page.dirty()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Podaj login.');
+    http.expectNone('/api/system-assistant/configuration'); fixture.destroy();
+  });
+  it('ignores a stale OIDC status response after the configured profiles change', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    const profile = newAuthProfile('OIDC', 'crm_oidc', 'CRM login', 'http://localhost');
+    page.configuration.update(value => ({...value, authProfiles: [profile]})); page.loadAuthStatus();
+    const pending = http.expectOne('/api/system-assistant/auth/status');
+    page.configuration.update(value => ({...value, authProfiles: []})); page.loadAuthStatus();
+    pending.flush({crm_oidc: {connected: true, username: 'crm.operator', expiresAt: null, message: 'Połączono'}});
+    expect(page.authConnections()).toEqual({}); fixture.destroy();
+  });
   it('keeps saved profiles separate from the draft and explains removed resources', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     page.workspaceView.set('profiles'); page.addSkill(); page.addProfile();
@@ -187,7 +224,7 @@ describe('SystemAssistantPage', () => {
     page.conversation.set(conversation); page.model.set('chosen'); page.reasoningEffort.set('high');
     const activeTools = [{apiId: 'old', name: 'read', description: '', method: 'GET', path: '/old', inputSchema: {}}];
     page.tools.set(activeTools);
-    const imported = {profiles: [], apis: [{id: 'products', name: 'Produkty', yaml: 'selected YAML'}], skills: [{id: 'new', name: 'Nowy', content: ''}]};
+    const imported = {authProfiles: [], profiles: [], apis: [{id: 'products', name: 'Produkty', yaml: 'selected YAML'}], skills: [{id: 'new', name: 'Nowy', content: ''}]};
     const {input, event} = configurationInput(JSON.stringify({version: 1, configuration: imported}));
     await page.importConfiguration(event); fixture.detectChanges();
     expect(input.value).toBe(''); expect(page.configuration()).toEqual(imported); expect(page.dirty()).toBe(true);
@@ -222,10 +259,10 @@ describe('SystemAssistantPage', () => {
     expect(oversized.input.files[0].text).not.toHaveBeenCalled(); expect(page.error()).toContain('10000000');
     const unreadable = configurationInput('{}'); unreadable.input.files[0].text.mockRejectedValue(new Error('Odczyt nieudany'));
     await page.importConfiguration(unreadable.event); expect(page.error()).toBe('Odczyt nieudany'); expect(page.configuration()).toBe(draft);
-    const valid = configurationInput('{"version":1,"configuration":{"apis":[],"skills":[],"profiles":[]}}');
+    const valid = configurationInput('{"version":1,"configuration":{"apis":[],"skills":[],"profiles":[],"authProfiles":[]}}');
     await page.importConfiguration(valid.event); page.addSkill(); await page.importConfiguration(valid.event);
     expect(valid.input.files[0].text).toHaveBeenCalledTimes(2); expect(valid.input.value).toBe('');
-    expect(page.configuration()).toEqual({profiles: [], apis: [], skills: []}); expect(page.dirty()).toBe(true); fixture.destroy();
+    expect(page.configuration()).toEqual({authProfiles: [], profiles: [], apis: [], skills: []}); expect(page.dirty()).toBe(true); fixture.destroy();
   });
   it('locks configuration while reading, without changing chat, and ignores completion after destruction', async () => {
     const fixture = ready(); const page = fixture.componentInstance; page.addSkill(); const draft = page.configuration();
@@ -243,7 +280,7 @@ describe('SystemAssistantPage', () => {
   });
   it('exports the visible draft through the header action with a JSON file and no state changes', async () => {
     const fixture = ready(); const page = fixture.componentInstance;
-    page.configuration.set({profiles: [], apis: [{id: 'api', name: 'Żółć', yaml: 'openapi: 3.0.3\n'}], skills: [{id: 's', name: 'Skill', content: '# Reguły\n'}]});
+    page.configuration.set({authProfiles: [], profiles: [], apis: [{id: 'api', name: 'Żółć', yaml: 'openapi: 3.0.3\n'}], skills: [{id: 's', name: 'Skill', content: '# Reguły\n'}]});
     page.dirty.set(true); page.workspaceView.set('launch'); page.model.set('private-model'); fixture.detectChanges();
     const originalCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
     const originalRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
@@ -286,7 +323,7 @@ describe('SystemAssistantPage', () => {
     };
     const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
     expect(page.workspaceView()).toBe('skills');
-    expect([...root.querySelectorAll('[role=tab]')].map(tab => tab.textContent?.trim())).toEqual(['Skille', 'Kontrakty', 'Profile', 'Rozmowa', 'Uruchamianie w systemie']);
+    expect([...root.querySelectorAll('[role=tab]')].map(tab => tab.textContent?.trim())).toEqual(['Skille', 'Kontrakty', 'Auth', 'Profile', 'Rozmowa', 'Uruchamianie w systemie']);
     expect(root.querySelectorAll('[role=tablist]')).toHaveLength(1);
     expect(configuration.hidden).toBe(false); expect(conversation.hidden).toBe(true); expect(launch.hidden).toBe(true);
     expect(page.formTourSteps().map(step => step.anchor)).toEqual(['assistant-skills']);
@@ -337,7 +374,7 @@ describe('SystemAssistantPage', () => {
   it('keeps drafts across tabs and offers preview, export and removal for contracts', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const current = {id: 'crm', name: 'CRM', yaml: 'current YAML'};
-    page.configuration.set({profiles: [], apis: [current], skills: []}); page.addSkill();
+    page.configuration.set({authProfiles: [], profiles: [], apis: [current], skills: []}); page.addSkill();
     page.updateSkill(0, 'content', 'Instrukcje robocze'); fixture.detectChanges();
     const tabs = [...(fixture.nativeElement as HTMLElement).querySelectorAll('[mat-tab-link]')];
     tabs.find(tab => tab.textContent?.trim() === 'Kontrakty')!.dispatchEvent(new MouseEvent('click', {bubbles: true}));
@@ -356,7 +393,7 @@ describe('SystemAssistantPage', () => {
   it('opens read-only documentation without changing the configuration', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const current = {id: 'crm', name: 'CRM', yaml: 'current YAML'};
-    page.configuration.set({profiles: [], apis: [current], skills: []}); page.viewContract(current); fixture.detectChanges();
+    page.configuration.set({authProfiles: [], profiles: [], apis: [current], skills: []}); page.viewContract(current); fixture.detectChanges();
     http.expectOne('/api/system-assistant/configuration/openapi/document').flush({specification: {openapi: '3.0.3', paths: {}}});
     TestBed.inject(Dialog).openDialogs[0].close();
     expect(page.configuration().apis[0]).toBe(current); expect(page.dirty()).toBe(false);
@@ -365,7 +402,7 @@ describe('SystemAssistantPage', () => {
   it('downloads the exact YAML of the selected draft without saving or changing it', async () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const current = {id: 'crm', name: 'CRM / demo', yaml: 'openapi: 3.0.3\ninfo:\n  title: Zgłoszenia — Łódź\n  version: 1.0.0\npaths:\n  /selected: {}\n'};
-    page.configuration.set({profiles: [], apis: [{id: 'other', name: 'Other', yaml: 'other YAML'}, current], skills: []});
+    page.configuration.set({authProfiles: [], profiles: [], apis: [{id: 'other', name: 'Other', yaml: 'other YAML'}, current], skills: []});
     page.dirty.set(true); page.workspaceView.set('contracts'); fixture.detectChanges();
     const originalCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
     const originalRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
@@ -400,7 +437,7 @@ describe('SystemAssistantPage', () => {
       {id: 'new', name: 'New draft', yaml: 'yaml'}];
     const tool = (apiId: string, name: string, path: string) => ({apiId, name, path, method: 'GET', description: '', inputSchema: {}});
     const active = [tool('crm', 'oa_crm_a_read', '/tickets'), tool('crm_a', 'oa_crm_a_write', '/other')];
-    page.configuration.set({profiles: [], apis, skills: []}); page.tools.set(active); page.workspaceView.set('contracts'); page.dirty.set(true);
+    page.configuration.set({authProfiles: [], profiles: [], apis, skills: []}); page.tools.set(active); page.workspaceView.set('contracts'); page.dirty.set(true);
     fixture.detectChanges();
     const counts = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.assistant-contract-count')].map(node => node.textContent?.trim());
     expect(counts()).toEqual(['1', '1', '0']);
@@ -415,7 +452,7 @@ describe('SystemAssistantPage', () => {
   });
   it('does not present unavailable operation counts as zero', () => {
     const fixture = ready(); const page = fixture.componentInstance;
-    page.configuration.set({profiles: [], apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}], skills: []});
+    page.configuration.set({authProfiles: [], profiles: [], apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}], skills: []});
     page.workspaceView.set('contracts'); page.loadTools();
     http.expectOne('/api/system-assistant/configuration/tools').flush({}, {status: 503, statusText: 'Unavailable'});
     fixture.detectChanges();

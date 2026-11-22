@@ -45,7 +45,7 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
                                       SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                                       SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
                                       Consumer<AnalysisAiActivityEvent> activity) {
-        var callbacks = tools.create(configuration.operations());
+        var callbacks = tools.create(configuration.executions());
         var names = callbacks.stream().map(callback -> callback.getToolDefinition().name()).toList();
         var session = new CopilotToolSessionContext(turnId, "system-assistant-" + turnId, Map.of());
         var definitions = sdkTools.createToolDefinitions(session, CopilotToolDescriptionContext.profile("system-assistant"), callbacks)

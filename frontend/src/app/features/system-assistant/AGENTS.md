@@ -3,10 +3,10 @@
 Chat-first konfigurowalny feature. Reuse shared chat, steps/activity/evidence,
 usage, preferencje AI i kontrolki. Ekran posiada bieżący szkic konfiguracji,
 walidację i requesty. Nie importuje innych feature'ów. Konfiguracja to jeden
-aktualny zestaw, bez wersjonowania. Bez auth źródłowego i załączników.
+aktualny zestaw, bez wersjonowania. Auth źródłowe: Basic/Bearer/OAuth2/OIDC, z formularzami inline i selectem Auth przy API w profilu, domyślnie No Auth. Bez załączników.
 Browser Tools przekazuje wyłącznie mały page-context przez sprawdzony handshake.
 Akcja osadza chat TDW w iframe /system-assistant/chat poza AppShell. Reuse
-jednego template'u rozmowy; pełny ekran ma zakładki Skille, Kontrakty, Profile, Rozmowa i Uruchamianie w systemie. Transfer V1
+jednego template'u rozmowy; pełny ekran ma zakładki Skille, Kontrakty, Auth, Profile, Rozmowa i Uruchamianie w systemie. Transfer V1
 sprawdza parent/contentWindow, origin, nonce i dokładne pola; nie przywracaj
 opener/popup dla System Assistant. Schowanie panelu zachowuje ramkę i stan,
 a usunięcie Browser Tools usuwa panel i listenery. Nie osłabiaj CSP.
@@ -16,7 +16,10 @@ Frontend nie parsuje YAML-a. Backend zwraca katalog i przygotowany podzbiór;
 modal zmienia tylko szkic, a Zapisz aktywuje konfigurację. Pełne źródło
 nie jest przechowywane po zamknięciu modalu; anulowanie zachowuje szkic.
 
-Konfiguracja ma zakładki Skille i Kontrakty przez shared analysis-result-tabs.
+Konfiguracja używa shared analysis-result-tabs. Auth ma formularze inline, bez modali CRUD.
+Dane dostępowe są jawne w polach tekstowych i eksporcie konfiguracji.
+OIDC wymaga zapisu przed logowaniem; powrót wybiera Auth bez storage.
+Usunięcie używanego Auth jest blokowane do zmiany selectów zależnych przypisań w profilach.
 Kontrakty dodajemy tylko w modalu importu z nazwą i wyborem operacji. Wiersz
 ma podgląd Swagger UI, eksport bieżącego YAML-a i usunięcie. Nie przywracaj ręcznej edycji
 YAML/ID/nazwy ani selekcji operacji istniejącego kontraktu. Swagger jest
@@ -43,7 +46,7 @@ blokuje przełączanie. Pełny ekran i kontrakt V1 pozostają bez zmian.
 Profile są przypisaniami do wspólnych katalogów API/skilli. Per tura wymagane
 profileId rozwiązuje bieżące zasoby i pomija brakujące; nie blokuje profilu
 bez narzędzi. Nie ma fallbacku do wszystkich zasobów. Wybór nie zmienia
-transkryptu, pierwotnego pageContext ani globalnego MCP. Braki są ostrzeżeniem
+transkryptu, pierwotnego pageContext ani innych profili MCP. Braki są ostrzeżeniem
 w konfiguracji. Select chatu jest feature-owned; pełny ekran pokazuje wszystkie
 profile, ramka filtruje po ingress origin + pathname wildcardem *, niezależnie
 od historycznego kontekstu rozmowy. Konfiguracja/import V1 wymaga profiles;

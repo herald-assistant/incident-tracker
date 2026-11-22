@@ -45,7 +45,7 @@ class SystemAssistantSkeletonTest {
                     .content("{\"apis\":null,\"skills\":[]}"))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
             mvc.perform(put("/api/system-assistant/configuration").contentType("application/json")
-                    .content("{\"apis\":[],\"skills\":[],\"profiles\":[]}"))
+                    .content("{\"apis\":[],\"skills\":[],\"profiles\":[],\"authProfiles\":[]}"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.apis").isEmpty());
         }
     }

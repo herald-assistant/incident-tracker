@@ -115,7 +115,7 @@ class SystemAssistantChatTest {
         var mapper = new ObjectMapper();
         var sdkTools = new CopilotSdkToolFactory(List.of(), mapper, List.of(), mock(CopilotToolInvocationHandler.class));
         var runner = new SystemAssistantCopilotRunner(() -> "synthetic-fixture", sdkTools,
-                new OpenApiToolSetFactory((op, args) -> null, mapper), null, null, new SystemAssistantPrompt(mapper), pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup.NO_OP);
+                new OpenApiToolSetFactory((op, args, authentication) -> null, mapper), null, null, new SystemAssistantPrompt(mapper), pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup.NO_OP);
         var history = List.of(pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState.completedUser("user", "Pytanie", java.time.Instant.now()).snapshot());
         var run = runner.assemble("one", new SystemAssistantConfigurationService.Snapshot(config("CURRENT"), List.of(), java.util.Map.of()),
                 null, history, message("Pytanie"), ignored -> {}, ignored -> {});

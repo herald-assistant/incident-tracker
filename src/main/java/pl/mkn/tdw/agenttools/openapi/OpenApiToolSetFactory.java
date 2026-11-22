@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import pl.mkn.tdw.integrations.openapi.OpenApiExecutionPort;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiArguments;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiException;
-import pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,9 +20,10 @@ public class OpenApiToolSetFactory {
     private final OpenApiExecutionPort executor;
     private final ObjectMapper mapper;
 
-    public List<ToolCallback> create(List<OpenApiOperation> operations) {
+    public List<ToolCallback> create(List<OpenApiExecution> executions) {
         var uncertainWrite = new AtomicBoolean(false);
-        return operations.stream().map(operation -> (ToolCallback) new ToolCallback() {
+        return executions.stream().map(execution -> (ToolCallback) new ToolCallback() {
+            private final pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation operation = execution.operation();
             @Override
             public ToolDefinition getToolDefinition() {
                 return new DefaultToolDefinition(operation.name(), operation.description(), operation.inputSchema().toString());
@@ -35,7 +36,7 @@ public class OpenApiToolSetFactory {
                 if (operation.mutation() && uncertainWrite.get())
                     return "{\"outcome\":\"WRITE_BLOCKED\",\"message\":\"Poprzedni zapis ma nieustalony wynik. W tej turze użyj odczytu.\"}";
                 try {
-                    var result = executor.execute(operation, new OpenApiArguments(mapper.readTree(input)));
+                    var result = executor.execute(operation, new OpenApiArguments(mapper.readTree(input)), execution.authentication());
                     if (operation.mutation() && result.outcome().equals("OUTCOME_UNKNOWN")) uncertainWrite.set(true);
                     return mapper.writeValueAsString(result);
                 } catch (java.io.IOException ex) {

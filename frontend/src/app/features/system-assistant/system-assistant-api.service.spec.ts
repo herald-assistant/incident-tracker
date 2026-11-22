@@ -31,8 +31,16 @@ describe('SystemAssistantApi', () => {
     expect(selected.request.body).toEqual({ message: 'Dalej', profileId: 'crm', model: 'model', reasoningEffort: 'high' }); selected.flush({});
   });
   it('replaces the current configuration without revision fields', () => {
-    api.save({profiles: [],  apis: [], skills: [] }).subscribe();
+    api.save({authProfiles: [], profiles: [],  apis: [], skills: [] }).subscribe();
     const request = http.expectOne('/api/system-assistant/configuration');
-    expect(request.request.method).toBe('PUT'); expect(request.request.body).toEqual({profiles: [],  apis: [], skills: [] }); request.flush({});
+    expect(request.request.method).toBe('PUT'); expect(request.request.body).toEqual({authProfiles: [], profiles: [],  apis: [], skills: [] }); request.flush({});
+  });
+  it('reads OIDC status and starts or disconnects a saved connection', () => {
+    api.authStatus().subscribe(); http.expectOne('/api/system-assistant/auth/status').flush({});
+    api.loginAuth('crm/one').subscribe();
+    const login = http.expectOne('/api/system-assistant/auth/crm%2Fone/login');
+    expect(login.request.method).toBe('POST'); expect(login.request.body).toEqual({}); login.flush({authorizationUrl: 'https://sso.example.com/authorize'});
+    api.disconnectAuth('crm').subscribe(); const disconnect = http.expectOne('/api/system-assistant/auth/crm/disconnect');
+    expect(disconnect.request.method).toBe('POST'); disconnect.flush(null);
   });
 });

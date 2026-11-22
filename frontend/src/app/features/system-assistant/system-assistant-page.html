@@ -19,7 +19,7 @@
           <span class="material-symbols-outlined" aria-hidden="true">download</span>
         </button>
       </div>
-      <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts' && workspaceView() !== 'profiles'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
+      <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts' && workspaceView() !== 'profiles' && workspaceView() !== 'auth'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
         @if (workspaceView() === 'skills') {
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
             @for (item of configuration().skills; track $index; let i = $index) {
@@ -31,6 +31,14 @@
               </section>
             } @empty { <p class="assistant-empty">Dodaj instrukcje określające sposób pracy asystenta.</p> }
           </fieldset>
+        } @else if (workspaceView() === 'auth') {
+          <fieldset data-form-tour="assistant-auth" aria-labelledby="system-assistant-view-tab-auth" [disabled]="configurationBusy()">
+            <app-assistant-auth-profiles [profiles]="configuration().authProfiles" [apis]="configuration().apis" [assistantProfiles]="configuration().profiles"
+              [disabled]="configurationBusy()" [dirty]="dirty()" [showErrors]="authValidationVisible()"
+              [busyId]="authBusyId()" [connections]="authConnections()" (profilesChange)="updateAuthProfiles($event)"
+              (login)="loginAuth($event)" (disconnect)="disconnectAuth($event)" />
+          </fieldset>
+          @if (authStatusError()) { <p role="alert">{{authStatusError()}} <button type="button" class="secondary-button" (click)="loadAuthStatus()">Odśwież stan logowania</button></p> }
         } @else if (workspaceView() === 'profiles') {
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-profiles" aria-labelledby="system-assistant-view-tab-profiles">
             @for (item of configuration().profiles; track item.id; let i = $index) {
@@ -50,7 +58,14 @@
                   </fieldset>
                   <fieldset><legend>API</legend>
                     @for (resource of profileResources(item, 'apis'); track resource.id) {
-                      <label><input type="checkbox" [checked]="item.apiIds.includes(resource.id)" (change)="toggleProfileResource(i, 'apiIds', resource.id, $any($event.target).checked)" />{{resource.name}}</label>
+                      <div class="assistant-profile-api">
+                        <label><input type="checkbox" [checked]="profileHasApi(item, resource.id)" (change)="toggleProfileApi(i, resource.id, $any($event.target).checked)" />{{resource.name}}</label>
+                        @if (profileHasApi(item, resource.id)) {
+                          <app-choice-select label="Uwierzytelnianie" [ariaLabel]="'Uwierzytelnianie API ' + resource.name + ' w profilu ' + item.name"
+                            [options]="apiAuthOptions(item, resource.id)" [value]="profileApiAuth(item, resource.id)" [disabled]="configurationBusy()"
+                            (valueChange)="updateProfileApiAuth(i, resource.id, $event)" />
+                        }
+                      </div>
                     } @empty { <p>Nie dodano API.</p> }
                   </fieldset>
                 </div>
@@ -90,6 +105,8 @@
         <div class="assistant-configuration-actions">
           @if (workspaceView() === 'skills') {
             <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().skills.length >= 20" (click)="addSkill()">Dodaj skill</button>
+          } @else if (workspaceView() === 'auth') {
+            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().authProfiles.length >= 20" (click)="addAuth()">Dodaj uwierzytelnianie</button>
           } @else if (workspaceView() === 'profiles') {
             <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().profiles.length >= 20" (click)="addProfile()">Dodaj profil</button>
           } @else if (workspaceView() === 'contracts') {

@@ -7,6 +7,14 @@ własny scope odczytu oraz guidance w opisach narzędzi; initial zawsze
 poprzedza rozmowę. Zasady commit/diff/verified reads opisuje
 [historia kodu GitLab](gitlab-code-history-tools.md).
 
+## Uwierzytelnianie wychodzących API
+
+`integrations.httpauth` udostępnia neutralne porty Basic/Bearer/OAuth2/OIDC.
+System Assistant posiada katalog i HTTP API logowania, a OpenAPI/SDK/MCP
+przekazują jawne wiązanie wykonania poza argumentami modelu. Dane formularzy
+są jawne w istniejącym JSON-ie; stan OIDC jest pamięciowy. Nie zmienia to
+logowania do TDW ani GitHub PAT. [Kontrakt](http-api-authentication.md).
+
 ## Cel projektu
 
 System Assistant (`system-assistant.enabled=false` domyślnie) używa

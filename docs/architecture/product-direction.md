@@ -135,8 +135,8 @@ Feature jest domyślnie wyłączony flagą
 katalogów skilli/API, a wybór w chacie określa zestaw następnej tury.
 Browser Tools filtruje profile wzorcem URL z wildcardem `*`; pełny ekran
 pokazuje wszystkie. Brak usuniętego zasobu daje ostrzeżenie w konfiguracji
-profilu i nie blokuje rozmowy. Nie ma wersjonowania konfiguracji, source auth
-ani załączników. Rozmowy są trwale zapisywane w historii;
+profilu i nie blokuje rozmowy. Nie ma wersjonowania konfiguracji ani załączników. Auth obejmuje Basic, Bearer,
+OAuth2 i OIDC, z formularzami inline i przypisaniem API–Auth w profilu, domyślnie No Auth. Rozmowy są trwale zapisywane w historii;
 kontynuacja odtwarza kontekst, ale używa bieżących instrukcji i narzędzi. Jest to rozszerzenie platformy
 o pracę operacyjną; pozostałe analizy zachowują swoje kontrakty.
 Szczegóły: [runtime System Assistant](system-assistant-runtime-flow.md).

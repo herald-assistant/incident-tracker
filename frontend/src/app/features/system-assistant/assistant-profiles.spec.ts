@@ -15,10 +15,10 @@ describe('Assistant profiles', () => {
   ])('matches literal whole URL %s', (pattern, url, expected) => expect(matchesProfileUrl(pattern, url)).toBe(expected));
 
   it('reports missing references without removing them or their remaining resources', () => {
-    const profile = {id: 'crm', name: 'CRM', urlPattern: '*', apiIds: ['present', 'missing'], skillIds: ['removed']};
-    const config = {profiles: [profile], apis: [{id: 'present', name: 'Present', yaml: ''}], skills: []};
+    const profile = {id: 'crm', name: 'CRM', urlPattern: '*', apiBindings: [{apiId: "present", authProfileId: null}, {apiId: "missing", authProfileId: null}], skillIds: ['removed']};
+    const config = {authProfiles: [], profiles: [profile], apis: [{id: 'present', name: 'Present', yaml: ''}], skills: []};
     expect(missingProfileResources(profile, config)).toContain('Brak API: missing. Brak skilli: removed.');
-    expect(profile.apiIds).toEqual(['present', 'missing']);
-    expect(missingProfileResources({...profile, apiIds: ['present'], skillIds: []}, config)).toBe('');
+    expect(profile.apiBindings.map(binding => binding.apiId)).toEqual(['present', 'missing']);
+    expect(missingProfileResources({...profile, apiBindings: [{apiId: "present", authProfileId: null}], skillIds: []}, config)).toBe('');
   });
 });

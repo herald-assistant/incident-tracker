@@ -335,3 +335,11 @@ Para AI ma jawny shared wariant `compact` (32 px, tekst 12 px), z zachowaniem
 opcji i blokad. Nie zmniejszaj pary przez nadpisania w feature. Panel osadzony nie renderuje toku działania AI ani kosztów. Pełny ekran
 /system-assistant prezentuje te dane w standardowym fixed aside, jak inne
 feature’y. Nie ma specjalnego wariantu inline ani jego styli.
+
+
+## Formularze Auth API
+
+Zakładka Auth w System Assistant utrzymuje kilka profili bezpośrednio na stronie,
+bez modali CRUD. Wspólne text-field i choice-select prezentują pola typu,
+nazwy i poświadczeń bez maskowania. Select przy przypisanym API w profilu ma domyślne No Auth.
+Wspólny zapis całego zestawu zachowuje szkic między zakładkami.

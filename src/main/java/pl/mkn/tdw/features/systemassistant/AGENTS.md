@@ -16,7 +16,10 @@ feature'ów. API i orkiestracja należą do feature'a; parser/REST do
   AnalysisReport. Nowa rozmowa nie usuwa poprzedniej z historii.
 - Przyjęcie zapisujemy przed AI; aktywna tura używa wspólnego operation guard
   z historią. Restart oznacza przerwaną turę błędem, nigdy nie ponawia API.
-- Auth API, załączniki i obowiązkowy approval są odrębnym zakresem.
+- Auth API ma katalog profili Basic/Bearer/OAuth2/OIDC w konfiguracji; profil zawiera apiBindings z apiId i authProfileId lub null (No Auth).
+  Neutralny runtime jest w integrations.httpauth; Auth nie trafia do promptu ani schema tooli.
+  Pola operatora są jawne w JSON/UI/eksporcie konfiguracji. Tokeny OIDC są pamięciowe.
+- Załączniki i obowiązkowy approval są odrębnym zakresem.
 - Nie zakładaj fikcyjnych danych ani lokalnego demo; timeout nie uprawnia do retry.
 
 Kontrakt: `docs/architecture/system-assistant-runtime-flow.md`.
@@ -30,7 +33,7 @@ przy istniejącym zapisie. Nie zachowuj pełnego źródła ani historii importó
 Profile są przypisaniami do wspólnych katalogów API/skilli. Per tura wymagane
 profileId rozwiązuje bieżące zasoby i pomija brakujące; nie blokuje profilu
 bez narzędzi. Nie ma fallbacku do wszystkich zasobów. Wybór nie zmienia
-transkryptu, pierwotnego pageContext ani globalnego MCP. Braki są ostrzeżeniem
+transkryptu, pierwotnego pageContext ani innych profili MCP. Braki są ostrzeżeniem
 w konfiguracji. Select chatu jest feature-owned; pełny ekran pokazuje wszystkie
 profile, ramka filtruje po ingress origin + pathname wildcardem *, niezależnie
 od historycznego kontekstu rozmowy. Konfiguracja/import V1 wymaga profiles;

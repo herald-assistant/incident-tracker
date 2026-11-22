@@ -1,0 +1,44 @@
+@for (item of profiles(); track item.id; let i = $index) {
+  <section class="auth-definition" [attr.aria-label]="item.name || 'Nowe uwierzytelnianie'">
+    <div class="auth-heading"><h3>{{item.name || 'Nowe uwierzytelnianie'}}</h3>
+      <button type="button" class="secondary-button" [disabled]="disabled() || !!usages(item.id)" (click)="remove(i)" [attr.aria-label]="'Usuń uwierzytelnianie ' + item.name">Usuń</button>
+    </div>
+    <div class="auth-fields">
+      <app-text-field label="Nazwa" [value]="item.name" [maxLength]="100" [required]="true" [disabled]="disabled()" [error]="error(item, 'name')" (valueChange)="update(i, 'name', $event)" />
+      <app-choice-select label="Typ uwierzytelniania" [options]="types" [value]="item.type" [disabled]="disabled()" (valueChange)="update(i, 'type', $event)" />
+      @if (item.type === 'BASIC') {
+        <app-text-field label="Login" [value]="item.username || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'username')" (valueChange)="update(i, 'username', $event)" />
+        <app-text-field label="Hasło" [value]="item.password || ''" autocomplete="off" [required]="true" [disabled]="disabled()" [error]="error(item, 'password')" (valueChange)="update(i, 'password', $event)" />
+      } @else if (item.type === 'BEARER') {
+        <app-text-field class="auth-wide" label="Token" hint="Sam token, bez prefiksu Bearer." [value]="item.token || ''" autocomplete="off" [required]="true" [disabled]="disabled()" [error]="error(item, 'token')" (valueChange)="update(i, 'token', $event)" />
+      } @else {
+        @if (item.type === 'OAUTH2') {
+          <app-text-field class="auth-wide" label="Token URL" type="url" hint="Adres serwera wydającego tokeny dla konta technicznego." [value]="item.tokenUrl || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'tokenUrl')" (valueChange)="update(i, 'tokenUrl', $event)" />
+        } @else {
+          <app-text-field class="auth-wide" label="Issuer URL" type="url" hint="Adres dostawcy tożsamości, np. realm w Keycloak." [value]="item.issuerUrl || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'issuerUrl')" (valueChange)="update(i, 'issuerUrl', $event)" />
+        }
+        <app-text-field label="Client ID" [value]="item.clientId || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'clientId')" (valueChange)="update(i, 'clientId', $event)" />
+        <app-text-field label="Client secret" [hint]="item.type === 'OIDC' ? 'Opcjonalny dla klienta publicznego.' : ''" [value]="item.clientSecret || ''" autocomplete="off" [required]="item.type === 'OAUTH2'" [disabled]="disabled()" [error]="error(item, 'clientSecret')" (valueChange)="update(i, 'clientSecret', $event)" />
+        <app-text-field label="Scopes" hint="Zakresy dostępu oddzielone spacjami." [value]="item.scopes || ''" [disabled]="disabled()" [error]="error(item, 'scopes')" (valueChange)="update(i, 'scopes', $event)" />
+        <app-choice-select label="Uwierzytelnianie klienta" [options]="item.type === 'OIDC' ? oidcMethods : methods" [value]="item.clientAuthentication || ''" [disabled]="disabled()" [error]="error(item, 'clientAuthentication')" (valueChange)="update(i, 'clientAuthentication', $event)" />
+        @if (item.type === 'OIDC') {
+          <app-text-field class="auth-wide" label="Adres powrotu TDW" type="url" hint="Wpisz ten sam adres jako dozwolony redirect URI w konfiguracji klienta u dostawcy." [value]="item.redirectUri || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'redirectUri')" (valueChange)="update(i, 'redirectUri', $event)" />
+        }
+      }
+    </div>
+    @if (usages(item.id); as usedBy) { <p class="auth-hint">Używane przez: {{usedBy}}. Przed usunięciem zmień uwierzytelnianie tych API w zakładce Profile.</p> }
+    @if (item.type === 'OIDC') {
+      <div class="auth-connection" aria-live="polite">
+        @if (connections()[item.id]; as connection) {
+          <span>{{connection.connected ? 'Połączono' : connection.message}}@if (connection.username) { · {{connection.username}} }</span>
+          @if (connection.connected && connection.expiresAt) { <span class="auth-hint">Token ważny do {{connection.expiresAt | date:'short'}}; odnowienie przed wywołaniem API.</span> }
+        } @else { <span>Nie połączono</span> }
+        <div class="auth-actions">
+          <button type="button" class="secondary-button" [disabled]="disabled() || dirty() || !!busyId()" (click)="login.emit(item.id)">{{busyId() === item.id ? 'Łączenie…' : 'Zaloguj'}}</button>
+          @if (connections()[item.id]?.connected) { <button type="button" class="secondary-button" [disabled]="disabled() || dirty() || !!busyId()" (click)="disconnect.emit(item.id)">Rozłącz</button> }
+        </div>
+        @if (dirty()) { <span class="auth-hint">Zapisz zmiany przed logowaniem.</span> }
+      </div>
+    }
+  </section>
+} @empty { <p class="auth-hint">Dodaj uwierzytelnianie, a następnie wybierz je przy API w zakładce Profile.</p> }

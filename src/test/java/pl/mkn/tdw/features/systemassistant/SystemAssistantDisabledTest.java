@@ -19,7 +19,7 @@ class SystemAssistantDisabledTest {
     @Test void exposesNoAssistantApiOrMcpWhenDisabled() throws Exception {
         assertThat(context.getBeansOfType(OpenApiMcpEndpoint.class)).isEmpty();
         mvc.perform(get("/api/system-assistant/configuration")).andExpect(status().isNotFound());
-        mvc.perform(post("/api/openapi-tools/mcp").contentType("application/json").content("{}"))
+        mvc.perform(post("/api/openapi-tools/test_profile/mcp").contentType("application/json").content("{}"))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/ui/config")).andExpect(jsonPath("$.systemAssistantEnabled").value(false));
         mvc.perform(get("/browser-tools/availability.js"))

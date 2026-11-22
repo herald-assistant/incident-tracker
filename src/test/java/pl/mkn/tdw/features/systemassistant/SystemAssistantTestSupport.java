@@ -9,9 +9,7 @@ import static org.mockito.Mockito.*;
 final class SystemAssistantTestSupport {
     static SystemAssistantConfiguration config(java.util.List<SystemAssistantConfiguration.ApiDefinition> apis,
             java.util.List<SystemAssistantConfiguration.Skill> skills) {
-        return new SystemAssistantConfiguration(apis, skills, java.util.List.of(new SystemAssistantConfiguration.Profile(
-                "test_profile", "Test CRM", "*", apis.stream().map(SystemAssistantConfiguration.ApiDefinition::id).toList(),
-                skills.stream().map(SystemAssistantConfiguration.Skill::id).toList())));
+        return new SystemAssistantConfiguration(apis, skills, java.util.List.of(new SystemAssistantConfiguration.Profile("test_profile", "Test CRM", "*", (apis.stream().map(SystemAssistantConfiguration.ApiDefinition::id).toList()).stream().map(apiId -> new SystemAssistantConfiguration.ApiBinding((String) apiId, null)).toList(), skills.stream().map(SystemAssistantConfiguration.Skill::id).toList())), java.util.List.of());
     }
     static pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationHistory history(java.nio.file.Path directory) {
         var properties = new pl.mkn.tdw.localworkspace.LocalWorkspaceProperties(); properties.setDirectory(directory.toString());

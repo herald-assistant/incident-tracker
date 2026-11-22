@@ -8,8 +8,10 @@ narzędziami, instrukcjami użytkownika inline (`skillsEnabled=false`) i jawną
 historią rozmowy. Nie zmienia to report-first ani continuation innych analiz.
 Skille robocze i YAML-e mają jeden aktualny stan, bez archiwum i rewizji.
 Docelowy host HTTP(S) pochodzi z kontraktu operatora, bez ograniczenia do
-loopback i fikcyjnych systemów. Source auth i workflow zatwierdzania są
-odrębnym zakresem. Nie ma automatycznych redirectów ani retry mutacji.
+loopback i fikcyjnych systemów. Source auth używa neutralnej capability integrations.httpauth: Basic, Bearer,
+OAuth2 i OIDC. Profile Auth są w tym samym jawnym JSON-ie konfiguracji i
+mają przypisania per API w profilu asystenta; No Auth jest domyślne. Workflow zatwierdzania
+pozostaje odrębnym zakresem. Nie ma automatycznych redirectów ani retry mutacji.
 Schema argumentów SDK/MCP jest projekcją requestu: pomija readOnly, mapuje
 nullable na null i zachowuje format jako adnotację. Wykonanie waliduje
 oryginalny schema OpenAPI. YAML zachowuje adnotacje także w podglądzie

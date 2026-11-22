@@ -10,6 +10,14 @@ Nie jest raportem liczby importow ani historia migracji pakietow. Aktualny kod
 ma zblizac sie do ponizszego modelu, a jawny drift trafia do `../plans/`, nie
 do definicji architektury.
 
+## Uwierzytelnianie wychodzących API
+
+`integrations.httpauth` udostępnia neutralne porty Basic/Bearer/OAuth2/OIDC.
+System Assistant posiada katalog i HTTP API logowania, a OpenAPI/SDK/MCP
+przekazują jawne wiązanie wykonania poza argumentami modelu. Dane formularzy
+są jawne w istniejącym JSON-ie; stan OIDC jest pamięciowy. Nie zmienia to
+logowania do TDW ani GitHub PAT. [Kontrakt](http-api-authentication.md).
+
 ## Model rozszerzalnosci
 
 System Assistant zachowuje ten sam kierunek: `features.systemassistant`

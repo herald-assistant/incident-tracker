@@ -7,6 +7,8 @@ body { margin: 0; background: #fff; color: #172b4d; }
 .swagger-ui .scheme-container { box-shadow: none; background: #f6f3ee; padding: 12px 0; }
 .swagger-ui .info .title small { font-size: 11px; }
 .swagger-ui .info .title small pre { font-family: inherit; }
+/* Authentication is configured in TDW Auth; the contract viewer remains read-only. */
+.swagger-ui .auth-wrapper, .swagger-ui .authorization__btn { display: none; }
 @media (max-width: 600px) { .swagger-ui .opblock .opblock-summary-path { font-size: 13px; } .swagger-ui .wrapper { padding: 0 6px; } }
 .tdw-operation-row{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;align-items:start}
 .swagger-ui .tdw-operation-checkbox{width:18px;height:18px;margin:var(--tdw-summary-center,20px) 0 0;transform:translateY(-50%);accent-color:#173f70;cursor:pointer}

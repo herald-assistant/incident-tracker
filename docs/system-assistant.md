@@ -14,8 +14,8 @@ Cały zestaw można też przygotować poza TDW na podstawie repozytorium lub dok
 Przekaż modelowi [samodzielną instrukcję tworzenia konfiguracji](system-assistant-configuration-authoring.md),
 a następnie zaimportuj wygenerowany plik JSON.
 
-Otwórz `/system-assistant`. Ekran zaczyna od `Skilli` i ma pięć zakładek:
-`Skille`, `Kontrakty`, `Profile`, `Rozmowa` oraz `Uruchamianie w systemie`.
+Otwórz `/system-assistant`. Ekran zaczyna od `Skilli` i ma sześć zakładek:
+`Skille`, `Kontrakty`, `Auth`, `Profile`, `Rozmowa` oraz `Uruchamianie w systemie`.
 W zakładce `Skille` dodaj instrukcje pracy
 asystenta. W zakładce `Kontrakty` wybierz `Dodaj OpenAPI` i wskaż plik YAML
 swojego API. W modalu wybierz operacje, nadaj nazwę kontraktu i użyj
@@ -39,10 +39,11 @@ Licznik na belce pokazuje aktywne operacje zapisanego kontraktu, a tooltip
 ich metody i ścieżki. Nowo dodany kontrakt ma zero aktywnych operacji do zapisu.
 
 Ikony obok zakładek oferują `Importuj konfigurację` i `Eksportuj konfigurację`.
-Eksport obejmuje cały bieżący szkic kontraktów i skilli, również niezapisany.
+Eksport obejmuje cały bieżący szkic kontraktów, skilli, profili i Auth,
+również niezapisany.
 Import zastępuje szkic; wymaga `Zapisz`, aby aktywować zestaw. Niepoprawny
-plik nie zmienia szkicu. Rozmowy, preferencje AI i autentykacja pozostają
-poza tym eksportem.
+plik nie zmienia szkicu. Rozmowy, preferencje AI, logowanie do Copilota
+i pamięciowe połączenia OIDC pozostają poza tym eksportem.
 
 ## Profile
 
@@ -63,7 +64,39 @@ Usunięte API lub skill nie blokuje profilu. W edytorze zobaczysz ikonę
 ostrzeżenia z tooltipem zawierającym brakujące ID. Możesz usunąć takie
 przypisanie; pozostałe zasoby nadal działają. Profil bez dostępnych zasobów
 pozwala rozmawiać bez narzędzi. Import/eksport konfiguracji obejmuje również
-profile; bieżący format V1 wymaga listy profiles i nie importuje starego kształtu.
+profile; bieżący format V1 wymaga list profiles i authProfiles oraz apiBindings z apiId/authProfileId w każdym profilu i nie importuje starego kształtu.
+
+## Uwierzytelnianie API
+
+W zakładce Auth wybierz Dodaj uwierzytelnianie, nazwij konfigurację i wybierz
+Basic, Bearer, OAuth2 albo OIDC. Formularze są na stronie. Dane dostępowe
+środowisk testowych są widoczne, bez maskowania, i zapisywane w tym samym
+JSON-ie co kontrakty, skille i profile. Import/eksport całego zestawu obejmuje
+również te pola.
+
+Basic wymaga loginu i hasła; Bearer samego tokenu, bez prefiksu Bearer.
+OAuth2 oznacza konto techniczne Client Credentials: podaj token URL,
+client ID, client secret, opcjonalne scopes i sposób przekazania sekretu.
+Backend sam uzyskuje i ponownie pobiera token po wygaśnięciu.
+
+OIDC oznacza logowanie użytkownika. Podaj issuer URL, client ID, scopes
+zawierające openid i adres powrotu TDW widoczny w formularzu. Dla klienta
+publicznego pozostaw sekret pusty i metodę none; klient poufny wymaga sekretu.
+Zarejestruj identyczny redirect URI u dostawcy, zapisz konfigurację i kliknij
+Zaloguj. Hasło wpisujesz na stronie dostawcy, np. Keycloak. Po powrocie
+zakładka Auth pokazuje stan połączenia. Rozłącz usuwa lokalne połączenie,
+nie wylogowuje globalnie z SSO. Po restarcie TDW zaloguj się ponownie.
+
+W Profilach zaznacz API i wybierz dla niego konfigurację w selekcie
+Uwierzytelnianie. Nowe przypisanie zawsze ma No Auth. Ten sam kontrakt
+może mieć różne Auth w różnych profilach. Zapisz cały zestaw. Usunięcie
+używanego Auth wymaga wcześniejszej zmiany zależnych par w profilach.
+Zewnętrzny klient MCP wybiera zestaw API i tożsamości przez adres
+`/api/openapi-tools/{profileId}/mcp`. Adres wynika z ID profilu i nie jest
+prezentowany w formularzu. Nieskopowany adres nie jest obsługiwany.
+Niezapisany szkic nie zmienia wykonywanych requestów i blokuje rozpoczęcie
+logowania OIDC. Błąd auth nie ponawia automatycznie operacji biznesowej.
+Szczegóły: [runtime Auth](architecture/http-api-authentication.md).
 
 ## Rozmowa i Browser Tools
 
@@ -107,8 +140,8 @@ oznaczana błędem i nie jest automatycznie ponawiana. Przy nieustalonym
 wyniku operacji sprawdź stan systemu przed ponownym zleceniem zapisu.
 Błąd odświeżania chatu pozwala ponowić odczyt, bez ponawiania polecenia.
 
-Feature nie obsługuje uwierzytelniania do podłączonych API, przejmowania
-logowania ze strony, załączników. Skille są
+Feature obsługuje Basic, Bearer, OAuth2 Client Credentials i OIDC. Nie przejmuje
+logowania ze strony i nie obsługuje załączników. Skille są
 instrukcjami pracy, nie mechanizmem nadawania uprawnień. Importer obsługuje
 wybrane konstrukcje OpenAPI, w tym readOnly, format i nullable;
 pełna macierz i limity są w [runtime flow](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).
