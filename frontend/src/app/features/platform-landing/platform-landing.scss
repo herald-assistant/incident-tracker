@@ -829,7 +829,6 @@
     scale(var(--source-scale));
 }
 
-.platform-landing__orbit-tool,
 .platform-landing__story-feature-face,
 .platform-landing__orbit-result {
   border-radius: var(--tile-radius, 23%);
@@ -914,6 +913,88 @@
   width: 74%;
 }
 
+.platform-landing__orbit-tool {
+  border-radius: var(--tile-radius, 20%);
+}
+
+.platform-landing__tool-surface {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border-radius: inherit;
+  // Tilt the material separately so the orbit and collection keep their geometry.
+  transform: perspective(460px)
+    rotateX(calc(-10deg * (1 - var(--tool-result-position))))
+    rotateY(calc(14deg * cos(var(--angle)) * (1 - var(--tool-result-position))))
+    rotateZ(calc(-2deg * sin(var(--angle)) * (1 - var(--tool-result-position))));
+}
+
+.platform-landing__tool-surface {
+  --enamel-blue: var(--tdw-symbol, 1);
+  --enamel-light: color-mix(in srgb, #f5faff calc(100% * (1 - var(--enamel-blue))), #76c3ff);
+  --enamel-face: color-mix(in srgb, #e5eef9 calc(100% * (1 - var(--enamel-blue))), #126ee7);
+  --enamel-base: color-mix(in srgb, #bed2e9 calc(100% * (1 - var(--enamel-blue))), #0730a7);
+  --enamel-edge: color-mix(in srgb, #446b98 calc(100% * (1 - var(--enamel-blue))), #020e4b);
+  --enamel-depth: calc(2px + 2px * var(--enamel-blue));
+  isolation: isolate;
+  background: transparent;
+  box-shadow: none;
+}
+
+.platform-landing__tool-surface::before {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, #73c5ff, var(--enamel-edge) 34%, #010a30 78%, #285ba5);
+  box-shadow:
+    inset 1px 0 1px rgb(197 235 255 / 45%),
+    0 4px 7px rgb(0 5 28 / 16%),
+    0 calc(var(--tile-shadow-offset, 9px) + 5px)
+      calc(var(--tile-shadow-blur, 17px) + 8px) rgb(0 5 28 / 24%);
+  transform: translate(1px, var(--enamel-depth));
+  pointer-events: none;
+  content: '';
+}
+
+.platform-landing__tool-surface::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid rgb(210 239 255 / 42%);
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at calc(28% + 18% * cos(var(--angle, 0deg))) 0%,
+      rgb(255 255 255 / 40%), transparent 58%),
+    linear-gradient(155deg, var(--enamel-light), var(--enamel-face) 52%, var(--enamel-base));
+  box-shadow:
+    inset 1px 1px 1px rgb(255 255 255 / 58%),
+    inset -1px -1px 2px rgb(0 18 72 / 23%);
+  pointer-events: none;
+  content: '';
+}
+
+.platform-landing__tool-surface .platform-landing__orbit-tool-icon {
+  width: 62%;
+  filter: drop-shadow(0 1px 1px rgb(0 16 55 / 15%));
+}
+
+.platform-landing__tool-surface .platform-landing__orbit-tdw-icon {
+  filter: brightness(0) invert(1) drop-shadow(0 2px 2px rgb(0 16 65 / 18%));
+}
+
+.platform-landing__story-card[data-scene='tools'] .platform-landing__orbit {
+  --orbit-radius-block: 27cqi;
+  --orbit-tile-span: 142cqi;
+  // Orbit uses elapsed time, so the logos keep moving while their transformation is delayed.
+  --tool-orbit-progress: clamp(0,
+    (var(--tool-elapsed-progress) - 0.26 * var(--story-tool-motion-share)) /
+    ((var(--tool-collection-start) - 0.26) * var(--story-tool-motion-share) +
+      var(--scene-recognition-hold) + var(--scene-transformation-extra)), 1);
+}
+
 .platform-landing__story-card {
   --story-tool-motion-share: 0.82;
   --tool-scene-progress: 1;
@@ -945,12 +1026,25 @@
 
 .platform-landing__story-card[data-scene='tools'] {
   --scene-preview: 0.43;
-  --story-surface: #153c2c;
-  --story-light: #6eb587;
-  --story-accent: #bee7ca;
-  --tool-scene-progress: var(--scene-progress);
+  --story-surface: #062b7e;
+  --story-light: #3d91ff;
+  --story-accent: #b7dfff;
+  --tool-elapsed-progress: calc(var(--scene-progress) * var(--scene-motion-scale));
+  // Delay the transformation after arrival; orbital movement follows its own continuous clock.
+  --tool-recognition-progress: min(var(--tool-elapsed-progress),
+    max(0.23, var(--tool-elapsed-progress) - var(--scene-recognition-hold)));
+  // Stretch only the interval from the first logo morph to the last completed morph.
+  --tool-transformation-progress: clamp(0,
+    (var(--tool-recognition-progress) - 0.36 * var(--story-tool-motion-share)) /
+    ((0.64 - 0.36) * var(--story-tool-motion-share) + var(--scene-transformation-extra)), 1);
+  --tool-scene-progress: calc(var(--tool-recognition-progress) -
+    var(--tool-transformation-progress) * var(--scene-transformation-extra));
   --slogan-progress: clamp(0, (var(--tool-progress) - 0.32) / 0.24, 1);
   --slogan-finale: var(--tool-finale);
+  background:
+    radial-gradient(ellipse at 72% 12%, rgb(23 116 255 / 74%), transparent 64%),
+    radial-gradient(ellipse at 18% 100%, rgb(0 6 39 / 90%), transparent 70%),
+    linear-gradient(120deg, #03163c, var(--story-surface) 55%, #0646b1);
 }
 
 .platform-landing__story-card[data-scene='features'] {
@@ -1061,7 +1155,7 @@
   --tool-result-position: calc(var(--tool-result-progress) * var(--tool-result-progress) *
     (3 - 2 * var(--tool-result-progress)));
   --tools-complete: clamp(0, (var(--tool-progress) - var(--tool-result-ready)) / 0.02, 1);
-  --tool-logo-visible: max(var(--tools-complete), clamp(0, (0.12 - var(--tool-progress)) / 0.08, 1));
+  --tool-logo-visible: var(--tools-complete);
   --guidance-reveal: calc(clamp(0, (var(--guidance-progress) - 0.06) / 0.12, 1) *
     clamp(0, 1 - var(--guidance-return) / 0.6, 1));
   --guidance-click: 0.31;
@@ -1082,6 +1176,8 @@
 
 .platform-landing__orbit-tool {
   --turn: calc(var(--tool-turns) * 1turn);
+  --base-source-scale: calc(0.84 + 0.16 * var(--appearance, 1) +
+    0.18 * var(--size-depth, var(--orbit-depth)) * var(--entry-radius, 1));
   // All three stages follow the same clockwise sequence, ending with the result tile.
   --clockwise-order: mod(calc(var(--source-index) - var(--tool-result-index) - 1), var(--source-count));
   --appearance: clamp(0, (var(--tool-progress) - 0.04 -
@@ -1099,11 +1195,11 @@
 .platform-landing__orbit-tool--result {
   --radius: calc(var(--entry-radius) * (1 - var(--tool-result-position)));
   --source-scale: calc(var(--base-source-scale) + (1 - var(--base-source-scale)) * var(--tool-result-position));
-  --tile-radius: calc(23% + 2% * var(--tool-result-position));
+  --tile-radius: calc(20% + 5% * var(--tool-result-position));
   width: calc(var(--source-width) * (1 - var(--tool-result-position)) +
     100cqi * (1 - 2 * var(--orbit-result-inset)) * var(--tool-result-position));
-  // Keep the last tile visible until the shared center tile covers it.
-  opacity: calc(var(--appearance) * (1 - clamp(0, (var(--tool-progress) - 0.99) / 0.01, 1)));
+  // The arriving tile remains the final tile, retaining its light and shadow.
+  opacity: var(--appearance);
 }
 
 .platform-landing__orbit-tool--result img {

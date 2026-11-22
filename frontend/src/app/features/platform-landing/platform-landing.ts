@@ -119,6 +119,8 @@ const STORY_SCENES = [
   { id: 'closing', duration: 3600, lines: ['Czas na Twój ruch.', 'Wybierz pierwsze zadanie.'] }
 ] as const;
 const STORY_CAPTION_HOLD_MS = 1400;
+const STORY_TOOLS_RECOGNITION_HOLD_MS = 1200;
+const STORY_TOOLS_TRANSFORMATION_EXTRA_MS = 1200;
 
 const INTRO_QUESTION = 'W czym możesz mi pomóc?';
 const INTRO_REPLY_LINES = [
@@ -164,13 +166,21 @@ export class PlatformLandingPageComponent {
   protected readonly storyFeatures = FEATURES.slice(0, 6);
   readonly toolIcons = TOOL_ICONS;
   protected readonly toolOrbitResultIndex = 2;
-  protected readonly storyScenes = STORY_SCENES.map(({ lines, duration, ...scene }) => ({
-    ...scene,
-    duration: duration + STORY_CAPTION_HOLD_MS,
-    motionShare: duration / (duration + STORY_CAPTION_HOLD_MS),
-    label: lines.join(' '),
-    lines: lines.map(line => Array.from(line))
-  }));
+  protected readonly storyScenes = STORY_SCENES.map(({ lines, duration, ...scene }) => {
+    const recognitionHold = scene.id === 'tools' ? STORY_TOOLS_RECOGNITION_HOLD_MS : 0;
+    const transformationExtra = scene.id === 'tools' ? STORY_TOOLS_TRANSFORMATION_EXTRA_MS : 0;
+    const motionDuration = duration + recognitionHold + transformationExtra;
+    return {
+      ...scene,
+      duration: motionDuration + STORY_CAPTION_HOLD_MS,
+      motionShare: motionDuration / (motionDuration + STORY_CAPTION_HOLD_MS),
+      motionScale: motionDuration / duration,
+      recognitionHoldShare: recognitionHold / duration,
+      transformationExtraShare: transformationExtra / duration,
+      label: lines.join(' '),
+      lines: lines.map(line => Array.from(line))
+    };
+  });
   protected readonly storyIndex = signal(0);
   protected readonly storyPlaying = signal(false);
   protected readonly storyFinished = signal(false);

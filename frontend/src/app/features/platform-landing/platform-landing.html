@@ -104,6 +104,9 @@
             [attr.data-past]="$index < storyIndex() ? '' : null"
             [attr.aria-hidden]="$index === storyIndex() ? null : 'true'"
             [style.--scene-motion-share]="scene.motionShare"
+            [style.--scene-motion-scale]="scene.motionScale"
+            [style.--scene-recognition-hold]="scene.recognitionHoldShare"
+            [style.--scene-transformation-extra]="scene.transformationExtraShare"
           >
             <div class="platform-landing__benefits-art">
               <div
@@ -120,12 +123,14 @@
                       [style.--source-index]="$index"
                       [style.--source-count]="toolIcons.length"
                     >
-                      <img
-                        class="platform-landing__orbit-tool-icon"
-                        [src]="'assets/brand/tool-icons/' + icon"
-                        alt=""
-                      />
-                      <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+                      <div class="platform-landing__tool-surface">
+                        <img
+                          class="platform-landing__orbit-tool-icon"
+                          [src]="'assets/brand/tool-icons/' + icon"
+                          alt=""
+                        />
+                        <img class="platform-landing__orbit-tdw-icon" src="assets/brand/main-logo.png" alt="" />
+                      </div>
                     </div>
                   }
                 }
@@ -146,37 +151,39 @@
                     }
                   </div>
                 }
-                <div class="platform-landing__orbit-result">
-                  <img src="assets/brand/main-logo.png" alt="" />
-                  @if (scene.id === 'guidance') {
-                    <div class="platform-landing__guidance-card">
-                      <div class="platform-landing__guidance-document">
-                        <div class="platform-landing__guidance-steps">
-                          <span class="platform-landing__guidance-step" style="--step-duration: 0.62">
-                            <span class="material-symbols-outlined">search</span>
-                          </span>
-                          <span class="platform-landing__guidance-step" style="--step-duration: 0.79">
-                            <span class="material-symbols-outlined">construction</span>
-                          </span>
-                          <span class="platform-landing__guidance-step" style="--step-duration: 1">
-                            <span class="material-symbols-outlined">auto_awesome</span>
+                @if (scene.id !== 'tools') {
+                  <div class="platform-landing__orbit-result">
+                    <img src="assets/brand/main-logo.png" alt="" />
+                    @if (scene.id === 'guidance') {
+                      <div class="platform-landing__guidance-card">
+                        <div class="platform-landing__guidance-document">
+                          <div class="platform-landing__guidance-steps">
+                            <span class="platform-landing__guidance-step" style="--step-duration: 0.62">
+                              <span class="material-symbols-outlined">search</span>
+                            </span>
+                            <span class="platform-landing__guidance-step" style="--step-duration: 0.79">
+                              <span class="material-symbols-outlined">construction</span>
+                            </span>
+                            <span class="platform-landing__guidance-step" style="--step-duration: 1">
+                              <span class="material-symbols-outlined">auto_awesome</span>
+                            </span>
+                          </div>
+                          <div class="platform-landing__guidance-document-result">
+                            <span class="material-symbols-outlined">markdown_document</span>
+                          </div>
+                        </div>
+                        <div class="platform-landing__guidance-action">
+                          <span class="platform-landing__guidance-start material-symbols-outlined">play_arrow</span>
+                          <span class="platform-landing__guidance-pending material-symbols-outlined">more_horiz</span>
+                          <span class="platform-landing__guidance-done material-symbols-outlined">check</span>
+                          <span class="platform-landing__guidance-pointer material-symbols-outlined">
+                            arrow_selector_tool
                           </span>
                         </div>
-                        <div class="platform-landing__guidance-document-result">
-                          <span class="material-symbols-outlined">markdown_document</span>
-                        </div>
                       </div>
-                      <div class="platform-landing__guidance-action">
-                        <span class="platform-landing__guidance-start material-symbols-outlined">play_arrow</span>
-                        <span class="platform-landing__guidance-pending material-symbols-outlined">more_horiz</span>
-                        <span class="platform-landing__guidance-done material-symbols-outlined">check</span>
-                        <span class="platform-landing__guidance-pointer material-symbols-outlined">
-                          arrow_selector_tool
-                        </span>
-                      </div>
-                    </div>
-                  }
-                </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
             <h4

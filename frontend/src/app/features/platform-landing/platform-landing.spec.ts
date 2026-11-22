@@ -180,6 +180,12 @@ describe('PlatformLandingPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const story = compiled.querySelector('.platform-landing__capabilities')!;
     const orbit = story.querySelector('.platform-landing__orbit')!;
+    const tools = story.querySelector('[data-scene="tools"]')!;
+    expect(tools.querySelectorAll('.platform-landing__orbit-tool')).toHaveLength(10);
+    expect(tools.querySelectorAll('.platform-landing__tool-surface')).toHaveLength(10);
+    expect(tools.querySelector('.platform-landing__orbit-result')).toBeNull();
+    expect(tools.querySelector('.platform-landing__orbit-tool--result .platform-landing__orbit-tdw-icon'))
+      .not.toBeNull();
     expect(story.querySelectorAll('.platform-landing__story-card')).toHaveLength(4);
     const storyTitle = story.querySelector('h3');
     expect(storyTitle?.textContent?.trim()).toBe('Jak działa Team Delivery Workspace');
@@ -282,7 +288,7 @@ describe('PlatformLandingPageComponent', () => {
       expect(progress()).toBe('');
       setVisibility(true);
       vi.advanceTimersByTime(1000);
-      expect(Number(progress())).toBeGreaterThan(0.15);
+      expect(Number(progress())).toBeGreaterThan(0.1);
       const initialProgress = progress();
 
       const wheel = new WheelEvent('wheel', { deltaY: 100, cancelable: true });
@@ -304,6 +310,12 @@ describe('PlatformLandingPageComponent', () => {
 
       setVisibility(true);
       vi.advanceTimersByTime(4300);
+      fixture.detectChanges();
+      expect(current()).toBe('workspace-scene-tools');
+      expect(buttons[0].getAttribute('aria-current')).toBe('true');
+
+      // Reading the moving logos and their slower transformation add 1.2 s each.
+      vi.advanceTimersByTime(2400);
       fixture.detectChanges();
       expect(current()).toBe('workspace-scene-features');
       expect(buttons[1].getAttribute('aria-current')).toBe('true');
