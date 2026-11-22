@@ -5,10 +5,10 @@
 }
 
 .platform-landing {
+  --landing-page-gap: clamp(28px, 4vw, 52px);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  row-gap: clamp(28px, 4vw, 52px);
-  padding-block-end: clamp(28px, 5svh, 56px);
+  row-gap: var(--landing-page-gap);
   container-type: inline-size;
   container-name: platform-landing;
 }
@@ -25,9 +25,9 @@
 }
 
 .platform-landing__intro {
-  --landing-hero-background-start: #e8eff8;
-  --landing-hero-background-middle: #9db4d2;
-  --landing-hero-background: #6a86ae;
+  --landing-hero-background-start: #dbe6f2;
+  --landing-hero-background-middle: #9bb2cf;
+  --landing-hero-background: #4f729e;
   --landing-hero-heading: #22252a;
   --landing-hero-text: #6b7077;
   --landing-hero-accent: #52759e;
@@ -37,12 +37,14 @@
   grid-template-columns: minmax(0, 1fr);
   min-block-size: calc(100svh - var(--landing-intro-offset, 64px));
   overflow: clip;
-  background: linear-gradient(
-    120deg,
-    var(--landing-hero-background-start),
-    var(--landing-hero-background-middle) 64%,
-    var(--landing-hero-background)
-  );
+  background:
+    radial-gradient(ellipse at 78% 38%, rgb(235 246 255 / 24%), transparent 52%),
+    linear-gradient(
+      120deg,
+      var(--landing-hero-background-start),
+      var(--landing-hero-background-middle) 60%,
+      var(--landing-hero-background)
+    );
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', var(--font-sans);
   font-optical-sizing: auto;
 }
@@ -199,13 +201,13 @@
 
 .platform-landing__intro-user .chat-message__content {
   padding: 12px 18px;
-  border: 1px solid rgb(255 255 255 / 38%);
+  border: 1px solid rgb(255 255 255 / 48%);
   border-radius: 18px 18px 5px 18px;
-  background: rgb(230 240 255 / 28%);
+  background: rgb(230 240 255 / 34%);
   -webkit-backdrop-filter: blur(20px) saturate(120%);
   backdrop-filter: blur(20px) saturate(120%);
   color: var(--color-text);
-  box-shadow: 0 4px 16px rgb(18 43 78 / 5%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 24%), 0 6px 20px rgb(18 43 78 / 8%);
 }
 
 .platform-landing__intro-user .platform-landing__letter {
@@ -247,13 +249,13 @@
   max-width: 100%;
   min-width: 66px;
   padding: 14px 18px;
-  border: 1px solid rgb(255 255 255 / 42%);
+  border: 1px solid rgb(255 255 255 / 55%);
   border-radius: 5px 18px 18px;
-  background: rgb(255 255 255 / 32%);
+  background: linear-gradient(145deg, rgb(255 255 255 / 42%), rgb(235 245 255 / 32%));
   -webkit-backdrop-filter: blur(20px) saturate(120%);
   backdrop-filter: blur(20px) saturate(120%);
   color: var(--landing-hero-heading);
-  box-shadow: 0 10px 32px rgb(18 43 78 / 8%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 30%), 0 16px 40px rgb(18 43 78 / 12%);
 }
 
 .platform-landing__intro-typing,
@@ -428,6 +430,19 @@
 
   .platform-landing__intro-typing {
     display: none;
+  }
+}
+
+.platform-landing__features-surface {
+  --features-heading-spacing: 88px;
+  padding-block-start: max(0px, calc(var(--features-heading-spacing) - var(--landing-page-gap)));
+  padding-block-end: clamp(40px, 6svh, 72px);
+  background: #e9eef5;
+}
+
+@container platform-landing (max-width: 700px) {
+  .platform-landing__features-surface {
+    --features-heading-spacing: 48px;
   }
 }
 
@@ -636,7 +651,9 @@
 
 .platform-landing__story-track::before,
 .platform-landing__story-track::after {
-  background-color: #e1d2c5;
+  background:
+    radial-gradient(ellipse at 70% 20%, rgb(88 127 179 / 20%), transparent 65%),
+    linear-gradient(130deg, #061326, var(--color-sidebar-bg));
   content: '';
 }
 

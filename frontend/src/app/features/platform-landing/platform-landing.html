@@ -232,78 +232,80 @@
       </button>
     </div>
   </section>
-  <div class="platform-landing__content">
-    <section
-      #featuresSection
-      id="platformLandingFeatures"
-      class="platform-landing__features"
-      aria-labelledby="platformLandingFeaturesTitle"
-      tabindex="-1"
-    >
-      <div class="platform-landing__features-header">
-        <h3 id="platformLandingFeaturesTitle" class="platform-landing__section-title">Wybierz, co chcesz załatwić</h3>
-        <div class="platform-landing__carousel-controls">
-          <button
-            type="button"
-            aria-label="Poprzednia karta"
-            aria-controls="platformLandingFeatureList"
-            [disabled]="!canScrollBack()"
-            (click)="scrollFeatureCarousel(-1)"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Następna karta"
-            aria-controls="platformLandingFeatureList"
-            [disabled]="!canScrollForward()"
-            (click)="scrollFeatureCarousel(1)"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
-          </button>
-        </div>
-      </div>
-
-      <ul
-        #featureList
-        id="platformLandingFeatureList"
-        class="platform-landing__feature-list"
-        role="list"
-        (scroll)="updateFeatureCarousel()"
+  <div class="platform-landing__features-surface">
+    <div class="platform-landing__content">
+      <section
+        #featuresSection
+        id="platformLandingFeatures"
+        class="platform-landing__features"
+        aria-labelledby="platformLandingFeaturesTitle"
+        tabindex="-1"
       >
-        @for (feature of features; track feature.route) {
-          @if (feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
-            <li #featureSlide>
-              <a
-                class="platform-landing__feature-card"
-                [routerLink]="feature.route"
-                [attr.aria-labelledby]="'overview-feature-title-' + $index"
-                [attr.aria-describedby]="'overview-feature-name-' + $index"
-              >
-                <div
-                  class="platform-landing__feature-visual"
-                  [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
-                  aria-hidden="true"
+        <div class="platform-landing__features-header">
+          <h3 id="platformLandingFeaturesTitle" class="platform-landing__section-title">Wybierz, co chcesz załatwić</h3>
+          <div class="platform-landing__carousel-controls">
+            <button
+              type="button"
+              aria-label="Poprzednia karta"
+              aria-controls="platformLandingFeatureList"
+              [disabled]="!canScrollBack()"
+              (click)="scrollFeatureCarousel(-1)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Następna karta"
+              aria-controls="platformLandingFeatureList"
+              [disabled]="!canScrollForward()"
+              (click)="scrollFeatureCarousel(1)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
+        <ul
+          #featureList
+          id="platformLandingFeatureList"
+          class="platform-landing__feature-list"
+          role="list"
+          (scroll)="updateFeatureCarousel()"
+        >
+          @for (feature of features; track feature.route) {
+            @if (feature.route !== '/release-summary' || uiConfig.config().releaseSummaryEnabled) {
+              <li #featureSlide>
+                <a
+                  class="platform-landing__feature-card"
+                  [routerLink]="feature.route"
+                  [attr.aria-labelledby]="'overview-feature-title-' + $index"
+                  [attr.aria-describedby]="'overview-feature-name-' + $index"
                 >
-                  @if (!feature.image) {
-                    <span class="platform-landing__feature-icon material-symbols-outlined">
-                      {{ feature.icon }}
-                    </span>
-                  }
-                </div>
-                <div class="platform-landing__feature-copy">
-                  <h4 class="platform-landing__feature-task" [id]="'overview-feature-title-' + $index">
-                    {{ feature.task }}
-                  </h4>
-                  <p class="platform-landing__feature-name" [id]="'overview-feature-name-' + $index">
-                    {{ feature.title }}
-                  </p>
-                </div>
-              </a>
-            </li>
+                  <div
+                    class="platform-landing__feature-visual"
+                    [style.background-image]="feature.image ? 'url(' + feature.image + ')' : null"
+                    aria-hidden="true"
+                  >
+                    @if (!feature.image) {
+                      <span class="platform-landing__feature-icon material-symbols-outlined">
+                        {{ feature.icon }}
+                      </span>
+                    }
+                  </div>
+                  <div class="platform-landing__feature-copy">
+                    <h4 class="platform-landing__feature-task" [id]="'overview-feature-title-' + $index">
+                      {{ feature.task }}
+                    </h4>
+                    <p class="platform-landing__feature-name" [id]="'overview-feature-name-' + $index">
+                      {{ feature.title }}
+                    </p>
+                  </div>
+                </a>
+              </li>
+            }
           }
-        }
-      </ul>
-    </section>
+        </ul>
+      </section>
+    </div>
   </div>
 </main>
