@@ -120,6 +120,17 @@ const STORY_SCENES = [
 ] as const;
 const STORY_CAPTION_HOLD_MS = 1400;
 
+const INTRO_QUESTION = 'W czym możesz mi pomóc?';
+const INTRO_REPLY_LINES = [
+  { text: 'Witaj! 👋', emphasis: '' },
+  { text: 'Odkryję zależności w Twoim systemie.', emphasis: 'Odkryję' },
+  { text: 'Opiszę działanie funkcji biznesowych i technicznych.', emphasis: 'Opiszę' },
+  { text: 'Wyjaśnię problemy w działaniu systemu.', emphasis: 'Wyjaśnię' },
+  { text: 'Zweryfikuję zmianę przed wdrożeniem.', emphasis: 'Zweryfikuję' },
+  { text: 'Pomogę udokumentować system.', emphasis: 'Pomogę udokumentować' },
+  { text: 'Od czego zaczynamy? 🚀', emphasis: '' }
+] as const;
+
 @Component({
   selector: 'app-platform-landing-page',
   imports: [RouterLink, SpecialThemeBannerComponent],
@@ -130,6 +141,26 @@ export class PlatformLandingPageComponent {
   readonly uiConfig = inject(AppUiConfigService);
   readonly activeTheme = inject(SpecialThemeService).activeTheme;
   readonly features = FEATURES;
+  protected readonly introQuestionText = INTRO_QUESTION;
+  protected readonly introQuestion = Array.from(INTRO_QUESTION);
+  protected readonly introDescription = INTRO_REPLY_LINES.map(line => line.text).join(' ');
+  protected readonly introReplyLines = (() => {
+    let letterIndex = 0;
+    return INTRO_REPLY_LINES.map(({ text, emphasis }) => {
+      const startIndex = letterIndex;
+      let wordStart = 0;
+      const words = text.split(' ').map(word => {
+        const emphasized = wordStart < emphasis.length;
+        wordStart += word.length + 1;
+        return {
+          emphasized,
+          letters: Array.from(word, value => ({ value, index: letterIndex++ }))
+        };
+      });
+      letterIndex += 8;
+      return { text, startIndex, words };
+    });
+  })();
   protected readonly storyFeatures = FEATURES.slice(0, 6);
   readonly toolIcons = TOOL_ICONS;
   protected readonly toolOrbitResultIndex = 2;
@@ -147,9 +178,11 @@ export class PlatformLandingPageComponent {
   protected readonly canScrollForward = signal(true);
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly intro = viewChild<ElementRef<HTMLElement>>('intro');
   private readonly featureList = viewChild.required<ElementRef<HTMLUListElement>>('featureList');
   private readonly featureSlides = viewChildren<ElementRef<HTMLLIElement>>('featureSlide');
   private readonly benefitsStory = viewChild.required<ElementRef<HTMLElement>>('benefitsStory');
+  private readonly featuresSection = viewChild.required<ElementRef<HTMLElement>>('featuresSection');
   private storyInView = false;
   private storyElapsed = 0;
   private storyFrame: number | undefined;
@@ -157,6 +190,14 @@ export class PlatformLandingPageComponent {
 
   constructor() {
     this.uiConfig.load();
+    afterRenderEffect({
+      mixedReadWrite: (onCleanup) => {
+        const intro = this.intro()?.nativeElement;
+        if (intro) {
+          onCleanup(this.connectIntroAnimation(intro));
+        }
+      }
+    });
     afterRenderEffect({
       read: (onCleanup) => {
         const firstSlide = this.featureSlides()[0]?.nativeElement;
@@ -174,6 +215,50 @@ export class PlatformLandingPageComponent {
       }
     });
     afterNextRender(() => this.connectStoryPlayback());
+  }
+
+  private connectIntroAnimation(intro: HTMLElement): () => void {
+    const events = new AbortController();
+    let inView = false;
+    const syncPlayback = () => {
+      intro.toggleAttribute('data-intro-playing', inView && document.visibilityState !== 'hidden');
+    };
+    const updateViewportOffset = () => {
+      const offset = Math.max(0, intro.getBoundingClientRect().top + window.scrollY);
+      intro.style.setProperty('--landing-intro-offset', `${offset}px`);
+    };
+    const visibility = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(([entry]) => {
+          inView = entry.isIntersecting;
+          syncPlayback();
+        })
+      : undefined;
+    const size = typeof ResizeObserver === 'function'
+      ? new ResizeObserver(updateViewportOffset)
+      : undefined;
+
+    inView = !visibility;
+    visibility?.observe(intro);
+    size?.observe(intro);
+    window.addEventListener('resize', updateViewportOffset, { signal: events.signal });
+    document.addEventListener('visibilitychange', syncPlayback, { signal: events.signal });
+    updateViewportOffset();
+    syncPlayback();
+
+    return () => {
+      events.abort();
+      visibility?.disconnect();
+      size?.disconnect();
+    };
+  }
+
+  protected scrollToOverviewSection(target: 'story' | 'features'): void {
+    const section = target === 'story'
+      ? this.benefitsStory().nativeElement
+      : this.featuresSection().nativeElement;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    section.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'instant' : 'smooth' });
+    section.focus({ preventScroll: true });
   }
 
   protected updateFeatureCarousel(): void {

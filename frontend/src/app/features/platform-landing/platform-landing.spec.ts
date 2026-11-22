@@ -21,6 +21,9 @@ describe('PlatformLandingPageComponent', () => {
     expect(compiled.querySelector('.platform-landing__actions')).toBeNull();
     expect(compiled.querySelectorAll('.platform-landing__intro a')).toHaveLength(0);
     expect(compiled.querySelector('.platform-landing__intro .section-eyebrow')).toBeNull();
+    expect(Array.from(compiled.querySelectorAll('#platformLandingTitle > span'),
+      span => span.textContent?.trim()
+    )).toEqual(['Twój osobisty', 'zespół ekspertów.']);
     const sections = compiled.querySelectorAll(
       '.platform-landing__intro, .platform-landing__capabilities, #platformLandingFeatures'
     );
@@ -55,6 +58,117 @@ describe('PlatformLandingPageComponent', () => {
     expect(compiled.textContent).not.toContain('Data Diagnostics');
   });
 
+  it('provides the complete conversation to screen readers without duplicating the animated transcript', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PlatformLandingPageComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PlatformLandingPageComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const chat = compiled.querySelector('[role="group"][aria-label="Przykładowa rozmowa"]')!;
+    const transcript = chat.querySelectorAll('.platform-landing__accessible-description p');
+    expect(transcript[0].textContent?.trim()).toBe('Ty: W czym możesz mi pomóc?');
+    expect(transcript[1].textContent?.trim()).toBe(
+      'Team Delivery Workspace: Witaj! 👋 Odkryję zależności w Twoim systemie. '
+      + 'Opiszę działanie funkcji biznesowych i technicznych. Wyjaśnię problemy w działaniu systemu. '
+      + 'Zweryfikuję zmianę przed wdrożeniem. Pomogę udokumentować system. Od czego zaczynamy? 🚀'
+    );
+    expect(chat.querySelector('.platform-landing__intro-thread')?.getAttribute('aria-hidden')).toBe('true');
+    expect(chat.querySelector('.platform-landing__intro-user .chat-message__text')?.textContent?.trim())
+      .toBe('W czym możesz mi pomóc?');
+    const visibleLines = Array.from(chat.querySelectorAll('.platform-landing__intro-reply-line'),
+      line => Array.from(line.querySelectorAll('.platform-landing__word'),
+        word => word.textContent?.trim()
+      ).join(' ')
+    );
+    expect(visibleLines.join(' ')).toBe(transcript[1].textContent?.trim().replace('Team Delivery Workspace: ', ''));
+  });
+
+  it('plays the conversation only while visible and releases its observers on destroy', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PlatformLandingPageComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+
+    const visibilityCallbacks = new Map<Element, (visible: boolean) => void>();
+    const disconnects: ReturnType<typeof vi.fn>[] = [];
+    vi.stubGlobal('IntersectionObserver', class {
+      readonly disconnect = vi.fn();
+      constructor(private readonly notify: IntersectionObserverCallback) {
+        disconnects.push(this.disconnect);
+      }
+      observe(target: Element): void {
+        visibilityCallbacks.set(target, visible => this.notify([{
+          target, isIntersecting: visible, intersectionRatio: visible ? 1 : 0
+        } as IntersectionObserverEntry], this as unknown as IntersectionObserver));
+      }
+      unobserve(): void {}
+    });
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const fixture = TestBed.createComponent(PlatformLandingPageComponent);
+
+    try {
+      fixture.detectChanges();
+      const intro = (fixture.nativeElement as HTMLElement).querySelector('.platform-landing__intro')!;
+      expect(intro.hasAttribute('data-intro-playing')).toBe(false);
+      visibilityCallbacks.get(intro)!(true);
+      expect(intro.hasAttribute('data-intro-playing')).toBe(true);
+
+      visibility.mockReturnValue('hidden');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(intro.hasAttribute('data-intro-playing')).toBe(false);
+      visibility.mockReturnValue('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(intro.hasAttribute('data-intro-playing')).toBe(true);
+      visibilityCallbacks.get(intro)!(false);
+      expect(intro.hasAttribute('data-intro-playing')).toBe(false);
+    } finally {
+      fixture.destroy();
+      visibility.mockRestore();
+      vi.unstubAllGlobals();
+    }
+    expect(disconnects.length).toBeGreaterThan(0);
+    for (const disconnect of disconnects) {
+      expect(disconnect).toHaveBeenCalledOnce();
+    }
+  });
+
+  it.each([false, true])('scrolls to each selected section and moves focus (reduced motion: %s)', async reducedMotion => {
+    await TestBed.configureTestingModule({
+      imports: [PlatformLandingPageComponent],
+      providers: [provideRouter([])]
+    }).compileComponents();
+    vi.stubGlobal('matchMedia', () => Object.assign(new EventTarget(), { matches: reducedMotion }));
+    const fixture = TestBed.createComponent(PlatformLandingPageComponent);
+
+    try {
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const buttons = compiled.querySelectorAll<HTMLButtonElement>('.platform-landing__intro-actions button');
+      expect(Array.from(buttons, button => button.textContent?.trim()))
+        .toEqual(['Jak działa platforma', 'Wybierz pierwsze zadanie']);
+
+      for (const [index, id] of ['platformLandingStory', 'platformLandingFeatures'].entries()) {
+        const section = compiled.querySelector<HTMLElement>(`#${id}`)!;
+        const scroll = vi.fn();
+        Object.defineProperty(section, 'scrollIntoView', { value: scroll, configurable: true });
+        const focus = vi.spyOn(section, 'focus');
+        expect(buttons[index].getAttribute('aria-controls')).toBe(id);
+        expect(section.getAttribute('tabindex')).toBe('-1');
+        buttons[index].click();
+        expect(scroll).toHaveBeenCalledExactlyOnceWith({
+          block: 'start', behavior: reducedMotion ? 'instant' : 'smooth'
+        });
+        expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true });
+      }
+    } finally {
+      fixture.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('renders one animation and caption per card', async () => {
     await TestBed.configureTestingModule({
       imports: [PlatformLandingPageComponent],
@@ -68,7 +182,7 @@ describe('PlatformLandingPageComponent', () => {
     const orbit = story.querySelector('.platform-landing__orbit')!;
     expect(story.querySelectorAll('.platform-landing__story-card')).toHaveLength(4);
     const storyTitle = story.querySelector('h3');
-    expect(storyTitle?.textContent?.trim()).toBe('Zobacz Workspace w akcji');
+    expect(storyTitle?.textContent?.trim()).toBe('Jak działa Team Delivery Workspace');
     expect(story.getAttribute('aria-labelledby')).toBe(storyTitle?.id);
     expect(Array.from(story.querySelectorAll('h4'), heading => heading.getAttribute('aria-label'))).toEqual([
       'Wszystkie Twoje aplikacje. Wreszcie grają razem.',
@@ -135,13 +249,15 @@ describe('PlatformLandingPageComponent', () => {
 
     let setVisibility!: (visible: boolean) => void;
     vi.stubGlobal('IntersectionObserver', class {
-      constructor(notify: IntersectionObserverCallback) {
-        setVisibility = visible => notify([{
-          isIntersecting: visible,
-          intersectionRatio: visible ? 1 : 0
-        } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+      constructor(private readonly notify: IntersectionObserverCallback) {}
+      observe(target: Element): void {
+        if (target.classList.contains('platform-landing__capabilities')) {
+          setVisibility = visible => this.notify([{
+            isIntersecting: visible,
+            intersectionRatio: visible ? 1 : 0
+          } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+        }
       }
-      observe(): void {}
       unobserve(): void {}
       disconnect(): void {}
     });
