@@ -10,6 +10,10 @@ niezależny od tej flagi. AI wymaga skonfigurowanego PAT Copilota w Workspace Se
 
 ## Konfiguracja
 
+Cały zestaw można też przygotować poza TDW na podstawie repozytorium lub dokumentów.
+Przekaż modelowi [samodzielną instrukcję tworzenia konfiguracji](system-assistant-configuration-authoring.md),
+a następnie zaimportuj wygenerowany plik JSON.
+
 Otwórz `/system-assistant`. Ekran zaczyna od `Skilli` i ma pięć zakładek:
 `Skille`, `Kontrakty`, `Profile`, `Rozmowa` oraz `Uruchamianie w systemie`.
 W zakładce `Skille` dodaj instrukcje pracy

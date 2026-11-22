@@ -74,6 +74,9 @@ i aktualnymi skillami oraz narzędziami.
 
 [Runtime](architecture/system-assistant-runtime-flow.md) określa kontrakty,
 zapis konfiguracji i rozmów, podzbiór OpenAPI oraz granice platformy.
+Samodzielna [instrukcja tworzenia konfiguracji przez AI](system-assistant-configuration-authoring.md)
+pozwala przygotować cały plik importu na podstawie repozytoriów lub dokumentów
+w zewnętrznym chacie, np. Codex lub VS Code.
 Feature jest domyślnie wyłączony. Obsługuje hosty HTTP(S) bez ograniczenia
 do loopback; source auth i załączniki pozostają poza bieżącym zakresem.
 
