@@ -14,8 +14,12 @@ mają przypisania per API w profilu asystenta; No Auth jest domyślne. Workflow 
 pozostaje odrębnym zakresem. Wykonawca API nie podąża za redirectami ani nie
 ponawia POST/PUT/PATCH/DELETE. Przed przyjęciem tury sprawdzamy/odnawiamy wymagane OIDC;
 409 AUTH_LOGIN_REQUIRED uruchamia w FE login i przekierowanie przeglądarki.
-Powrót do konkretnego chatu/profilu jest związany z jednorazowym state i browser
-binding. Szkic nie jest zachowywany, wiadomość nie jest automatycznie wysyłana.
+Powrót do konkretnego chatu/profilu i returnPath jest związany z jednorazowym
+state i browser binding. Dozwolone są wyłącznie /system-assistant i
+/system-assistant/chat. Cookie ma SameSite=None; Secure; brak cookie nadal
+odrzuca callback. Embedded odtwarza localRunId i tylko zweryfikowany ingress
+z krótkiego sessionStorage (5 min), niezależnie od historycznego pageContext.
+Szkic nie jest zachowywany, wiadomość nie jest automatycznie wysyłana.
 Schema argumentów SDK/MCP jest projekcją requestu: pomija readOnly, mapuje
 nullable na null i zachowuje format jako adnotację. Wykonanie waliduje
 schema OpenAPI po adaptacji do JSON Schema, z kompozycją i bez zdalnego resolvera.

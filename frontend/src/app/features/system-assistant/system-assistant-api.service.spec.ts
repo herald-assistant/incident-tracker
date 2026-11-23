@@ -39,10 +39,10 @@ describe('SystemAssistantApi', () => {
     api.authStatus().subscribe(); http.expectOne('/api/system-assistant/auth/status').flush({});
     api.loginAuth('crm/one').subscribe();
     const login = http.expectOne('/api/system-assistant/auth/crm%2Fone/login');
-    expect(login.request.method).toBe('POST'); expect(login.request.body).toEqual({}); login.flush({authorizationUrl: 'https://sso.example.com/authorize'});
-    api.loginAuth('crm', {conversationId: 'crm-chat', profileId: 'crm_profile'}).subscribe();
+    expect(login.request.method).toBe('POST'); expect(login.request.body).toEqual({returnPath: '/system-assistant'}); login.flush({authorizationUrl: 'https://sso.example.com/authorize'});
+    api.loginAuth('crm', {conversationId: 'crm-chat', profileId: 'crm_profile', returnPath: '/system-assistant/chat'}).subscribe();
     const chatLogin = http.expectOne('/api/system-assistant/auth/crm/login');
-    expect(chatLogin.request.body).toEqual({conversationId: 'crm-chat', profileId: 'crm_profile'});
+    expect(chatLogin.request.body).toEqual({conversationId: 'crm-chat', profileId: 'crm_profile', returnPath: '/system-assistant/chat'});
     chatLogin.flush({authorizationUrl: 'https://sso.example.com/authorize'});
     api.disconnectAuth('crm').subscribe(); const disconnect = http.expectOne('/api/system-assistant/auth/crm/disconnect');
     expect(disconnect.request.method).toBe('POST'); disconnect.flush(null);

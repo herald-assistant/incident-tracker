@@ -107,16 +107,20 @@ fallbacku. Adres MCP wynika z ID profilu i nie jest prezentowany w formularzu.
 Zakładka Auth utrzymuje Basic, Bearer, OAuth2 Client Credentials i OIDC.
 Każde przypisanie API w profilu ma select Auth domyślnie No Auth. Pola są jawne we wspólnym JSON-ie,
 a wykonawca wiąże je z operacją poza argumentami modelu. Logowanie OIDC
-odbywa się przez pełny ekran i powrót /api/system-assistant/auth/callback;
+odbywa się przez przekierowanie i powrót /api/system-assistant/auth/callback;
 stan tokenów jest pamięciowy. Status, login, callback i disconnect są
 feature-owned API pod /api/system-assistant/auth.
 Przed przyjęciem tury feature sprawdza/odnawia OIDC aktywnych operacji profilu.
 `AUTH_LOGIN_REQUIRED` nie zapisuje wiadomości ani nie uruchamia AI. FE
-rozpoczyna login z conversationId/profileId i przekierowuje do dostawcy;
-callback wiąże te ID z state i przeglądarką, po czym otwiera pełny widok tego
-chatu i wybiera profil. Bez zachowania szkicu i automatycznej wysyłki. Zwykłe
-przekierowanie próbujemy również w ramce, bez zmiany sandbox/CSP; provider
-może je blokować. Ręczne logowanie z Auth nadal wraca do tej zakładki.
+rozpoczyna login z conversationId/profileId i returnPath ze ścisłej listy
+/system-assistant albo /system-assistant/chat. Callback wiąże te dane z state
+i przeglądarką, po czym przywraca tę samą rozmowę, profil i pełny lub osadzony
+widok. Cookie tdw_oidc_browser ma HttpOnly, SameSite=None i zawsze Secure.
+Bez zachowania szkicu i automatycznej wysyłki. Embedded zachowuje tylko
+zweryfikowany ingress w sessionStorage na maks. 5 min, aby odtworzyć filtr
+profili niezależny od historycznego pageContext. Bez nowego handshake,
+zmiany sandbox/CSP i popupów. Blokada third-party cookies lub osadzania
+providera nadal może uniemożliwić login. Ręczny login z Auth wraca do Auth.
 Kontrakt, mechanikę i ograniczenia opisuje
 [uwierzytelnianie HTTP API](http-api-authentication.md).
 

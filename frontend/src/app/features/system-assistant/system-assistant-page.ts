@@ -41,6 +41,7 @@ import { ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NA
   styleUrl: './system-assistant-page.scss'
 })
 export class SystemAssistantPage implements OnInit, FormTourSource {
+  private readonly loginContextKey = 'tdw.system-assistant.login-context';
   private readonly browser = inject(SYSTEM_ASSISTANT_WINDOW);
   private readonly route = inject(ActivatedRoute, {optional: true});
   private readonly router = inject(Router, {optional: true});
@@ -150,9 +151,10 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   constructor() { this.destroyRef.onDestroy(() => { this.picker?.close(); this.viewer?.close(); }); }
 
   ngOnInit(): void {
-    this.ingress.start();
     const authReturn = this.route?.snapshot.queryParamMap?.get('auth');
-    if (!this.embedded && authReturn) {
+    if (this.embedded && authReturn && this.restoredId) this.restoreLoginContext();
+    this.ingress.start();
+    if (authReturn) {
       const message = authReturn === 'success' ? 'Zalogowano. Wpisz wiadomość, aby kontynuować rozmowę.'
         : 'Nie udało się zalogować. Wpisz i wyślij wiadomość, aby spróbować ponownie.';
       if (this.restoredId) { this.workspaceView.set('conversation'); this.loginNotice.set(message); }
@@ -163,7 +165,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       }
       void this.router?.navigate([], {relativeTo: this.route, queryParams: {auth: null}, queryParamsHandling: 'merge', replaceUrl: true});
     }
-    if (!this.embedded && this.restoredId) this.restoreConversation();
+    if (this.restoredId) { this.historyOpen.set(false); this.restoreConversation(); }
     this.api.configuration().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: value => { this.configuration.set(value); this.activeProfiles.set(value.profiles); this.ready.set(true); this.configurationAvailable.set(true); this.loadTools(); this.loadAi(); this.loadAuthStatus(); },
       error: error => {
@@ -225,13 +227,46 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     });
   }
   private loginForConversation(authProfileId: string, conversationId: string, profileId: string): void {
+    if (!this.rememberLoginContext(conversationId, profileId)) {
+      this.submitting.set(false);
+      this.chatError.set('Przeglądarka blokuje zachowanie kontekstu ramki. Otwórz pełny widok TDW, aby się zalogować.');
+      return;
+    }
     this.authBusyId.set(authProfileId); this.loginNotice.set('Przekierowywanie do logowania…');
-    this.api.loginAuth(authProfileId, {conversationId, profileId}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const returnPath = this.embedded ? '/system-assistant/chat' : '/system-assistant';
+    this.api.loginAuth(authProfileId, {conversationId, profileId, returnPath}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: result => this.browser.location.assign(result.authorizationUrl),
       error: error => {
+        this.clearLoginContext();
         this.authBusyId.set(''); this.submitting.set(false); this.loginNotice.set(''); this.chatError.set(this.message(error));
       }
     });
+  }
+  private rememberLoginContext(conversationId: string, profileId: string): boolean {
+    if (!this.embedded) return true;
+    const context = this.ingress.context();
+    try {
+      if (context) this.browser.sessionStorage.setItem(this.loginContextKey,
+        JSON.stringify({conversationId, profileId, expiresAt: Date.now() + 300_000, context}));
+      else this.clearLoginContext();
+      return true;
+    } catch { return !context; }
+  }
+  private restoreLoginContext(): void {
+    try {
+      const raw = this.browser.sessionStorage.getItem(this.loginContextKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved) || Object.keys(saved).length !== 4
+          || !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now()) { this.clearLoginContext(); return; }
+      if (saved.conversationId !== this.restoredId || saved.profileId !== this.profileId()) return;
+      this.clearLoginContext();
+      this.ingress.restoreContext(saved.context);
+    } catch { this.clearLoginContext(); }
+  }
+  private clearLoginContext(): void {
+    if (!this.embedded) return;
+    try { this.browser.sessionStorage.removeItem(this.loginContextKey); } catch { /* Storage may be blocked in an iframe. */ }
   }
   restoreMessage(): void { this.chatPanel()?.messageText.set(this.unsentMessage()); this.unsentMessage.set(''); }
   startPolling(): void {

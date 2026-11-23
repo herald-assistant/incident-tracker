@@ -110,7 +110,7 @@ użytkownik podaje tam swoje hasło. Klient musi być zarejestrowany u dostawcy
 z dokładnym redirect URI i uprawnieniami docelowego API.
 
 Rozpoczęte logowanie ma jednorazowy state, TTL 5 min i jest powiązane
-z losowym cookie `tdw_oidc_browser` (HttpOnly, SameSite=Lax, Secure dla HTTPS),
+z losowym cookie `tdw_oidc_browser` (HttpOnly, SameSite=None, zawsze Secure),
 zapisanym profilem i dokładnym callback URI. Zmiana konfiguracji, inna
 przeglądarka, wygaśnięcie lub ponowny callback blokują wymianę kodu.
 Pending logowania są ograniczone do 100. Callback sprawdza podpis JWT,
@@ -127,8 +127,8 @@ globalnego wylogowania SSO ani cofnięcia operacji biznesowych.
 | Endpoint | Znaczenie |
 | --- | --- |
 | GET /api/system-assistant/auth/status | Stan połączeń zapisanych profili OIDC, bez tokenów, no-store |
-| POST /api/system-assistant/auth/{id}/login | `{}` lub `{conversationId, profileId}`; zwraca authorizationUrl i cookie; wymaga callbacku w tym samym originie TDW |
-| GET /api/system-assistant/auth/callback | Kod/state lub błąd dostawcy; 303 do /system-assistant?auth=success albo failed, z powiązanym localRunId i profileId dla logowania z rozmowy; bez tokenów i treści błędu dostawcy |
+| POST /api/system-assistant/auth/{id}/login | `{returnPath, conversationId?, profileId?}`; zwraca authorizationUrl i cookie; wymaga callbacku w tym samym originie TDW |
+| GET /api/system-assistant/auth/callback | Kod/state lub błąd dostawcy; 303 do zwalidowanego returnPath z auth=success albo failed oraz powiązanym localRunId/profileId dla rozmowy; bez tokenów i treści błędu dostawcy |
 | POST /api/system-assistant/auth/{id}/disconnect | JSON, usuwa lokalne połączenie |
 
 Endpointy są dostępne tylko po włączeniu System Assistant. Dev proxy
@@ -152,16 +152,31 @@ wiadomości, nie uruchamia SDK ani biznesowego requestu. Brakujące API i
 nieprzypisane Auth nie blokują rozmowy. Nie jest to obsługa błędów auth podczas
 już przyjętej tury ani automatyczne ponawianie wywołań.
 
-FE przechwytuje wyłącznie ten kod/status, rozpoczyna login z ID rozmowy i
-profilu, następnie wykonuje `location.assign(authorizationUrl)`. Nie zapisuje
-szkicu ani nie wysyła go po powrocie. Serwer przechowuje cel powrotu w pamięci,
-z limitem 100 i TTL 5 min, związany z jednorazowym state i browser binding.
-Callback zwraca wyłącznie stałą trasę `/system-assistant` i zwalidowane ID;
-także odmowa dostawcy wraca do powiązanego chatu, bez pętli logowania. Nie ma
-dowolnego returnUrl, storage zakładki ani danych dostawcy w adresie powrotu.
-W ramce wykonywana jest ta sama próba przekierowania; provider/cookies mogą
-ją blokować. Sandbox/CSP i protokół Browser Tools nie są zmieniane. Jeżeli
-provider dopuści logowanie, powrót otwiera pełny widok chatu wewnątrz ramki.
+FE przechwytuje wyłącznie ten kod/status, rozpoczyna login z ID rozmowy,
+profilu i wymaganym returnPath, następnie wykonuje location.assign. Ścisła
+lista returnPath obejmuje wyłącznie `/system-assistant` i
+`/system-assistant/chat`, bez query/hash, zewnętrznych adresów i aliasów.
+Trasa embedded wymaga pary conversationId/profileId; ręczny login z Auth
+podaje pełną trasę bez ID. Serwer wiąże cel z state/browser i TTL 5 min,
+z limitem 100. Parametry callbacku nie nadpisują celu. Odmowa dostawcy także
+wraca do powiązanej rozmowy. Przy braku poprawnego browser binding nie ma
+powrotu do prywatnej rozmowy ani wymiany kodu; pozostaje ogólny błąd Auth.
+
+localRunId jest odtwarzany w obu widokach. Embedded zamyka picker i pokazuje
+kompaktowy chat bez aside; pełny widok zachowuje standardowe aside. Nie ma
+zachowania szkicu, automatycznej wysyłki ani tokenów w FE. Na czas logowania
+ramka przechowuje w sessionStorage wyłącznie ostatni zweryfikowany ingress,
+conversationId/profileId i termin ważności (5 min). Po pasującym powrocie
+odczytuje go jednorazowo; błąd rozpoczęcia loginu usuwa cache. Obcy, wygasły
+lub uszkodzony kontekst jest odrzucany. Filtr profili używa tego ingress,
+nigdy historycznego pageContext rozmowy. Gdy storage jest niedostępny,
+a kontekst jest potrzebny, FE pokazuje błąd przed rozpoczęciem logowania.
+
+SameSite=None; Secure umożliwia cookie w cross-site iframe przy dopuszczonych
+third-party cookies. Wymaga HTTPS (przeglądarki mają wyjątki dla localhost);
+pełnej blokady third-party cookies ani zakazu osadzania u providera nie
+obchodzimy. Sandbox/CSP i protokół Browser Tools nie są zmieniane, nie ma
+popupów ani ponownego handshake tylko w celu wznowienia rozmowy.
 
 Testy: `SystemAssistantAuthConfigurationTest`, `SystemAssistantAuthControllerTest`,
 `OpenApiAuthenticationTest`, `OidcLoginTest`, SDK/snapshot i MCP wire,

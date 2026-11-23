@@ -23,12 +23,20 @@ function savedConversation(): AssistantConversation {
       toolEvidenceSections: [], aiActivityEvents: [], toolFeedback: [], prompt: ''
     }))};
 }
+const currentIngress = {origin: 'https://crm.example', pathname: '/tickets/CRM-202', title: 'CRM ticket', capturedAt: '2026-11-23T10:00:00Z'};
+const loginContextKey = 'tdw.system-assistant.login-context';
 
 describe('SystemAssistantPage', () => {
   let http: HttpTestingController;
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [SystemAssistantPage], providers: [provideHttpClient(), provideHttpClientTesting(),
-      {provide: SYSTEM_ASSISTANT_WINDOW, useFactory: () => ({location: {hash: '', assign: vi.fn()}, removeEventListener: vi.fn(), clearTimeout: vi.fn()})},
+      {provide: SYSTEM_ASSISTANT_WINDOW, useFactory: () => {
+        const cache = new Map<string, string>();
+        return {location: {hash: '', assign: vi.fn()}, removeEventListener: vi.fn(), clearTimeout: vi.fn(), sessionStorage: {
+          getItem: (key: string) => cache.get(key) ?? null,
+          setItem: (key: string, value: string) => { cache.set(key, value); }, removeItem: (key: string) => { cache.delete(key); }
+        }};
+      }},
       {provide: ActivatedRoute, useValue: {snapshot: {data: {embeddedChat: false}}}}] });
     http = TestBed.inject(HttpTestingController);
   });
@@ -44,12 +52,13 @@ describe('SystemAssistantPage', () => {
     if (fixture.componentInstance.embedded) { http.expectOne('/api/analysis/runs').flush({runs}); fixture.detectChanges(); }
     return fixture;
   }
-  it.each([{existing: false, embedded: false}, {existing: true, embedded: false}, {existing: true, embedded: true}])(
+  it.each([{existing: false, embedded: false}, {existing: true, embedded: false}, {existing: false, embedded: true}, {existing: true, embedded: true}])(
     'redirects rejected turns to OIDC without saving a draft or retrying (existing=$existing, embedded=$embedded)', ({existing, embedded}) => {
       const assign = vi.mocked(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).location.assign);
       TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
       const fixture = ready(); const page = fixture.componentInstance;
       page.workspaceView.set('conversation'); page.historyOpen.set(false);
+      if (embedded) page.ingress.restoreContext(currentIngress);
       if (existing) page.conversation.set(savedConversation());
       fixture.detectChanges();
       const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
@@ -59,38 +68,88 @@ describe('SystemAssistantPage', () => {
       http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
         {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc', message: 'Zaloguj'}, {status: 409, statusText: 'Conflict'});
       const login = http.expectOne('/api/system-assistant/auth/crm_oidc/login');
-      expect(login.request.body).toEqual({conversationId: 'saved-chat', profileId: 'test_profile'});
+      expect(login.request.body).toEqual({conversationId: 'saved-chat', profileId: 'test_profile', returnPath: embedded ? '/system-assistant/chat' : '/system-assistant'});
       expect(page.unsentMessage()).toBe(''); expect(chat.messageText()).toBe('');
+      const cached = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey);
+      if (embedded) {
+        expect(JSON.parse(cached!)).toEqual({conversationId: 'saved-chat', profileId: 'test_profile', expiresAt: expect.any(Number), context: currentIngress});
+        expect(cached).not.toContain('Sprawdź klienta'); expect(cached).not.toContain('Poprzednia odpowiedź');
+      } else expect(cached).toBeNull();
       http.expectNone('/api/system-assistant/conversations/saved-chat');
       login.flush({authorizationUrl: 'https://sso.example.com/authorize?state=opaque'});
       expect(assign).toHaveBeenCalledExactlyOnceWith('https://sso.example.com/authorize?state=opaque');
       page.send('Nie ponawiaj'); http.expectNone('/api/system-assistant/conversations/saved-chat/messages');
       fixture.destroy();
     });
-  it('keeps a failed login start recoverable without restoring or resending the message', () => {
+  it.each([false, true])('keeps a failed login start recoverable without retaining a draft or ingress cache (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const fixture = ready(); const page = fixture.componentInstance;
+    page.historyOpen.set(false); if (embedded) page.ingress.restoreContext(currentIngress);
     page.conversation.set(savedConversation()); page.send('Sprawdź klienta');
     http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
       {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
     http.expectOne('/api/system-assistant/auth/crm_oidc/login').flush({message: 'Dostawca niedostępny'}, {status: 400, statusText: 'Bad Request'});
     expect(page.submitting()).toBe(false); expect(page.chatError()).toBe('Dostawca niedostępny');
-    expect(page.unsentMessage()).toBe(''); expect(page.authBusyId()).toBe(''); fixture.destroy();
+    expect(page.unsentMessage()).toBe(''); expect(page.authBusyId()).toBe('');
+    expect(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey)).toBeNull(); fixture.destroy();
   });
-  it.each(['success', 'failed'])('returns from OIDC to the exact chat and selected profile without sending (%s)', auth => {
+  it.each([{auth: 'success', embedded: false}, {auth: 'failed', embedded: false}, {auth: 'success', embedded: true}, {auth: 'failed', embedded: true}])(
+    'returns from OIDC to the exact chat/profile and view without sending (auth=$auth, embedded=$embedded)', ({auth, embedded}) => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
       value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth}), configurable: true});
+    const storage = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage;
+    if (embedded) storage.setItem(loginContextKey, JSON.stringify({conversationId: 'saved-chat', profileId: 'crm_selected', expiresAt: Date.now() + 60_000, context: currentIngress}));
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
     const page = fixture.componentInstance;
     expect(page.profileId()).toBe('crm_selected');
     http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
-    http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles: [{...testProfile, id: 'crm_selected'}]});
+    http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles: [{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/tickets/*'}]});
     http.expectOne('/api/system-assistant/configuration/tools').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
     http.expectOne('/api/auth/github/status').flush({configured: true});
     fixture.detectChanges();
     expect(page.workspaceView()).toBe('conversation'); expect(page.selectedProfileId()).toBe('crm_selected');
     expect(page.messages()).toHaveLength(2); expect(page.unsentMessage()).toBe('');
+    expect(page.historyOpen()).toBe(false); expect(page.canChat()).toBe(true);
+    expect(page.pageContext()).toEqual(savedConversation().pageContext);
+    if (embedded) {
+      expect(page.ingress.context()).toEqual(currentIngress); expect(storage.getItem(loginContextKey)).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-analysis-feature-aside')).toBeNull();
+    }
     http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+  it.each(['expired', 'wrong_chat', 'wrong_profile', 'extra_context', 'broken'])('rejects %s login context without using historical context for profile selection', kind => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+    Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
+      value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth: 'success'}), configurable: true});
+    const cached = {conversationId: kind === 'wrong_chat' ? 'other-chat' : 'saved-chat',
+      profileId: kind === 'wrong_profile' ? 'other-profile' : 'crm_selected', expiresAt: kind === 'expired' ? 0 : Date.now() + 60_000,
+      context: kind === 'extra_context' ? {...currentIngress, cookies: 'not-allowed'} : currentIngress};
+    TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.setItem(loginContextKey, kind === 'broken' ? '{' : JSON.stringify(cached));
+    const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges(); const page = fixture.componentInstance;
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [],
+      profiles: [{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/customers/*'}]});
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
+    http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
+    expect(page.conversation()?.id).toBe('saved-chat'); expect(page.historyOpen()).toBe(false);
+    expect(page.ingress.context()).toBeNull(); expect(page.selectedProfileId()).toBe(''); expect(page.canChat()).toBe(false);
+    http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+  it('does not start login when the browser blocks storage needed to preserve embedded context', () => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+    const browser = TestBed.inject(SYSTEM_ASSISTANT_WINDOW);
+    vi.spyOn(browser.sessionStorage, 'setItem').mockImplementation(() => { throw new DOMException('Blocked', 'SecurityError'); });
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.historyOpen.set(false); page.conversation.set(savedConversation()); page.ingress.restoreContext(currentIngress);
+    page.send('Sprawdź klienta');
+    http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
+      {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
+    http.expectNone('/api/system-assistant/auth/crm_oidc/login'); expect(browser.location.assign).not.toHaveBeenCalled();
+    expect(page.submitting()).toBe(false); expect(page.unsentMessage()).toBe('');
+    expect(page.chatError()).toContain('Przeglądarka blokuje'); fixture.destroy();
   });
   it('assigns independent API authentication in two profiles through the shared select', async () => {
     const fixture = ready(); const page = fixture.componentInstance;

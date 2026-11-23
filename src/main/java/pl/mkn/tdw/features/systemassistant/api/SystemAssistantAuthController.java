@@ -25,7 +25,7 @@ public class SystemAssistantAuthController {
     private final SecureRandom random = new SecureRandom();
     private final Map<String, LoginReturn> returns = new HashMap<>();
 
-    public record LoginRequest(String conversationId, String profileId) { }
+    public record LoginRequest(String conversationId, String profileId, String returnPath) { }
     private record LoginReturn(String browser, Instant expiresAt, LoginRequest destination) { }
 
     public SystemAssistantAuthController(SystemAssistantConfigurationService configuration, OidcLoginPort oidc) {
@@ -60,13 +60,11 @@ public class SystemAssistantAuthController {
             browser = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         }
         var url = oidc.begin(profile, browser);
-        if (destination.conversationId() != null) {
-            var state = UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst("state");
-            if (state == null || state.isBlank()) throw new HttpAuthException("Nie udało się rozpocząć logowania OIDC.");
-            returns.put(state, new LoginReturn(browser, Instant.now().plusSeconds(300), destination));
-        }
-        var cookie = ResponseCookie.from(COOKIE, browser).httpOnly(true).secure(callback.getScheme().equals("https"))
-                .sameSite("Lax").path("/api/system-assistant/auth").build();
+        var state = UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst("state");
+        if (state == null || state.isBlank()) throw new HttpAuthException("Nie udało się rozpocząć logowania OIDC.");
+        returns.put(state, new LoginReturn(browser, Instant.now().plusSeconds(300), destination));
+        var cookie = ResponseCookie.from(COOKIE, browser).httpOnly(true).secure(true)
+                .sameSite("None").path("/api/system-assistant/auth").build();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new Login(url));
     }
 
@@ -82,8 +80,9 @@ public class SystemAssistantAuthController {
             var uri = request.getRequestURL().toString();
             oidc.complete(configuration.current().authProfiles(), state, code, error, browser, uri);
         } catch (RuntimeException failure) { result = "failed"; }
-        var location = UriComponentsBuilder.fromPath("/system-assistant").queryParam("auth", result);
-        if (destination != null) location.queryParam("localRunId", destination.conversationId()).queryParam("profileId", destination.profileId());
+        var location = UriComponentsBuilder.fromPath(destination == null ? "/system-assistant" : destination.returnPath()).queryParam("auth", result);
+        if (destination != null && destination.conversationId() != null)
+            location.queryParam("localRunId", destination.conversationId()).queryParam("profileId", destination.profileId());
         return ResponseEntity.status(HttpStatus.SEE_OTHER).location(location.build().toUri())
                 .cacheControl(CacheControl.noStore()).header("Referrer-Policy", "no-referrer").build();
     }
@@ -100,7 +99,9 @@ public class SystemAssistantAuthController {
     }
 
     private void validateDestination(LoginRequest destination) {
-        if (destination.conversationId() == null && destination.profileId() == null) return;
+        if (!"/system-assistant".equals(destination.returnPath()) && !"/system-assistant/chat".equals(destination.returnPath()))
+            throw new HttpAuthException("Wybierz prawidłową ścieżkę powrotu System Assistant.");
+        if (destination.conversationId() == null && destination.profileId() == null && "/system-assistant".equals(destination.returnPath())) return;
         if (destination.conversationId() == null || !destination.conversationId().matches("[a-zA-Z0-9_-]{1,100}")
                 || destination.profileId() == null || !destination.profileId().matches("[a-zA-Z0-9_-]{1,100}"))
             throw new HttpAuthException("Nieprawidłowa rozmowa lub profil powrotu po logowaniu.");

@@ -22,7 +22,11 @@ feature'ów. API i orkiestracja należą do feature'a; parser/REST do
 - Przed przyjęciem tury sprawdzaj/odnawiaj OIDC tylko aktywnych operacji profilu.
   409 AUTH_LOGIN_REQUIRED zawiera authProfileId; brak gotowości nie zapisuje tury
   i nie uruchamia AI. FE rozpoczyna login i przekierowuje bez szkicu/retry.
-  Docelowy chat/profil callbacku wiąż z state i przeglądarką; bez returnUrl.
+  Docelowy chat/profil/returnPath wiąż z state i przeglądarką. returnPath
+  dopuszcza tylko /system-assistant i /system-assistant/chat, bez dowolnego
+  returnUrl. Cookie ma HttpOnly/SameSite=None/Secure; nie omijaj browser binding.
+  Oba widoki odtwarzają localRunId; embedded zachowuje wyłącznie zweryfikowany
+  ingress do filtra profili, bez szkicu lub tokenów w storage.
 - Załączniki i obowiązkowy approval są odrębnym zakresem.
 - Nie zakładaj fikcyjnych danych ani lokalnego demo; timeout nie uprawnia do retry.
 

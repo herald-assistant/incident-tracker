@@ -20,9 +20,13 @@ Konfiguracja używa shared analysis-result-tabs. Auth ma formularze inline, bez 
 Dane dostępowe są jawne w polach tekstowych i eksporcie konfiguracji.
 OIDC używa zapisanej konfiguracji. Powrót ręcznego logowania wybiera Auth.
 409 AUTH_LOGIN_REQUIRED przy wysłaniu rozpoczyna login i location.assign także
-w ramce, bez zmiany sandbox/CSP. Backend wiąże chat/profil z state; powrót
-otwiera pełny widok tego chatu i wybiera profil. Bez storage szkicu, ponawiania
-wiadomości, popupów lub przekazywania tokenów do FE. Inne błędy nadal wymagają
+w ramce, bez zmiany sandbox/CSP. Backend wiąże chat/profil/returnPath z state;
+returnPath to wyłącznie /system-assistant lub /system-assistant/chat.
+Powrót odtwarza localRunId i profil w obu trybach, embedded zamyka picker.
+Na czas loginu zapisuje tylko zweryfikowany ingress i ID w sessionStorage
+z TTL 5 min; cache jest jednorazowy i walidowany. Nie używaj historycznego
+pageContext do filtra profili. Bez storage szkicu, ponawiania wiadomości,
+popupów lub przekazywania tokenów do FE. Inne błędy nadal wymagają
 dotychczasowego reconciliation; nie wolno przekierowywać po błędzie narzędzia.
 Usunięcie używanego Auth jest blokowane do zmiany selectów zależnych przypisań w profilach.
 Kontrakty dodajemy tylko w modalu importu z nazwą i wyborem operacji. Wiersz

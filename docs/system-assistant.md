@@ -191,8 +191,12 @@ Jeśli OIDC wymaga ponownego logowania, wysłanie wiadomości najpierw próbuje
 odnowić token. Gdy to niemożliwe, TDW przekierowuje do dostawcy bez uruchamiania
 AI. Po logowaniu wrócisz do tej samej rozmowy i profilu. Wpisz wiadomość
 ponownie — szkic nie jest zachowywany ani automatycznie wysyłany. Próba działa
-też w ramce, ale provider może blokować logowanie w iframe. Nie zmieniamy jej
-zabezpieczeń; po udanym logowaniu wraca pełny widok rozmowy.
+też w ramce: returnPath odtwarza kompaktowy widok tej samej rozmowy i profil,
+bez przejścia na pełny TDW. Na czas logowania ramka przechowuje tylko kontekst
+strony do filtra profili (sessionStorage, 5 min), bez wiadomości i tokenów.
+Cookie logowania ma SameSite=None; Secure. Potrzebne są HTTPS (z wyjątkami
+przeglądarki dla localhost) i zgoda na third-party cookies; provider musi
+pozwalać na iframe. Zabezpieczenia ramki pozostają bez zmian.
 Szczegóły: [runtime Auth](architecture/http-api-authentication.md).
 
 ## Rozmowa i Browser Tools

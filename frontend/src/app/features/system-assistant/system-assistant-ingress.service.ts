@@ -30,6 +30,12 @@ export class SystemAssistantIngress implements OnDestroy {
       this.parentWindow!.postMessage({ type: 'TDW_SYSTEM_ASSISTANT_READY', protocolVersion: 1, nonce }, origin);
     } catch { this.fail('Nieprawidłowy link Browser Tools albo brak rodzica ramki. Możesz kontynuować bez kontekstu.'); }
   }
+  restoreContext(value: unknown): boolean {
+    const origin = value && typeof value === 'object' ? (value as Record<string, unknown>)['origin'] : null;
+    if (typeof origin !== 'string' || !isOrigin(origin) || !validContext(value, origin)) return false;
+    this.cleanup(); this.context.set(value); this.error.set(''); this.status.set('received');
+    return true;
+  }
   private readonly receive = (event: MessageEvent): void => {
     if (event.origin !== this.origin || event.source !== this.parentWindow || this.status() !== 'waiting') return;
     const data = event.data;

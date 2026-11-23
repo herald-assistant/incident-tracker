@@ -1,6 +1,9 @@
 package pl.mkn.tdw.features.systemassistant;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pl.mkn.tdw.features.systemassistant.api.SystemAssistantAuthController;
@@ -14,7 +17,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class SystemAssistantAuthControllerTest {
-    @Test void returnsToOnlyTheBoundConversationAndProfileWithoutAUserSuppliedReturnUrl() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"/system-assistant", "/system-assistant/chat"})
+    void returnsToTheBoundConversationAndAllowedView(String returnPath) throws Exception {
         var profile = new HttpAuthProfile("crm", "CRM", "OIDC", null, null, null, null, "crm-client", null,
                 "openid", "https://sso.example.com/issuer", "http://localhost/api/system-assistant/auth/callback", "none");
         var configuration = SystemAssistantTestSupport.configuration((id, yaml) -> List.of());
@@ -26,25 +31,41 @@ class SystemAssistantAuthControllerTest {
         var mvc = MockMvcBuilders.standaloneSetup(new SystemAssistantAuthController(configuration, oidc))
                 .setControllerAdvice(new pl.mkn.tdw.api.ApiExceptionHandler()).build();
         var cookie = new jakarta.servlet.http.Cookie("tdw_oidc_browser", "a".repeat(43));
-        var body = "{\"conversationId\":\"crm-chat\",\"profileId\":\"crm_profile\"}";
+        var body = "{\"conversationId\":\"crm-chat\",\"profileId\":\"crm_profile\",\"returnPath\":\"" + returnPath + "\"}";
         mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
-        mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "first").param("code", "test-code"))
-                .andExpect(redirectedUrl("/system-assistant?auth=success&localRunId=crm-chat&profileId=crm_profile"));
+        mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "first").param("code", "test-code")
+                        .param("returnPath", "https://evil.example"))
+                .andExpect(redirectedUrl(returnPath + "?auth=success&localRunId=crm-chat&profileId=crm_profile"));
         doThrow(new IllegalArgumentException("provider denied")).when(oidc).complete(anyList(), any(), any(), any(), any(), any());
         mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "first"))
                 .andExpect(redirectedUrl("/system-assistant?auth=failed"));
         mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
         mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "denied").param("error", "access_denied"))
-                .andExpect(redirectedUrl("/system-assistant?auth=failed&localRunId=crm-chat&profileId=crm_profile"));
+                .andExpect(redirectedUrl(returnPath + "?auth=failed&localRunId=crm-chat&profileId=crm_profile"));
         mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
         mvc.perform(get("/api/system-assistant/auth/callback").param("state", "other"))
                 .andExpect(redirectedUrl("/system-assistant?auth=failed"));
         mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
-                .contentType(MediaType.APPLICATION_JSON).content("{\"conversationId\":\"//evil.example\",\"profileId\":\"crm_profile\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"conversationId\":\"//evil.example\",\"profileId\":\"crm_profile\",\"returnPath\":\"/system-assistant\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"https://evil.example", "//evil.example", "/system-assistant?next=evil", "/system-assistant#chat", "/system-assistant/other", "/system-assistant/chat/", "/system-assistant/%2e%2e/"})
+    void rejectsMissingOrUntrustedReturnPathsBeforeStartingLogin(String returnPath) throws Exception {
+        var oidc = mock(OidcLoginPort.class);
+        var configuration = mock(pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new SystemAssistantAuthController(configuration, oidc))
+                .setControllerAdvice(new pl.mkn.tdw.api.ApiExceptionHandler()).build();
+        var body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                new SystemAssistantAuthController.LoginRequest("crm-chat", "crm_profile", returnPath));
+        mvc.perform(post("/api/system-assistant/auth/crm/login").header("Origin", "http://localhost")
+                        .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+        verifyNoInteractions(oidc, configuration);
     }
 
     @Test void bindsLoginToBrowserReturnsOnlyAuthorizationUrlAndUsesFixedReturnLocation() throws Exception {
@@ -57,11 +78,12 @@ class SystemAssistantAuthControllerTest {
         var mvc = MockMvcBuilders.standaloneSetup(new SystemAssistantAuthController(configuration, oidc))
                 .setControllerAdvice(new pl.mkn.tdw.api.ApiExceptionHandler()).build();
         var response = mvc.perform(post("/api/system-assistant/auth/crm/login").header("Origin", "http://localhost")
-                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"returnPath\":\"/system-assistant\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.authorizationUrl").value("https://sso.example.com/authorize?state=opaque"))
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")))
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("SameSite=Lax"))).andReturn();
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("SameSite=None")))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Secure"))).andReturn();
         var cookie = response.getResponse().getHeader("Set-Cookie").split(";", 2)[0].split("=", 2)[1];
         mvc.perform(get("/api/system-assistant/auth/callback").param("state", "opaque").param("code", "test-code")
                 .cookie(new jakarta.servlet.http.Cookie("tdw_oidc_browser", cookie)))
@@ -71,7 +93,7 @@ class SystemAssistantAuthControllerTest {
         mvc.perform(get("/api/system-assistant/auth/callback").param("state", "opaque"))
                 .andExpect(status().isSeeOther()).andExpect(redirectedUrl("/system-assistant?auth=failed"));
         mvc.perform(post("/api/system-assistant/auth/crm/login").header("Origin", "http://other.example.com")
-                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"returnPath\":\"/system-assistant\"}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/system-assistant/auth/crm/disconnect").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isNoContent());
