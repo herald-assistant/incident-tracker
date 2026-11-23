@@ -32,6 +32,8 @@ export class OpenApiOperationPicker implements OnInit {
   readonly tag = signal('');
   readonly onlySelected = signal(false);
   readonly selected = signal(new Set<string>());
+  readonly selectedWarnings = computed(() => [...new Set((this.preview()?.operations ?? [])
+    .filter(operation => this.selected().has(this.key(operation))).flatMap(operation => operation.warnings))]);
   readonly selectableOperations = computed(() => (this.preview()?.operations ?? []).filter(operation => !operation.unavailableReason));
   readonly page = signal(0);
   readonly pageSize = 50;
@@ -59,7 +61,12 @@ export class OpenApiOperationPicker implements OnInit {
       if (!paths[operation.path]) paths[operation.path] = Object.fromEntries(Object.entries(original).filter(([key]) => !methods.has(key)));
       paths[operation.path][operation.method.toLowerCase()] = original[operation.method.toLowerCase()];
     }
-    return {...source, paths};
+    const activeTags = new Set(this.rows().flatMap(operation => operation.tags));
+    const declaredTags = source['tags'];
+    const tags = Array.isArray(declaredTags)
+      ? {tags: declaredTags.filter(tag => tag && typeof tag === 'object' && activeTags.has(tag['name']))}
+      : {};
+    return {...source, paths, ...tags};
   });
   readonly renderedSelection = computed(() => this.rows().map(operation => ({method: operation.method, path: operation.path,
     checked: this.selected().has(this.key(operation)), disabled: this.applying() || !!operation.unavailableReason, unavailableReason: operation.unavailableReason})));

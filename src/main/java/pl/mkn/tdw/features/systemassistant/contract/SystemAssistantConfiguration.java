@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.systemassistant.contract;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 import pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiSelection;
 
 public record SystemAssistantConfiguration(
         @NotNull @Size(max = 12) List<@Valid ApiDefinition> apis,
@@ -18,7 +20,7 @@ public record SystemAssistantConfiguration(
     public record ApiDefinition(
             @NotBlank @Pattern(regexp = "[a-z][a-z0-9_]{0,23}") String id,
             @NotBlank @Size(max = 100) String name,
-            @NotBlank @Size(max = 100_000) String yaml) {
+            @NotBlank @Size(max = OpenApiSelection.MAX_DOCUMENT_CHARACTERS) String yaml) {
     }
 
     public record Skill(
@@ -41,7 +43,7 @@ public record SystemAssistantConfiguration(
 
     public record ApiBinding(
             @NotBlank @Size(max = 100) String apiId,
-            @com.fasterxml.jackson.annotation.JsonProperty(required = true) @Size(max = 100) String authProfileId) { }
+            @JsonProperty(required = true) @Size(max = 100) String authProfileId) { }
 
     public SystemAssistantConfiguration {
         if (apis != null) apis = List.copyOf(apis);

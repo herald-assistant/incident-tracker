@@ -21,7 +21,11 @@ public class OpenApiToolSetFactory {
     private final ObjectMapper mapper;
 
     public List<ToolCallback> create(List<OpenApiExecution> executions) {
-        var uncertainWrite = new AtomicBoolean(false);
+        return create(executions, new AtomicBoolean(false));
+    }
+
+    /** The caller owns the lifecycle of a turn or an MCP session's uncertain-write state. */
+    public List<ToolCallback> create(List<OpenApiExecution> executions, AtomicBoolean uncertainWrite) {
         return executions.stream().map(execution -> (ToolCallback) new ToolCallback() {
             private final pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation operation = execution.operation();
             @Override
@@ -36,7 +40,7 @@ public class OpenApiToolSetFactory {
                 if (operation.mutation() && uncertainWrite.get())
                     return "{\"outcome\":\"WRITE_BLOCKED\",\"message\":\"Poprzedni zapis ma nieustalony wynik. W tej turze użyj odczytu.\"}";
                 try {
-                    var result = executor.execute(operation, new OpenApiArguments(mapper.readTree(input)), execution.authentication());
+                    var result = executor.execute(execution, new OpenApiArguments(mapper.readTree(input)));
                     if (operation.mutation() && result.outcome().equals("OUTCOME_UNKNOWN")) uncertainWrite.set(true);
                     return mapper.writeValueAsString(result);
                 } catch (java.io.IOException ex) {

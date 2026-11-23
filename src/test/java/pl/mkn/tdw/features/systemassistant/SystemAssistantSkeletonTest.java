@@ -20,7 +20,7 @@ class SystemAssistantSkeletonTest {
         var schema = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
         OpenApiImportPort importer = (id, yaml) -> List.of(new pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation(
                 id.equals("crm") ? "oa_crm_a_read" : "oa_crm_a_write", "Demo", "GET",
-                java.net.URI.create("http://127.0.0.1:8099"), "/" + id, List.of(), schema, schema));
+                java.net.URI.create("http://127.0.0.1:8099"), "/" + id, List.of(), schema, schema, "UNKNOWN", java.util.Map.of()));
         var service = SystemAssistantTestSupport.configuration(importer);
         service.save(SystemAssistantTestSupport.config(List.of(
                 new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration.ApiDefinition("crm", "CRM", "yaml"),

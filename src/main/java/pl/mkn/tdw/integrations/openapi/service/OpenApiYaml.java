@@ -13,13 +13,13 @@ final class OpenApiYaml {
 
     static JsonNode read(ObjectMapper mapper, String yaml, int limit) {
         if (yaml == null || yaml.isBlank() || yaml.length() > limit)
-            throw new OpenApiException("Wymagany YAML do " + limit + " znaków.");
+            throw new OpenApiException("Wymagany dokument JSON/YAML do " + limit + " znaków.");
         try {
             var options = new LoaderOptions();
             options.setAllowDuplicateKeys(false); options.setMaxAliasesForCollections(0);
-            options.setNestingDepthLimit(30); options.setCodePointLimit(limit);
+            options.setNestingDepthLimit(100); options.setCodePointLimit(limit);
             return mapper.valueToTree(new Yaml(new SafeConstructor(options)).load(yaml));
-        } catch (RuntimeException ex) { throw new OpenApiException("Niepoprawny YAML specyfikacji OpenAPI."); }
+        } catch (RuntimeException ex) { throw new OpenApiException("Niepoprawny dokument JSON/YAML specyfikacji OpenAPI."); }
     }
 
     static String write(ObjectMapper mapper, JsonNode document) {

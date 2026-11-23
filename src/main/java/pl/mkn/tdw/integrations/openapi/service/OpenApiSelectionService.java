@@ -15,13 +15,13 @@ import java.util.*;
 @RequiredArgsConstructor
 public class OpenApiSelectionService implements OpenApiSelectionPort {
     private static final Set<String> METHODS = Set.of("get", "post", "put", "delete", "patch", "head", "options", "trace");
-    private static final Set<String> EXECUTABLE = Set.of("get", "post", "put", "delete");
+    private static final Set<String> EXECUTABLE = Set.of("get", "post", "put", "delete", "patch");
     private final ObjectMapper mapper;
     private final OpenApiImportPort importer;
 
     @Override public OpenApiSelection.Document document(String apiId, String yaml) {
         importer.parse(apiId, yaml);
-        return new OpenApiSelection.Document(OpenApiYaml.read(mapper, yaml, 100_000));
+        return new OpenApiSelection.Document(OpenApiYaml.read(mapper, yaml, OpenApiSelection.MAX_DOCUMENT_CHARACTERS));
     }
 
     @Override public OpenApiSelection.Preview preview(String apiId, String yaml) {
@@ -75,15 +75,15 @@ public class OpenApiSelectionService implements OpenApiSelectionPort {
             if (tags.isEmpty()) result.remove("tags"); else result.set("tags", tags);
         }
         var prepared = OpenApiYaml.write(mapper, result);
-        if (prepared.length() > 100_000) fail("Wybrany zestaw wraz ze schematami przekracza 100000 znaków. Zmniejsz wybór.");
+        if (prepared.length() > OpenApiSelection.MAX_DOCUMENT_CHARACTERS) fail("Wybrany zestaw wraz ze schematami przekracza 1000000 znaków. Zmniejsz wybór.");
         var operations = importer.parse(apiId, prepared);
         return new OpenApiSelection.Prepared(prepared, operations.size());
     }
 
     private JsonNode source(String yaml) {
         var source = OpenApiYaml.read(mapper, yaml, OpenApiSelection.MAX_SOURCE_CHARACTERS);
-        if (!source.isObject() || !source.path("openapi").asText().matches("3\\.0\\.[0-9]+"))
-            fail("Wspierane OpenAPI 3.0.x.");
+        if (!source.isObject() || !source.path("openapi").asText().matches("3\\.[01]\\.[0-9]+"))
+            fail("Wspierane OpenAPI 3.0.x i 3.1.x.");
         if (!source.path("paths").isObject()) fail("Wymagany obiekt paths.");
         return source;
     }
@@ -104,12 +104,11 @@ public class OpenApiSelectionService implements OpenApiSelectionPort {
                 String unavailable = null;
                 if (!EXECUTABLE.contains(entry.getKey())) unavailable = "Nieobsługiwana metoda HTTP.";
                 else if (!operation.isObject()) unavailable = "Nieprawidłowa definicja operacji.";
-                else if (!id.matches("[a-zA-Z][a-zA-Z0-9_]{0,63}")) unavailable = "Wymagany poprawny operationId (litery, cyfry, podkreślenie).";
-                else if (("oa_" + apiId + "_" + id).length() > 64) unavailable = "Nazwa narzędzia przekracza 64 znaki; skróć ID API lub operationId.";
+                else if (!OpenApiToolNames.validOperationId(id)) unavailable = "Wymagany poprawny operationId (pierwszy znak: litera; dalej litery, cyfry, podkreślenie).";
                 var tags = new LinkedHashSet<String>();
                 if (operation.path("tags").isArray()) operation.get("tags").forEach(tag -> { if (tag.isTextual()) tags.add(tag.asText()); });
                 operations.add(new OpenApiSelection.Candidate(entry.getKey().toUpperCase(Locale.ROOT), path.getKey(), id,
-                        operation.path("summary").asText(operation.path("description").asText("")), List.copyOf(tags), unavailable));
+                        operation.path("summary").asText(operation.path("description").asText("")), List.copyOf(tags), unavailable, OpenApiSchemaDiagnostics.warnings(source, path.getValue(), operation)));
                 if (operations.size() > OpenApiSelection.MAX_CANDIDATES) fail("Maksymalnie 5000 operacji w pliku źródłowym.");
             }
         }
@@ -142,6 +141,7 @@ public class OpenApiSelectionService implements OpenApiSelectionPort {
 
     private void references(JsonNode node, Deque<String> pending) {
         if (node.isObject() && node.has("$ref")) pending.add(node.get("$ref").asText());
+        node.path("discriminator").path("mapping").forEach(value -> pending.add(value.asText()));
         if (node.isContainerNode()) node.forEach(child -> references(child, pending));
     }
     private String pointerSegment(String value) { return value.replace("~1", "/").replace("~0", "~"); }

@@ -51,3 +51,9 @@ w konfiguracji. Select chatu jest feature-owned; pełny ekran pokazuje wszystkie
 profile, ramka filtruje po ingress origin + pathname wildcardem *, niezależnie
 od historycznego kontekstu rozmowy. Konfiguracja/import V1 wymaga profiles;
 nie dodawaj migracji ani wersjonowania.
+
+Import JSON/YAML obsługuje OpenAPI 3.0/3.1 i kompozycję schematów.
+Kontrakt źródłowy, walidacja requestu i schemat argumentów mają odrębne role.
+Nie zgaduj discriminator mapping i nie usuwaj ograniczeń allOf/oneOf.
+Kanoniczne limity oraz semantykę x-tdw-operation-effect opisuje runtime
+System Assistanta; GET bez potwierdzenia skutków pozostaje UNKNOWN.

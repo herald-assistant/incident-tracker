@@ -110,7 +110,7 @@
           } @else if (workspaceView() === 'profiles') {
             <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().profiles.length >= 20" (click)="addProfile()">Dodaj profil</button>
           } @else if (workspaceView() === 'contracts') {
-            <input #newContractFile type="file" accept=".yaml,.yml" hidden (change)="readNewOpenApi($event)" />
+            <input #newContractFile type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml" hidden (change)="readNewOpenApi($event)" />
             <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().apis.length >= 12" (click)="newContractFile.click()">Dodaj OpenAPI</button>
           }
           <button class="primary-button" type="button" [disabled]="configurationBusy() || !dirty()" (click)="save()">{{saving() ? 'Zapisywanie…' : 'Zapisz'}}</button>

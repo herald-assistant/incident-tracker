@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info: {title: Fikcyjne wzorce kodów, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /items:
+    post:
+      operationId: createItems
+      x-tdw-operation-effect: MUTATION
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [records]
+              properties:
+                records: {type: array, items: {$ref: '#/components/schemas/Record'}}
+      responses:
+        '200': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Code'}}}}
+  /items/{code}:
+    get:
+      operationId: readItem
+      x-tdw-operation-effect: READ_ONLY
+      parameters:
+        - {name: code, in: path, required: true, schema: {$ref: '#/components/schemas/Code'}}
+        - {name: query, in: query, schema: {type: string, pattern: needle}}
+        - {name: tags, in: query, schema: {type: array, items: {type: string, pattern: '^[a-z]+$'}}}
+      responses:
+        '200': {description: Item}
+components:
+  schemas:
+    Code: {type: string, pattern: '^[A-Z]{2}-[0-9]{3}$'}
+    Record:
+      allOf:
+        - type: object
+          required: [code]
+          properties:
+            code: {$ref: '#/components/schemas/Code'}
+        - type: object
+          properties:
+            label: {type: string, pattern: '[a-z]+'}

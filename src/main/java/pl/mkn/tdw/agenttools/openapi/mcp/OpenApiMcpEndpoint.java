@@ -13,6 +13,7 @@ import pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog;
 import pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Each operator-selected scope has an isolated MCP transport and sessions. */
 public class OpenApiMcpEndpoint implements AutoCloseable {
@@ -53,6 +54,7 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
         private final WebMvcStreamableServerTransportProvider transport;
         private final McpSyncServer server;
         private final Set<String> registered = new LinkedHashSet<>();
+        private final Map<String, AtomicBoolean> sessionGuards = new HashMap<>();
 
         Scope(String id) {
             this.id = id;
@@ -69,17 +71,28 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
                 var tool = McpSchema.Tool.builder().name(operation.name()).description(operation.description())
                         .inputSchema(new JacksonMcpJsonMapper(mapper), operation.inputSchema().toString()).build();
                 server.addTool(McpServerFeatures.SyncToolSpecification.builder().tool(tool)
-                        .callHandler((exchange, request) -> call(operation.name(), request.arguments())).build());
+                        .callHandler((exchange, request) -> call(exchange.sessionId(), operation.name(), request.arguments())).build());
                 registered.add(operation.name());
             }
         }
 
-        private McpSchema.CallToolResult call(String name, Map<String, Object> arguments) {
+        private synchronized AtomicBoolean guard(String sessionId) {
+            var current = sessionGuards.get(sessionId);
+            if (current != null) return current;
+            if (sessionGuards.size() >= 1024) throw new IllegalArgumentException("Osiągnięto limit sesji MCP tego profilu. Utwórz ponownie ekspozycję profilu.");
+            var next = new AtomicBoolean(); sessionGuards.put(sessionId, next); return next;
+        }
+
+        private McpSchema.CallToolResult call(String sessionId, String name, Map<String, Object> arguments) {
             try {
                 var execution = catalog.current().getOrDefault(id, List.of()).stream()
                         .filter(item -> item.operation().name().equals(name)).findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("Operacja nie jest już dostępna w wybranym profilu."));
-                var raw = callbacks.create(List.of(execution)).get(0).call(mapper.writeValueAsString(arguments));
+                var guard = guard(sessionId);
+                String raw;
+                synchronized (guard) {
+                    raw = callbacks.create(List.of(execution), guard).get(0).call(mapper.writeValueAsString(arguments));
+                }
                 var result = mapper.readTree(raw);
                 var failed = !result.path("outcome").asText().equals("RESPONSE_RECEIVED") || result.path("statusCode").asInt(500) >= 300;
                 return McpSchema.CallToolResult.builder().addTextContent(raw).isError(failed).build();

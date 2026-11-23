@@ -22,6 +22,12 @@
       </button>
     </div>
   </div>
+  @if (selectedWarnings().length) {
+    <details class="picker-notes">
+      <summary>Uwagi do wybranych operacji ({{selectedWarnings().length}})</summary>
+      <ul>@for (warning of selectedWarnings(); track warning) { <li>{{warning}}</li> }</ul>
+    </details>
+  }
   @if (exceedsLimit()) { <p class="picker-error" role="alert">Przekroczono limit {{document.maxSelected}} operacji. Zmniejsz wybór.</p> }
   @if (rows().length) {
     <app-openapi-renderer class="picker-documentation" [specification]="renderedSpecification()" [selection]="renderedSelection()"
@@ -30,7 +36,7 @@
   @if (pages() > 1) {
     <nav class="picker-pagination" aria-label="Strony operacji">
       <button type="button" class="secondary-button" [disabled]="currentPage() === 0" (click)="page.set(currentPage() - 1)">Poprzednia</button>
-      <span>Strona {{currentPage() + 1}} z {{pages()}}</span>
+      <span>Strona {{currentPage() + 1}} z {{pages()}} · Operacje {{currentPage() * pageSize + 1}}–{{currentPage() * pageSize + rows().length}} z {{filtered().length}}</span>
       <button type="button" class="secondary-button" [disabled]="currentPage() + 1 >= pages()" (click)="page.set(currentPage() + 1)">Następna</button>
     </nav>
   }

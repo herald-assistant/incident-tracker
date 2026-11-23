@@ -29,3 +29,7 @@ footer > span, .picker-pagination { font-size: .85rem; }
   footer { bottom: -16px; }
   footer .primary-button { flex: 1; }
 }
+
+.picker-notes { color: var(--color-muted); font-size: .875rem; }
+.picker-notes summary { cursor: pointer; }
+.picker-notes li + li { margin-top: 6px; }

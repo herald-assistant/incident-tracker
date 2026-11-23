@@ -8,7 +8,7 @@ OpenAPI YAML i skilli roboczych, a kolejne tury tej samej rozmowy korzystają
 z zapisanej aktualnej treści. Ekran: `/system-assistant`.
 
 Operator może podłączyć HTTP(S) API dowolnego systemu, z hostem DNS, IP lub
-localhost, w obsługiwanym podzbiorze OpenAPI 3.0.x opisanym poniżej.
+localhost, w obsługiwanym podzbiorze OpenAPI 3.0.x/3.1.x opisanym poniżej.
 Bieżący zakres obsługuje jedną osobę w workspace. Obsługuje source auth Basic/Bearer/OAuth2/OIDC. Nie obejmuje załączników,
 approval workflow ani integracji CLP.
 Konfigurację, rozmowę i testy opisuje [instrukcja obsługi](../system-assistant.md).
@@ -60,6 +60,12 @@ jest importerem wykonawczym i nie jest tutaj używany. Tools OpenAPI nie są
 globalnymi `ToolCallbackProvider`; istniejący katalog MCP TDW pozostaje
 odrębny.
 
+`OpenApiExecutionPort.execute` przyjmuje własny `OpenApiExecution` (operacja
+i captured Auth) oraz `OpenApiArguments`. Callback SDK/MCP przekazuje ten sam
+binding do REST, bez ponownego wyboru profilu. HttpAuthProfile pozostaje
+modelem neutralnego httpauth użytym wewnątrz kontraktu bindingu, poza root
+portem i poza schema argumentów AI. Nie ma starszego overloadu wykonania.
+
 ## Kontrakty HTTP
 
 | Endpoint | Kontrakt |
@@ -109,33 +115,109 @@ z lokalizacją przed zapisem.
 
 | Obszar | Obsługiwane | Odrzucane |
 | --- | --- | --- |
-| Dokument | `3.0.x`, metadata info/tags/externalDocs, paths, components.schemas | Swagger 2, OpenAPI 3.1+, inne pola wykonawcze |
+| Dokument | JSON/YAML, `3.0.x` i `3.1.x`, metadata info/tags/externalDocs, paths, components.schemas, zachowane `x-*` | Swagger 2, inne wersje i nieobsługiwane pola wykonawcze |
 | Server | Jeden jawny top-level URL HTTP(S) z dowolnym poprawnym hostem DNS/IP/localhost, opcjonalny base path | Brak hosta, nieprawidłowy port, credentials, query/hash, server variables i override path/operation |
-| Operacje | GET, POST, PUT, DELETE; wymagany unikalny operationId z liter/cyfr/underscore | PATCH i pozostałe metody, callbacks/webhooks, operacyjne `$ref` |
-| Parametry | Scalar path/query, path required; dziedziczenie path-level i override operacji | Headers/cookies, object/array, pozostałe style i content parameters |
-| Body | POST/PUT `application/json`, wymagane lub opcjonalne body | GET/DELETE body, multipart, binary, pozostałe media types |
-| Schema | Jawny type object/array/string/number/integer/boolean; properties/items/required/enum/additionalProperties boolean; minimum/maximum, min/maxLength i min/maxItems; readOnly, nullable, format; metadata description/title/example/default | oneOf/anyOf/allOf, pattern, dodatkowe keywords i schema-valued additionalProperties |
-| References | Lokalne acykliczne `#/components/schemas/...`, bez rodzeństwa `$ref` | Zewnętrzne refs i cykle; rozwinięcie ponad 10000 węzłów lub 20 poziomów |
-| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne JSON content/schema | Response refs, headers, links, inne content types |
+| Operacje | GET, POST, PUT, DELETE, PATCH; wymagany unikalny operationId z liter/cyfr/underscore | HEAD/OPTIONS/TRACE i pozostałe metody, callbacks/webhooks, operacyjne `$ref` |
+| Parametry | Scalar path/query oraz jednowymiarowe query array z jawnym scalar items; path required; dziedziczenie path-level i override operacji; opcjonalne header zachowane w dokumentacji i pomijane przy wykonaniu | Wymagane header, cookies, obiekty query, array path, tablice obiektów/tablic/null i nullable tablice query, pozostałe style i content wykonywanych parametrów |
+| Body | POST/PUT/PATCH `application/json`, wymagane lub opcjonalne body | GET/DELETE body, multipart, binary, pozostałe media types |
+| Schema | object/array/scalars, properties/items/required/enum, `allOf`/`oneOf`/`anyOf`, discriminator jako guidance wariantów, boolean lub typowane additionalProperties, uniqueItems, pattern, limity, readOnly/writeOnly, format i metadata; w 3.0 nullable, w 3.1 null/tablica typów/const | not, patternProperties, multipleOf, inne nieobsługiwane keywords i niestandardowe dialekty |
+| References | Lokalne `#/components/schemas/...`; requesty: acykliczna projekcja inline do 30000 węzłów i 64 poziomów; odpowiedzi: ograniczony graf z produktywną rekursją; rodzeństwo schema `$ref` w 3.1 zachowuje przecięcie ograniczeń | Zewnętrzne refs, cykliczne aliasy, rekurencyjne requesty, rodzeństwo `$ref` w 3.0, przekroczenie budżetu |
+| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json lub text/plain ze string schema | Response refs, headers, links, pozostałe content types |
 | Auth | security i components.securitySchemes dla Basic/Bearer/OAuth2/openIdConnect; wykonanie według wybranego profilu Auth | apiKey, digest, credentials w URL i model-facing Authorization |
 
-Nazwa narzędzia: `oa_<apiId>_<operationId>`, do 64 znaków. Schema argumentów
-grupuje parametry w `path`, `query` i `body`. Required, typy, enum i limity
+Nazwa narzędzia ma maksymalnie 64 znaki. Pełna postać to
+`oa_<apiId>_<operationId>`; gdy jest dłuższa, importer zachowuje jej pierwsze
+47 znaków i dodaje `_` oraz pierwsze 16 cyfr hex SHA-256 pełnej nazwy UTF-8.
+Wynik jest niezależny od kolejności i wyboru innych operacji. Ten sam wynik
+zasila SDK, MCP, allowlistę i evidence. Kolizja wynikowych nazw blokuje import
+lub zapis całego katalogu, zamiast nadpisywać operację. `operationId` wymaga
+składni `[a-zA-Z][a-zA-Z0-9_]*` i unikalności w dokumencie; nie ma osobnego
+limitu 64 znaków. Pełny identyfikator pozostaje w YAML, preview, podglądzie,
+eksporcie V1 i opisie narzędzia. Zmiana apiId albo operationId zmienia nazwę.
+Schema argumentów grupuje parametry w `path`, `query` i `body`. Required, typy, enum i limity
 są sprawdzane przed HTTP. Default nie jest samoczynnie dopisywany do requestu.
-Operacja przechowuje osobno walidacyjny schema OpenAPI i projekcję JSON Schema
-dla argumentów SDK/MCP. Pola readOnly są pomijane w projekcji i w requestowym
-required; próba przesłania ich w argumentach jest odrzucana przed HTTP.
-Adnotacja readOnly poza definicją pola nie wyłącza całego body lub parametru.
-Nullable mapuje się w narzędziu na `type: [typ, "null"]`, ale nie znosi
-obowiązku obecności pola ani ograniczeń enum. Format jest adnotacją zachowaną
-także dla własnych formatów; backend nie dodaje walidacji składni UUID,
-email lub dat. Typy readOnly/nullable muszą być boolean, a format string.
-Oryginalne adnotacje pozostają w YAML-u wyboru, podglądzie i eksporcie.
-Nie ma dowolnego URL ani nagłówka Authorization w argumentach modelu.
+Opcjonalne parametry `in: header` (`required: false` lub brak required) nie
+blokują importu. Po zastosowaniu dziedziczenia i override są pomijane przed
+budowaniem argumentów i listy parametrów wykonawczych. Header names są
+rozpoznawane bez rozróżnienia wielkości liter. Ich schema/default/example nie
+służą do przygotowania requestu. Oryginalne deklaracje zostają w YAML,
+podglądzie i eksporcie; preview oraz opis narzędzia informują o pominięciu.
+Wymagany header oraz niepoprawny typ required blokują import. Narzędzie nie
+ma argumentu header/headers; dodatkowe argumenty są odrzucane przed HTTP.
+Nie generujemy ani nie wysyłamy correlationId z takiej deklaracji.
+Authorization z operator-owned Auth pozostaje odrębnym mechanizmem.
 
-Limity: 12 YAML-i po 100000 znaków, do 60 operacji w YAML i 100 w zestawie;
-20 skilli po 20000 znaków. Źródło wybierane w UI może mieć do 2000000 bajtów/znaków i 5000 operacji;
-limit 100000 dotyczy przygotowanego YAML-a zapisywanego w konfiguracji.
+Metadane operacji zachowują media types odpowiedzi dla każdego statusu oraz
+`default`, także puste deklaracje bez content. `Accept` zawiera sumę typów
+z dokumentu; przy braku content pozostaje application/json. Rzeczywisty
+`Content-Type` rozstrzyga odczyt: application/json jest parsowany jako JSON,
+a text/plain jako tekstowy JsonNode w istniejącym `body` wyniku. Text/plain
+wymaga deklaracji dla danego statusu lub default; jawny status bez content
+nie dziedziczy default. Charset pochodzi z nagłówka, domyślnie UTF-8; błędne
+kodowanie lub charset daje nieustalony wynik, bez zastępowania znaków.
+Brak Content-Type zachowuje obsługę JSON. Nie ma fallbacku błędnego JSON do
+tekstu ani interpretacji tekstu wyglądającego jak JSON. Pusty text/plain
+zwraca pusty string; 204/205 i pusty JSON zwracają null. Pozostałe media
+types z niepustym body są nieobsługiwane. Limit 64 KiB dotyczy bytes przed
+dekodowaniem; Auth, status HTTP i guard potencjalnego zapisu pozostają.
+
+Query array pozostaje tablicą JSON w `arguments.query.<name>` SDK/MCP.
+Wykonawca HTTP serializuje `style: form` (także domyślne): `explode: true`
+(domyślne dla query) powtarza klucz, np. `ids=101&ids=102`; `explode: false`
+łączy osobno kodowane elementy literalnym przecinkiem, np. `ids=101,102`.
+Przecinek wewnątrz elementu jest kodowany jako `%2C`, a znaki `&`, `=`, `+`,
+`%`, `#`, nawiasy i Unicode nie zmieniają struktury URI. Kolejność elementów
+jest zachowana; `uniqueItems`, enum, required i limity waliduje JSON Schema.
+`items` wymaga typu string/integer/number/boolean bez null; brak jawnych typów,
+obiekty, zagnieżdżone tablice i inne style nie są zgadywane.
+Brak opcjonalnej tablicy pomija parametr. Jawna pusta tablica jest odrzucana
+przed HTTP, bez zamiany na brak parametru lub pusty string; opis argumentu
+informuje o wymaganiu niepustej tablicy. Pusty string jako element tablicy
+stringów pozostaje pustą wartością. Oryginalny schema/YAML pozostaje bez zmian.
+Efektywne `explode` należy do neutralnych metadanych `Parameter`, bez
+model-facing wyboru serializacji, dowolnego URL albo query stringa.
+
+PATCH używa tego samego wykonawcy i walidacji co pozostałe operacje.
+Dopuszcza `application/json`, opcjonalne body oraz brak body. Nie znosi
+schema required, nie dopisuje defaultów, nie pobiera całego obiektu do
+scalenia i nie zamienia metody na PUT. `application/json-patch+json` oraz
+`application/merge-patch+json` nie należą do obsługiwanego podzbioru.
+Operation-level security i jego securitySchemes są walidowane i zachowane
+w selekcji również dla PATCH.
+
+Operacja przechowuje osobno walidacyjny schema OpenAPI i projekcję JSON Schema
+argumentów. Walidacja korzysta z networknt JSON Schema Validator 2.0.0,
+Draft 2020-12 po adaptacji OpenAPI 3.0; pobieranie zasobów jest wyłączone.
+Format pozostaje adnotacją. `allOf` zachowuje wszystkie ograniczenia,
+`oneOf` wymaga dokładnie jednego dopasowania, `anyOf` co najmniej jednego.
+`pattern` jest ograniczeniem stringów, nie adnotacją. Import sprawdza typ
+string oraz składnię tą samą fabryką regex co walidacja requestu: jawnie
+skonfigurowaną JDKRegularExpressionFactory networknt. To składnia silnika JDK
+z adaptacją networknt, bez gwarancji pełnej zgodności z ECMAScript. Nie
+przepisujemy wzorców i nie dopisujemy kotwic: bez `^`/`$` wystarczy pasujący
+fragment tekstu. Pusty pattern jest poprawny; null i inne typy nie podlegają
+samemu pattern (pozostałe ograniczenia nadal obowiązują). Wzorzec pozostaje
+w YAML, podglądzie, eksporcie i schema SDK/MCP, także przez refs/allOf oraz
+zagnieżdżone tablice i mapy. Błędny typ/składnia daje OPENAPI_INVALID ze
+wskazaniem /pattern przed publikacją. Niezgodna wartość jest odrzucana przed
+HTTP przez istniejący walidator; nie ma model-facing obejścia. Schema
+odpowiedzi ma kontrolę składni, bez nowej walidacji wartości odpowiedzi.
+Discriminator i jawny mapping są zachowane w dokumencie, a projekcja opisuje
+je w description; nie zastępują walidacji wariantów ani nie ustanawiają
+wywnioskowanych powiązań enum–nazwa klasy. Mapping zawiera istniejące lokalne
+schema refs. Preview pokazuje uwagi o oneOf, braku jawnego mapping i skutkach.
+
+Pola readOnly są pomijane w projekcji i requestowym required, również przy
+allOf. Backend odrzuca ich wysłanie przed HTTP. Nullable nie znosi required
+ani enum. `readOnly` na całym body lub parametrze nie usuwa tego argumentu.
+Schematy odpowiedzi są sprawdzane jako graf dokumentacji; nie są rozwijane
+w schemat argumentów ani walidowane jako runtime response.
+Oryginalne adnotacje pozostają w YAML-u, podglądzie i eksporcie.
+
+Limity: 12 kontraktów po 1000000 znaków, do 60 operacji w kontrakcie i 100
+w zestawie; 20 skilli po 20000 znaków. Źródło może mieć do 2000000
+bajtów/znaków i 5000 operacji. Projekcja argumentów ma do 250000 znaków na
+narzędzie i 1000000 łącznie w katalogu. Limit dotyczy także rozwinięcia refs.
 Argumenty callbacka mają limit 65536 znaków, odpowiedź HTTP — 64 KiB.
 Connect timeout wynosi 3 s, read timeout 8 s. Przekroczenia są jawne;
 odpowiedź nie jest po cichu przycinana ani zastępowana pustym sukcesem.
@@ -143,7 +225,7 @@ odpowiedź nie jest po cichu przycinana ani zastępowana pustym sukcesem.
 ## Wybór operacji przy imporcie
 
 `OpenApiSelectionPort` jest neutralną capability obok portów importu i wykonania.
-Odczytuje katalog źródła OpenAPI 3.0.x bez walidowania wykonania każdej
+Odczytuje katalog źródła OpenAPI 3.0.x/3.1.x bez walidowania wykonania każdej
 niewybranej operacji. Preview zwraca katalog kandydatów oraz kopię JSON
 źródła do efemerycznej prezentacji szczegółów; nie nadaje jej statusu kontraktu
 wykonawczego. Modal CDK używa tego samego renderera Swagger UI co podgląd.
@@ -151,7 +233,9 @@ Pokazuje metodę, ścieżkę, opis, operationId, parametry, odpowiedzi i schemat
 oraz checkbox i powód niewybieralności operacji. Obsługuje wyszukiwanie, filtry metody/tagu,
 tylko wybrane, zaznaczanie całego kontraktu i strony po 50 operacji.
 Angular posiada wybór i filtry; przekazuje do iframe tylko paths bieżącej
-strony wraz z kontekstem components. Globalna lista modeli jest w imporcie
+strony wraz z kontekstem components i deklaracjami tylko używanych na niej tagów.
+Paginacja pokazuje zakres i całkowitą liczbę operacji po filtrach; puste grupy
+tagów z pozostałych stron nie są renderowane. Globalna lista modeli jest w imporcie
 ukryta, podobnie jak powtórzony nagłówek kontraktu i sekcja serwera.
 Ukrywanie zależy od trybu wyboru całej ramki, również po zwinięciu grup.
 Wrapper dokumentacji nie ma bocznych odstępów w modalu wyboru. Checkboxy
@@ -163,7 +247,7 @@ Nowy plik zaczyna z pustym wyborem. Modal ma jeden nagłówek i ikonę zamknięc
 wiersz filtrów zawiera szukanie, metodę HTTP, tag, `Tylko wybrane` i ikony
 `select_all` / `deselect` z tooltipami. Nazwa kontraktu jest w stopce obok
 `Użyj wybranych operacji`, przed dodaniem do szkicu.
-Zaimportowany kontrakt nie ma trybu edycji. Metody poza GET/POST/PUT/DELETE i nieprawidłowy operationId są
+Zaimportowany kontrakt nie ma trybu edycji. Metody poza GET/POST/PUT/DELETE/PATCH i nieprawidłowy operationId są
 niewybieralne. Pozostałą semantykę sprawdza obecny importer po wyborze.
 `Zaznacz wszystko` wybiera wszystkie dostępne operacje całego kontraktu,
 niezależnie od filtrów, strony i widoku tylko wybranych. `Odznacz wszystko`
@@ -174,7 +258,7 @@ wybrane metody, wspólne parametry i metadata ich ścieżek, domknięcie lokalny
 refs w components oraz używane tagi. Niewybrane operacje i nieosiągalne
 components są usuwane. Nie pobiera zewnętrznych refs i nie pomija pól
 wpływających na wybraną operację. Wynik przechodzi pełną walidację wykonawczą,
-limit 60 operacji i 100000 znaków na YAML. Błąd pozostawia modal oraz wybór.
+limit 60 operacji i 1000000 znaków na kontrakt. Błąd pozostawia modal oraz wybór.
 
 Preview i przygotowanie są bezstanowe: nie zapisują pliku ani nie publikują
 tools. Zatwierdzenie modalu dodaje przygotowany kontrakt do szkicu. Zapis
@@ -306,7 +390,7 @@ i skilla `id,name,content`. Nie obejmuje rozmów, kontekstu strony, preferencji
 AI ani runtime access/refresh tokenów. Obejmuje jawne pola katalogu Auth. Eksport zachowuje treść YAML/Markdown także przed zapisem.
 Import zastępuje cały szkic i otwiera Skille; nie zapisuje ani nie publikuje
 narzędzi. Dopiero `Zapisz` waliduje i aktywuje zestaw. Parser pliku wymaga
-dokładnych pól i typów, wersji 1, do 12 API, 20 skilli, 20 profili i 20 konfiguracji Auth oraz limitu 10000000
+dokładnych pól i typów, wersji 1, do 12 API, 20 skilli, 20 profili i 20 konfiguracji Auth oraz limitu 100000000
 bajtów. Pozwala odtworzyć niekompletne pola tekstowe; walidacja biznesowa
 kontraktów pozostaje na serwerze przy zapisie. Błędny plik zachowuje szkic.
 Podczas odczytu blokowana jest edycja konfiguracji i zapis, bez zatrzymywania
@@ -354,11 +438,13 @@ RestClient wysyła JSON jako bajty UTF-8 z jawną długością body. Nie podąż
 za redirectami ani nie implementuje retry. Wynik
 zawiera `outcome`, status HTTP, body i ograniczenie potwierdzenia. HTTP
 200 nie jest uniwersalną walidacją biznesową; model musi uwzględnić body.
-Nieustalony wynik HTTP zapisu to `OUTCOME_UNKNOWN`; callbacki tej tury
-blokują kolejne zapisy i pozwalają sprawdzić stan odczytem. Błąd odczytu
-to `REQUEST_FAILED`. Rozróżnienie transportowe GET/pozostałe nie jest
-klasyfikacją skutków dowolnego API. Skille operatora i kontrakt dostarczają
-kontekst skutków operacji. Host pozostaje przypięty do skonfigurowanej operacji;
+Operacja ma jawne `x-tdw-operation-effect`: `READ_ONLY`, `MUTATION` albo
+`UNKNOWN` (domyślnie). Nazwa ani metoda HTTP nie potwierdzają skutków.
+Nieustalony wynik operacji MUTATION/UNKNOWN, także GET, to `OUTCOME_UNKNOWN`;
+blokuje kolejne operacje MUTATION/UNKNOWN tej tury, dopuszczając READ_ONLY.
+Błąd potwierdzonego odczytu daje `REQUEST_FAILED`. Skille i kontrakt opisują
+znaczenie biznesowe, ale nie obchodzą technicznej blokady.
+Host pozostaje przypięty do skonfigurowanej operacji;
 model nie wybiera URL-a ani nie przejmuje tokenów lub cookies strony.
 
 Callbacki Copilota i MCP używają tego samego importera, modeli i wykonawcy.
@@ -366,7 +452,10 @@ Copilot używa callbacków lokalnie, nie połączenia MCP w SDK. MCP jest
 rzeczywistym osobnym endpointem: aktualizuje listę i handlery oraz wysyła
 notifications/tools/list_changed. Klient musi ponownie odczytać tools/list;
 nie zakładamy automatycznego refreshu dowolnego klienta. Po usunięciu operacji
-nowe wywołanie jej nazwy jest odrzucane.
+nowe wywołanie jej nazwy jest odrzucane. MCP utrzymuje guard per sesja
+protokołu i profil, także pomiędzy kolejnymi calls i zmianą katalogu.
+Stan jest ograniczony do 1024 sesji na ekspozycję profilu; limit blokuje nowe
+wywołania zamiast usuwać istniejące guardy. Usunięcie ekspozycji usuwa stan.
 
 ## Trwała historia rozmów
 
@@ -472,8 +561,12 @@ import/eksport, wejście z historii, wybór rozmowy w ramce, zachowanie szkiców
 oraz odrzucenie spóźnionych odpowiedzi HTTP. Node/JSDOM sprawdza protokół,
 izolację ramki, resize/maximize i regresję UX Inspectora/UI Explorera.
 
-Fixtures OpenAPI są w `src/test/resources/openapi`. Testy HTTP używają
-własnych izolowanych serwerów; nie wymagają osobnego projektu demo.
+Fixtures OpenAPI są w `src/test/resources/openapi` i zawierają małe,
+fikcyjne modele oraz adresy loopback/example.invalid. Nie kopiujemy kontraktu
+operatora ani jego nazw domenowych do testów. Jedna fixture kompozycji ma
+dwa warianty i wspólną bazę; duży rozmiar i graniczne grafy refs są generowane
+w testach. Testy HTTP używają własnych izolowanych serwerów; nie wymagają
+osobnego projektu demo.
 Weryfikacja w przeglądarce obejmuje kontynuację wybranego zapisu na innej
 stronie po zmianie konfiguracji: zachowanie zapamiętanego kodu i pierwotnego
 pathname, zastosowanie aktualnego skilla oraz wywołanie aktualnego narzędzia

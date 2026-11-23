@@ -28,8 +28,8 @@ class SystemAssistantPersistenceTest {
         var original = SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Demo", yaml)), List.of());
         service.save(original);
         var seen = new java.util.concurrent.atomic.AtomicReference<String>();
-        var factory = new pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory((op, args, authentication) -> {
-            seen.set(op.path());
+        var factory = new pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory((execution, args) -> {
+            seen.set(execution.operation().path());
             return new pl.mkn.tdw.integrations.openapi.contract.OpenApiResult("RESPONSE_RECEIVED", 200, mapper.createObjectNode(), "Demo");
         }, mapper);
         var accepted = factory.create(service.snapshot().executions()).get(0);

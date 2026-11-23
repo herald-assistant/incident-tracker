@@ -48,25 +48,25 @@ class OpenApiAuthenticationTest {
             var auth = new HttpAuthenticationService(protocol, new pl.mkn.tdw.integrations.httpauth.service.OidcLoginService(protocol, java.time.Clock.systemUTC()));
             var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, auth);
             var operation = new OpenApiOperation("oa_crm_read", "CRM", "POST", java.net.URI.create(base), "/api", List.of(),
-                    mapper.readTree("{\"type\":\"object\"}"), mapper.readTree("{\"type\":\"object\"}"));
+                    mapper.readTree("{\"type\":\"object\"}"), mapper.readTree("{\"type\":\"object\"}"), "UNKNOWN", java.util.Map.of());
             var arguments = new OpenApiArguments(mapper.createObjectNode());
-            assertThat(executor.execute(operation, arguments, basic()).statusCode()).isEqualTo(200);
-            assertThat(executor.execute(operation, arguments, bearer()).statusCode()).isEqualTo(200);
-            assertThat(executor.execute(operation, arguments, null).statusCode()).isEqualTo(200);
+            assertThat(executor.execute(new OpenApiExecution(operation, basic()), arguments).statusCode()).isEqualTo(200);
+            assertThat(executor.execute(new OpenApiExecution(operation, bearer()), arguments).statusCode()).isEqualTo(200);
+            assertThat(executor.execute(new OpenApiExecution(operation, null), arguments).statusCode()).isEqualTo(200);
             var oauth = oauth(base + "/token", "client_secret_basic", "client-one");
-            executor.execute(operation, arguments, oauth); executor.execute(operation, arguments, oauth);
+            executor.execute(new OpenApiExecution(operation, oauth), arguments); executor.execute(new OpenApiExecution(operation, oauth), arguments);
             assertThat(tokenCalls).hasValue(1);
             assertThat(headers).containsExactly("Basic b3BlcmF0b3I6cHVibGljLXBhc3M=", "Bearer public-token", null, "Bearer crm-token-1", "Bearer crm-token-1");
             assertThat(tokenAuthorization.get()).startsWith("Basic ");
             assertThat(tokenForm.get()).contains("grant_type=client_credentials", "scope=crm.read").doesNotContain("client_secret");
             expires.set(1);
             var post = oauth(base + "/token", "client_secret_post", "client-two");
-            executor.execute(operation, arguments, post); executor.execute(operation, arguments, post);
+            executor.execute(new OpenApiExecution(operation, post), arguments); executor.execute(new OpenApiExecution(operation, post), arguments);
             assertThat(tokenCalls).hasValue(3);
             assertThat(tokenAuthorization.get()).isNull();
             assertThat(tokenForm.get()).contains("client_id=client-two", "client_secret=public-secret");
             fail.set(true);
-            assertThat(executor.execute(operation, arguments, oauth(base + "/token", "client_secret_basic", "broken")).outcome()).isEqualTo("AUTH_REQUIRED");
+            assertThat(executor.execute(new OpenApiExecution(operation, oauth(base + "/token", "client_secret_basic", "broken")), arguments).outcome()).isEqualTo("AUTH_REQUIRED");
             assertThat(headers).hasSize(7);
         } finally { server.stop(0); }
     }

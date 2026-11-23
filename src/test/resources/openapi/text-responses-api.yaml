@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info: {title: Fikcyjne odpowiedzi tekstowe, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /state:
+    get:
+      operationId: readState
+      x-tdw-operation-effect: READ_ONLY
+      responses:
+        '200': {description: State, content: {text/plain: {schema: {$ref: '#/components/schemas/Message'}}}}
+        '201': {description: No declared content}
+        default: {description: Message, content: {text/plain: {schema: {type: string}}}}
+  /json:
+    post:
+      operationId: writeJson
+      x-tdw-operation-effect: MUTATION
+      responses:
+        '200': {description: Result, content: {application/json: {schema: {type: object}}}}
+  /mixed:
+    get:
+      operationId: readMixed
+      x-tdw-operation-effect: READ_ONLY
+      responses:
+        '200': {description: Result, content: {application/json: {schema: {}}, text/plain: {schema: {type: string}}}}
+components:
+  schemas:
+    Message: {type: string}

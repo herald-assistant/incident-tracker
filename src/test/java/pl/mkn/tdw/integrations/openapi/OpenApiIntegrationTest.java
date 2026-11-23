@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
 
 class OpenApiIntegrationTest {
     @Test
@@ -38,9 +39,9 @@ class OpenApiIntegrationTest {
             var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
             var read = operations.stream().filter(op -> op.method().equals("GET")).findFirst().orElseThrow();
-            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"IN_PROGRESS\"}}"), null);
+            var result = executor.execute(new OpenApiExecution(write, null), args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"IN_PROGRESS\"}}"));
             assertThat(result.outcome()).isEqualTo("OUTCOME_UNKNOWN");
-            assertThat(executor.execute(read, args("{\"path\":{\"id\":\"CRM-101\"}}"), null).body().path("status").asText()).isEqualTo("IN_PROGRESS");
+            assertThat(executor.execute(new OpenApiExecution(read, null), args("{\"path\":{\"id\":\"CRM-101\"}}")).body().path("status").asText()).isEqualTo("IN_PROGRESS");
             assertThat(writes).hasValue(1);
         } finally { server.stop(0); workers.shutdownNow(); }
     }
@@ -67,7 +68,7 @@ class OpenApiIntegrationTest {
             var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
-            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"OPEN\"}}"), null);
+            var result = executor.execute(new OpenApiExecution(write, null), args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"OPEN\"}}"));
             assertThat(result.outcome()).isEqualTo("OUTCOME_UNKNOWN"); assertThat(calls).hasValue(1);
             var queryYaml = """
                     openapi: 3.0.3
@@ -84,7 +85,7 @@ class OpenApiIntegrationTest {
                             '200': {description: Demo, content: {application/json: {schema: {type: object}}}}
                     """.formatted(server.getAddress().getPort());
             var lookup = importer.parse("crm", queryYaml).get(0);
-            executor.execute(lookup, args("{\"path\":{\"q0\":\"CRM-101\"},\"query\":{\"search\":\"A&B #1\"}}"), null);
+            executor.execute(new OpenApiExecution(lookup, null), args("{\"path\":{\"q0\":\"CRM-101\"},\"query\":{\"search\":\"A&B #1\"}}"));
             assertThat(querySeen.get()).isEqualTo("search=A%26B%20%231");
         } finally { server.stop(0); }
     }
@@ -97,11 +98,11 @@ class OpenApiIntegrationTest {
     void rejectsUnsupportedAndAmbiguousSpecifications() throws Exception {
         var yaml = fixture();
         assertThat(importer.parse("crm", yaml)).hasSize(3);
-        for (var invalid : new String[]{yaml.replace("3.0.3", "3.1.0"), yaml.replace("http://127.0.0.1:8099", "file:///tmp/api"),
+        for (var invalid : new String[]{yaml.replace("3.0.3", "3.2.0"), yaml.replace("http://127.0.0.1:8099", "file:///tmp/api"),
                 yaml.replace("minLength: 1", "nullable: wrong"), yaml.replace("#/components/schemas/Ticket", "https://example.com/ticket"),
                 yaml.replace("operationId: simulateCost", "operationId: simulateCost\n      servers: []"),
                 yaml + "\nsecurity: [{bearer: []}]\n", yaml.replace("operationId: simulateCost", "operationId: simulateCost\n      callbacks: {}"),
-                yaml.replace("maxLength: 160", "maxLength: 160, pattern: '.*'"), yaml.replace("get:", "patch:"),
+                yaml.replace("maxLength: 160", "maxLength: 160, multipleOf: 1"), yaml.replace("get:", "head:"),
                 yaml.replace("minimum: 0", "minimum: 100001")})
             assertThatThrownBy(() -> importer.parse("crm", invalid)).isInstanceOf(OpenApiException.class);
         assertThatThrownBy(() -> importer.parse("crm", "openapi: 3.0.3\nopenapi: 3.0.2")).isInstanceOf(OpenApiException.class);
@@ -135,14 +136,14 @@ class OpenApiIntegrationTest {
             var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
             var read = operations.stream().filter(op -> op.method().equals("GET")).findFirst().orElseThrow();
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
-            assertThat(executor.execute(read, args("{\"path\":{\"id\":\"CRM-101\"}}"), null).body().path("status").asText()).isEqualTo("OPEN");
-            var result = executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"New\",\"status\":\"CLOSED\"}}"), null);
+            assertThat(executor.execute(new OpenApiExecution(read, null), args("{\"path\":{\"id\":\"CRM-101\"}}")).body().path("status").asText()).isEqualTo("OPEN");
+            var result = executor.execute(new OpenApiExecution(write, null), args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"New\",\"status\":\"CLOSED\"}}"));
             assertThat(result.body().path("title").asText()).isEqualTo("New");
             assertThat(bodyLength).hasValue(mapper.writeValueAsBytes(result.body()).length);
-            assertThatThrownBy(() -> executor.execute(write, args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"X\",\"status\":\"OTHER\"}}"), null))
+            assertThatThrownBy(() -> executor.execute(new OpenApiExecution(write, null), args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"X\",\"status\":\"OTHER\"}}")))
                     .isInstanceOf(OpenApiException.class);
             var simulation = operations.stream().filter(op -> op.path().equals("/simulate")).findFirst().orElseThrow();
-            assertThat(executor.execute(simulation, args("{\"body\":{\"amount\":12,\"months\":2}}"), null).statusCode()).isEqualTo(302);
+            assertThat(executor.execute(new OpenApiExecution(simulation, null), args("{\"body\":{\"amount\":12,\"months\":2}}")).statusCode()).isEqualTo(302);
             assertThat(calls).hasValue(3);
         } finally { server.stop(0); }
     }

@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info: {title: Query arrays, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /items/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string}}
+      - {name: ids, in: query, required: true, schema: {$ref: '#/components/schemas/Ids'}}
+    get:
+      operationId: listItems
+      x-tdw-operation-effect: READ_ONLY
+      parameters:
+        - {name: tags, in: query, schema: {type: array, items: {type: string}}}
+        - {name: flags, in: query, explode: false, schema: {type: array, items: {type: boolean}}}
+        - {name: weights, in: query, explode: false, schema: {type: array, items: {type: number}}}
+        - {name: statuses, in: query, schema: {type: array, items: {type: string, enum: [NEW, DONE]}}}
+      responses:
+        '200': {description: Items}
+  /csv:
+    get:
+      operationId: listCsv
+      x-tdw-operation-effect: READ_ONLY
+      parameters:
+        - {name: values, in: query, style: form, explode: false, required: true, schema: {type: array, items: {type: string}}}
+      responses:
+        '200': {description: Items}
+  /optional:
+    get:
+      operationId: listOptional
+      x-tdw-operation-effect: READ_ONLY
+      parameters:
+        - {name: ids, in: query, schema: {type: array, items: {type: string}}}
+      responses:
+        '200': {description: Items}
+components:
+  schemas:
+    Ids:
+      type: array
+      items: {type: integer, minimum: 1}
+      uniqueItems: true
+      minItems: 1
+      maxItems: 3

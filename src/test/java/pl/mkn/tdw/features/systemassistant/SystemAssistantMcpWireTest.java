@@ -28,7 +28,102 @@ import static org.assertj.core.api.Assertions.*;
 @DirtiesContext
 class SystemAssistantMcpWireTest {
     @Test
-    void publishesNullableArgumentsAndCallsAnApiThroughLocalhost() throws Exception {
+    void exposesNestedPatternsAndRejectsViolationsBeforeHttpThroughMcp() throws Exception {
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/items", exchange -> {
+            calls.incrementAndGet(); exchange.getRequestBody().readAllBytes();
+            var bytes = "{}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var source = Files.readString(Path.of("src/test/resources/openapi/pattern-api.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("demo", "Demo", source)), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var tool = client.listTools().tools().stream().filter(item -> item.name().equals("oa_demo_createItems")).findFirst().orElseThrow();
+                var code = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(tool.inputSchema()).path("properties")
+                        .path("body").path("properties").path("records").path("items").path("allOf").get(0).path("properties").path("code");
+                assertThat(code.path("pattern").asText()).isEqualTo("^[A-Z]{2}-[0-9]{3}$");
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), Map.of("body", Map.of("records", List.of(Map.of("code", "AB-123")))))).isError()).isFalse();
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), Map.of("body", Map.of("records", List.of(Map.of("code", "invalid")))))).isError()).isTrue();
+                assertThat(calls).hasValue(1);
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
+    void transportsPlainTextAndKeepsTheWriteGuardForInvalidJson() throws Exception {
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var accept = new java.util.concurrent.atomic.AtomicReference<String>();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/", exchange -> {
+            calls.incrementAndGet(); accept.set(exchange.getRequestHeaders().getFirst("Accept"));
+            boolean text = exchange.getRequestURI().getPath().equals("/state");
+            var bytes = (text ? "Zażółć" : "broken").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", text ? "text/plain; charset=UTF-8" : "application/json");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var source = Files.readString(Path.of("src/test/resources/openapi/text-responses-api.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("demo", "Demo", source)), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var result = client.callTool(new McpSchema.CallToolRequest("oa_demo_readState", Map.of()));
+                assertThat(result.isError()).isFalse();
+                var body = new com.fasterxml.jackson.databind.ObjectMapper().readTree(((McpSchema.TextContent) result.content().get(0)).text()).path("body");
+                assertThat(body.isTextual()).isTrue(); assertThat(body.asText()).isEqualTo("Zażółć");
+                assertThat(accept).hasValue("text/plain");
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_demo_writeJson", Map.of())).content().toString()).contains("OUTCOME_UNKNOWN");
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_demo_writeJson", Map.of())).content().toString()).contains("WRITE_BLOCKED");
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_demo_readState", Map.of())).isError()).isFalse();
+                assertThat(calls).hasValue(3);
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
+    void exposesArrayQueryArgumentsAndSerializesRepeatedAndCsvThroughMcp() throws Exception {
+        var queries = new java.util.concurrent.CopyOnWriteArrayList<String>();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/", exchange -> {
+            queries.add(exchange.getRequestURI().getRawQuery());
+            var bytes = "{}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var source = Files.readString(Path.of("src/test/resources/openapi/query-arrays-api.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("items", "Items", source)), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var tool = client.listTools().tools().stream().filter(item -> item.name().equals("oa_items_listItems")).findFirst().orElseThrow();
+                var schema = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(tool.inputSchema());
+                var ids = schema.path("properties").path("query").path("properties").path("ids");
+                assertThat(ids.path("type").asText()).isEqualTo("array");
+                assertThat(ids.path("items").path("type").asText()).isEqualTo("integer");
+                var arguments = Map.<String, Object>of("path", Map.of("id", "7"), "query", Map.of("ids", List.of(101, 102), "tags", List.of("A&B", "x+y")));
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), arguments)).isError()).isFalse();
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_listCsv", Map.of("query", Map.of("values", List.of("A,B", "C"))))).isError()).isFalse();
+                assertThat(queries).containsExactly("ids=101&ids=102&tags=A%26B&tags=x%2By", "values=A%2CB,C");
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), Map.of("path", Map.of("id", "7"), "query", Map.of("ids", List.of(1, 1))))).isError()).isTrue();
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_listCsv", Map.of("query", Map.of("values", List.of())))).isError()).isTrue();
+                assertThat(queries).hasSize(2);
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
+    void publishesShortenedNamesAndNullableArgumentsAndCallsAnApiThroughLocalhost() throws Exception {
+        var operationId = "createOrder" + "WithProductPricingDetails".repeat(6);
         var received = new java.util.concurrent.atomic.AtomicReference<String>();
         var authorization = new java.util.concurrent.atomic.AtomicReference<String>();
         var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -41,6 +136,7 @@ class SystemAssistantMcpWireTest {
         api.start();
         try {
             var yaml = Files.readString(Path.of("src/test/resources/openapi/orders-api.yaml"))
+                    .replace("operationId: createOrder", "operationId: " + operationId)
                     .replace(":8081", ":" + api.getAddress().getPort());
             var base = SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("orders", "Orders", yaml)), List.of());
             configurations.save(new SystemAssistantConfiguration(base.apis(), base.skills(), List.of(new SystemAssistantConfiguration.Profile("test_profile", "Test", "*", List.of(new SystemAssistantConfiguration.ApiBinding("orders", "crm_bearer")), List.of())), List.of(
@@ -49,7 +145,8 @@ class SystemAssistantMcpWireTest {
             var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
             try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
                 client.initialize();
-                var tool = client.listTools().tools().stream().filter(item -> item.name().equals("oa_orders_createOrder")).findFirst().orElseThrow();
+                var tool = client.listTools().tools().stream().filter(item -> item.description().contains("operationId: " + operationId)).findFirst().orElseThrow();
+                assertThat(tool.name()).hasSize(64).startsWith("oa_orders_");
                 var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 var properties = mapper.valueToTree(tool.inputSchema()).path("properties").path("body").path("properties");
                 assertThat(properties.path("note").path("type").toString()).isEqualTo("[\"string\",\"null\"]");
@@ -60,6 +157,85 @@ class SystemAssistantMcpWireTest {
                 assertThat(result.isError()).isFalse(); assertThat(result.content().toString()).contains("NEW");
                 assertThat(mapper.readTree(received.get()).get("note").isNull()).isTrue();
                 assertThat(authorization.get()).isEqualTo("Bearer public-crm-token");
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
+    void transportsCompositionAndKeepsUncertainWriteStateAcrossMcpRequests() throws Exception {
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/items/1", exchange -> {
+            calls.incrementAndGet(); var bytes = "{\"id\":123}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.createContext("/collections", exchange -> {
+            calls.incrementAndGet(); var bytes = "not-json".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var source = Files.readString(Path.of("src/test/resources/openapi/composition-api.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("products", "Products", source)), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var tool = client.listTools().tools().stream().filter(item -> item.name().equals("oa_products_createItem")).findFirst().orElseThrow();
+                var schema = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(tool.inputSchema());
+                assertThat(schema.path("properties").path("body").path("oneOf")).hasSize(2);
+                assertThat(schema.toString()).contains("allOf", "Discriminator").doesNotContain("generatedId");
+                var arguments = Map.<String, Object>of("path", Map.of("batchId", 1), "query", Map.of("ownerKey", "test"), "body", Map.of("type", "BASIC", "size", 1));
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), arguments)).isError()).isFalse();
+                var invalid = Map.<String, Object>of("path", Map.of("batchId", 1), "query", Map.of("ownerKey", "test"), "body", Map.of("type", "BASIC", "size", 0));
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), invalid)).isError()).isTrue();
+                var uncertain = client.callTool(new McpSchema.CallToolRequest("oa_products_getOrCreateCollection", Map.of("query", Map.of("ownerKey", "test"))));
+                assertThat(uncertain.content().toString()).contains("OUTCOME_UNKNOWN");
+                assertThat(client.callTool(new McpSchema.CallToolRequest(tool.name(), arguments)).content().toString()).contains("WRITE_BLOCKED");
+                assertThat(calls).hasValue(2);
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
+    void executesPatchAndPreservesItsWriteGuardAcrossMcpCalls() throws Exception {
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var method = new java.util.concurrent.atomic.AtomicReference<String>();
+        var correlation = new java.util.concurrent.atomic.AtomicReference<String>();
+        var body = new java.util.concurrent.atomic.AtomicReference<String>();
+        var uncertain = new java.util.concurrent.atomic.AtomicBoolean();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/items/7", exchange -> {
+            calls.incrementAndGet(); method.set(exchange.getRequestMethod());
+            correlation.set(exchange.getRequestHeaders().getFirst("correlationId"));
+            body.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            var bytes = (uncertain.get() ? "not-json" : "{\"updated\":true}").getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var source = Files.readString(Path.of("src/test/resources/openapi/patch-api.yaml")).replace("\r\n", "\n")
+                    .replace("parameters:\n      - {name: id", "parameters:\n      - {name: correlationId, in: header}\n      - {name: id")
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            var selected = selections.select("items", source, List.of(new pl.mkn.tdw.integrations.openapi.contract.OpenApiSelection.OperationKey("PATCH", "/items/{id}")));
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("items", "Items", selected.yaml())), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var listed = client.listTools().tools();
+                assertThat(listed).extracting(McpSchema.Tool::name).containsExactly("oa_items_patchItem");
+                assertThat(new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(listed.get(0).inputSchema()).toString()).doesNotContain("correlationId", "headers");
+                var arguments = Map.<String, Object>of("path", Map.of("id", 7), "body", Map.of("note", "Changed"));
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", arguments)).isError()).isFalse();
+                assertThat(method).hasValue("PATCH"); assertThat(body).hasValue("{\"note\":\"Changed\"}");
+                assertThat(correlation.get()).isNull();
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", Map.of("path", Map.of("id", 7), "body", Map.of()))).isError()).isTrue();
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", Map.of("path", Map.of("id", 7), "body", Map.of("note", "Changed"), "headers", Map.of("correlationId", "model-value")))).isError()).isTrue();
+                assertThat(calls).hasValue(1);
+                uncertain.set(true);
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", arguments)).content().toString()).contains("OUTCOME_UNKNOWN");
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", arguments)).content().toString()).contains("WRITE_BLOCKED");
+                assertThat(calls).hasValue(2);
             }
         } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
     }

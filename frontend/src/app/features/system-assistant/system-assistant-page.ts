@@ -336,7 +336,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (!file || this.configurationBusy()) { input.value = ''; return; }
     this.importing.set(true); this.error.set(''); this.notice.set('');
     try {
-      if (file.size > ASSISTANT_CONFIGURATION_FILE_MAX_BYTES) throw new Error('Plik konfiguracji może mieć do 10000000 bajtów.');
+      if (file.size > ASSISTANT_CONFIGURATION_FILE_MAX_BYTES) throw new Error('Plik konfiguracji może mieć do 100000000 bajtów.');
       const value = await readJsonFile(file, 'Plik konfiguracji nie zawiera poprawnego JSON-a.');
       if (this.destroyRef.destroyed) return;
       const configuration = parseConfigurationFile(value);

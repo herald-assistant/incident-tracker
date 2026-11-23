@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info: {title: Patch operations, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /items/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    get:
+      operationId: getItem
+      x-tdw-operation-effect: READ_ONLY
+      responses:
+        '200': {description: Item}
+    patch:
+      operationId: patchItem
+      x-tdw-operation-effect: MUTATION
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ItemPatch'}
+      responses:
+        '200': {description: Updated}
+  /items/{id}/refresh:
+    patch:
+      operationId: refreshItem
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      responses:
+        '204': {description: Refreshed}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+    unused: {type: http, scheme: basic}
+  schemas:
+    ItemPatch:
+      type: object
+      required: [note]
+      additionalProperties: false
+      properties:
+        note: {type: [string, 'null'], minLength: 1}
+        status: {type: string, default: OPEN}

@@ -3,7 +3,7 @@
 System Assistant korzysta z kontraktów OpenAPI i instrukcji utrzymywanych
 przez operatora. Umożliwia zadawanie pytań, odczyt stanu, obliczenia
 i zlecanie operacji udostępnionych w kontrakcie. API może wskazywać dowolny
-poprawny host HTTP(S), w obsługiwanym podzbiorze OpenAPI 3.0.x.
+poprawny host HTTP(S), w obsługiwanym podzbiorze OpenAPI 3.0.x/3.1.x.
 Feature jest domyślnie wyłączony; uruchom TDW z
 `--system-assistant.enabled=true`. Wybór adresu nasłuchiwania TDW jest
 niezależny od tej flagi. AI wymaga skonfigurowanego PAT Copilota w Workspace Settings.
@@ -17,7 +17,7 @@ a następnie zaimportuj wygenerowany plik JSON.
 Otwórz `/system-assistant`. Ekran zaczyna od `Skilli` i ma sześć zakładek:
 `Skille`, `Kontrakty`, `Auth`, `Profile`, `Rozmowa` oraz `Uruchamianie w systemie`.
 W zakładce `Skille` dodaj instrukcje pracy
-asystenta. W zakładce `Kontrakty` wybierz `Dodaj OpenAPI` i wskaż plik YAML
+asystenta. W zakładce `Kontrakty` wybierz `Dodaj OpenAPI` i wskaż plik JSON lub YAML
 swojego API. W modalu wybierz operacje, nadaj nazwę kontraktu i użyj
 `Użyj wybranych operacji`. Do szkicu trafiają tylko wybrane operacje
 i potrzebne im schematy. Kliknij `Zapisz`, aby aktywować konfigurację.
@@ -44,6 +44,86 @@ również niezapisany.
 Import zastępuje szkic; wymaga `Zapisz`, aby aktywować zestaw. Niepoprawny
 plik nie zmienia szkicu. Rozmowy, preferencje AI, logowanie do Copilota
 i pamięciowe połączenia OIDC pozostają poza tym eksportem.
+
+## Długie identyfikatory operacji
+
+Długi `operationId` nie blokuje importu. Nazwa narzędzia ma do 64 znaków;
+gdy trzeba, TDW skraca ją automatycznie i dodaje stabilny hash. Pełny
+`operationId` pozostaje w dokumentacji, eksporcie i opisie narzędzia,
+więc możesz używać go w instrukcjach. Zmiana kolejności albo wybór mniejszego
+zestawu operacji nie zmienia wygenerowanej nazwy.
+
+## Listy w parametrach query
+
+Parametr query może być jednowymiarową tablicą tekstów, liczb lub boolean.
+AI przekazuje np. `{"query":{"productIds":[101,102]}}`. Dla domyślnego
+`style: form` i `explode: true` TDW wysyła `productIds=101&productIds=102`;
+przy `explode: false` wysyła `productIds=101,102`. Elementy są kodowane osobno
+i walidowane zgodnie ze schema, także enum, uniqueItems i limity liczby.
+Opcjonalny parametr można pominąć. Pusta tablica jest odrzucana przed HTTP;
+obiekty query, tablice zagnieżdżone i null nie należą do tego zakresu.
+
+## Wzorce tekstowe
+
+Ograniczenie `pattern` jest zachowywane w schema i egzekwowane przed
+wywołaniem API. Nieprawidłowy typ lub składnia regexu blokuje import.
+Wzorzec bez `^` i `$` może pasować do fragmentu tekstu; TDW nie dopisuje
+kotwic. Obsługiwana składnia wynika z silnika JDK w walidatorze networknt.
+
+## Odpowiedzi tekstowe
+
+Odpowiedź `text/plain` ze schema `type: string` jest obsługiwana przez SDK
+i MCP. Treść trafia jako string do istniejącego pola `body` wyniku narzędzia.
+TDW wysyła `Accept` z deklaracji OpenAPI, a odpowiedź odczytuje według
+`Content-Type` i charsetu (domyślnie UTF-8). Tekst nie jest zamieniany na JSON
+nawet wtedy, gdy wygląda jak JSON. Błędny application/json nadal jest błędem.
+Obowiązuje limit 64 KiB i dotychczasowa blokada po nieustalonym zapisie.
+Request body nadal obsługuje wyłącznie application/json.
+
+## Operacje PATCH
+
+Możesz importować i wybierać PATCH z `application/json` lub bez body.
+Wysyłany jest dokładnie JSON przygotowany zgodnie ze schematem requestu;
+TDW nie pobiera i nie odsyła całego DTO ani nie dopisuje domyślnych wartości.
+Required nadal obowiązuje. Auth i blokada po nieustalonym wyniku działają
+jak dla pozostałych potencjalnych zapisów.
+
+Wymagane nagłówki, cookies oraz JSON Patch i Merge Patch z odrębnymi media
+types pozostają nieobsługiwane.
+
+## Opcjonalne nagłówki
+
+Deklaracja opcjonalnego header, np. correlationId, nie blokuje importu.
+Brak required oznacza false. Nagłówek pozostaje widoczny w dokumentacji,
+ale AI nie otrzymuje argumentu do jego podania, a TDW go nie generuje ani
+nie wysyła. Panel uwag informuje, które nagłówki są pomijane. Wymagany
+header nadal blokuje import. Autoryzacja z profilu Auth działa niezależnie.
+
+## Kompozycja modeli i skutki operacji
+
+Importer zachowuje `allOf`, `oneOf`, `anyOf`, discriminatory i mapy
+z typowanymi wartościami. Rozwiń `Uwagi do wybranych operacji` w modalu,
+aby zobaczyć ograniczenia kontraktu. Nakładające się warianty `oneOf` są
+odrzucane przed wysłaniem żądania; brak mapping nie jest naprawiany przez
+zgadywanie nazw typów. Formularz requestu i DTO odpowiedzi pozostają odrębne.
+
+Przykład: `addProduct` może używać formularzy opartych na
+`DefaultProductDataForm`, a `getOrCreatePricingOrders` zwracać złożone DTO.
+Import obu operacji nie potwierdza, że formularze w źródle jednoznacznie
+rozróżniają wartości `type`. Kontrakt powinien zawierać ograniczenia wariantów
+zgodne z rzeczywistym API.
+
+Opisuj potwierdzone skutki w źródle przez `x-tdw-operation-effect`:
+`READ_ONLY`, `MUTATION` albo `UNKNOWN`. Domyślne UNKNOWN jest traktowane jak
+potencjalny zapis, również dla GET. Po nieustalonym wyniku można wykonywać
+tylko potwierdzone odczyty; nie ma samoczynnego retry.
+
+Limit liczby operacji pozostaje 60 na kontrakt i 100 łącznie. Kontrakt może
+mieć do 1000000 znaków, ale projekcja argumentów pojedynczego narzędzia do
+250000, a wszystkich do 1000000. Schematy odpowiedzi nie powiększają
+argumentów narzędzia. Rekurencyjne requesty nie są obsługiwane; rekursja
+w dokumentacji odpowiedzi jest zachowywana. Pełne ograniczenia opisuje
+[runtime](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).
 
 ## Profile
 

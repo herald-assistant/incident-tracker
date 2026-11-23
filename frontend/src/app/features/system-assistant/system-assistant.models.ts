@@ -18,7 +18,7 @@ export interface AssistantTool { apiId: string; name: string; description: strin
 export interface AssistantPageContext { origin: string; pathname: string; title: string; capturedAt: string; }
 export interface AssistantConversation { id: string; busy: boolean; pageContext: AssistantPageContext | null; messages: AnalysisChatMessageResponse[]; }
 export interface OpenApiOperationKey { method: string; path: string; }
-export interface OpenApiCandidate extends OpenApiOperationKey { operationId: string; summary: string; tags: string[]; unavailableReason: string | null; }
+export interface OpenApiCandidate extends OpenApiOperationKey { operationId: string; summary: string; tags: string[]; unavailableReason: string | null; warnings: string[]; }
 export interface OpenApiPreview { title: string; operations: OpenApiCandidate[]; maxSelected: number; specification: Record<string, unknown>; }
 export interface OpenApiSelectionRow extends OpenApiOperationKey { checked: boolean; disabled: boolean; unavailableReason: string | null; }
 export interface OpenApiSelectionChange extends OpenApiOperationKey { checked: boolean; }

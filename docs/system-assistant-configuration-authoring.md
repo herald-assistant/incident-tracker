@@ -4,7 +4,7 @@ Ten dokument jest samodzielną instrukcją do użycia w Codex, VS Code lub innym
 chacie AI. Można go przekazać razem z repozytorium na dysku, dostępem do
 repozytorium na platformie, dokumentacją albo istniejącym eksportem konfiguracji.
 Do wykonania zadania nie jest potrzebny dostęp do kodu TDW. Dokument opisuje
-aktualny format importu V1, z profilami i ograniczonym podzbiorem OpenAPI 3.0.x.
+aktualny format importu V1, z profilami i ograniczonym podzbiorem OpenAPI 3.0.x/3.1.x.
 
 ## Polecenie użytkownika — wzór
 
@@ -74,7 +74,7 @@ konfiguracji. Sam dostęp do źródeł nie oznacza polecenia wykonania ich opera
 ## Format pliku importu
 
 Nazwa docelowa: `system-assistant-configuration.json`. Kodowanie UTF-8,
-zwykły JSON, bez komentarzy i trailing commas. Maksymalnie 10 000 000 bajtów.
+zwykły JSON, bez komentarzy i trailing commas. Maksymalnie 100 000 000 bajtów.
 Wszystkie poniższe klucze są wymagane; nie dodawaj innych pól.
 
 ```json
@@ -93,7 +93,7 @@ Wszystkie poniższe klucze są wymagane; nie dodawaj innych pól.
 | --- | --- |
 | `apis` | Do 12 obiektów: `id`, `name`, `yaml` (niepuste stringi) |
 | API `id` | Regex `[a-z][a-z0-9_]{0,23}`; unikalne w `apis` |
-| API `name` / `yaml` | Nazwa do 100 znaków; YAML jako string do 100 000 znaków |
+| API `name` / `yaml` | Nazwa do 100 znaków; YAML jako string do 1 000 000 znaków |
 | `skills` | Do 20 obiektów: `id`, `name`, `content`, wszystkie string i niepuste |
 | Skill `id` | Regex `[a-z][a-z0-9_]{0,39}`; unikalne w `skills` |
 | Skill `name` / `content` | Nazwa do 100 znaków; Markdown jako string do 20 000 znaków |
@@ -128,45 +128,56 @@ Do 60 operacji na YAML, maksymalnie 100 łącznie we wszystkich API.
 
 | Obszar | Reguły dla generowanego YAML-a |
 | --- | --- |
-| Wersja | `openapi: 3.0.3` albo inne `3.0.x`; bez Swagger 2 i OpenAPI 3.1 |
+| Wersja | `3.0.x` albo `3.1.x`; zachowaj dialekt źródła, bez Swagger 2 |
 | Root | Tylko `openapi`, `info`, `servers`, `paths`, `components`, `tags`, `externalDocs`, `security` |
 | Serwer | Dokładnie jeden top-level `servers` z bezwzględnym `url` HTTP(S); dowolny poprawny host i opcjonalny base path; bez credentials, query, hash, zmiennych i override na path/operacji |
 | Ścieżki | Zaczynają się `/`; bez query/hash, `..` i `%`; parametry `{id}` muszą dokładnie odpowiadać deklaracjom `in: path` |
-| Metody | Tylko `get`, `post`, `put`, `delete`; bez PATCH, HEAD, OPTIONS, callbacks i webhooks |
+| Metody | `get`, `post`, `put`, `delete`, `patch`; bez HEAD, OPTIONS, TRACE, callbacks i webhooks |
 | Path item | Tylko obsługiwane metody, `parameters`, `summary`, `description` |
 | Operacja | Tylko `operationId`, `summary`, `description`, `parameters`, `requestBody`, `responses`, `tags`, `deprecated`, `externalDocs`, `security` |
-| `operationId` | Wymagany, unikalny w kontrakcie, regex `[a-zA-Z][a-zA-Z0-9_]{0,63}`; wynikowa nazwa `oa_<apiId>_<operationId>` musi mieć maksymalnie 64 znaki |
-| Parametry | Wyłącznie `path` i `query`, typ skalarny; nazwa `[a-zA-Z][a-zA-Z0-9_]{0,63}`; path zawsze `required: true`; domyślny style albo `simple` dla path / `form` dla query |
-| Pola parametru | `name`, `in`, `description`, `required`, `schema`, `style`, `explode`, `deprecated`, `example`; bez headers/cookies, tablic i obiektów |
-| Body | Tylko POST/PUT i `application/json`; pola `description`, `required`, `content`; media object ma `schema` i opcjonalne `example` |
-| Responses | Wymagana niepusta mapa; kody w cudzysłowach `"100"`–`"599"` lub `default`; odpowiedź ma `description` i opcjonalne `content` wyłącznie JSON ze schema; bez headers, links i response refs |
+| `operationId` | Wymagany, unikalny w kontrakcie, regex `[a-zA-Z][a-zA-Z0-9_]*`; pełny identyfikator pozostaje w dokumencie i opisie narzędzia. Nazwa `oa_<apiId>_<operationId>` ponad 64 znaki jest automatycznie skracana do 47 znaków prefiksu + `_` + 16 cyfr hex SHA-256 pełnej nazwy UTF-8; kolizja blokuje publikację |
+| Parametry | Wykonywane są scalar `path`/`query` oraz query array z jawnym scalar items (string/integer/number/boolean, bez null); opcjonalne `header` pozostają dokumentacją bez wysyłania; nazwa `[a-zA-Z][a-zA-Z0-9_]{0,63}`; path zawsze `required: true`; domyślny style albo `simple` dla path / `form` dla query |
+| Pola parametru | `name`, `in`, `description`, `required`, `schema`, `style`, `explode`, `deprecated`, `example`; query array: form + explode true/domyślne (powtarzane klucze) lub false (CSV, elementy kodowane osobno); pusta tablica odrzucana przed HTTP, optional pomijany tylko przy braku argumentu; bez object query, array path, tablic obiektów/tablic/null i nullable tablic; wymagane header i cookies nieobsługiwane |
+| Body | POST/PUT/PATCH i `application/json`; body PATCH może być opcjonalne albo nieobecne; pola `description`, `required`, `content`; media object ma `schema` i opcjonalne `example` |
+| Responses | Wymagana niepusta mapa; kody w cudzysłowach `"100"`–`"599"` lub `default`; odpowiedź ma `description` i opcjonalne `content`: application/json albo text/plain ze schema type string; bez headers, links i response refs |
 | Components | `components.schemas` oraz `components.securitySchemes` dla Basic/Bearer/OAuth2/openIdConnect; bez katalogów parameters, responses i requestBodies |
-| References | Tylko lokalne, acykliczne `#/components/schemas/...`, bez dodatkowych pól obok `$ref`; maks. 20 poziomów i 10 000 węzłów rozwinięcia |
-| YAML | Bez duplikatów kluczy, kotwic/aliasów i własnych tagów; bez nieobsługiwanych rozszerzeń `x-*` |
+| References | Lokalne `#/components/schemas/...`; requesty acykliczne do 64 poziomów i 30000 węzłów; odpowiedzi mogą mieć produktywną rekursję; rodzeństwo schema `$ref` dozwolone tylko w 3.1 |
+| YAML | Bez duplikatów kluczy, kotwic/aliasów i własnych tagów; rozszerzenia `x-*` są zachowane jako metadata; skutki określa wyłącznie `x-tdw-operation-effect` |
 
-Schemat musi mieć jawny `type`: `object`, `array`, `string`, `number`,
-`integer` albo `boolean`. Dozwolone pola schematu to:
+Obsługiwane schematy i dialekty opisuje aktualny
+[runtime](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).
+W szczególności obsługiwane są `allOf`, `oneOf`, `anyOf`, discriminator,
+`uniqueItems`, `pattern`, typowane `additionalProperties` i ograniczenia pól. W OpenAPI
+3.0 null opisuje nullable, a w 3.1 tablica typów z null. Nie zmieniaj samego
+numeru wersji dokumentu. Format jest adnotacją, default nie jest dopisywany,
+a pola readOnly są pomijane w argumentach i zabronione w wysyłanym requeście.
 
-```text
-type, description, title, properties, items, required, enum,
-additionalProperties, minimum, maximum, minLength, maxLength,
-minItems, maxItems, example, default, readOnly, format, nullable
-```
+`pattern` musi być stringiem z poprawnym regexem w silniku JDK networknt;
+nie zakładaj pełnej składni ECMAScript. Zachowaj wzorzec i jego escaping,
+bez dopisywania kotwic lub zastępowania reguły opisem. Bez `^` i `$` może
+pasować fragment tekstu. Pattern jest egzekwowany przed HTTP i przekazywany
+do schema SDK/MCP; błędny typ lub składnia blokuje import.
 
-- Obiekt: `properties` jest mapą schematów; `required` jest listą unikalnych
-  nazw istniejących pól. `additionalProperties` może być tylko boolean.
-  Nie dodawaj `additionalProperties: false`, jeżeli zmieni to rzeczywisty kontrakt.
-- Tablica: wymagane `items` z obsługiwanym schematem. Parametry path/query
-  nie mogą być tablicami, nawet jeżeli body i odpowiedzi mogą je zawierać.
-- `enum` to niepusta tablica. Minimum nie może przekraczać maximum;
-  ograniczenia długości/liczby elementów są nieujemnymi liczbami całkowitymi.
-- `readOnly` i `nullable` muszą być boolean, `format` stringiem.
-  Pola readOnly nie są wysyłane w żądaniu. Nullable nie znosi required ani enum.
-  Format jest adnotacją: TDW nie sprawdza na tej podstawie składni UUID, daty czy emaila.
-  `default` nie jest automatycznie dopisywany do requestu.
-- Nieobsługiwane m.in.: `allOf`, `oneOf`, `anyOf`, `not`, `discriminator`,
-  `pattern`, `writeOnly`, `uniqueItems`, `multipleOf`, `exclusiveMinimum`,
-  `exclusiveMaximum`, typ `null`, tablica typów i schema jako additionalProperties.
+Zachowaj wszystkie ograniczenia allOf. OneOf wymaga dokładnie jednego
+pasującego schematu; discriminator nie usuwa nakładania się wariantów.
+Nie zgaduj mapping na podstawie podobieństwa enumów i nazw klas. Mapping
+musi wskazywać istniejące lokalne schematy. Nieobsługiwane pozostają m.in.
+`not`, `patternProperties`, `multipleOf`, zewnętrzne refs i rekurencyjne requesty.
+
+Opisz potwierdzone skutki operacji przez `x-tdw-operation-effect`:
+`READ_ONLY`, `MUTATION` lub `UNKNOWN`. Brak pola oznacza UNKNOWN, także dla
+GET. Nie przypisuj READ_ONLY na podstawie samej metody lub nazwy.
+Zachowaj opcjonalne `in: header` ze źródła, w tym correlationId, bez zmiany
+required. Brak required oznacza false. Nie przenoś tych parametrów do
+path/query/body i nie dopisuj ich wartości jako defaultu ani do instrukcji
+wywołania. Narzędzie ich nie wysyła i nie daje AI możliwości ich podania.
+Wymagany header pozostaje blokadą importu. Auth jest wybierane osobno.
+
+PATCH zachowuje zadeklarowany schema i required; nie dopisuj pól całego DTO.
+Media types JSON Patch i Merge Patch nie są obecnie obsługiwane.
+
+Do 1000000 znaków na kontrakt, 250000 na projekcję argumentów narzędzia,
+1000000 na cały katalog schematów argumentów. Limit operacji pozostaje 60/100.
 
 Możesz rozwinąć dziedziczenie lub lokalne referencje do jawnego schematu,
 jeżeli potrafisz zachować rzeczywisty kontrakt. Nie spłaszczaj arbitralnie unii,
@@ -235,7 +246,8 @@ Uwzględnij tylko wiedzę i procedury potrzebne do celu:
 - oczekiwany język i formę odpowiedzi, jawne braki oraz ograniczenia.
 
 Możesz odwoływać się do rzeczywistych `operationId` lub wygenerowanych nazw
-`oa_<apiId>_<operationId>`. Nie wpisuj nazw nieistniejących tools. Nie odsyłaj
+`oa_<apiId>_<operationId>` (długie nazwy mają skrót z hashem; do instrukcji
+możesz użyć pełnego operationId). Nie wpisuj nazw nieistniejących tools. Nie odsyłaj
 asystenta do lokalnych plików źródłowych jako jedynego źródła wymaganej reguły:
 przenieś potrzebną, zwięzłą wiedzę do content. Zachowaj identyfikatory techniczne.
 Nie kopiuj sekretów, danych klientów ani całych repozytoriów do instrukcji.
@@ -287,12 +299,12 @@ konfiguracji użyj wyłącznie potwierdzonych adresów, operacji i reguł.
       {
         "id": "tickets_read",
         "name": "Zgłoszenia — odczyt",
-        "yaml": "openapi: 3.0.3\ninfo:\n  title: Tickets read\n  version: '1.0'\nservers:\n  - url: https://api.example.invalid/api\npaths:\n  /tickets/{id}:\n    get:\n      operationId: getTicket\n      summary: Odczytaj zgłoszenie\n      parameters:\n        - name: id\n          in: path\n          required: true\n          schema:\n            type: string\n      responses:\n        '200':\n          description: Stan zgłoszenia\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n                  id:\n                    type: string\n                    readOnly: true\n                  status:\n                    type: string\n                    enum: [OPEN, CLOSED]\n        '404':\n          description: Nie znaleziono zgłoszenia\n"
+        "yaml": "openapi: 3.0.3\ninfo:\n  title: Tickets read\n  version: '1.0'\nservers:\n  - url: https://api.example.invalid/api\npaths:\n  /tickets/{id}:\n    get:\n      operationId: getTicket\n      x-tdw-operation-effect: READ_ONLY\n      summary: Odczytaj zgłoszenie\n      parameters:\n        - name: id\n          in: path\n          required: true\n          schema:\n            type: string\n      responses:\n        '200':\n          description: Stan zgłoszenia\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n                  id:\n                    type: string\n                    readOnly: true\n                  status:\n                    type: string\n                    enum: [OPEN, CLOSED]\n        '404':\n          description: Nie znaleziono zgłoszenia\n"
       },
       {
         "id": "tickets_write",
         "name": "Zgłoszenia — zmiana statusu",
-        "yaml": "openapi: 3.0.3\ninfo:\n  title: Tickets write\n  version: '1.0'\nservers:\n  - url: https://api.example.invalid/api\npaths:\n  /tickets/{id}/status:\n    put:\n      operationId: setTicketStatus\n      summary: Ustaw status zgłoszenia\n      parameters:\n        - name: id\n          in: path\n          required: true\n          schema:\n            type: string\n      requestBody:\n        required: true\n        content:\n          application/json:\n            schema:\n              type: object\n              required: [status]\n              properties:\n                status:\n                  type: string\n                  enum: [OPEN, CLOSED]\n      responses:\n        '204':\n          description: Zmieniono status\n        '404':\n          description: Nie znaleziono zgłoszenia\n"
+        "yaml": "openapi: 3.0.3\ninfo:\n  title: Tickets write\n  version: '1.0'\nservers:\n  - url: https://api.example.invalid/api\npaths:\n  /tickets/{id}/status:\n    put:\n      operationId: setTicketStatus\n      x-tdw-operation-effect: MUTATION\n      summary: Ustaw status zgłoszenia\n      parameters:\n        - name: id\n          in: path\n          required: true\n          schema:\n            type: string\n      requestBody:\n        required: true\n        content:\n          application/json:\n            schema:\n              type: object\n              required: [status]\n              properties:\n                status:\n                  type: string\n                  enum: [OPEN, CLOSED]\n      responses:\n        '204':\n          description: Zmieniono status\n        '404':\n          description: Nie znaleziono zgłoszenia\n"
       }
     ],
     "skills": [
@@ -351,7 +363,7 @@ konfiguracji użyj wyłącznie potwierdzonych adresów, operacji i reguł.
 
 - [ ] JSON parsuje się, ma dokładne klucze, numeric version 1 i wszystkie cztery listy i apiBindings z apiId/authProfileId w profilach.
 - [ ] Nie przekroczono limitów; ID są unikalne, referencje istnieją i nie powtarzają się.
-- [ ] Każdy yaml po odczycie JSON parsuje się jako samodzielny OpenAPI 3.0.x.
+- [ ] Każdy yaml po odczycie JSON parsuje się jako samodzielny OpenAPI 3.0.x/3.1.x.
 - [ ] Są tylko obsługiwane pola, metody, schema i refs; nazwy tools mieszczą się w 64 znakach.
 - [ ] Operacje, adresy i wymagania dostępu mają potwierdzenie w źródłach.
 - [ ] Ograniczenia importera nie zostały ukryte przez zmianę semantyki API.

@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info: {title: Optional header parameters, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /items/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+      - {name: correlationId, in: header}
+      - name: X-Client
+        in: header
+        required: false
+        schema: {type: string, default: untrusted-header-default}
+    get:
+      operationId: getItem
+      x-tdw-operation-effect: READ_ONLY
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema: {type: string, default: untrusted-authorization-default}
+      responses:
+        '200': {description: Item, content: {application/json: {schema: {type: object}}}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}

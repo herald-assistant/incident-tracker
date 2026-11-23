@@ -3,7 +3,7 @@ import { AssistantAuthProfile, AssistantConfiguration } from './system-assistant
 const AUTH_FIELDS = ['id', 'name', 'type', 'username', 'password', 'token', 'tokenUrl', 'clientId', 'clientSecret', 'scopes', 'issuerUrl', 'redirectUri', 'clientAuthentication'];
 
 export const ASSISTANT_CONFIGURATION_FILE_NAME = 'system-assistant-configuration.json';
-export const ASSISTANT_CONFIGURATION_FILE_MAX_BYTES = 10_000_000;
+export const ASSISTANT_CONFIGURATION_FILE_MAX_BYTES = 100_000_000;
 
 export interface AssistantConfigurationFile {
   version: 1;

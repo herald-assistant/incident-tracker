@@ -3,10 +3,14 @@ package pl.mkn.tdw.features.systemassistant.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
+import pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile;
 import pl.mkn.tdw.integrations.openapi.OpenApiImportPort;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiSelection;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.util.*;
@@ -17,7 +21,7 @@ import java.util.*;
 public class SystemAssistantConfigurationService {
     private final OpenApiImportPort importer;
     private final SystemAssistantConfigurationStore store;
-    private final pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog catalog;
+    private final OpenApiToolCatalog catalog;
     private Snapshot snapshot = new Snapshot(SystemAssistantConfiguration.empty(), List.of(), Map.of());
     private boolean unavailable;
 
@@ -28,19 +32,19 @@ public class SystemAssistantConfigurationService {
             operationApiIds = Map.copyOf(operationApiIds);
         }
 
-        public List<pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution> executions() {
+        public List<OpenApiExecution> executions() {
             if (configuration.profiles().size() != 1) throw new IllegalStateException("Wykonanie wymaga jednego wybranego profilu.");
-            var auth = new HashMap<String, pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile>();
+            var auth = new HashMap<String, HttpAuthProfile>();
             configuration.authProfiles().forEach(profile -> auth.put(profile.id(), profile));
             var bindings = new HashMap<String, SystemAssistantConfiguration.ApiBinding>();
             configuration.profiles().get(0).apiBindings().forEach(binding -> bindings.put(binding.apiId(), binding));
             return operations.stream().filter(operation -> bindings.containsKey(operationApiIds.get(operation.name())))
-                    .map(operation -> new pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution(operation,
+                    .map(operation -> new OpenApiExecution(operation,
                             auth.get(bindings.get(operationApiIds.get(operation.name())).authProfileId()))).toList();
         }
 
-        public Map<String, List<pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution>> executionsByProfile() {
-            var result = new LinkedHashMap<String, List<pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution>>();
+        public Map<String, List<OpenApiExecution>> executionsByProfile() {
+            var result = new LinkedHashMap<String, List<OpenApiExecution>>();
             configuration.profiles().forEach(profile -> result.put(profile.id(), forProfile(profile.id()).executions()));
             return Map.copyOf(result);
         }
@@ -130,6 +134,10 @@ public class SystemAssistantConfigurationService {
         if (operations.stream().map(OpenApiOperation::name).distinct().count() != operations.size())
             throw new SystemAssistantException("DUPLICATE_TOOL", UserFacingErrorType.BAD_REQUEST,
                     "Zestaw API generuje powtórzone nazwy narzędzi. Zmień ID API lub operationId.");
+        var schemaCharacters = operations.stream().mapToLong(operation -> operation.inputSchema().toString().length()).sum();
+        if (schemaCharacters > OpenApiSelection.MAX_CATALOG_SCHEMA_CHARACTERS)
+            throw new SystemAssistantException("TOOL_SCHEMAS_TOO_LARGE", UserFacingErrorType.BAD_REQUEST,
+                    "Schematy argumentów zestawu przekraczają 1000000 znaków. Zmniejsz wybór operacji.");
         if (operations.size() > 100)
             throw new SystemAssistantException("TOO_MANY_TOOLS", UserFacingErrorType.BAD_REQUEST,
                     "Maksymalnie 100 narzędzi w zestawie.");

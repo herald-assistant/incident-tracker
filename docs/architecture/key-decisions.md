@@ -14,8 +14,18 @@ mają przypisania per API w profilu asystenta; No Auth jest domyślne. Workflow 
 pozostaje odrębnym zakresem. Nie ma automatycznych redirectów ani retry mutacji.
 Schema argumentów SDK/MCP jest projekcją requestu: pomija readOnly, mapuje
 nullable na null i zachowuje format jako adnotację. Wykonanie waliduje
-oryginalny schema OpenAPI. YAML zachowuje adnotacje także w podglądzie
+schema OpenAPI po adaptacji do JSON Schema, z kompozycją i bez zdalnego resolvera.
+Requesty mają ograniczoną projekcję inline; schematy odpowiedzi pozostają
+dokumentacją grafu i nie rozszerzają argumentów narzędzi. Jawne
+`x-tdw-operation-effect` rozróżnia READ_ONLY/MUTATION/UNKNOWN, domyślnie UNKNOWN
+także dla GET. Nieustalony potencjalny zapis blokuje kolejne potencjalne
+zapisy w turze SDK lub sesji MCP. YAML zachowuje adnotacje także w podglądzie
 i eksporcie. Ekspozycja MCP pozostaje odrębna od istniejącego katalogu.
+Nazwy narzędzi OpenAPI mają do 64 znaków; dłuższa postać jest skracana
+deterministycznie z hashem SHA-256. Pełny operationId pozostaje w kontrakcie
+i opisie, a kolizja wygenerowanych nazw blokuje publikację katalogu.
+Tablice query są typowanymi argumentami SDK/MCP; wspólny wykonawca HTTP
+obsługuje form/explode, kodując osobno elementy i zachowując walidację schema.
 
 Transkrypt V1 jest trwałym wpisem wspólnej Analysis History. Powrót do chatu
 z pełnego TDW lub panelu Browser Tools odtwarza pierwotny kontekst strony

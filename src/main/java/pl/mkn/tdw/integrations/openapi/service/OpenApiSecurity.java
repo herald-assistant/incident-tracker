@@ -18,7 +18,7 @@ final class OpenApiSecurity {
             var type = scheme.path("type").asText();
             switch (type) {
                 case "http" -> {
-                    fields(scheme, "type", "description", "scheme", "bearerFormat");
+                    fields(scheme, "type", "description", "scheme", "bearerFormat", "name");
                     if (!Set.of("basic", "bearer").contains(scheme.path("scheme").asText().toLowerCase(java.util.Locale.ROOT)))
                         fail("Obsługiwane HTTP securitySchemes: basic, bearer.");
                 }
@@ -45,7 +45,7 @@ final class OpenApiSecurity {
         });
         requirement(root, schemes);
         root.path("paths").forEach(path -> path.fields().forEachRemaining(entry -> {
-            if (Set.of("get", "post", "put", "delete").contains(entry.getKey())) requirement(entry.getValue(), schemes);
+            if (Set.of("get", "post", "put", "delete", "patch").contains(entry.getKey())) requirement(entry.getValue(), schemes);
         }));
     }
 
@@ -53,7 +53,7 @@ final class OpenApiSecurity {
         var names = new LinkedHashSet<String>();
         addNames(source.path("security"), names);
         paths.forEach(path -> path.fields().forEachRemaining(entry -> {
-            if (Set.of("get", "post", "put", "delete").contains(entry.getKey())) addNames(entry.getValue().path("security"), names);
+            if (Set.of("get", "post", "put", "delete", "patch").contains(entry.getKey())) addNames(entry.getValue().path("security"), names);
         }));
         return names;
     }
@@ -80,7 +80,7 @@ final class OpenApiSecurity {
 
     private static void fields(JsonNode node, String... allowed) {
         var names = Set.of(allowed);
-        node.fieldNames().forEachRemaining(name -> { if (!names.contains(name)) fail("Nieobsługiwane pole security: " + name); });
+        node.fieldNames().forEachRemaining(name -> { if (!names.contains(name) && !name.startsWith("x-")) fail("Nieobsługiwane pole security: " + name); });
     }
 
     private static void url(JsonNode node) {

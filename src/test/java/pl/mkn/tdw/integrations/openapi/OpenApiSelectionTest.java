@@ -58,7 +58,7 @@ class OpenApiSelectionTest {
                 .doesNotContain("updateTicket", "simulateCost", "unused", "NeverUsed", "example.invalid");
         var operations = importer.parse("crm", prepared.yaml());
         assertThat(operations).hasSize(1);
-        assertThat(operations.get(0).parameters()).containsExactly(new pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation.Parameter("id", "path"));
+        assertThat(operations.get(0).parameters()).containsExactly(new pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation.Parameter("id", "path", false));
     }
     @Test void retainsSharedPathParametersAndSelectedMethodsWithoutExtraEndpoints() throws Exception {
         var prepared = selection.select("crm", fixture().toString(), List.of(
@@ -72,11 +72,11 @@ class OpenApiSelectionTest {
         var key = new OperationKey("GET", "/tickets/{id}");
         for (var keys : List.of(List.<OperationKey>of(), List.of(key, key), List.of(new OperationKey("GET", "/missing"))))
             assertThatThrownBy(() -> selection.select("crm", document.toString(), keys)).isInstanceOf(OpenApiException.class);
-        ((ObjectNode) document.path("paths").path("/tickets/{id}")).set("patch", document.path("paths").path("/tickets/{id}").get("put"));
+        ((ObjectNode) document.path("paths").path("/tickets/{id}")).set("head", document.path("paths").path("/tickets/{id}").get("put"));
         assertThat(selection.preview("crm", document.toString()).operations()).anySatisfy(candidate -> {
-            assertThat(candidate.method()).isEqualTo("PATCH"); assertThat(candidate.unavailableReason()).isNotBlank();
+            assertThat(candidate.method()).isEqualTo("HEAD"); assertThat(candidate.unavailableReason()).isNotBlank();
         });
-        assertThatThrownBy(() -> selection.select("crm", document.toString(), List.of(new OperationKey("PATCH", "/tickets/{id}"))))
+        assertThatThrownBy(() -> selection.select("crm", document.toString(), List.of(new OperationKey("HEAD", "/tickets/{id}"))))
                 .isInstanceOf(OpenApiException.class);
         ((ObjectNode) document.path("components").path("schemas").path("Ticket").path("properties").path("title")).put("nullable", "wrong");
         assertThatThrownBy(() -> selection.select("crm", document.toString(), List.of(key))).isInstanceOf(OpenApiException.class);

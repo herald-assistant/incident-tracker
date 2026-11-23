@@ -111,6 +111,10 @@ konsumentow naleza do `contract`, a implementacje, konfiguracja i techniczne
 modele do odpowiednich podpakietow. Konsumenci poza integracja importuja porty
 oraz `contract`; jedynymi wyjatkami konfiguracji sa konkretne properties
 aktualizowane przez `api.workspacesettings.WorkspaceSettingsService`.
+Port wykonania OpenAPI przyjmuje własny `contract.OpenApiExecution` oraz
+`OpenApiArguments`. Binding zawiera operację i captured profil neutralnego
+HTTP Auth; root portu nie importuje ani nie ujawnia bezpośrednio typu profilu
+innej integracji. Callback i REST reuse'ują ten sam binding.
 `IntegrationPackageBoundaryTest` sprawdza wszystkie obecne integracje systemowe,
 ich konsumentow oraz inwentarz katalogow, aby nowy system wymagal jawnego
 objecia testem.

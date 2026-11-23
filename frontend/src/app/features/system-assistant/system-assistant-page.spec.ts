@@ -255,8 +255,8 @@ describe('SystemAssistantPage', () => {
     const fixture = ready(); const page = fixture.componentInstance; page.addSkill(); const draft = page.configuration();
     await page.importConfiguration({target: {files: [], value: ''}} as unknown as Event);
     expect(page.configuration()).toBe(draft); expect(page.error()).toBe('');
-    const oversized = configurationInput('{}', 10_000_001); await page.importConfiguration(oversized.event);
-    expect(oversized.input.files[0].text).not.toHaveBeenCalled(); expect(page.error()).toContain('10000000');
+    const oversized = configurationInput('{}', 100_000_001); await page.importConfiguration(oversized.event);
+    expect(oversized.input.files[0].text).not.toHaveBeenCalled(); expect(page.error()).toContain('100000000');
     const unreadable = configurationInput('{}'); unreadable.input.files[0].text.mockRejectedValue(new Error('Odczyt nieudany'));
     await page.importConfiguration(unreadable.event); expect(page.error()).toBe('Odczyt nieudany'); expect(page.configuration()).toBe(draft);
     const valid = configurationInput('{"version":1,"configuration":{"apis":[],"skills":[],"profiles":[],"authProfiles":[]}}');
@@ -357,7 +357,7 @@ describe('SystemAssistantPage', () => {
     fixture.detectChanges();
     const preview = http.expectOne('/api/system-assistant/configuration/openapi/preview');
     expect(preview.request.body.yaml).toBe(source); expect(page.configuration().apis).toHaveLength(0);
-    preview.flush({title: 'Duże CRM', operations: [{method: 'GET', path: '/tickets', operationId: 'getTickets', summary: '', tags: [], unavailableReason: null}], maxSelected: 60, specification: {openapi: '3.0.3', paths: {'/tickets': {get: {operationId: 'getTickets'}}}}});
+    preview.flush({title: 'Duże CRM', operations: [{method: 'GET', path: '/tickets', operationId: 'getTickets', summary: '', tags: [], warnings: [], unavailableReason: null}], maxSelected: 60, specification: {openapi: '3.0.3', paths: {'/tickets': {get: {operationId: 'getTickets'}}}}});
     await fixture.whenStable();
     expect(document.querySelector('cdk-dialog-container')?.contains(document.activeElement)).toBe(true);
     const dialog = TestBed.inject(Dialog).openDialogs[0];
@@ -398,6 +398,17 @@ describe('SystemAssistantPage', () => {
     TestBed.inject(Dialog).openDialogs[0].close();
     expect(page.configuration().apis[0]).toBe(current); expect(page.dirty()).toBe(false);
     http.expectNone('/api/system-assistant/configuration/openapi/selection'); fixture.destroy();
+  });
+  it('accepts an OpenAPI JSON source and keeps the version 3.1 document for backend selection', async () => {
+    const fixture = ready(); const page = fixture.componentInstance; page.workspaceView.set('contracts'); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('input[accept*=".yaml"]').getAttribute('accept')).toContain('.json');
+    const source = JSON.stringify({openapi: '3.1.0', paths: {'/products': {post: {operationId: 'addProduct'}}}});
+    await page.readNewOpenApi({target: {files: [{name: 'backend.json', size: source.length, text: () => Promise.resolve(source)}], value: 'backend.json'}} as unknown as Event);
+    fixture.detectChanges();
+    const request = http.expectOne('/api/system-assistant/configuration/openapi/preview');
+    expect(request.request.body.yaml).toBe(source);
+    request.flush({title: 'Products', operations: [], maxSelected: 60, specification: JSON.parse(source)});
+    TestBed.inject(Dialog).closeAll(); fixture.destroy();
   });
   it('downloads the exact YAML of the selected draft without saving or changing it', async () => {
     const fixture = ready(); const page = fixture.componentInstance;
