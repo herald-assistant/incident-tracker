@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiIntegrationTest {
     @Test
@@ -36,7 +37,7 @@ class OpenApiIntegrationTest {
         server.start();
         try {
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
             var read = operations.stream().filter(op -> op.method().equals("GET")).findFirst().orElseThrow();
             var result = executor.execute(new OpenApiExecution(write, null), args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"IN_PROGRESS\"}}"));
@@ -65,7 +66,7 @@ class OpenApiIntegrationTest {
         });
         server.start();
         try {
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
             var result = executor.execute(new OpenApiExecution(write, null), args("{\"path\":{\"id\":\"CRM-101\"},\"body\":{\"title\":\"Demo\",\"status\":\"OPEN\"}}"));
@@ -133,7 +134,7 @@ class OpenApiIntegrationTest {
         server.start();
         try {
             var operations = importer.parse("crm", fixture().replace(":8099", ":" + server.getAddress().getPort()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             var read = operations.stream().filter(op -> op.method().equals("GET")).findFirst().orElseThrow();
             var write = operations.stream().filter(op -> op.method().equals("PUT")).findFirst().orElseThrow();
             assertThat(executor.execute(new OpenApiExecution(read, null), args("{\"path\":{\"id\":\"CRM-101\"}}")).body().path("status").asText()).isEqualTo("OPEN");

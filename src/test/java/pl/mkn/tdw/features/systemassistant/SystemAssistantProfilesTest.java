@@ -65,7 +65,7 @@ class SystemAssistantProfilesTest {
             return new pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort.Reply("Odpowiedź CRM", null);
         });
         var service = new pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationService(configurations, ai,
-                SystemAssistantTestSupport.history(workspace), new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard());
+                SystemAssistantTestSupport.history(workspace), new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard(), org.mockito.Mockito.mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class));
         try {
             var id = service.create(null).id();
             for (var profile : List.of("first", "second", "empty")) {

@@ -5,8 +5,14 @@ i walidacja w `service`, RestClient w `adapter.rest`. Brak zależności od
 feature'ów, MCP i Copilota. Wspierany podzbiór jest jawny w runtime dokumentacji.
 API HTTP(S) mogą wskazywać dowolny poprawny host (DNS, IP, localhost), bez
 listy hostów ani trybu lokalnego. Base URL nie zawiera credentials, query
-ani fragmentu. Nie dodawaj redirectów, retry ani pobierania zewnętrznych refs.
-Nie klasyfikuj skutków po samym HTTP. Nie wyłączaj walidacji TLS.
+ani fragmentu. Nie dodawaj redirectów, retry aplikacji ani pobierania zewnętrznych refs.
+Nie klasyfikuj skutków po samym HTTP. TLS wynika wyłącznie ze wspólnej
+flagi integrations.http.ignore-ssl-errors i fabryki IntegrationRestClientBuilderFactory.
+False weryfikuje cert i hostname, true pomija je lokalnie dla klienta.
+Oba tryby używają JDK HttpClient; true ma lokalny X509ExtendedTrustManager.
+Zachowaj PATCH, 3/8 s i brak redirectów; nie zmieniaj TLS całej JVM.
+Wbudowany retry GET JDK po niektórych zerwaniach jest jawnie dopuszczony,
+również dla GET UNKNOWN. Nie ponawiaj POST/PUT/PATCH/DELETE.
 Wykonanie przyjmuje typowany profil integrations.httpauth poza argumentami
 narzędzia. No Auth nie dodaje Authorization. Security metadata Basic/Bearer/
 OAuth2/openIdConnect są walidowane i domykane w selekcji; nie wybierają

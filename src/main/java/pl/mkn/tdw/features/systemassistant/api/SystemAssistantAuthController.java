@@ -10,8 +10,8 @@ import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
 import pl.mkn.tdw.integrations.httpauth.OidcLoginPort;
 import pl.mkn.tdw.integrations.httpauth.contract.*;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
-import java.net.URI;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.*;
 
 @RestController
@@ -23,6 +23,10 @@ public class SystemAssistantAuthController {
     private final SystemAssistantConfigurationService configuration;
     private final OidcLoginPort oidc;
     private final SecureRandom random = new SecureRandom();
+    private final Map<String, LoginReturn> returns = new HashMap<>();
+
+    public record LoginRequest(String conversationId, String profileId) { }
+    private record LoginReturn(String browser, Instant expiresAt, LoginRequest destination) { }
 
     public SystemAssistantAuthController(SystemAssistantConfigurationService configuration, OidcLoginPort oidc) {
         this.configuration = configuration; this.oidc = oidc;
@@ -39,8 +43,11 @@ public class SystemAssistantAuthController {
     public record Login(String authorizationUrl) { }
 
     @PostMapping(value = "/{id}/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Login> login(@PathVariable String id, HttpServletRequest request,
+    public synchronized ResponseEntity<Login> login(@PathVariable String id, @RequestBody LoginRequest destination, HttpServletRequest request,
                                       @CookieValue(name = COOKIE, required = false) String browser) {
+        validateDestination(destination);
+        returns.values().removeIf(item -> !item.expiresAt().isAfter(Instant.now()));
+        if (returns.size() >= 100) throw new HttpAuthException("Zbyt wiele rozpoczętych logowań. Spróbuj ponownie później.");
         var profile = profile(id);
         var callback = HttpAuthProfile.endpoint(profile.redirectUri());
         var origin = request.getHeader("Origin");
@@ -53,21 +60,31 @@ public class SystemAssistantAuthController {
             browser = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         }
         var url = oidc.begin(profile, browser);
+        if (destination.conversationId() != null) {
+            var state = UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst("state");
+            if (state == null || state.isBlank()) throw new HttpAuthException("Nie udało się rozpocząć logowania OIDC.");
+            returns.put(state, new LoginReturn(browser, Instant.now().plusSeconds(300), destination));
+        }
         var cookie = ResponseCookie.from(COOKIE, browser).httpOnly(true).secure(callback.getScheme().equals("https"))
                 .sameSite("Lax").path("/api/system-assistant/auth").build();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new Login(url));
     }
 
     @GetMapping("/callback")
-    public ResponseEntity<Void> callback(@RequestParam(required = false) String state, @RequestParam(required = false) String code,
+    public synchronized ResponseEntity<Void> callback(@RequestParam(required = false) String state, @RequestParam(required = false) String code,
                                          @RequestParam(required = false) String error, HttpServletRequest request,
                                          @CookieValue(name = COOKIE, required = false) String browser) {
         var result = "success";
+        var loginReturn = state == null ? null : returns.remove(state);
+        var destination = loginReturn != null && loginReturn.browser().equals(browser)
+                && loginReturn.expiresAt().isAfter(Instant.now()) ? loginReturn.destination() : null;
         try {
             var uri = request.getRequestURL().toString();
             oidc.complete(configuration.current().authProfiles(), state, code, error, browser, uri);
         } catch (RuntimeException failure) { result = "failed"; }
-        return ResponseEntity.status(HttpStatus.SEE_OTHER).location(URI.create("/system-assistant?auth=" + result))
+        var location = UriComponentsBuilder.fromPath("/system-assistant").queryParam("auth", result);
+        if (destination != null) location.queryParam("localRunId", destination.conversationId()).queryParam("profileId", destination.profileId());
+        return ResponseEntity.status(HttpStatus.SEE_OTHER).location(location.build().toUri())
                 .cacheControl(CacheControl.noStore()).header("Referrer-Policy", "no-referrer").build();
     }
 
@@ -80,5 +97,13 @@ public class SystemAssistantAuthController {
     private HttpAuthProfile profile(String id) {
         return configuration.current().authProfiles().stream().filter(profile -> profile.id().equals(id) && profile.type().equals("OIDC"))
                 .findFirst().orElseThrow(() -> new SystemAssistantException("AUTH_PROFILE_NOT_FOUND", UserFacingErrorType.BAD_REQUEST, "Wybierz zapisany profil OIDC."));
+    }
+
+    private void validateDestination(LoginRequest destination) {
+        if (destination.conversationId() == null && destination.profileId() == null) return;
+        if (destination.conversationId() == null || !destination.conversationId().matches("[a-zA-Z0-9_-]{1,100}")
+                || destination.profileId() == null || !destination.profileId().matches("[a-zA-Z0-9_-]{1,100}"))
+            throw new HttpAuthException("Nieprawidłowa rozmowa lub profil powrotu po logowaniu.");
+        configuration.snapshot().forProfile(destination.profileId());
     }
 }

@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiTextResponseTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -25,7 +26,7 @@ class OpenApiTextResponseTest {
     private final AtomicReference<String> accept = new AtomicReference<>();
     private HttpServer server;
     private List<OpenApiOperation> operations;
-    private final OpenApiRestExecutor executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+    private final OpenApiRestExecutor executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
     private record Reply(int status, String contentType, byte[] bytes) {}
 
     private String source() throws Exception { return Files.readString(Path.of("src/test/resources/openapi/text-responses-api.yaml")); }

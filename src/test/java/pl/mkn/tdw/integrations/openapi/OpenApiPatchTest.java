@@ -13,6 +13,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiPatchTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -54,7 +55,7 @@ class OpenApiPatchTest {
         try {
             var source = source().replace(":8099", ":" + server.getAddress().getPort());
             var operation = importer.parse("items", source).stream().filter(op -> op.name().endsWith("_patchItem")).findFirst().orElseThrow();
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> "Bearer patch-test-token");
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> "Bearer patch-test-token");
             var arguments = new OpenApiArguments(mapper.readTree("{\"path\":{\"id\":7},\"body\":{\"note\":\"Zażółć\"}}"));
             assertThat(executor.execute(new OpenApiExecution(operation, null), arguments).statusCode()).isEqualTo(204);
             assertThat(method).hasValue("PATCH"); assertThat(auth).hasValue("Bearer patch-test-token");

@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiQueryArrayTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -57,7 +58,7 @@ class OpenApiQueryArrayTest {
         server.start();
         try {
             var operations = importer.parse("items", source().replace(":8099", ":" + server.getAddress().getPort()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             var repeated = operations.get(0);
             var arguments = args("""
                     {"path":{"id":"A B"},"query":{"ids":[101,102],"tags":["A&B #1","a,b","x+y","%2F","{id}","Zażółć",""],"flags":[true,false],"weights":[1.25,-2],"statuses":["NEW"]}}

@@ -171,7 +171,7 @@ function Get-TdwServerUrl {
         [string[]]$Arguments
     )
 
-    $port = "8080"
+    $port = "4200"
     $contextPath = ""
     $httpsEnabled = $false
 

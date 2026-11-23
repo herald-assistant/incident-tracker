@@ -14,6 +14,7 @@ import java.nio.file.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiCompatibilityTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -77,7 +78,7 @@ class OpenApiCompatibilityTest {
         });
         server.start();
         try {
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             var order = importer.parse("orders", fixture("orders").replace(":8081", ":" + server.getAddress().getPort())).get(0);
             var arguments = new OpenApiArguments(mapper.readTree("{\"body\":{\"customerEmail\":\"tester@example.com\",\"items\":[{\"productId\":\"p1\",\"quantity\":2}],\"note\":null}}"));
             assertThat(executor.execute(new OpenApiExecution(order, null), arguments).statusCode()).isEqualTo(201);

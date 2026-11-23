@@ -4,6 +4,11 @@ TDW jest uruchamiane lokalnie jako JAR z prostym skryptem startowym. Skrypt ma
 lezyc w tym samym katalogu co JAR i przekazywac backendowi katalog danych przez
 property `tdw.workspace.directory`.
 
+Domyślny adres backendu i gotowego frontendu w paczce to
+`http://localhost:4200/`; launcher pokazuje i otwiera ten adres.
+W trybie deweloperskim osobny Angular dev server działa na `4300` i używa
+proxy do tego samego backendu na `4200`.
+
 ## Uruchomienie
 
 Klikany launcher dla Windows:

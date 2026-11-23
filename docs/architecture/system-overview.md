@@ -416,7 +416,8 @@ Na dzisiaj projekt ma:
 
 ## Weryfikacja TLS integracji REST
 
-GitLab (rowniez named connections), Jira, Confluence i Dynatrace korzystaja ze
+GitLab (rowniez named connections), Jira, Confluence, Dynatrace, OpenAPI oraz
+klienci OAuth2/OIDC (discovery, tokeny i JWKS) korzystaja ze
 wspolnego `integrations.support.http.IntegrationRestClientBuilderFactory`.
 Ustawienie backendowe
 `integrations.http.ignore-ssl-errors=false` domyslnie pozostawia standardowa
@@ -425,6 +426,16 @@ obie walidacje lokalnie dla tych klientow; nie wylacza szyfrowania HTTPS ani nie
 zmienia globalnego TLS JVM. Nowe integracje REST korzystaja z tej samej fabryki,
 jesli maja podlegac tej polityce. Ustawienie jest ladowane przy starcie i nie
 jest wystawione przez Workspace Settings.
+
+Transport JDK HttpClient obsługuje obie wartości flagi i PATCH. Przy true
+fabryka używa własnego SSLContext z X509ExtendedTrustManager, obejmującym
+również weryfikację na poziomie SSLEngine/Socket. Standardowy tryb pozostaje
+na JDK; nie ma dodatkowej zależności Apache, HttpURLConnection ani globalnego
+przypięcia fabryki Springa. OpenAPI/Auth zachowują connect/read 3/8 s oraz
+Redirect.NEVER. Aplikacja nie ponawia wywołań; transport JDK może ponawiać GET
+po niektórych zerwaniach połączenia, także gdy efekt GET jest UNKNOWN.
+Pozostałe wykonywane metody POST/PUT/PATCH/DELETE nie są ponawiane. Polityka
+TLS przeglądarki i walidacja tokenów OIDC pozostają odrębne.
 
 Starsze `analysis.gitlab.ignore-ssl-errors` i
 `integrations.gitlab.named.connections.<id>.ignore-ssl-errors` nie sa juz

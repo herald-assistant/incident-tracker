@@ -14,6 +14,7 @@ import java.nio.file.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiCompositionTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -60,7 +61,7 @@ class OpenApiCompositionTest {
         server.start();
         try {
             var operation = importer.parse("products", fixture("composition-api.yaml").replace(":8099", ":" + server.getAddress().getPort())).get(0);
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             for (var body : List.of("{\"type\":\"TIMED\",\"size\":1,\"duration\":12,\"note\":null,\"weights\":{\"blue\":2},\"labels\":[\"a\"]}", "{\"type\":\"BASIC\",\"size\":1}"))
                 assertThat(executor.execute(new OpenApiExecution(operation, null), args(body)).body().path("id").asInt()).isEqualTo(123);
             for (var invalid : List.of("{\"type\":\"TIMED\",\"size\":0,\"duration\":12}", "{\"type\":\"TIMED\",\"size\":1}",

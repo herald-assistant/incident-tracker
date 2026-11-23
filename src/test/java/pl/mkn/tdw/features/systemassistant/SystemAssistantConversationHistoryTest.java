@@ -52,7 +52,7 @@ class SystemAssistantConversationHistoryTest {
         });
         var page = new SystemAssistantConversation.PageContext("https://crm.example", "/customers/C-100", "Klient", Instant.now().toString());
         String id;
-        try (var first = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history(store), new LocalAnalysisRunOperationGuard()))) {
+        try (var first = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history(store), new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             id = first.service.create(page).id(); first.service.send(id, request("Pierwsze pytanie"));
             await().until(() -> !first.service.get(id).busy());
         }
@@ -64,7 +64,7 @@ class SystemAssistantConversationHistoryTest {
         var current = new SystemAssistantConfigurationService.Snapshot(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "CRM", "yaml")),
                 List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "CURRENT_SKILL"))), List.of(tool), Map.of("oa_crm_read", "crm"));
         when(configurations.snapshot()).thenReturn(current);
-        try (var reopened = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history(store()), new LocalAnalysisRunOperationGuard()))) {
+        try (var reopened = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history(store()), new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             assertThat(reopened.service.get(id).messages()).hasSize(2);
             reopened.service.send(id, request("Kontynuacja")); await().until(() -> !reopened.service.get(id).busy());
             assertThat(seen.get()).isEqualTo(current); assertThat(seenPage.get()).isEqualTo(page);
@@ -85,7 +85,7 @@ class SystemAssistantConversationHistoryTest {
         history.save(now, new SystemAssistantConversation(id, true, null,
                 List.of(AnalysisChatMessageState.completedUser("user", "Zapisz", now).snapshot(), assistant.snapshot())));
         var ai = mock(SystemAssistantAiPort.class);
-        try (var service = new ServiceClose(new SystemAssistantConversationService(mock(SystemAssistantConfigurationService.class), ai, history, new LocalAnalysisRunOperationGuard()))) {
+        try (var service = new ServiceClose(new SystemAssistantConversationService(mock(SystemAssistantConfigurationService.class), ai, history, new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             service.service.recoverInterruptedTurns();
             var restored = service.service.get(id);
             assertThat(restored.busy()).isFalse(); assertThat(restored.messages().get(restored.messages().size() - 1).errorCode()).isEqualTo("TURN_INTERRUPTED");
@@ -99,7 +99,7 @@ class SystemAssistantConversationHistoryTest {
         var ai = mock(SystemAssistantAiPort.class); var finished = new CountDownLatch(1);
         when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenReturn(new SystemAssistantAiPort.Reply("Wykonano", null));
         try (var service = new ServiceClose(new SystemAssistantConversationService(SystemAssistantTestSupport.configuration((id, yaml) -> List.of()), ai,
-                history, new LocalAnalysisRunOperationGuard()))) {
+                history, new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             var id = service.service.create(null).id();
             doAnswer(call -> {
                 LocalAnalysisRunRecord record = call.getArgument(1);
@@ -124,7 +124,7 @@ class SystemAssistantConversationHistoryTest {
         when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
             entered.countDown(); release.await(5, TimeUnit.SECONDS); return new SystemAssistantAiPort.Reply("Gotowe", null);
         });
-        try (var service = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history, guard))) {
+        try (var service = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history, guard, mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             var id = service.service.create(null).id();
             doThrow(new IllegalStateException("storage offline")).when(store).save(any(), any());
             assertThatThrownBy(() -> service.service.send(id, request("Nie wykonuj"))).isInstanceOf(SystemAssistantException.class);

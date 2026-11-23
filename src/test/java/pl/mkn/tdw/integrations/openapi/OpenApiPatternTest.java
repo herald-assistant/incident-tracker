@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiPatternTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -69,7 +70,7 @@ class OpenApiPatternTest {
         server.start();
         try {
             var operations = importer.parse("demo", source().replace(":8099", ":" + server.getAddress().getPort()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, profile -> null);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, profile -> null);
             assertThat(executor.execute(new OpenApiExecution(operations.get(0), null), args("{\"body\":{\"records\":[{\"code\":\"AB-123\"}]}}")).statusCode()).isEqualTo(200);
             assertThat(executor.execute(new OpenApiExecution(operations.get(1), null), args("{\"path\":{\"code\":\"AB-123\"},\"query\":{\"query\":\"a-needle-b\",\"tags\":[\"blue\"]}}")).statusCode()).isEqualTo(200);
             assertThatThrownBy(() -> executor.execute(new OpenApiExecution(operations.get(0), null), args("{\"body\":{\"records\":[{\"code\":\"bad\"}]}}"))).isInstanceOf(OpenApiException.class).hasMessageContaining("pattern");

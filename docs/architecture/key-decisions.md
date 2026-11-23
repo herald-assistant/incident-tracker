@@ -11,7 +11,11 @@ Docelowy host HTTP(S) pochodzi z kontraktu operatora, bez ograniczenia do
 loopback i fikcyjnych systemów. Source auth używa neutralnej capability integrations.httpauth: Basic, Bearer,
 OAuth2 i OIDC. Profile Auth są w tym samym jawnym JSON-ie konfiguracji i
 mają przypisania per API w profilu asystenta; No Auth jest domyślne. Workflow zatwierdzania
-pozostaje odrębnym zakresem. Nie ma automatycznych redirectów ani retry mutacji.
+pozostaje odrębnym zakresem. Wykonawca API nie podąża za redirectami ani nie
+ponawia POST/PUT/PATCH/DELETE. Przed przyjęciem tury sprawdzamy/odnawiamy wymagane OIDC;
+409 AUTH_LOGIN_REQUIRED uruchamia w FE login i przekierowanie przeglądarki.
+Powrót do konkretnego chatu/profilu jest związany z jednorazowym state i browser
+binding. Szkic nie jest zachowywany, wiadomość nie jest automatycznie wysyłana.
 Schema argumentów SDK/MCP jest projekcją requestu: pomija readOnly, mapuje
 nullable na null i zachowuje format jako adnotację. Wykonanie waliduje
 schema OpenAPI po adaptacji do JSON Schema, z kompozycją i bez zdalnego resolvera.
@@ -26,6 +30,14 @@ deterministycznie z hashem SHA-256. Pełny operationId pozostaje w kontrakcie
 i opisie, a kolizja wygenerowanych nazw blokuje publikację katalogu.
 Tablice query są typowanymi argumentami SDK/MCP; wspólny wykonawca HTTP
 obsługuje form/explode, kodując osobno elementy i zachowując walidację schema.
+OpenAPI oraz serwerowe połączenia OAuth2/OIDC współdzielą istniejącą flagę
+`integrations.http.ignore-ssl-errors`. Pomijanie cert/hostname jest lokalne
+dla klientów, bez zmiany TLS JVM lub walidacji tokenów. Domyślnie false.
+Oba tryby korzystają z JDK HttpClient, z lokalnym X509ExtendedTrustManager
+przy true; nie ma zależności Apache ani globalnego przypięcia transportu.
+OpenAPI/Auth zachowują PATCH, limity i brak redirectów. JDK może ponawiać GET
+po niektórych zerwaniach połączenia, także GET UNKNOWN; pozostałe wykonywane
+metody POST/PUT/PATCH/DELETE nie są ponawiane.
 
 Transkrypt V1 jest trwałym wpisem wspólnej Analysis History. Powrót do chatu
 z pełnego TDW lub panelu Browser Tools odtwarza pierwotny kontekst strony

@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.atomic.*;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiAuthenticationTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -44,9 +45,9 @@ class OpenApiAuthenticationTest {
         server.start();
         try {
             var base = "http://127.0.0.1:" + server.getAddress().getPort();
-            var protocol = new HttpAuthProtocolClient(RestClient.builder());
+            var protocol = new HttpAuthProtocolClient(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()));
             var auth = new HttpAuthenticationService(protocol, new pl.mkn.tdw.integrations.httpauth.service.OidcLoginService(protocol, java.time.Clock.systemUTC()));
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, auth);
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, auth);
             var operation = new OpenApiOperation("oa_crm_read", "CRM", "POST", java.net.URI.create(base), "/api", List.of(),
                     mapper.readTree("{\"type\":\"object\"}"), mapper.readTree("{\"type\":\"object\"}"), "UNKNOWN", java.util.Map.of());
             var arguments = new OpenApiArguments(mapper.createObjectNode());

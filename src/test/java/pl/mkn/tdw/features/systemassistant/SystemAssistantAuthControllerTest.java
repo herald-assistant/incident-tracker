@@ -14,6 +14,39 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class SystemAssistantAuthControllerTest {
+    @Test void returnsToOnlyTheBoundConversationAndProfileWithoutAUserSuppliedReturnUrl() throws Exception {
+        var profile = new HttpAuthProfile("crm", "CRM", "OIDC", null, null, null, null, "crm-client", null,
+                "openid", "https://sso.example.com/issuer", "http://localhost/api/system-assistant/auth/callback", "none");
+        var configuration = SystemAssistantTestSupport.configuration((id, yaml) -> List.of());
+        configuration.save(new SystemAssistantConfiguration(List.of(), List.of(),
+                List.of(new SystemAssistantConfiguration.Profile("crm_profile", "CRM", "*", List.of(), List.of())), List.of(profile)));
+        var oidc = mock(OidcLoginPort.class);
+        when(oidc.begin(eq(profile), anyString())).thenReturn("https://sso.example.com/authorize?state=first",
+                "https://sso.example.com/authorize?state=denied", "https://sso.example.com/authorize?state=other");
+        var mvc = MockMvcBuilders.standaloneSetup(new SystemAssistantAuthController(configuration, oidc))
+                .setControllerAdvice(new pl.mkn.tdw.api.ApiExceptionHandler()).build();
+        var cookie = new jakarta.servlet.http.Cookie("tdw_oidc_browser", "a".repeat(43));
+        var body = "{\"conversationId\":\"crm-chat\",\"profileId\":\"crm_profile\"}";
+        mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "first").param("code", "test-code"))
+                .andExpect(redirectedUrl("/system-assistant?auth=success&localRunId=crm-chat&profileId=crm_profile"));
+        doThrow(new IllegalArgumentException("provider denied")).when(oidc).complete(anyList(), any(), any(), any(), any(), any());
+        mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "first"))
+                .andExpect(redirectedUrl("/system-assistant?auth=failed"));
+        mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        mvc.perform(get("/api/system-assistant/auth/callback").cookie(cookie).param("state", "denied").param("error", "access_denied"))
+                .andExpect(redirectedUrl("/system-assistant?auth=failed&localRunId=crm-chat&profileId=crm_profile"));
+        mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        mvc.perform(get("/api/system-assistant/auth/callback").param("state", "other"))
+                .andExpect(redirectedUrl("/system-assistant?auth=failed"));
+        mvc.perform(post("/api/system-assistant/auth/crm/login").cookie(cookie).header("Origin", "http://localhost")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"conversationId\":\"//evil.example\",\"profileId\":\"crm_profile\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test void bindsLoginToBrowserReturnsOnlyAuthorizationUrlAndUsesFixedReturnLocation() throws Exception {
         var profile = new HttpAuthProfile("crm", "CRM", "OIDC", null, null, null, null, "crm-client", null,
                 "openid", "https://sso.example.com/issuer", "http://localhost/api/system-assistant/auth/callback", "none");

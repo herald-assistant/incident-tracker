@@ -19,6 +19,10 @@ feature'ów. API i orkiestracja należą do feature'a; parser/REST do
 - Auth API ma katalog profili Basic/Bearer/OAuth2/OIDC w konfiguracji; profil zawiera apiBindings z apiId i authProfileId lub null (No Auth).
   Neutralny runtime jest w integrations.httpauth; Auth nie trafia do promptu ani schema tooli.
   Pola operatora są jawne w JSON/UI/eksporcie konfiguracji. Tokeny OIDC są pamięciowe.
+- Przed przyjęciem tury sprawdzaj/odnawiaj OIDC tylko aktywnych operacji profilu.
+  409 AUTH_LOGIN_REQUIRED zawiera authProfileId; brak gotowości nie zapisuje tury
+  i nie uruchamia AI. FE rozpoczyna login i przekierowuje bez szkicu/retry.
+  Docelowy chat/profil callbacku wiąż z state i przeglądarką; bez returnUrl.
 - Załączniki i obowiązkowy approval są odrębnym zakresem.
 - Nie zakładaj fikcyjnych danych ani lokalnego demo; timeout nie uprawnia do retry.
 

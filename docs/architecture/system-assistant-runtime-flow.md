@@ -23,6 +23,13 @@ Flaga `system-assistant.enabled` jest domyślnie wyłączona i steruje dostępno
 ani nie waliduje `server.address`: adres nasłuchiwania TDW pozostaje wspólną
 konfiguracją aplikacji. API konfiguracji, chat i MCP są dostępne pod adresem
 TDW. Docelowe usługi wskazane przez YAML nie mają listy dopuszczonych hostów.
+Wychodzące API oraz połączenia backendu OAuth2/OIDC (discovery, tokeny, JWKS)
+respektują `integrations.http.ignore-ssl-errors`: false weryfikuje certyfikat
+i nazwę hosta, true pomija obie kontrole lokalnie dla klienta. Flaga wymaga
+restartu. Nie zmienia TLS JVM ani przeglądarki i nie wyłącza walidacji JWT.
+Oba tryby używają JDK HttpClient z lokalną polityką TLS. Transport zachowuje
+PATCH, connect/read 3/8 s i brak redirectów. Aplikacja nie dodaje retry;
+wbudowany retry GET JDK po niektórych zerwaniach połączenia jest dopuszczony.
 Ta sama flaga steruje feature API, osobnym MCP, sidebar, landing
 i akcją Browser Tools. Shared UI config zwraca `systemAssistantEnabled`.
 
@@ -78,7 +85,7 @@ portem i poza schema argumentów AI. Nie ma starszego overloadu wykonania.
 | `GET /api/system-assistant/configuration/tools` | ID kontraktu `apiId`, wygenerowane nazwy, opisy, metody, ścieżki i input schema |
 | `POST /api/system-assistant/conversations` | `{pageContext}` lub null context; `201` i pusta rozmowa bez AI |
 | `GET /api/system-assistant/conversations/{id}` | ID, busy, przypięty pageContext i neutralne wiadomości |
-| `POST /api/system-assistant/conversations/{id}/messages` | `{message, profileId, model?, reasoningEffort?}`; `202` i natychmiastowy snapshot |
+| `POST /api/system-assistant/conversations/{id}/messages` | `{message, profileId, model?, reasoningEffort?}`; `202` i natychmiastowy snapshot; `409 AUTH_LOGIN_REQUIRED` z authProfileId przed przyjęciem, jeżeli wymagane OIDC nie jest gotowe |
 | `DELETE /api/system-assistant/conversations/{id}` | `204`; aktywna tura daje `409` |
 | `GET /api/analysis/runs` | Wspólny indeks historii; rozmowy mają `feature=system-assistant` |
 | `GET /api/analysis/runs/{id}/export` | Archiwalny JSON transkryptu; bez konfiguracji API/skilli |
@@ -103,6 +110,13 @@ a wykonawca wiąże je z operacją poza argumentami modelu. Logowanie OIDC
 odbywa się przez pełny ekran i powrót /api/system-assistant/auth/callback;
 stan tokenów jest pamięciowy. Status, login, callback i disconnect są
 feature-owned API pod /api/system-assistant/auth.
+Przed przyjęciem tury feature sprawdza/odnawia OIDC aktywnych operacji profilu.
+`AUTH_LOGIN_REQUIRED` nie zapisuje wiadomości ani nie uruchamia AI. FE
+rozpoczyna login z conversationId/profileId i przekierowuje do dostawcy;
+callback wiąże te ID z state i przeglądarką, po czym otwiera pełny widok tego
+chatu i wybiera profil. Bez zachowania szkicu i automatycznej wysyłki. Zwykłe
+przekierowanie próbujemy również w ramce, bez zmiany sandbox/CSP; provider
+może je blokować. Ręczne logowanie z Auth nadal wraca do tej zakładki.
 Kontrakt, mechanikę i ograniczenia opisuje
 [uwierzytelnianie HTTP API](http-api-authentication.md).
 
@@ -435,7 +449,9 @@ osobnego magazynu telemetryki ani historycznych konfiguracji.
 ## Wykonanie i wynik operacji
 
 RestClient wysyła JSON jako bajty UTF-8 z jawną długością body. Nie podąża
-za redirectami ani nie implementuje retry. Wynik
+za redirectami ani nie implementuje retry na poziomie aplikacji. JDK może
+ponawiać GET po niektórych zerwaniach połączenia, także GET UNKNOWN;
+pozostałe wykonywane metody POST/PUT/PATCH/DELETE nie są ponawiane. Wynik
 zawiera `outcome`, status HTTP, body i ograniczenie potwierdzenia. HTTP
 200 nie jest uniwersalną walidacją biznesową; model musi uwzględnić body.
 Operacja ma jawne `x-tdw-operation-effect`: `READ_ONLY`, `MUTATION` albo

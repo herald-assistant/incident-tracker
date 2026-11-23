@@ -30,7 +30,9 @@ export class SystemAssistantApi {
   }
 
   authStatus() { return this.http.get<Record<string, AssistantOidcConnection>>(`${this.base}/auth/status`); }
-  loginAuth(id: string) { return this.http.post<{authorizationUrl: string}>(`${this.base}/auth/${encodeURIComponent(id)}/login`, {}); }
+  loginAuth(id: string, destination?: {conversationId: string; profileId: string}) {
+    return this.http.post<{authorizationUrl: string}>(`${this.base}/auth/${encodeURIComponent(id)}/login`, destination ?? {});
+  }
   disconnectAuth(id: string) { return this.http.post<void>(`${this.base}/auth/${encodeURIComponent(id)}/disconnect`, {}); }
 
   previewOpenApi(id: string, yaml: string) {

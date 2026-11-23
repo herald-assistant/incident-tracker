@@ -74,7 +74,22 @@ Brak zalogowania lub błąd token endpoint zwraca `AUTH_REQUIRED` bez wysłania
 requestu biznesowego. HTTP 401/403 pozostają odpowiedzią źródłowego API.
 Nie ma automatycznego retry requestu po błędzie auth ani po timeout.
 Odnowienie tokenu następuje przed requestem. Redirecty API i klienta protokołu
-są wyłączone, a TLS jest weryfikowany. Connect/read timeout wynosi 3/8 s.
+są wyłączone. Connect/read timeout wynosi 3/8 s.
+
+TLS API oraz klientów OAuth2/OIDC podlega istniejącej wspólnej fladze
+`integrations.http.ignore-ssl-errors`. Domyślne false weryfikuje certyfikat
+i nazwę hosta; true pomija obie kontrole lokalnie dla klientów backendu,
+także discovery, token client credentials/code/refresh oraz pobierania JWKS.
+Transport dostarcza `IntegrationRestClientBuilderFactory`: JDK HttpClient w obu
+trybach, z obsługą PATCH i bez redirectów. True używa lokalnego SSLContext
+z X509ExtendedTrustManager, który obsługuje także kontrole SSLEngine/Socket.
+Aplikacja nie dodaje retry; JDK może ponawiać GET po niektórych zerwaniach
+połączenia (także GET z efektem UNKNOWN). POST/PUT/PATCH/DELETE nie są ponawiane.
+Pomijanie TLS nie wyłącza walidacji JWT, issuer/audience/nonce, state ani PKCE.
+Nie zmienia domyślnego SSLContext, HostnameVerifier, truststore ani właściwości
+JVM. Wymaga restartu; przeglądarka na stronie logowania dostawcy nadal ma
+własną politykę certyfikatów. Nie ma zależności Apache, osobnego transportu
+HttpURLConnection ani globalnego przypięcia spring.http.client.factory.
 
 Wartości z katalogu Auth nie trafiają do promptu, input schema, tool evidence,
 transkryptu ani eksportu rozmowy. Operatorski eksport konfiguracji jest
@@ -112,8 +127,8 @@ globalnego wylogowania SSO ani cofnięcia operacji biznesowych.
 | Endpoint | Znaczenie |
 | --- | --- |
 | GET /api/system-assistant/auth/status | Stan połączeń zapisanych profili OIDC, bez tokenów, no-store |
-| POST /api/system-assistant/auth/{id}/login | JSON, zwraca authorizationUrl i cookie; wymaga callbacku w tym samym originie TDW |
-| GET /api/system-assistant/auth/callback | Kod/state lub błąd dostawcy; 303 do /system-assistant?auth=success albo failed, bez tokenów i treści błędu dostawcy |
+| POST /api/system-assistant/auth/{id}/login | `{}` lub `{conversationId, profileId}`; zwraca authorizationUrl i cookie; wymaga callbacku w tym samym originie TDW |
+| GET /api/system-assistant/auth/callback | Kod/state lub błąd dostawcy; 303 do /system-assistant?auth=success albo failed, z powiązanym localRunId i profileId dla logowania z rozmowy; bez tokenów i treści błędu dostawcy |
 | POST /api/system-assistant/auth/{id}/disconnect | JSON, usuwa lokalne połączenie |
 
 Endpointy są dostępne tylko po włączeniu System Assistant. Dev proxy
@@ -126,8 +141,27 @@ odpowiadał zarejestrowanemu redirect URI.
 Zakładka Auth używa formularzy inline i wspólnych kontrolek. Usunięcie
 używanego Auth wymaga wcześniejszej zmiany lub odpięcia par API–Auth w profilach. Zmiana typu czyści pola
 poprzedniego typu, zachowując nazwę/ID. Zaloguj/Rozłącz korzystają z zapisu,
-a niezapisany szkic blokuje te akcje. Powrót OIDC wybiera Auth bez
-zapamiętywania zakładki w storage. Stan połączenia i konfiguracja są oddzielne.
+a niezapisany szkic blokuje te akcje w edytorze Auth. Stan połączenia i
+konfiguracja są oddzielne. Ręczny login wraca do Auth.
+
+Przed przyjęciem tury System Assistant wywołuje `OidcLoginPort.authorization`
+dla unikalnych OIDC aktywnych operacji wybranego profilu. Ważny token lub
+skuteczny refresh dopuszcza turę. Brak tokenu, brak refresh lub nieudany refresh
+daje `409 {code: "AUTH_LOGIN_REQUIRED", message, authProfileId}`. Nie zapisuje
+wiadomości, nie uruchamia SDK ani biznesowego requestu. Brakujące API i
+nieprzypisane Auth nie blokują rozmowy. Nie jest to obsługa błędów auth podczas
+już przyjętej tury ani automatyczne ponawianie wywołań.
+
+FE przechwytuje wyłącznie ten kod/status, rozpoczyna login z ID rozmowy i
+profilu, następnie wykonuje `location.assign(authorizationUrl)`. Nie zapisuje
+szkicu ani nie wysyła go po powrocie. Serwer przechowuje cel powrotu w pamięci,
+z limitem 100 i TTL 5 min, związany z jednorazowym state i browser binding.
+Callback zwraca wyłącznie stałą trasę `/system-assistant` i zwalidowane ID;
+także odmowa dostawcy wraca do powiązanego chatu, bez pętli logowania. Nie ma
+dowolnego returnUrl, storage zakładki ani danych dostawcy w adresie powrotu.
+W ramce wykonywana jest ta sama próba przekierowania; provider/cookies mogą
+ją blokować. Sandbox/CSP i protokół Browser Tools nie są zmieniane. Jeżeli
+provider dopuści logowanie, powrót otwiera pełny widok chatu wewnątrz ramki.
 
 Testy: `SystemAssistantAuthConfigurationTest`, `SystemAssistantAuthControllerTest`,
 `OpenApiAuthenticationTest`, `OidcLoginTest`, SDK/snapshot i MCP wire,

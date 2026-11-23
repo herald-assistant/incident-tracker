@@ -126,7 +126,7 @@ public class OidcLoginService implements OidcLoginPort {
     private boolean valid(OAuth2AccessTokenResponse response) {
         return response.getAccessToken().getExpiresAt() != null && response.getAccessToken().getExpiresAt().isAfter(clock.instant().plusSeconds(15));
     }
-    private String required(HttpAuthProfile profile) { throw new HttpAuthException("Zaloguj profil „" + profile.name() + "” w zakładce Auth."); }
+    private String required(HttpAuthProfile profile) { throw new HttpAuthException("Zaloguj ponownie profil „" + profile.name() + "”."); }
     private String random() { var bytes = new byte[32]; random.nextBytes(bytes); return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); }
     private String challenge(String verifier) {
         try { return Base64.getUrlEncoder().withoutPadding().encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII))); }

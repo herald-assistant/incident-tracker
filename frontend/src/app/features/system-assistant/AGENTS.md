@@ -18,7 +18,12 @@ nie jest przechowywane po zamknięciu modalu; anulowanie zachowuje szkic.
 
 Konfiguracja używa shared analysis-result-tabs. Auth ma formularze inline, bez modali CRUD.
 Dane dostępowe są jawne w polach tekstowych i eksporcie konfiguracji.
-OIDC wymaga zapisu przed logowaniem; powrót wybiera Auth bez storage.
+OIDC używa zapisanej konfiguracji. Powrót ręcznego logowania wybiera Auth.
+409 AUTH_LOGIN_REQUIRED przy wysłaniu rozpoczyna login i location.assign także
+w ramce, bez zmiany sandbox/CSP. Backend wiąże chat/profil z state; powrót
+otwiera pełny widok tego chatu i wybiera profil. Bez storage szkicu, ponawiania
+wiadomości, popupów lub przekazywania tokenów do FE. Inne błędy nadal wymagają
+dotychczasowego reconciliation; nie wolno przekierowywać po błędzie narzędzia.
 Usunięcie używanego Auth jest blokowane do zmiany selectów zależnych przypisań w profilach.
 Kontrakty dodajemy tylko w modalu importu z nazwą i wyborem operacji. Wiersz
 ma podgląd Swagger UI, eksport bieżącego YAML-a i usunięcie. Nie przywracaj ręcznej edycji

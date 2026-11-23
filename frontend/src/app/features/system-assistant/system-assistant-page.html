@@ -130,6 +130,7 @@
         @if (ingress.status() === 'waiting') { <p role="status">Oczekiwanie na kontekst strony…</p> }
         @if (ingress.error()) { <p role="alert">{{ingress.error()}}</p> }
         @if (catalogError()) { <p role="alert">{{catalogError()}}</p> }
+        @if (loginNotice()) { <p role="status">{{loginNotice()}}</p> }
         @if (dirty()) { <p role="status">Masz niezapisane zmiany. Chat korzysta z ostatniego poprawnie zapisanego zestawu.</p> }
         @if (!selectedProfileId() && !historyOpen()) {
           <p role="status">{{profileNotice()}}

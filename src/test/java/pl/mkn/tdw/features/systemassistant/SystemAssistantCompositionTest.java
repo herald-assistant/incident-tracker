@@ -18,6 +18,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class SystemAssistantCompositionTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -155,7 +156,7 @@ class SystemAssistantCompositionTest {
         var source = Files.readString(Path.of("src/test/resources/openapi/patch-api.yaml")).replace("\r\n", "\n")
                 .replace("parameters:\n      - {name: id", "parameters:\n      - {name: correlationId, in: header}\n      - {name: id");
         var operation = importer.parse("items", source).stream().filter(op -> op.method().equals("PATCH") && op.path().equals("/items/{id}")).findFirst().orElseThrow();
-        var executor = new pl.mkn.tdw.integrations.openapi.adapter.rest.OpenApiRestExecutor(org.springframework.web.client.RestClient.builder(), mapper, profile -> null);
+        var executor = new pl.mkn.tdw.integrations.openapi.adapter.rest.OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(org.springframework.web.client.RestClient.builder()), mapper, profile -> null);
         var callbacks = new OpenApiToolSetFactory(executor, mapper).create(List.of(new OpenApiExecution(operation, null)));
         var sdk = new CopilotSdkToolFactory(List.of(), mapper, List.of(), null).createToolDefinitions(
                 new CopilotToolSessionContext("patch", "patch-session", Map.of()), CopilotToolDescriptionContext.profile("system-assistant"), callbacks);

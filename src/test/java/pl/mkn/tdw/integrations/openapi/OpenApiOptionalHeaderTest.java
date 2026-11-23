@@ -14,6 +14,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import static org.assertj.core.api.Assertions.*;
+import pl.mkn.tdw.testsupport.integrations.IntegrationRestClientBuilderFactoryTestCreator;
 
 class OpenApiOptionalHeaderTest {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -74,7 +75,7 @@ class OpenApiOptionalHeaderTest {
         try {
             var operation = importer.parse("items", source().replace(":8099", ":" + server.getAddress().getPort())).get(0);
             var profile = mapper.readValue("{\"id\":\"test\",\"name\":\"Test\",\"type\":\"BEARER\",\"token\":\"profile-token\"}", pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile.class);
-            var executor = new OpenApiRestExecutor(RestClient.builder(), mapper, selected -> "Bearer " + selected.token());
+            var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, selected -> "Bearer " + selected.token());
             assertThat(executor.execute(new OpenApiExecution(operation, profile), new OpenApiArguments(mapper.readTree("{\"path\":{\"id\":7}}"))).statusCode()).isEqualTo(200);
             assertThat(received.get()).doesNotContainKeys("correlationId", "X-Client");
             assertThat(received.get().get("Authorization")).containsExactly("Bearer profile-token");

@@ -192,10 +192,17 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 
 ## Build i frontend workflow
 
+Spring Boot domyślnie nasłuchuje na porcie `4200` i pod
+`http://localhost:4200` serwuje także gotowy frontend. Port można nadpisać
+przez `SERVER_PORT` lub argument `--server.port`.
+
 - `mvn -q test`
   uruchamia testy backendu bez instalowania Node, `npm ci` i budowania Angulara.
 - `cd ../frontend && npm start`
-  Angular dev server z proxy na lokalny backend Spring Boot.
+  Angular dev server na `4300` z proxy na lokalny backend Spring Boot na
+  `4200`. Backend uruchom np. `mvn -Pbackend-dev spring-boot:run`, bez zmiany
+  portu. Po zbudowaniu paczki Spring Boot serwuje API i gotowy frontend na
+  `4200`; skrypty `run-tdw.cmd` / `run-tdw.ps1` używają tego samego adresu.
 - `cd ../frontend && npm test`
   testy UI Angulara; nie sa uruchamiane przez `mvn test`.
 - `cd ../frontend && npm run build`

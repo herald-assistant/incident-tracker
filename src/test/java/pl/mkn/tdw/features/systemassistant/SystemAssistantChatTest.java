@@ -23,7 +23,7 @@ class SystemAssistantChatTest {
     @org.junit.jupiter.api.io.TempDir java.nio.file.Path workspace;
     private SystemAssistantConversationService service(SystemAssistantConfigurationService configurations, SystemAssistantAiPort ai) {
         return new SystemAssistantConversationService(configurations, ai, SystemAssistantTestSupport.history(workspace),
-                new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard());
+                new pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class));
     }
 
     @Test

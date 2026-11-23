@@ -3,16 +3,12 @@ package pl.mkn.tdw.integrations.support.http;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -37,7 +33,7 @@ class IntegrationRestClientBuilderFactoryTest {
     }
 
     @Test
-    void shouldApplyInsecureRequestFactoryOnlyWhenEnabled() throws IOException {
+    void shouldApplyLocalJdkTlsPolicyOnlyToTheClone() {
         var properties = new IntegrationHttpProperties();
         properties.setIgnoreSslErrors(true);
         var rootBuilder = mock(RestClient.Builder.class);
@@ -50,13 +46,6 @@ class IntegrationRestClientBuilderFactoryTest {
         verify(clonedBuilder).requestFactory(requestFactoryCaptor.capture());
         verify(rootBuilder, never()).requestFactory(any(ClientHttpRequestFactory.class));
 
-        var requestFactory = (IntegrationRestClientBuilderFactory.InsecureRequestFactory)
-                requestFactoryCaptor.getValue();
-        var connection = mock(HttpsURLConnection.class);
-        requestFactory.prepareConnection(connection, "GET");
-        verify(connection).setSSLSocketFactory(any(SSLSocketFactory.class));
-        var hostnameVerifierCaptor = ArgumentCaptor.forClass(HostnameVerifier.class);
-        verify(connection).setHostnameVerifier(hostnameVerifierCaptor.capture());
-        assertTrue(hostnameVerifierCaptor.getValue().verify("wrong-host.example.com", null));
+        assertInstanceOf(JdkClientHttpRequestFactory.class, requestFactoryCaptor.getValue());
     }
 }

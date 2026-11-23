@@ -11,6 +11,9 @@ import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationSe
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantLoginRequiredException;
+import pl.mkn.tdw.integrations.httpauth.OidcLoginPort;
+import pl.mkn.tdw.integrations.httpauth.contract.HttpAuthException;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
@@ -31,6 +34,7 @@ public class SystemAssistantConversationService {
     private final SystemAssistantAiPort ai;
     private final SystemAssistantConversationHistory history;
     private final LocalAnalysisRunOperationGuard operationGuard;
+    private final OidcLoginPort oidc;
     private final Map<String, Conversation> conversations = new ConcurrentHashMap<>();
     private final ExecutorService worker = new ThreadPoolExecutor(2, 2, 0L, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(16), runnable -> {
@@ -91,6 +95,7 @@ public class SystemAssistantConversationService {
                 if (conversation.messages.size() >= 40)
                     throw error("CHAT_LIMIT", UserFacingErrorType.BAD_REQUEST, "Limit 20 tur. Rozpocznij nową rozmowę.");
                 var configuration = configurations.snapshot().forProfile(request.profileId());
+                requireApiAuthentication(configuration);
                 var user = AnalysisChatMessageState.completedUser(UUID.randomUUID().toString(), request.message(), Instant.now());
                 var assistant = AnalysisChatMessageState.inProgressAssistant(UUID.randomUUID().toString(), Instant.now());
                 conversation.messages.add(user.snapshot());
@@ -158,6 +163,18 @@ public class SystemAssistantConversationService {
 
     private LocalAnalysisRunOperationGuard.Lease lease(String id) {
         return operationGuard.tryAcquire(id).orElseThrow(() -> error("CHAT_BUSY", UserFacingErrorType.CONFLICT, "Poczekaj na zakończenie tury lub innej operacji na rozmowie."));
+    }
+
+    private void requireApiAuthentication(SystemAssistantConfigurationService.Snapshot configuration) {
+        var profiles = configuration.executions().stream().map(execution -> execution.authentication())
+                .filter(Objects::nonNull).filter(profile -> "OIDC".equals(profile.type())).distinct().toList();
+        for (var profile : profiles) {
+            try {
+                oidc.authorization(profile); // Refresh before accepting a turn, never a business request.
+            } catch (HttpAuthException failure) {
+                throw new SystemAssistantLoginRequiredException(profile.id());
+            }
+        }
     }
 
     private Conversation find(String id, boolean ownsLease) {

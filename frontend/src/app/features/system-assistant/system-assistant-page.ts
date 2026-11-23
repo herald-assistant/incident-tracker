@@ -24,7 +24,7 @@ import { GithubAuthService } from '../../core/services/github-auth.service';
 import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, defaultReasoningEffortForAiModel } from '../../core/utils/analysis-ai-model-options.utils';
 import { Subscription } from 'rxjs';
 import type { FormTourSource } from '../../core/models/form-tour';
-import { SystemAssistantIngress } from './system-assistant-ingress.service';
+import { SystemAssistantIngress, SYSTEM_ASSISTANT_WINDOW } from './system-assistant-ingress.service';
 import { AssistantConversationPicker } from './assistant-conversation-picker';
 import { BrowserToolsSetupComponent } from '../../components/browser-tools-setup/browser-tools-setup';
 import { downloadJsonFile, readJsonFile, sanitizeFileNamePart } from '../../core/utils/json-file.utils';
@@ -41,6 +41,7 @@ import { ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NA
   styleUrl: './system-assistant-page.scss'
 })
 export class SystemAssistantPage implements OnInit, FormTourSource {
+  private readonly browser = inject(SYSTEM_ASSISTANT_WINDOW);
   private readonly route = inject(ActivatedRoute, {optional: true});
   private readonly router = inject(Router, {optional: true});
   readonly embedded = this.route?.snapshot.data['embeddedChat'] === true;
@@ -55,7 +56,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   protected readonly destroyRef = inject(DestroyRef);
   readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [], authProfiles: [] });
   readonly activeProfiles = signal<AssistantProfile[]>([]);
-  readonly profileId = signal('');
+  readonly profileId = signal(this.route?.snapshot.queryParamMap?.get('profileId') || '');
   readonly availableProfiles = computed(() => this.activeProfiles().filter(profile => {
     if (!this.embedded) return true;
     const page = this.ingress.context();
@@ -103,6 +104,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private authStatusGeneration = 0;
   readonly conversation = signal<AssistantConversation | null>(null);
   readonly chatError = signal('');
+  readonly loginNotice = signal('');
   readonly unsentMessage = signal('');
   private readonly chatPanel = viewChild(AnalysisFollowUpChatComponent);
   readonly formTourSteps = computed(() => {
@@ -151,8 +153,14 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.ingress.start();
     const authReturn = this.route?.snapshot.queryParamMap?.get('auth');
     if (!this.embedded && authReturn) {
-      this.workspaceView.set('auth');
-      this.notice.set(authReturn === 'success' ? 'Zalogowano. API może korzystać z połączenia OIDC.' : 'Nie udało się zalogować. Sprawdź konfigurację i rozpocznij logowanie ponownie.');
+      const message = authReturn === 'success' ? 'Zalogowano. Wpisz wiadomość, aby kontynuować rozmowę.'
+        : 'Nie udało się zalogować. Wpisz i wyślij wiadomość, aby spróbować ponownie.';
+      if (this.restoredId) { this.workspaceView.set('conversation'); this.loginNotice.set(message); }
+      else {
+        this.workspaceView.set('auth');
+        this.notice.set(authReturn === 'success' ? 'Zalogowano. API może korzystać z połączenia OIDC.'
+          : 'Nie udało się zalogować. Sprawdź konfigurację i rozpocznij logowanie ponownie.');
+      }
       void this.router?.navigate([], {relativeTo: this.route, queryParams: {auth: null}, queryParamsHandling: 'merge', replaceUrl: true});
     }
     if (!this.embedded && this.restoredId) this.restoreConversation();
@@ -179,6 +187,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   send(message: string): void {
     if (!this.canChat() || this.busy()) return;
+    this.loginNotice.set('');
     this.unsentMessage.set(message);
     this.submitting.set(true); this.chatError.set('');
     const existing = this.conversation();
@@ -191,10 +200,17 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   private submitMessage(id: string, message: string): void {
     const generation = this.conversationGeneration;
+    const profileId = this.selectedProfileId();
     const previousMessageIds = new Set(this.conversation()?.messages.map(item => item.id) ?? []);
-    this.api.send(id, message, this.selectedProfileId(), this.model(), this.reasoningEffort()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.send(id, message, profileId, this.model(), this.reasoningEffort()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: snapshot => { this.conversation.set(snapshot); this.unsentMessage.set(''); this.submitting.set(false); this.startPolling(); },
       error: error => {
+        if (error instanceof HttpErrorResponse && error.status === 409 && error.error?.code === 'AUTH_LOGIN_REQUIRED'
+            && typeof error.error.authProfileId === 'string' && error.error.authProfileId) {
+          this.unsentMessage.set(''); this.chatPanel()?.messageText.set('');
+          this.loginForConversation(error.error.authProfileId, id, profileId);
+          return; // Explicitly rejected before acceptance: no reconciliation or message retry.
+        }
         this.submitting.set(false); this.chatError.set(this.message(error));
         // Lost HTTP response may still mean the turn was accepted. Reconcile without resubmitting.
         this.api.conversation(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -205,6 +221,15 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
             if (snapshot.busy) this.startPolling();
           }, error: () => {}
         });
+      }
+    });
+  }
+  private loginForConversation(authProfileId: string, conversationId: string, profileId: string): void {
+    this.authBusyId.set(authProfileId); this.loginNotice.set('Przekierowywanie do logowania…');
+    this.api.loginAuth(authProfileId, {conversationId, profileId}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => this.browser.location.assign(result.authorizationUrl),
+      error: error => {
+        this.authBusyId.set(''); this.submitting.set(false); this.loginNotice.set(''); this.chatError.set(this.message(error));
       }
     });
   }
@@ -453,7 +478,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (this.dirty() || this.configurationBusy() || this.authBusyId()) return;
     this.authBusyId.set(id); this.saveError.set('');
     this.api.loginAuth(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: result => window.location.assign(result.authorizationUrl),
+      next: result => this.browser.location.assign(result.authorizationUrl),
       error: error => { this.authBusyId.set(''); this.saveError.set(this.message(error)); }
     });
   }

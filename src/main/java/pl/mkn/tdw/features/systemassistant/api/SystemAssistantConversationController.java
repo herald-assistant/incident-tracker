@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationService;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantLoginRequiredException;
 
 import java.net.URI;
 
@@ -17,6 +18,14 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class SystemAssistantConversationController {
     private final SystemAssistantConversationService conversations;
+
+    public record LoginRequired(String code, String message, String authProfileId) { }
+
+    @ExceptionHandler(SystemAssistantLoginRequiredException.class)
+    public ResponseEntity<LoginRequired> loginRequired(SystemAssistantLoginRequiredException failure) {
+        return ResponseEntity.status(409).cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new LoginRequired(failure.code(), failure.getMessage(), failure.authProfileId()));
+    }
 
     public record CreateRequest(SystemAssistantConversation.PageContext pageContext) {
     }

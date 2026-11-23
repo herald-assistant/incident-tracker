@@ -122,10 +122,15 @@ objecia testem.
 `integrations.support.http` jest wspolna infrastruktura klientow REST, nie
 integracja systemowa, wiec nie podlega regule portow w root. Zawiera
 `IntegrationRestClientBuilderFactory` i `IntegrationHttpProperties`. Fabryki
-klientow Confluence, Dynatrace, GitLab i Jira korzystaja z niej, zachowujac
+klientow Confluence, Dynatrace, GitLab i Jira oraz transport OpenAPI i
+OAuth2/OIDC korzystaja z niej, zachowujac
 dotychczasowa polityke TLS i klucz konfiguracji
 `integrations.http.ignore-ssl-errors`. Nie zmienia ona globalnych ustawien TLS
-JVM.
+JVM. Obie wartości flagi używają JDK HttpClient; lokalny SSLContext z
+X509ExtendedTrustManager zmienia wyłącznie weryfikację TLS. Nie ma Apache,
+transportu HttpURLConnection ani globalnego przypięcia fabryki Springa.
+OpenAPI/Auth zachowują PATCH, limity i brak redirectów. Wbudowany retry GET
+JDK jest dopuszczony; aplikacja nie implementuje retry operacji biznesowej.
 
 W `integrations.confluence` pakiet glowny zawiera tylko publiczny
 `ConfluencePagePort`. Publiczny wynik odczytu strony lezy w `contract`, adapter

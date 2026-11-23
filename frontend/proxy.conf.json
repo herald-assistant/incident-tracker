@@ -1,21 +1,21 @@
 {
   "^/analysis(?:[/?]|$)": {
-    "target": "http://localhost:8080",
+    "target": "http://localhost:4200",
     "secure": false,
     "changeOrigin": true
   },
   "/api/system-assistant/auth": {
-    "target": "http://localhost:8080",
+    "target": "http://localhost:4200",
     "secure": false,
     "changeOrigin": false
   },
   "/api": {
-    "target": "http://localhost:8080",
+    "target": "http://localhost:4200",
     "secure": false,
     "changeOrigin": true
   },
   "/browser-tools/availability.js": {
-    "target": "http://localhost:8080",
+    "target": "http://localhost:4200",
     "secure": false,
     "changeOrigin": true
   }

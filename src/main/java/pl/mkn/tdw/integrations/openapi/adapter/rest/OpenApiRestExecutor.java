@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -18,7 +17,7 @@ import pl.mkn.tdw.integrations.openapi.contract.OpenApiResult;
 import pl.mkn.tdw.integrations.openapi.service.OpenApiSchema;
 import pl.mkn.tdw.integrations.openapi.service.OpenApiTarget;
 
-import java.net.http.HttpClient;
+import pl.mkn.tdw.integrations.support.http.IntegrationRestClientBuilderFactory;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
@@ -34,14 +33,12 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
     private final ObjectMapper mapper;
     private final HttpAuthenticationPort authentication;
 
-    public OpenApiRestExecutor(RestClient.Builder builder, ObjectMapper mapper,
+    public OpenApiRestExecutor(IntegrationRestClientBuilderFactory builders, ObjectMapper mapper,
                                HttpAuthenticationPort authentication) {
         this.mapper = mapper;
         this.authentication = authentication;
-        var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build());
-        factory.setReadTimeout(Duration.ofSeconds(8));
-        this.client = builder.clone().requestFactory(factory).build();
+        var factory = builders.newRequestFactory(Duration.ofSeconds(3), Duration.ofSeconds(8));
+        this.client = builders.newBuilder().requestFactory(factory).build();
     }
 
     @Override

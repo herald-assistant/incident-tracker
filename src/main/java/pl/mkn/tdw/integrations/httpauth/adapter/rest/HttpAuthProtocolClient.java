@@ -2,7 +2,6 @@ package pl.mkn.tdw.integrations.httpauth.adapter.rest;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.oauth2.client.endpoint.*;
 import org.springframework.security.oauth2.client.http.OAuth2ErrorResponseErrorHandler;
@@ -11,11 +10,11 @@ import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenResponse;
 import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter;
 import pl.mkn.tdw.integrations.httpauth.contract.HttpAuthProfile;
-import java.net.http.HttpClient;
+import pl.mkn.tdw.integrations.support.http.IntegrationRestClientBuilderFactory;
 import java.time.Duration;
 import java.util.Arrays;
 
-/** Strict TLS and no redirects, including token requests with client credentials. */
+/** Shared TLS policy and no redirects, including token requests with client credentials. */
 @Component
 public class HttpAuthProtocolClient {
     private final RestClientClientCredentialsTokenResponseClient credentials = new RestClientClientCredentialsTokenResponseClient();
@@ -24,13 +23,11 @@ public class HttpAuthProtocolClient {
     private final RestClient json;
     private final org.springframework.web.client.RestOperations jwks;
 
-    public HttpAuthProtocolClient(RestClient.Builder builder) {
-        var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build());
-        factory.setReadTimeout(Duration.ofSeconds(8));
-        json = builder.clone().requestFactory(factory).build();
+    public HttpAuthProtocolClient(IntegrationRestClientBuilderFactory builders) {
+        var factory = builders.newRequestFactory(Duration.ofSeconds(3), Duration.ofSeconds(8));
+        json = builders.newBuilder().requestFactory(factory).build();
         jwks = new org.springframework.web.client.RestTemplate(factory);
-        var tokens = builder.clone().requestFactory(factory).messageConverters(converters -> {
+        var tokens = builders.newBuilder().requestFactory(factory).messageConverters(converters -> {
             converters.clear();
             converters.add(new FormHttpMessageConverter());
             converters.add(new OAuth2AccessTokenResponseHttpMessageConverter());

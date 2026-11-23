@@ -63,6 +63,14 @@ i walidowane zgodnie ze schema, także enum, uniqueItems i limity liczby.
 Opcjonalny parametr można pominąć. Pusta tablica jest odrzucana przed HTTP;
 obiekty query, tablice zagnieżdżone i null nie należą do tego zakresu.
 
+## Certyfikaty API i dostawcy logowania
+
+Backend respektuje wspólne ustawienie `integrations.http.ignore-ssl-errors`.
+Przy false sprawdza certyfikat i nazwę hosta; przy true pomija te kontrole
+dla API oraz OAuth2/OIDC, w tym tokenów, discovery i JWKS. Zmiana wymaga
+restartu. Przeglądarka na stronie logowania ma własną politykę certyfikatów;
+walidacja podpisu i tożsamości tokenów nadal obowiązuje.
+
 ## Wzorce tekstowe
 
 Ograniczenie `pattern` jest zachowywane w schema i egzekwowane przed
@@ -116,7 +124,9 @@ zgodne z rzeczywistym API.
 Opisuj potwierdzone skutki w źródle przez `x-tdw-operation-effect`:
 `READ_ONLY`, `MUTATION` albo `UNKNOWN`. Domyślne UNKNOWN jest traktowane jak
 potencjalny zapis, również dla GET. Po nieustalonym wyniku można wykonywać
-tylko potwierdzone odczyty; nie ma samoczynnego retry.
+tylko potwierdzone odczyty. Aplikacja nie ponawia operacji, ale transport JDK
+może ponowić GET po niektórych zerwaniach połączenia, także GET UNKNOWN.
+POST/PUT/PATCH/DELETE nie są ponawiane.
 
 Limit liczby operacji pozostaje 60 na kontrakt i 100 łącznie. Kontrakt może
 mieć do 1000000 znaków, ale projekcja argumentów pojedynczego narzędzia do
@@ -174,8 +184,15 @@ używanego Auth wymaga wcześniejszej zmiany zależnych par w profilach.
 Zewnętrzny klient MCP wybiera zestaw API i tożsamości przez adres
 `/api/openapi-tools/{profileId}/mcp`. Adres wynika z ID profilu i nie jest
 prezentowany w formularzu. Nieskopowany adres nie jest obsługiwany.
-Niezapisany szkic nie zmienia wykonywanych requestów i blokuje rozpoczęcie
-logowania OIDC. Błąd auth nie ponawia automatycznie operacji biznesowej.
+Niezapisany szkic konfiguracji nie zmienia wykonywanych requestów i blokuje
+ręczny login w edytorze Auth. Login z rozmowy używa aktywnego zapisu.
+Błąd auth nie ponawia automatycznie operacji biznesowej.
+Jeśli OIDC wymaga ponownego logowania, wysłanie wiadomości najpierw próbuje
+odnowić token. Gdy to niemożliwe, TDW przekierowuje do dostawcy bez uruchamiania
+AI. Po logowaniu wrócisz do tej samej rozmowy i profilu. Wpisz wiadomość
+ponownie — szkic nie jest zachowywany ani automatycznie wysyłany. Próba działa
+też w ramce, ale provider może blokować logowanie w iframe. Nie zmieniamy jej
+zabezpieczeń; po udanym logowaniu wraca pełny widok rozmowy.
 Szczegóły: [runtime Auth](architecture/http-api-authentication.md).
 
 ## Rozmowa i Browser Tools
