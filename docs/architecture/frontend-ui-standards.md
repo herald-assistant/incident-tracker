@@ -166,6 +166,10 @@ wyslania zmiany do feature'a.
 - `app-text-field` emituje `valueChange` podczas edycji, z obsluga IME;
   `committed` odpowiada natywnemu zdarzeniu `change`. Migracja pola nie moze
   zamienic zatwierdzenia zmiany na zapis przy kazdym znaku.
+- `app-text-field type="password"` może mieć jawne `passwordToggle=true`:
+  domyślnie maskuje wartość, a przycisk oka obok inputu odsłania ją bez zmiany
+  wartości, walidacji i dirty/touched. Wyłączenie kontrolki ponownie maskuje
+  wartość. Toggle ma dostępną nazwę, tooltip i stan `aria-pressed`.
 - Typ `number` przekazuje do `FormControl` liczbe albo `null`, natomiast
   `valueChange` i `committed` przekazuja tekst. Typ `date` zachowuje string
   `YYYY-MM-DD` bez konwersji przez `Date` lub strefe czasowa.
@@ -256,7 +260,13 @@ Wspolny `app-analysis-result-tabs` udostepnia opcjonalny slot `[tabActions]`
 na akcje obok paska zakladek. Akcje sa poza `tablist` i panelem; nie zmieniaja
 wyboru zakladki ani obslugi jej klawiatury. Feature dostarcza handlery, ikony,
 tooltipy i dostepne nazwy. Brak slota pozostawia pelna szerokosc nawigacji.
-System Assistant uzywa slota do importu i eksportu calego szkicu konfiguracji.
+System Assistant grupuje import, eksport i zapis całego szkicu we wspólnym
+dolnym pasku konfiguracji, poza nagłówkiem zakładek.
+
+Opcjonalne `equalWidth=true` rozdziela całą dostępną szerokość na równe
+zakładki. Długie etykiety mogą zajmować dwa wiersze; minimalna szerokość
+148 px zachowuje paginację Material na wąskim ekranie. System Assistant
+używa tego wariantu. Domyślny układ pozostałych konsumentów pozostaje bez zmian.
 
 `AnalysisResultTabsComponent` uzywa paginowanego naglowka Angular Material
 (`MatTabNav`) i powiazanego `MatTabNavPanel`. Po przekroczeniu szerokosci
@@ -350,5 +360,18 @@ feature’y. Nie ma specjalnego wariantu inline ani jego styli.
 
 Zakładka Auth w System Assistant utrzymuje kilka profili bezpośrednio na stronie,
 bez modali CRUD. Wspólne text-field i choice-select prezentują pola typu,
-nazwy i poświadczeń bez maskowania. Select przy przypisanym API w profilu ma domyślne No Auth.
-Wspólny zapis całego zestawu zachowuje szkic między zakładkami.
+nazwy i poświadczeń. Hasło, token i client secret używają `type="password"`
+oraz `passwordToggle=true`, z prezentacją oka obok pola jak w Workspace Settings.
+Select przy przypisanym API w profilu ma domyślne No Auth.
+
+Cztery zakładki konfiguracji System Assistant mają wspólny wzorzec listy:
+licznik wpisów i Dodaj, bez powtarzania nazwy aktywnej zakładki. Nazwa wpisu
+z pomocniczym opisem znajduje się po lewej, a
+ikonowe akcje 32 px po prawej. Usuwanie jest zawsze ostatnią akcją wiersza.
+Skille, Auth i Profile rozwijają edytor inline; Kontrakty zachowują podgląd
+i eksport. Wewnętrzne separatory są zastąpione odstępami; delikatny hover
+obejmuje całą belkę z obszarem akcji. Jedna subtelna linia oddziela listę od
+sticky paska akcji; wiersze listy pozostają bez separatorów. Pasek grupuje
+import, eksport i `Zapisz konfigurację` dla całego zestawu. Pokazuje komunikaty
+oraz stan tylko niezapisanych zmian; zakres zapisu wyjaśnia tooltip.
+Przełączanie zakładek zachowuje szkic.

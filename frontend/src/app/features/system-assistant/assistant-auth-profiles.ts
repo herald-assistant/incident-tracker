@@ -1,5 +1,6 @@
 import {Component, input, output} from '@angular/core';
 import {DatePipe} from '@angular/common';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {TextFieldComponent} from '../../components/text-field/text-field';
 import {ChoiceSelectComponent} from '../../components/choice-select/choice-select';
 import {AssistantApiDefinition, AssistantProfile, AssistantAuthProfile, AssistantAuthType, AssistantOidcConnection} from './system-assistant.models';
@@ -7,7 +8,7 @@ import {AUTH_TYPES, authErrors, newAuthProfile} from './assistant-auth';
 
 @Component({
   selector: 'app-assistant-auth-profiles',
-  imports: [TextFieldComponent, ChoiceSelectComponent, DatePipe],
+  imports: [TextFieldComponent, ChoiceSelectComponent, DatePipe, MatTooltipModule],
   templateUrl: './assistant-auth-profiles.html',
   styleUrl: './assistant-auth-profiles.scss'
 })

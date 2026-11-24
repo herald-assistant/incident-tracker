@@ -381,7 +381,7 @@ describe('SystemAssistantPage', () => {
     const operation = page.importConfiguration(pending.event); fixture.detectChanges();
     expect(page.importing()).toBe(true);
     expect(fixture.nativeElement.querySelector('.assistant-configuration fieldset').disabled).toBe(true);
-    expect([...fixture.nativeElement.querySelectorAll('.assistant-configuration-actions button, .assistant-configuration-transfer button')].every((button: any) => button.disabled)).toBe(true);
+    expect([...fixture.nativeElement.querySelectorAll('.assistant-configuration-actions button, .assistant-configuration-add button')].every((button: any) => button.disabled)).toBe(true);
     page.addSkill(); page.updateSkill(0, 'name', 'Ignored'); page.remove('skills', 0); page.save();
     expect(page.configuration()).toBe(draft); expect(page.canChat()).toBe(true);
     http.expectNone('/api/system-assistant/configuration');
@@ -430,7 +430,7 @@ describe('SystemAssistantPage', () => {
     const root = fixture.nativeElement as HTMLElement;
     const heading = () => root.querySelector<HTMLButtonElement>('.assistant-definition-toggle')!;
     const body = () => root.querySelector<HTMLElement>('.assistant-definition-body')!;
-    const expected = {skills: ['Analiza CRM', 'triage'], profiles: ['Test CRM', '*'], auth: ['Dostęp CRM', 'Basic']}[view];
+    const expected = {skills: ['Analiza CRM', 'triage'], profiles: ['Test CRM', 'Wszystkie adresy'], auth: ['Dostęp CRM', 'Basic']}[view];
     expect(heading().textContent).toContain(expected[0]); expect(heading().textContent).toContain(expected[1]);
     expect(heading().textContent).not.toContain('public-test-password');
     expect(heading().getAttribute('aria-expanded')).toBe('false'); expect(body().hidden).toBe(true);
@@ -452,6 +452,63 @@ describe('SystemAssistantPage', () => {
     expect(body().querySelector<HTMLInputElement>('input')!.value).toBe('Robocza zmiana');
     fixture.destroy();
   });
+  it.each([
+    {view: 'skills', kind: 'skills', add: 'Dodaj skill', remove: 'Usuń skill Instrukcja'},
+    {view: 'contracts', kind: 'apis', add: 'Dodaj OpenAPI', remove: 'Usuń kontrakt CRM'},
+    {view: 'auth', kind: 'authProfiles', add: 'Dodaj uwierzytelnianie', remove: 'Usuń uwierzytelnianie Dostęp'},
+    {view: 'profiles', kind: 'profiles', add: 'Dodaj profil', remove: 'Usuń profil Test CRM'}
+  ] as const)('keeps list actions separate from global transfer and save in $view', ({view, kind, add, remove}) => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.configuration.set({apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}], skills: [{id: 'guide', name: 'Instrukcja', content: 'Treść'}],
+      authProfiles: [{...newAuthProfile('BASIC', 'access', 'Dostęp', 'http://localhost'), username: 'operator', password: 'public-password'}], profiles: [testProfile]});
+    page.workspaceView.set(view); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.assistant-configuration-header h2')).toBeNull();
+    expect(root.querySelector('.assistant-section-count')?.textContent).toBe('Liczba wpisów: 1');
+    expect(root.querySelector('.assistant-configuration-add button')?.textContent).toBe(add);
+    expect(root.querySelector('.analysis-result-tabs--equal-width')).not.toBeNull();
+    expect(root.querySelector('.analysis-result-tabs-header .assistant-configuration-transfer')).toBeNull();
+    const saveBar = root.querySelector('.assistant-configuration-actions')!;
+    expect(saveBar.querySelectorAll('button')).toHaveLength(3);
+    expect(saveBar.querySelectorAll('.assistant-configuration-transfer button')).toHaveLength(2);
+    expect(saveBar.querySelector('.primary-button')?.textContent).toBe('Zapisz konfigurację');
+    expect(saveBar.querySelector('.assistant-save-state')).toBeNull();
+    const deleteButton = root.querySelector<HTMLButtonElement>(`[aria-label="${remove}"]`)!;
+    expect(deleteButton.closest('.assistant-definition-heading')).not.toBeNull();
+    expect(deleteButton.classList.contains('assistant-definition-action')).toBe(true);
+    deleteButton.click(); fixture.detectChanges();
+    expect(page.configuration()[kind]).toHaveLength(0);
+    expect(saveBar.textContent).toContain('Niezapisane zmiany');
+    expect(saveBar.querySelector<HTMLButtonElement>('.primary-button')?.disabled).toBe(false);
+    http.expectNone('/api/system-assistant/configuration'); fixture.destroy();
+  });
+
+  it('saves the whole draft from any configuration tab and keeps errors and locks in the shared footer', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.addSkill(); page.updateSkill(0, 'content', 'Nowa instrukcja');
+    page.workspaceView.set('profiles'); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const save = () => root.querySelector<HTMLButtonElement>('.assistant-configuration-actions .primary-button')!;
+    save().click(); fixture.detectChanges();
+    const request = http.expectOne('/api/system-assistant/configuration');
+    expect(request.request.body).toEqual(page.configuration());
+    expect(request.request.body.skills[0].content).toBe('Nowa instrukcja');
+    expect(request.request.body.profiles).toEqual([testProfile]);
+    expect(save().disabled).toBe(true);
+    expect([...root.querySelectorAll<HTMLButtonElement>('.assistant-configuration-add button, .assistant-definition-heading button')].every(button => button.disabled)).toBe(true);
+    request.flush({message: 'Nie zapisano zestawu'}, {status: 503, statusText: 'Unavailable'});
+    page.workspaceView.set('contracts'); fixture.detectChanges();
+    expect(root.querySelector('.assistant-configuration-actions [role=alert]')?.textContent).toBe('Nie zapisano zestawu');
+    expect(page.dirty()).toBe(true); expect(save().disabled).toBe(false);
+    save().click(); http.expectOne('/api/system-assistant/configuration').flush(page.configuration());
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]); fixture.detectChanges();
+    expect(page.dirty()).toBe(false); expect(save().disabled).toBe(true);
+    expect(root.querySelector('.assistant-save-state')).toBeNull();
+    expect(root.querySelector('.assistant-configuration-actions [role=alert]')).toBeNull();
+    expect(root.querySelector('.assistant-configuration-actions [role=status]')?.textContent).toContain('Zapisano');
+    fixture.destroy();
+  });
+
   it('keeps the skill expansion with the edited row after changing its ID and deleting an earlier row', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     page.configuration.update(value => ({...value, skills: [{id: 'first', name: 'Pierwszy', content: ''}, {id: 'second', name: 'Drugi', content: ''}]}));
@@ -614,15 +671,15 @@ describe('SystemAssistantPage', () => {
     page.configuration.set({authProfiles: [], profiles: [], apis, skills: []}); page.tools.set(active); page.workspaceView.set('contracts'); page.dirty.set(true);
     fixture.detectChanges();
     const counts = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.assistant-contract-count')].map(node => node.textContent?.trim());
-    expect(counts()).toEqual(['1', '1', '0']);
+    expect(counts()).toEqual(['Aktywne operacje: 1', 'Aktywne operacje: 1', 'Aktywne operacje: 0']);
     expect(fixture.nativeElement.textContent).not.toContain('Aktywne narzędzia');
     const tooltip = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatTooltipHarness.with({selector: '.assistant-contract-count'}));
     await tooltip.show(); expect(await tooltip.getTooltipText()).toContain('GET /tickets');
     expect(await tooltip.getTooltipText()).not.toContain('/other'); await tooltip.hide();
     page.save(); http.expectOne('/api/system-assistant/configuration').flush(page.configuration()); fixture.detectChanges();
-    expect(counts()).toEqual(['—', '—', '—']);
+    expect(counts()).toEqual(['Aktywne operacje: —', 'Aktywne operacje: —', 'Aktywne operacje: —']);
     http.expectOne('/api/system-assistant/configuration/tools').flush([...active, tool('new', 'oa_new_read', '/new')]);
-    fixture.detectChanges(); expect(counts()).toEqual(['1', '1', '1']); fixture.destroy();
+    fixture.detectChanges(); expect(counts()).toEqual(['Aktywne operacje: 1', 'Aktywne operacje: 1', 'Aktywne operacje: 1']); fixture.destroy();
   });
   it('does not present unavailable operation counts as zero', () => {
     const fixture = ready(); const page = fixture.componentInstance;
@@ -630,7 +687,7 @@ describe('SystemAssistantPage', () => {
     page.workspaceView.set('contracts'); page.loadTools();
     http.expectOne('/api/system-assistant/configuration/tools').flush({}, {status: 503, statusText: 'Unavailable'});
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.assistant-contract-count').textContent.trim()).toBe('—');
+    expect(fixture.nativeElement.querySelector('.assistant-contract-count').textContent.trim()).toBe('Aktywne operacje: —');
     expect(fixture.nativeElement.querySelector('.assistant-configuration [role=alert]').textContent).toContain('Nie udało się pobrać');
     fixture.destroy();
   });
@@ -660,7 +717,7 @@ describe('SystemAssistantPage', () => {
     const section = (fixture.nativeElement as HTMLElement).querySelector('.assistant-configuration')!;
     const alert = section.querySelector('[role="alert"]')!;
     expect(alert.textContent).toContain('Niepoprawny skill');
-    expect(alert.nextElementSibling?.querySelector('.primary-button')?.textContent?.trim()).toBe('Zapisz');
+    expect(alert.closest('.assistant-configuration-actions')?.querySelector('.primary-button')?.textContent?.trim()).toBe('Zapisz konfigurację');
     expect(fixture.nativeElement.querySelector('.assistant-workspace > [role="alert"]')).toBeNull();
     page.save(); fixture.detectChanges();
     expect(section.querySelector('[role="alert"]')).toBeNull();

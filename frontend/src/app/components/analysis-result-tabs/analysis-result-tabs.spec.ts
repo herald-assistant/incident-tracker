@@ -72,9 +72,10 @@ describe('AnalysisResultTabsComponent', () => {
     expect(tabSelected).toHaveBeenCalledWith('INSTRUCTION_COMPLIANCE');
   });
 
-  it('should navigate by arrows and Home/End, select with Enter/Space and label the active panel', async () => {
+  it.each([false, true])('should preserve keyboard navigation and panel labels with equalWidth=%s', async (equalWidth) => {
     await TestBed.configureTestingModule({ imports: [AnalysisResultTabsComponent] }).compileComponents();
     const fixture = TestBed.createComponent(AnalysisResultTabsComponent);
+    fixture.componentRef.setInput('equalWidth', equalWidth);
     fixture.componentRef.setInput('tabs', [
       { id: 'profiles', tabLabel: 'CRM Customer Profiles' },
       { id: 'contacts', tabLabel: 'CRM Contacts' },
@@ -86,6 +87,7 @@ describe('AnalysisResultTabsComponent', () => {
     fixture.detectChanges();
 
     const loader = TestbedHarnessEnvironment.loader(fixture);
+    expect(fixture.nativeElement.querySelector('.analysis-result-tabs--equal-width') !== null).toBe(equalWidth);
     const nav = await loader.getHarness(MatTabNavBarHarness);
     const tabs = await loader.getAllHarnesses(MatTabLinkHarness);
     const hosts = await Promise.all(tabs.map(tab => tab.host()));

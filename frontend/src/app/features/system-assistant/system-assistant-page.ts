@@ -90,6 +90,11 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     {id: 'conversation', tabLabel: 'Rozmowa'},
     {id: 'launch', tabLabel: 'Uruchamianie w systemie'}
   ];
+  readonly configurationEntryCount = computed(() => {
+    const kind = this.workspaceView() === 'contracts' ? 'apis' : this.workspaceView() === 'auth' ? 'authProfiles'
+      : this.workspaceView() === 'profiles' ? 'profiles' : 'skills';
+    return this.configuration()[kind].length;
+  });
   readonly error = signal('');
   readonly saveError = signal('');
   readonly notice = signal('');
@@ -370,6 +375,10 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.dirty.set(true); this.notice.set('');
   }
   profileWarning(profile: AssistantProfile): string { return missingProfileResources(profile, this.configuration()); }
+  profileSummary(profile: AssistantProfile): string {
+    const scope = profile.urlPattern === '*' ? 'Wszystkie adresy' : profile.urlPattern || 'Brak wzorca URL';
+    return `${scope} · Skille: ${profile.skillIds.length} · API: ${profile.apiBindings.length}`;
+  }
   profileResources(profile: AssistantProfile, kind: 'apis' | 'skills') {
     const resources = this.configuration()[kind].map(item => ({id: item.id, name: item.name}));
     const ids = kind === 'apis' ? profile.apiBindings.map(binding => binding.apiId) : profile.skillIds;

@@ -12,9 +12,10 @@
       (compositionstart)="startComposition()" (compositionend)="endComposition($event)"
       (input)="update($event)" (change)="commit($event)" (blur)="touch()"></textarea>
   } @else {
+    <div class="text-field__input-row" [class.text-field__input-row--secret]="type() === 'password' && passwordToggle()">
     <input #control class="text-input" [class.text-field--descriptive]="size() === 'descriptive'"
       [class.text-field--code]="appearance() === 'code'"
-      [type]="type()" [id]="inputId()" [value]="currentValue()" [placeholder]="placeholder()"
+      [type]="inputType()" [id]="inputId()" [value]="currentValue()" [placeholder]="placeholder()"
       [attr.min]="min()" [attr.max]="max()" [attr.maxlength]="maxLength()" [required]="required()"
       [attr.step]="step()" [attr.pattern]="pattern()" [attr.list]="list()" [attr.inputmode]="inputmode() || null"
       [readOnly]="readonly()" [disabled]="isDisabled()" [autocomplete]="autocomplete()" [spellcheck]="spellcheck()"
@@ -23,5 +24,13 @@
       [attr.aria-invalid]="error() ? true : null"
       (compositionstart)="startComposition()" (compositionend)="endComposition($event)"
       (input)="update($event)" (change)="commit($event)" (blur)="touch()" />
+      @if (type() === 'password' && passwordToggle()) {
+        <button class="secondary-button text-field__password-toggle" type="button" [disabled]="isDisabled()"
+          [attr.aria-label]="passwordToggleLabel()" [attr.aria-controls]="inputId()" [attr.aria-pressed]="passwordVisible()"
+          [matTooltip]="passwordToggleLabel()" (click)="togglePassword()">
+          <span class="material-symbols-outlined" aria-hidden="true">{{passwordVisible() ? 'visibility_off' : 'visibility'}}</span>
+        </button>
+      }
+    </div>
   }
 </app-form-field>

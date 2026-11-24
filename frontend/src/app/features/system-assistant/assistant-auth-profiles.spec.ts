@@ -7,7 +7,7 @@ import {configurationFile, parseConfigurationFile} from './system-assistant-conf
 import {AssistantAuthProfile} from './system-assistant.models';
 
 describe('Assistant Auth profiles', () => {
-  it('edits inline, switches type without retaining previous credentials, and shows plain values', async () => {
+  it('edits inline with masked credentials and clears previous credentials when switching type', async () => {
     const fixture = TestBed.createComponent(AssistantAuthProfiles);
     const basic = {...newAuthProfile('BASIC', 'crm', 'CRM access', 'http://localhost'), username: 'operator', password: 'public-test-password'};
     fixture.componentRef.setInput('profiles', [basic]); fixture.componentRef.setInput('apis', []);
@@ -15,7 +15,10 @@ describe('Assistant Auth profiles', () => {
     let emitted: AssistantAuthProfile[] = [];
     fixture.componentInstance.profilesChange.subscribe(value => { emitted = value; fixture.componentRef.setInput('profiles', value); });
     fixture.detectChanges();
-    expect([...fixture.nativeElement.querySelectorAll('input')].some((input: any) => input.value === 'public-test-password' && input.type === 'text')).toBe(true);
+    const password = fixture.nativeElement.querySelector('input[type=password]') as HTMLInputElement;
+    expect(password.value).toBe('public-test-password');
+    fixture.nativeElement.querySelector('[aria-label="Pokaż: Hasło"]').click(); fixture.detectChanges();
+    expect(password.type).toBe('text'); expect(emitted).toEqual([]);
     expect(fixture.nativeElement.querySelector('[role=dialog]')).toBeNull();
     const type = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatSelectHarness);
     await type.open(); await type.clickOptions({text: /Bearer/});
@@ -23,6 +26,7 @@ describe('Assistant Auth profiles', () => {
     expect(emitted[0].id).toBe('crm'); expect(emitted[0].name).toBe('CRM access');
     fixture.componentInstance.update(0, 'token', 'public-token'); fixture.detectChanges();
     expect(emitted[0].token).toBe('public-token');
+    expect(fixture.nativeElement.querySelector('input[type=password]').value).toBe('public-token');
     expect(fixture.nativeElement.textContent).toContain('Sam token, bez prefiksu Bearer'); fixture.destroy();
   });
 
@@ -37,13 +41,29 @@ describe('Assistant Auth profiles', () => {
     const changed = vi.fn(); fixture.componentInstance.profilesChange.subscribe(changed); fixture.detectChanges();
     fixture.componentInstance.remove(0); expect(changed).not.toHaveBeenCalled();
     const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
-    expect(buttons.find(button => button.textContent?.trim() === 'Usuń')!.disabled).toBe(true);
+    expect(buttons.find(button => button.getAttribute('aria-label') === 'Usuń uwierzytelnianie CRM OIDC')!.disabled).toBe(true);
     expect(buttons.find(button => button.textContent?.trim() === 'Zaloguj')!.disabled).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('CRM API');
     expect(fixture.nativeElement.textContent).toContain('Podaj client ID.');
     fixture.componentRef.setInput('dirty', false); fixture.detectChanges();
     const loggedIn = vi.fn(); fixture.componentInstance.login.subscribe(loggedIn);
     buttons.find(button => button.textContent?.trim() === 'Zaloguj')!.click(); expect(loggedIn).toHaveBeenCalledWith('crm'); fixture.destroy();
+  });
+
+  it.each(['BASIC', 'BEARER', 'OAUTH2', 'OIDC'] as const)('masks and reveals %s secrets without changing the draft', type => {
+    const fixture = TestBed.createComponent(AssistantAuthProfiles);
+    const profile = {...newAuthProfile(type, 'access', 'Dostęp', 'http://localhost'), password: 'public-password', token: 'public-token', clientSecret: 'public-secret'};
+    fixture.componentRef.setInput('profiles', [profile]); fixture.componentRef.setInput('apis', []);
+    fixture.componentRef.setInput('expandedIds', new Set(['access']));
+    const changed = vi.fn(); fixture.componentInstance.profilesChange.subscribe(changed); fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('input[type=password]') as HTMLInputElement;
+    const toggle = fixture.nativeElement.querySelector('.text-field__password-toggle') as HTMLButtonElement;
+    expect(input.value).toBe(type === 'BASIC' ? 'public-password' : type === 'BEARER' ? 'public-token' : 'public-secret');
+    toggle.click(); fixture.detectChanges(); expect(input.type).toBe('text');
+    toggle.click(); fixture.detectChanges(); expect(input.type).toBe('password');
+    expect(changed).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('disabled', true); fixture.detectChanges(); expect(toggle.disabled).toBe(true);
+    fixture.destroy();
   });
 
   it('round trips all four plain auth types and assignments, omitting runtime tokens and rejecting the old V1 shape', () => {

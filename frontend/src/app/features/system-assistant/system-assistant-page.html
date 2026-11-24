@@ -8,18 +8,24 @@
       }
       <ng-container [ngTemplateOutlet]="chatView" />
     } @else {
-    <app-analysis-result-tabs [tabs]="workspaceTabs" [activeTabId]="workspaceView()"
+    <app-analysis-result-tabs [tabs]="workspaceTabs" [activeTabId]="workspaceView()" [equalWidth]="true"
       idPrefix="system-assistant-view" ariaLabel="Widoki System Assistant" (tabSelected)="workspaceView.set($event)">
-      <div tabActions class="assistant-configuration-transfer" role="group" aria-label="Import i eksport konfiguracji">
-        <input #configurationFileInput class="assistant-configuration-file" type="file" accept=".json,application/json" hidden (change)="importConfiguration($event)" />
-        <button class="secondary-button" type="button" aria-label="Importuj konfigurację" matTooltip="Importuj konfigurację" [disabled]="configurationBusy()" (click)="configurationFileInput.click()">
-          <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-        </button>
-        <button class="secondary-button" type="button" aria-label="Eksportuj konfigurację" matTooltip="Eksportuj konfigurację" [disabled]="configurationBusy()" (click)="exportConfiguration()">
-          <span class="material-symbols-outlined" aria-hidden="true">download</span>
-        </button>
-      </div>
       <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts' && workspaceView() !== 'profiles' && workspaceView() !== 'auth'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
+        <header class="assistant-configuration-header">
+          <span class="assistant-section-count">Liczba wpisów: {{configurationEntryCount()}}</span>
+          <div class="assistant-configuration-add">
+            @if (workspaceView() === 'skills') {
+              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().skills.length >= 20" (click)="addSkill()">Dodaj skill</button>
+            } @else if (workspaceView() === 'auth') {
+              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().authProfiles.length >= 20" (click)="addAuth()">Dodaj uwierzytelnianie</button>
+            } @else if (workspaceView() === 'profiles') {
+              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().profiles.length >= 20" (click)="addProfile()">Dodaj profil</button>
+            } @else if (workspaceView() === 'contracts') {
+              <input #newContractFile type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml" hidden (change)="readNewOpenApi($event)" />
+              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().apis.length >= 12" (click)="newContractFile.click()">Dodaj OpenAPI</button>
+            }
+          </div>
+        </header>
         @if (workspaceView() === 'skills') {
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
             @for (item of configuration().skills; track $index; let i = $index) {
@@ -31,12 +37,17 @@
                     <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy skill'}}</span><span class="assistant-definition-meta">{{item.id || 'Brak ID'}}</span></span>
                     <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
                   </button>
+                  <div class="assistant-definition-actions">
+                    <button class="assistant-definition-action" type="button" [disabled]="configurationBusy()" matTooltip="Usuń skill"
+                      [attr.aria-label]="'Usuń skill ' + item.name" (click)="remove('skills', i)">
+                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="assistant-definition-body" [id]="'assistant-skill-body-' + i" [hidden]="!expandedDefinitions().skills.has('' + i)">
                   <app-text-field [disabled]="configurationBusy()" label="ID skilla" [value]="item.id" (valueChange)="updateSkill(i, 'id', $event)" />
                   <app-text-field [disabled]="configurationBusy()" label="Nazwa skilla" [value]="item.name" (valueChange)="updateSkill(i, 'name', $event)" />
                   <app-text-field [disabled]="configurationBusy()" label="Instrukcje Markdown" type="textarea" [rows]="6" [value]="item.content" (valueChange)="updateSkill(i, 'content', $event)" />
-                  <button class="secondary-button" type="button" (click)="remove('skills', i)">Usuń skill {{item.name}}</button>
                 </div>
               </section>
             } @empty { <p class="assistant-empty">Dodaj instrukcje określające sposób pracy asystenta.</p> }
@@ -58,12 +69,18 @@
                   <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
                     [attr.aria-expanded]="expandedDefinitions().profiles.has(item.id)" [attr.aria-controls]="'assistant-profile-body-' + i"
                     (click)="toggleDefinition('profiles', item.id)">
-                    <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy profil'}}</span><span class="assistant-definition-meta">{{item.urlPattern || 'Brak wzorca URL'}}</span></span>
+                    <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy profil'}}</span><span class="assistant-definition-meta">{{profileSummary(item)}}</span></span>
                     <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
                   </button>
-                  @if (profileWarning(item); as warning) {
-                    <span class="material-symbols-outlined assistant-profile-warning" role="img" tabindex="0" aria-label="Brakujące zasoby profilu" [matTooltip]="warning">warning</span>
-                  }
+                  <div class="assistant-definition-actions">
+                    @if (profileWarning(item); as warning) {
+                      <span class="material-symbols-outlined assistant-profile-warning" role="img" tabindex="0" aria-label="Brakujące zasoby profilu" [matTooltip]="warning">warning</span>
+                    }
+                    <button class="assistant-definition-action" type="button" [disabled]="configurationBusy()" matTooltip="Usuń profil"
+                      [attr.aria-label]="'Usuń profil ' + item.name" (click)="remove('profiles', i)">
+                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="assistant-definition-body" [id]="'assistant-profile-body-' + i" [hidden]="!expandedDefinitions().profiles.has(item.id)">
                   <app-text-field label="Nazwa profilu" [value]="item.name" [maxLength]="100" [required]="true" [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'name', $event)" />
@@ -87,7 +104,6 @@
                       } @empty { <p>Nie dodano API.</p> }
                     </fieldset>
                   </div>
-                  <button class="secondary-button" type="button" (click)="remove('profiles', i)">Usuń profil {{item.name}}</button>
                 </div>
               </section>
             } @empty { <p>Nie dodano profili.</p> }
@@ -96,22 +112,29 @@
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-api" aria-labelledby="system-assistant-view-tab-contracts">
             <ul class="assistant-contracts" aria-label="Zaimportowane kontrakty">
               @for (item of configuration().apis; track item.id; let i = $index) {
-                <li class="assistant-contract">
-                  <h3>{{item.name}}</h3>
-                  <div class="assistant-contract-actions">
-                    @if (contractActivity().get(item.id); as activity) {
-                      <span class="assistant-contract-count" tabindex="0" [matTooltip]="activity.tooltip"
-                        matTooltipClass="analysis-rich-tooltip" [attr.aria-label]="item.name + ': ' + activity.tooltip">{{activity.count === null ? '—' : activity.count}}</span>
-                    }
-                    <button class="secondary-button" type="button" matTooltip="Podgląd" [disabled]="configurationBusy()" (click)="viewContract(item)" [attr.aria-label]="'Podgląd kontraktu ' + item.name">
-                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                    </button>
-                    <button class="secondary-button" type="button" matTooltip="Eksportuj YAML" [disabled]="configurationBusy()" (click)="exportContract(item)" [attr.aria-label]="'Eksportuj kontrakt ' + item.name">
-                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                    </button>
-                    <button class="secondary-button" type="button" matTooltip="Usuń" [disabled]="configurationBusy()" (click)="remove('apis', i)" [attr.aria-label]="'Usuń kontrakt ' + item.name">
-                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    </button>
+                <li class="assistant-contract assistant-definition">
+                  <div class="assistant-definition-heading">
+                    <div class="assistant-definition-label assistant-definition-label--static">
+                      <h3 class="assistant-definition-title">{{item.name}}</h3>
+                      <div class="assistant-contract-meta assistant-definition-meta">
+                        <span>{{item.id}}</span>
+                        @if (contractActivity().get(item.id); as activity) {
+                          <span class="assistant-definition-meta assistant-contract-count" tabindex="0" [matTooltip]="activity.tooltip"
+                            matTooltipClass="analysis-rich-tooltip" [attr.aria-label]="item.name + ': ' + activity.tooltip">Aktywne operacje: {{activity.count === null ? '—' : activity.count}}</span>
+                        }
+                      </div>
+                    </div>
+                    <div class="assistant-definition-actions assistant-contract-actions">
+                      <button class="assistant-definition-action" type="button" matTooltip="Podgląd" [disabled]="configurationBusy()" (click)="viewContract(item)" [attr.aria-label]="'Podgląd kontraktu ' + item.name">
+                        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                      </button>
+                      <button class="assistant-definition-action" type="button" matTooltip="Eksportuj YAML" [disabled]="configurationBusy()" (click)="exportContract(item)" [attr.aria-label]="'Eksportuj kontrakt ' + item.name">
+                        <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                      </button>
+                      <button class="assistant-definition-action" type="button" matTooltip="Usuń" [disabled]="configurationBusy()" (click)="remove('apis', i)" [attr.aria-label]="'Usuń kontrakt ' + item.name">
+                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                      </button>
+                    </div>
                   </div>
                 </li>
               } @empty { <li class="assistant-empty">Nie dodano kontraktów. Wczytaj plik i wybierz potrzebne operacje.</li> }
@@ -119,21 +142,26 @@
           </fieldset>
           @if (toolsError()) { <p role="alert">{{toolsError()}}</p> }
         }
-        @if (notice()) { <p role="status">{{notice()}}</p> }
-        @if (saveError()) { <p role="alert">{{saveError()}}</p> }
-        <div class="assistant-configuration-actions">
-          @if (workspaceView() === 'skills') {
-            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().skills.length >= 20" (click)="addSkill()">Dodaj skill</button>
-          } @else if (workspaceView() === 'auth') {
-            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().authProfiles.length >= 20" (click)="addAuth()">Dodaj uwierzytelnianie</button>
-          } @else if (workspaceView() === 'profiles') {
-            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().profiles.length >= 20" (click)="addProfile()">Dodaj profil</button>
-          } @else if (workspaceView() === 'contracts') {
-            <input #newContractFile type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml" hidden (change)="readNewOpenApi($event)" />
-            <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().apis.length >= 12" (click)="newContractFile.click()">Dodaj OpenAPI</button>
-          }
-          <button class="primary-button" type="button" [disabled]="configurationBusy() || !dirty()" (click)="save()">{{saving() ? 'Zapisywanie…' : 'Zapisz'}}</button>
-        </div>
+        <footer class="assistant-configuration-actions" aria-label="Zapis całej konfiguracji">
+          <div class="assistant-configuration-status" aria-live="polite">
+            @if (saveError()) { <p role="alert">{{saveError()}}</p> }
+            @if (notice()) { <p role="status">{{notice()}}</p> }
+            @if (dirty()) { <p class="assistant-save-state">Niezapisane zmiany</p> }
+          </div>
+          <div class="assistant-configuration-buttons" role="group" aria-label="Akcje całej konfiguracji">
+            <div class="assistant-configuration-transfer" role="group" aria-label="Import i eksport konfiguracji">
+              <input #configurationFileInput class="assistant-configuration-file" type="file" accept=".json,application/json" hidden (change)="importConfiguration($event)" />
+              <button class="secondary-button" type="button" aria-label="Importuj konfigurację" matTooltip="Importuj konfigurację" [disabled]="configurationBusy()" (click)="configurationFileInput.click()">
+                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              </button>
+              <button class="secondary-button" type="button" aria-label="Eksportuj konfigurację" matTooltip="Eksportuj konfigurację" [disabled]="configurationBusy()" (click)="exportConfiguration()">
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              </button>
+            </div>
+            <button class="primary-button" type="button" [disabled]="configurationBusy() || !dirty()" [attr.aria-busy]="saving()"
+              matTooltip="Zapis obejmuje Skille, Kontrakty, Auth i Profile." (click)="save()">{{saving() ? 'Zapisywanie…' : 'Zapisz konfigurację'}}</button>
+          </div>
+        </footer>
       </section>
       <ng-container [ngTemplateOutlet]="chatView" />
       <section class="assistant-launch assistant-view" [hidden]="workspaceView() !== 'launch'" aria-labelledby="system-assistant-view-tab-launch">

@@ -52,6 +52,17 @@
   white-space: nowrap;
 }
 
+.analysis-result-tabs--equal-width .analysis-result-tab {
+  flex: 1 0 148px;
+  min-width: 148px;
+  padding-inline: 12px;
+}
+
+.analysis-result-tabs--equal-width .analysis-result-tab__label {
+  white-space: normal;
+  line-height: 18px;
+}
+
 mat-tab-nav-panel {
   display: block;
   min-width: 0;

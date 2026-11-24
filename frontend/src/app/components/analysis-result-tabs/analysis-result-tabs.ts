@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, booleanAttribute, input, output } from '@angular/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -25,5 +25,6 @@ export class AnalysisResultTabsComponent {
   readonly activeTabId = input('');
   readonly idPrefix = input('analysis');
   readonly ariaLabel = input('Sekcje wyniku analizy');
+  readonly equalWidth = input(false, { transform: booleanAttribute });
   readonly tabSelected = output<string>();
 }

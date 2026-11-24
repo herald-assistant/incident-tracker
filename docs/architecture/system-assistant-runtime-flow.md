@@ -297,6 +297,8 @@ Rozmowa oraz Uruchamianie w systemie. Bezpośrednie `/system-assistant` zaczyna 
 wejście z `localRunId` otwiera Rozmowę, a osadzony route Browser Tools zaczyna
 od wyboru nowej lub zapisanej rozmowy, bez zakładek konfiguracji.
 Nie ma nadrzędnej zakładki Konfiguracja ani drugiego przełącznika.
+Sześć zakładek ma równą szerokość i wypełnia cały dostępny pasek przez
+shared `equalWidth=true`; na wąskim ekranie pozostaje paginacja Material.
 Sam wybór zakładki nie jest utrwalany w storage ani w URL.
 Aktywny link sidebar nadal nie remountuje strony.
 
@@ -307,22 +309,30 @@ nie zapisuje konfiguracji i nie tworzy ani nie wysyła rozmowy.
 
 Skille, Kontrakty, Auth i Profile korzystają ze wspólnej oprawy zapisu całego zestawu.
 Skille, profile i Auth są początkowo zwinięte. Kliknięcie belki rozwija edytor;
-belka pokazuje nazwę i odpowiednio ID skilla, wzorzec URL profilu albo typ Auth.
+belka pokazuje nazwę i odpowiednio ID skilla, zakres URL z liczbą skilli/API
+profilu albo typ Auth. `*` jest prezentowane jako „Wszystkie adresy”.
 Ostrzeżenie o brakujących zasobach profilu pozostaje dostępne po zwinięciu.
 Dodany wpis jest od razu rozwinięty. Zwijanie zachowuje szkic, a przełączanie
 zakładek zachowuje stan belek; stan jest wyłącznie lokalny dla otwartej strony.
 Import konfiguracji rozpoczyna ze zwiniętymi wpisami. Zapis rozwija niepoprawne
 wpisy Auth, aby pokazać błędy pól.
-Akcje `Dodaj skill` lub `Dodaj OpenAPI` oraz wyróżniony `Zapisz` są na dole,
-wyrównane do prawej; `Zapisz` jest ostatni. Komunikaty konfiguracji i błąd
-zapisu są nad tym paskiem. Pierwszy widok
+Nad każdą listą jest licznik wpisów i akcja `Dodaj…` po prawej, bez
+powtarzania nazwy zakładki. Wewnętrzne poziome linie zastępują odstępy;
+delikatny hover obejmuje całą belkę, łącznie z obszarem akcji.
+Wiersze używają jednej gęstości, nazwy i pomocniczego opisu po lewej
+oraz małych ikonowych akcji po prawej; usuwanie jest ostatnią akcją każdego
+wiersza. Jeden sticky pasek pod listą pokazuje stan tylko niezapisanych zmian,
+komunikaty i błąd zapisu. Import, eksport i `Zapisz konfigurację` są obok siebie
+w grupie akcji całego zestawu; zakres zapisu wyjaśnia tooltip.
+Pierwszy widok
 pozwala dodawać, edytować i usuwać instrukcje; drugi dodaje kontrakt wyłącznie
 przez modal importu z nazwą i wyborem operacji oraz oferuje podgląd, eksport i usunięcie.
 Eksport pobiera dokładny YAML bieżącej belki jako plik `.yaml`, również ze
 szkicu przed zapisem. Zawiera tylko zachowane operacje i potrzebne schematy;
 nie odtwarza pełnego źródła i nie aktywuje konfiguracji. Nazwa pliku pochodzi
 z nazwy kontraktu, z użyciem wspólnego sanityzowania nazw plików.
-Belka ma nazwę, licznik oraz ikony podglądu, eksportu i usunięcia z tooltipami.
+Belka ma nazwę, ID rozróżniające jednakowo nazwane kontrakty, opisany licznik
+aktywnych operacji oraz ikony podglądu, eksportu i usunięcia z tooltipami.
 Na belce kontraktu znajduje się liczba aktywnych operacji. Tooltip pokazuje
 ich metody i ścieżki; można go otworzyć także fokusem klawiatury. Liczba pochodzi
 z zapisanego katalogu, z jawnym przypisaniem `apiId` przygotowanym podczas
@@ -410,7 +420,7 @@ zapisane profile przy otwarciu; niezapisany szkic ich nie podmienia.
 
 ## Import i eksport konfiguracji
 
-Obok wspólnego paska zakładek są ikony importu i eksportu całej konfiguracji
+W dolnym pasku obok zapisu są ikony importu i eksportu całej konfiguracji
 z tooltipami. Eksport `system-assistant-configuration.json` zawiera bieżący
 szkic: `{version:1, configuration:{apis,skills,profiles,authProfiles}}`, z polami API `id,name,yaml`
 i skilla `id,name,content`. Nie obejmuje rozmów, kontekstu strony, preferencji

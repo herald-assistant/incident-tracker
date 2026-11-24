@@ -1,7 +1,6 @@
 @use './assistant-definition';
 
 :host { display: block; }
-.auth-heading > .secondary-button { flex: 0 0 auto; width: auto; margin: 0; }
 .auth-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
 .auth-wide { grid-column: 1 / -1; }
 .auth-hint { color: var(--color-muted); font-size: .875rem; overflow-wrap: anywhere; }

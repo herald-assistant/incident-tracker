@@ -3,7 +3,8 @@
     mat-tab-nav-bar
     class="analysis-result-tabs"
     [tabPanel]="panel"
-    [mat-stretch-tabs]="false"
+    [mat-stretch-tabs]="equalWidth()"
+    [class.analysis-result-tabs--equal-width]="equalWidth()"
     [attr.aria-label]="ariaLabel()"
   >
     @for (tab of tabs(); track tab.id) {

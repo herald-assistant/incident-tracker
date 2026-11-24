@@ -9,7 +9,7 @@ import { TextFieldComponent } from './text-field';
   imports: [TextFieldComponent, ReactiveFormsModule],
   template: `<app-text-field inputId="crm-field" label="Opis CRM" [type]="type" [formControl]="control"
     [rows]="5" [maxLength]="4000" [min]="min" [max]="max" hint="Kontekst klienta." [error]="error"
-    [readonly]="readonly" [autosize]="autosize" [minRows]="3" [maxRows]="10" list="crm-suggestions"
+    [readonly]="readonly" [passwordToggle]="passwordToggle" [autosize]="autosize" [minRows]="3" [maxRows]="10" list="crm-suggestions"
     (committed)="committed = $event" />`
 })
 class Host {
@@ -21,6 +21,7 @@ class Host {
   committed = '';
   readonly = false;
   autosize = false;
+  passwordToggle = false;
 }
 
 describe('TextFieldComponent', () => {
@@ -106,6 +107,31 @@ describe('TextFieldComponent', () => {
     expect(input.value).toBe('CRM');
     input.value = 'Unexpected edit'; input.dispatchEvent(new Event('input'));
     expect(host.control.value).toBe('CRM');
+  });
+
+  it('reveals a password without editing its FormControl and masks it again when disabled', () => {
+    const fixture = TestBed.createComponent(Host);
+    const host = fixture.componentInstance;
+    host.type = 'password'; host.passwordToggle = true;
+    const changed = vi.fn(); host.control.valueChanges.subscribe(changed);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const input = root.querySelector('input')!;
+    const toggle = root.querySelector<HTMLButtonElement>('.text-field__password-toggle')!;
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-controls')).toBe(input.id);
+    toggle.click(); fixture.detectChanges();
+    expect(input.type).toBe('text'); expect(input.value).toBe('CRM');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Ukryj: Opis CRM');
+    expect(changed).not.toHaveBeenCalled();
+    expect(host.control.pristine).toBe(true); expect(host.control.untouched).toBe(true);
+    host.control.disable(); fixture.detectChanges();
+    expect(input.type).toBe('password'); expect(toggle.disabled).toBe(true);
+    host.control.enable(); fixture.detectChanges();
+    expect(input.type).toBe('password');
+    toggle.click(); fixture.detectChanges(); toggle.click(); fixture.detectChanges();
+    expect(input.type).toBe('password'); expect(host.control.value).toBe('CRM');
   });
 
   it('passes autosize row limits to the shared textarea implementation', () => {

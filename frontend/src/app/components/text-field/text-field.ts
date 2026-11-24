@@ -2,12 +2,13 @@ import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { ChangeDetectionStrategy, Component, ElementRef, Input, booleanAttribute, computed, effect, forwardRef, input, numberAttribute, output, signal, viewChild } from '@angular/core';
 import { AbstractControl, ControlValueAccessor, NG_VALIDATORS, NG_VALUE_ACCESSOR, ValidationErrors, Validator, Validators } from '@angular/forms';
 import { FormFieldComponent } from '../form-field/form-field';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 let nextTextFieldId = 0;
 
 @Component({
   selector: 'app-text-field',
-  imports: [FormFieldComponent, CdkTextareaAutosize],
+  imports: [FormFieldComponent, CdkTextareaAutosize, MatTooltipModule],
   templateUrl: './text-field.html',
   styleUrl: './text-field.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +33,10 @@ export class TextFieldComponent implements ControlValueAccessor, Validator {
   readonly error = input('');
   readonly type = input<'text' | 'search' | 'textarea' | 'date' | 'number' | 'password' | 'url' | 'email' | 'tel'>('text');
   readonly placeholder = input('');
+  readonly passwordToggle = input(false, { transform: booleanAttribute });
+  readonly passwordVisible = signal(false);
+  readonly inputType = computed(() => this.type() === 'password' && this.passwordToggle() && this.passwordVisible() ? 'text' : this.type());
+  readonly passwordToggleLabel = computed(() => `${this.passwordVisible() ? 'Ukryj' : 'Pokaż'}: ${this.ariaLabel() || this.label() || 'hasło'}`);
   readonly rows = input(4, { transform: numberAttribute });
   readonly maxLength = input<number | null, unknown>(null, { transform: value => value == null ? null : numberAttribute(value) });
   readonly min = input<string | number | null>(null);
@@ -65,6 +70,9 @@ export class TextFieldComponent implements ControlValueAccessor, Validator {
   private composing = false;
 
   constructor() {
+    effect(() => {
+      if (this.type() !== 'password' || !this.passwordToggle() || this.isDisabled()) this.passwordVisible.set(false);
+    });
     let initialized = false;
     effect(() => {
       this.type(); this.required(); this.min(); this.max(); this.maxLength(); this.pattern();
@@ -93,6 +101,7 @@ export class TextFieldComponent implements ControlValueAccessor, Validator {
   }
   setDisabledState(disabled: boolean): void { this.formDisabled.set(disabled); }
   focus(): void { this.control()?.nativeElement.focus(); }
+  togglePassword(): void { if (!this.isDisabled()) this.passwordVisible.update(value => !value); }
   touch(): void { this.onTouched(); }
   startComposition(): void { this.composing = true; }
   endComposition(event: CompositionEvent): void {

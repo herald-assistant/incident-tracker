@@ -20,11 +20,16 @@ W zakładce `Skille` dodaj instrukcje pracy
 asystenta. W zakładce `Kontrakty` wybierz `Dodaj OpenAPI` i wskaż plik JSON lub YAML
 swojego API. W modalu wybierz operacje, nadaj nazwę kontraktu i użyj
 `Użyj wybranych operacji`. Do szkicu trafiają tylko wybrane operacje
-i potrzebne im schematy. Kliknij `Zapisz`, aby aktywować konfigurację.
+i potrzebne im schematy. Kliknij `Zapisz konfigurację`, aby aktywować cały zestaw.
 Następna przyjęta tura korzysta z aktualnie zapisanego zestawu.
 Zmiana szkicu nie wpływa na chat przed zapisem. Tura już rozpoczęta kończy
-pracę na swoim zestawie. Przyciski dodawania oraz `Zapisz` są na dole po
-prawej, a błędy zapisu nad nimi. Przełączanie zakładek zachowuje szkic.
+pracę na swoim zestawie. Przycisk dodawania znajduje się nad każdą listą
+obok liczby wpisów, bez powtórzonej nazwy zakładki. Ikona usuwania jest po
+prawej stronie każdego wiersza. Wspólny pasek na dole pokazuje niezapisane
+zmiany, komunikaty i błędy oraz grupuje import, eksport i `Zapisz konfigurację`
+dla Skilli, Kontraktów, Auth oraz Profili. Zakładki wypełniają dostępną
+szerokość równymi kolumnami; na wąskim ekranie można je przewijać strzałkami.
+Przełączanie zakładek zachowuje szkic.
 
 Swagger UI pozwala przejrzeć parametry, odpowiedzi i schematy. Wyszukiwanie,
 filtry metody/tagu i `Tylko wybrane` ułatwiają wybór. `Zaznacz wszystko`
@@ -161,9 +166,10 @@ profile; bieżący format V1 wymaga list profiles i authProfiles oraz apiBinding
 
 W zakładce Auth wybierz Dodaj uwierzytelnianie, nazwij konfigurację i wybierz
 Basic, Bearer, OAuth2 albo OIDC. Formularze są na stronie. Dane dostępowe
-środowisk testowych są widoczne, bez maskowania, i zapisywane w tym samym
-JSON-ie co kontrakty, skille i profile. Import/eksport całego zestawu obejmuje
-również te pola.
+są zapisywane w tym samym JSON-ie co kontrakty, skille i profile.
+Hasło, token i client secret są domyślnie maskowane. Ikona oka obok pola
+pozwala pokazać i ponownie ukryć wartość bez edycji szkicu.
+Import/eksport całego zestawu obejmuje również jawne wartości tych pól.
 
 Basic wymaga loginu i hasła; Bearer samego tokenu, bez prefiksu Bearer.
 OAuth2 oznacza konto techniczne Client Credentials: podaj token URL,

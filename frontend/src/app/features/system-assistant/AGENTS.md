@@ -21,7 +21,15 @@ Skille, profile i Auth startują zwinięte do belek z nazwą oraz odpowiednio ID
 wzorcem URL lub typem uwierzytelniania. Nowy wpis jest rozwinięty. Stan zwinięcia
 należy do strony, przetrwa przełączenie zakładki i nie trafia do konfiguracji ani
 storage. Import resetuje go do zwiniętego; niepoprawny Auth rozwija się przy zapisie.
-Dane dostępowe są jawne w polach tekstowych i eksporcie konfiguracji.
+Hasło, token i client secret są domyślnie maskowane przez shared text-field
+z passwordToggle, z przyciskiem oka jak w Workspace Settings. JSON i eksport
+konfiguracji nadal zawierają jawne wartości.
+Listy czterech zakładek mają licznik wpisów i Dodaj bez powtórzonego nagłówka,
+odstępy zamiast wewnętrznych separatorów oraz hover całej belki z obszarem
+akcji. Małe ikony są po prawej; usuwanie jest ostatnią akcją.
+Jeden sticky pasek grupuje import, eksport i Zapisz konfigurację dla całego
+zestawu. Pokazuje tylko niezapisane zmiany i komunikaty. Zakres zapisu jest
+w tooltipie. Zakładki używają shared equalWidth z równą szerokością i paginacją.
 OIDC używa zapisanej konfiguracji. Powrót ręcznego logowania wybiera Auth.
 409 AUTH_LOGIN_REQUIRED przy wysłaniu rozpoczyna login i location.assign także
 w ramce, bez zmiany sandbox/CSP. Backend wiąże chat/profil/returnPath z state;

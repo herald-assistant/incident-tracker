@@ -6,7 +6,13 @@
         <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowe uwierzytelnianie'}}</span><span class="assistant-definition-meta">{{typeLabel(item.type)}}</span></span>
         <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
       </button>
-      <button type="button" class="secondary-button" [disabled]="disabled() || !!usages(item.id)" (click)="remove(i)" [attr.aria-label]="'Usuń uwierzytelnianie ' + item.name">Usuń</button>
+      <div class="assistant-definition-actions">
+        <button type="button" class="assistant-definition-action" [disabled]="disabled() || !!usages(item.id)" (click)="remove(i)"
+          [matTooltip]="usages(item.id) ? 'Przed usunięciem zmień przypisania w zakładce Profile' : 'Usuń uwierzytelnianie'"
+          [attr.aria-label]="'Usuń uwierzytelnianie ' + item.name">
+          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+        </button>
+      </div>
     </div>
     <div class="assistant-definition-body" [id]="'assistant-auth-body-' + i" [hidden]="!expandedIds().has(item.id)">
       <div class="auth-fields">
@@ -14,9 +20,9 @@
         <app-choice-select label="Typ uwierzytelniania" [options]="types" [value]="item.type" [disabled]="disabled()" (valueChange)="update(i, 'type', $event)" />
         @if (item.type === 'BASIC') {
           <app-text-field label="Login" [value]="item.username || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'username')" (valueChange)="update(i, 'username', $event)" />
-          <app-text-field label="Hasło" [value]="item.password || ''" autocomplete="off" [required]="true" [disabled]="disabled()" [error]="error(item, 'password')" (valueChange)="update(i, 'password', $event)" />
+          <app-text-field label="Hasło" type="password" [passwordToggle]="true" [value]="item.password || ''" autocomplete="off" [required]="true" [disabled]="disabled()" [error]="error(item, 'password')" (valueChange)="update(i, 'password', $event)" />
         } @else if (item.type === 'BEARER') {
-          <app-text-field class="auth-wide" label="Token" hint="Sam token, bez prefiksu Bearer." [value]="item.token || ''" autocomplete="off" [required]="true" [disabled]="disabled()" [error]="error(item, 'token')" (valueChange)="update(i, 'token', $event)" />
+          <app-text-field class="auth-wide" label="Token" type="password" [passwordToggle]="true" hint="Sam token, bez prefiksu Bearer." [value]="item.token || ''" autocomplete="off" [required]="true" [disabled]="disabled()" [error]="error(item, 'token')" (valueChange)="update(i, 'token', $event)" />
         } @else {
           @if (item.type === 'OAUTH2') {
             <app-text-field class="auth-wide" label="Token URL" type="url" hint="Adres serwera wydającego tokeny dla konta technicznego." [value]="item.tokenUrl || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'tokenUrl')" (valueChange)="update(i, 'tokenUrl', $event)" />
@@ -24,7 +30,7 @@
             <app-text-field class="auth-wide" label="Issuer URL" type="url" hint="Adres dostawcy tożsamości, np. realm w Keycloak." [value]="item.issuerUrl || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'issuerUrl')" (valueChange)="update(i, 'issuerUrl', $event)" />
           }
           <app-text-field label="Client ID" [value]="item.clientId || ''" [required]="true" [disabled]="disabled()" [error]="error(item, 'clientId')" (valueChange)="update(i, 'clientId', $event)" />
-          <app-text-field label="Client secret" [hint]="item.type === 'OIDC' ? 'Opcjonalny dla klienta publicznego.' : ''" [value]="item.clientSecret || ''" autocomplete="off" [required]="item.type === 'OAUTH2'" [disabled]="disabled()" [error]="error(item, 'clientSecret')" (valueChange)="update(i, 'clientSecret', $event)" />
+          <app-text-field label="Client secret" type="password" [passwordToggle]="true" [hint]="item.type === 'OIDC' ? 'Opcjonalny dla klienta publicznego.' : ''" [value]="item.clientSecret || ''" autocomplete="off" [required]="item.type === 'OAUTH2'" [disabled]="disabled()" [error]="error(item, 'clientSecret')" (valueChange)="update(i, 'clientSecret', $event)" />
           <app-text-field label="Scopes" hint="Zakresy dostępu oddzielone spacjami." [value]="item.scopes || ''" [disabled]="disabled()" [error]="error(item, 'scopes')" (valueChange)="update(i, 'scopes', $event)" />
           <app-choice-select label="Uwierzytelnianie klienta" [options]="item.type === 'OIDC' ? oidcMethods : methods" [value]="item.clientAuthentication || ''" [disabled]="disabled()" [error]="error(item, 'clientAuthentication')" (valueChange)="update(i, 'clientAuthentication', $event)" />
           @if (item.type === 'OIDC') {
