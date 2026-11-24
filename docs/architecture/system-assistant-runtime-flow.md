@@ -281,7 +281,8 @@ Nowy plik zaczyna z pustym wyborem. Modal ma jeden nagłówek i ikonę zamknięc
 wiersz filtrów zawiera szukanie, metodę HTTP, tag, `Tylko wybrane` i ikony
 `select_all` / `deselect` z tooltipami. Nazwa kontraktu jest w stopce obok
 `Użyj wybranych operacji`, przed dodaniem do szkicu.
-Zaimportowany kontrakt nie ma trybu edycji. Metody poza GET/POST/PUT/DELETE/PATCH i nieprawidłowy operationId są
+Zaimportowany kontrakt pozwala zmienić samą nazwę API w szkicu konfiguracji;
+YAML, ID i wybór operacji nie mają trybu edycji. Metody poza GET/POST/PUT/DELETE/PATCH i nieprawidłowy operationId są
 niewybieralne. Pozostałą semantykę sprawdza obecny importer po wyborze.
 `Zaznacz wszystko` wybiera wszystkie dostępne operacje całego kontraktu,
 niezależnie od filtrów, strony i widoku tylko wybranych. `Odznacz wszystko`
@@ -301,8 +302,13 @@ pozostaje wyłącznie w efemerycznym stanie otwartego modalu, bez archiwum,
 cache i nowego pola persistence. Po zamknięciu zachowany jest tylko wynik.
 Dodanie później innej operacji wymaga ponownego wczytania źródła. Anulowanie
 nie zmienia szkicu. Ekran pokazuje kontrakty w osobnej zakładce, z akcjami podglądu, eksportu i usunięcia.
-Zmiana kontraktu wymaga nowego importu. Nie ma ręcznej edycji YAML-a, ID
-lub nazwy zaimportowanego kontraktu.
+Zmiana treści kontraktu wymaga nowego importu. Nie ma ręcznej edycji YAML-a ani ID.
+Ikona ołówka przy kontrakcie rozwija shared text-field „Nazwa API” (1–100 znaków,
+nie same białe znaki). Edycja aktualizuje wyłącznie name w szkicu i etykiety
+powiązanych API w profilach, bez zmiany YAML info.title, ID lub przypisań.
+Utrwala ją wspólny zapis konfiguracji; niepoprawna nazwa blokuje zapis i otwiera
+edytor. Przełączanie zakładek i błąd zapisu zachowują szkic. Import konfiguracji
+i usunięcie edytowanego API resetują lokalny stan edytora.
 
 ## Widoki pracy i podgląd kontraktów
 
@@ -340,13 +346,13 @@ komunikaty i błąd zapisu. Import, eksport i `Zapisz konfigurację` są obok si
 w grupie akcji całego zestawu; zakres zapisu wyjaśnia tooltip.
 Pierwszy widok
 pozwala dodawać, edytować i usuwać instrukcje; drugi dodaje kontrakt wyłącznie
-przez modal importu z nazwą i wyborem operacji oraz oferuje podgląd, eksport i usunięcie.
+przez modal importu z nazwą i wyborem operacji oraz oferuje edycję nazwy, podgląd, eksport i usunięcie.
 Eksport pobiera dokładny YAML bieżącej belki jako plik `.yaml`, również ze
 szkicu przed zapisem. Zawiera tylko zachowane operacje i potrzebne schematy;
 nie odtwarza pełnego źródła i nie aktywuje konfiguracji. Nazwa pliku pochodzi
 z nazwy kontraktu, z użyciem wspólnego sanityzowania nazw plików.
 Belka ma nazwę, ID rozróżniające jednakowo nazwane kontrakty, opisany licznik
-aktywnych operacji oraz ikony podglądu, eksportu i usunięcia z tooltipami.
+aktywnych operacji oraz ikony edycji nazwy, podglądu, eksportu i usunięcia z tooltipami.
 Na belce kontraktu znajduje się liczba aktywnych operacji. Tooltip pokazuje
 ich metody i ścieżki; można go otworzyć także fokusem klawiatury. Liczba pochodzi
 z zapisanego katalogu, z jawnym przypisaniem `apiId` przygotowanym podczas
@@ -554,7 +560,7 @@ ma kompaktowy układ: przewijana historia, edytor i jeden pasek akcji na dole.
 Model/reasoning korzysta z shared compact 32 px; kontekst strony jest pod
 ikoną informacji, nowa rozmowa pod ikoną. Tok AI i koszty nie są renderowane w panelu
 osadzonym; pełny ekran używa standardowego shared aside. Bez powtórzonych nagłówków i opisów. Enter wysyła, Shift+Enter wstawia
-nową linię. Ramka startuje z szerokością 660 px, ograniczoną dostępnym
+nową linię. Ramka startuje z szerokością 700 px, ograniczoną dostępnym
 viewportem, i zajmuje wysokość viewportu z marginesem 8 px.
 Lewą krawędź można przeciągać (Pointer Events z capture i osłoną iframe);
 minimum to 320 px albo szerokość mniejszego viewportu minus marginesy.

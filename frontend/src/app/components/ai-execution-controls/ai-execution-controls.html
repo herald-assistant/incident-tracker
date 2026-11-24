@@ -1,6 +1,7 @@
 <app-choice-select [size]="compact() ? 'standard' : 'descriptive'" [class.is-compact]="compact()"
   [inputId]="modelInputId()" [label]="compact() ? '' : 'Model AI'" ariaLabel="Model AI"
   [tooltip]="compact() ? '' : 'Model używany do analizy. Dostępne modele pochodzą z konfiguracji workspace’u.'"
+  [placeholder]="defaultModelLabel()"
   [options]="modelOptions()" [value]="model()" [disabled]="modelLocked()" [loading]="loading()" [error]="error()"
   (valueChange)="selectModel($event)" (touched)="modelTouched.emit()" (opened)="opened.emit()" />
 <app-choice-select [size]="compact() ? 'standard' : 'descriptive'" [class.is-compact]="compact()"

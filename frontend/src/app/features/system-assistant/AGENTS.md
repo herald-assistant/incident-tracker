@@ -51,8 +51,10 @@ konfiguracji, ponawiania zaakceptowanych wiadomości, popupów lub tokenów w FE
 dotychczasowego reconciliation; nie wolno przekierowywać po błędzie narzędzia.
 Usunięcie używanego Auth jest blokowane do zmiany selectów zależnych przypisań w profilach.
 Kontrakty dodajemy tylko w modalu importu z nazwą i wyborem operacji. Wiersz
-ma podgląd Swagger UI, eksport bieżącego YAML-a i usunięcie. Nie przywracaj ręcznej edycji
-YAML/ID/nazwy ani selekcji operacji istniejącego kontraktu. Swagger jest
+ma edycję nazwy API inline pod ikoną ołówka, podgląd Swagger UI, eksport bieżącego YAML-a
+i usunięcie. Nazwa ma 1–100 znaków, nie może być samymi białymi znakami i jest
+zapisywana wspólnym zapisem konfiguracji; ID, YAML i przypisania pozostają bez zmian.
+Nie przywracaj ręcznej edycji YAML/ID ani selekcji operacji istniejącego kontraktu. Swagger jest
 lokalnie pakowany, osadzany w izolowanym iframe i nie wykonuje żądań API.
 
 Belka kontraktu pokazuje liczbę aktywnych operacji z tooltipem metod i ścieżek.

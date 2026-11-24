@@ -64,7 +64,7 @@ export class ChoiceSelectComponent implements ControlValueAccessor {
     || this.selectedValue() || this.placeholder());
   readonly selectedTooltip = computed(() => this.availableOptions().find(option => option.value === this.selectedValue())?.tooltip
     || this.selectedLabel());
-  readonly displayOptions = computed<readonly ChoiceOption[]>(() => this.availableOptions().some(option => option.value === this.selectedValue())
+  readonly displayOptions = computed<readonly ChoiceOption[]>(() => !this.selectedValue() || this.availableOptions().some(option => option.value === this.selectedValue())
     ? this.availableOptions()
     : [{ value: this.selectedValue(), label: this.selectedLabel(), disabled: true }, ...this.availableOptions()]);
   readonly selectedDescription = computed(() => {

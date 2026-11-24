@@ -51,9 +51,9 @@ export class AiExecutionControlsComponent {
   readonly efforts = computed(() => reasoningEffortsForAiModel(this.catalog(), this.model()));
   readonly reasoningLocked = computed(() => this.disabled() || this.reasoningDisabled()
     || !!this.catalogMessage() || !this.efforts().length);
-  private readonly defaultModelLabel = computed(() => {
+  readonly defaultModelLabel = computed(() => {
     const id = this.catalog().defaultModel;
-    return id ? `Domyślny: ${this.modelName(id)}` : 'Wybierz model AI';
+    return id ? `Domyślny: ${this.modelName(id)}` : 'Wybierz model';
   });
   private readonly emptyReasoningLabel = computed(() => {
     if (!this.efforts().length) {
@@ -73,8 +73,8 @@ export class AiExecutionControlsComponent {
     const options: ChoiceOption[] = this.catalog().models.map(model => ({
       value: model.id, label: model.name || model.id, tooltip: model.id
     }));
-    if (!this.model() || this.allowDefaultSelection()) {
-      options.unshift({ value: '', label: this.compact() && !this.catalog().defaultModel ? 'Model AI' : this.defaultModelLabel(), tooltip: this.defaultModelLabel(), disabled: !this.allowDefaultSelection() });
+    if (this.allowDefaultSelection() && this.catalog().defaultModel) {
+      options.unshift({ value: '', label: this.defaultModelLabel(), tooltip: this.defaultModelLabel() });
     }
     return this.withRestoredValue(options, this.model(), this.modelName(this.model()));
   });

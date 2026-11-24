@@ -160,6 +160,10 @@ wyslania zmiany do feature'a.
 - `ChoiceOption` zawiera `value`, `label` oraz opcjonalne `hint`, `disabled`,
   `badge`, `tooltip`. `description` opisuje zamkniety select, a `hint` opcji
   opisuje wiersz listy. Opcje sa plaskimi wierszami, bez kart i ramek.
+- Placeholder pustego selecta jest widoczny tylko w zamkniętym polu, bez
+  syntetycznej nieaktywnej pozycji na liście. Jawna opcja z pustą wartością
+  pozostaje częścią danych ekranu (np. wybór „Domyślny”). Niepusta odtworzona
+  wartość spoza bieżącego katalogu pozostaje widoczna jako nieaktywna opcja.
 - `resetAfterSelection` jest przeznaczone dla pickerow dodajacych referencje:
   emituje wybrana wartosc i zeruje widoczny wybor. Liste referencji utrzymuje
   ekran; nie dodawaj lokalnego obejscia resetu dropdownu.
@@ -243,14 +247,16 @@ Nieznany przyszly poziom zachowuje oryginalna nazwe.
 | Trwa pobieranie | „Ładowanie modeli…” / „Ładowanie poziomów…” |
 | Blad lub niedostepny katalog | „Katalog modeli niedostępny”; szczegoly bledu przy polu |
 | Pusty katalog | „Brak dostępnych modeli” |
-| Brak modelu i brak defaultu | „Wybierz model AI”; reasoning: „Najpierw wybierz model” |
+| Brak modelu i brak defaultu | Placeholder „Wybierz model”, bez pozycji na liście; reasoning: „Najpierw wybierz model” |
 | Model nie obsluguje reasoning | „Model nie udostępnia reasoning” |
 | Brak poziomow dla modelu | „Brak dostępnych poziomów” |
 | Pusta preferencja przy dostepnym default | „Domyślny: …”; bez nazwanego effort: „Ustawienie domyślne” |
 
 Pusta preferencja backendu i jawny wybor katalogowego modelu Auto nie sa tym
-samym. `allowDefaultSelection` pozwala wrocic do pustej preferencji; obecnie
-korzysta z niego Release summary. Pozostale ekrany zachowuja swoje zasady
+samym. `allowDefaultSelection` pozwala wrócić do pustej preferencji modelu
+przez jawną opcję „Domyślny: …”, jeśli katalog wskazuje rzeczywisty defaultModel;
+bez defaultu lista zawiera wyłącznie modele. Korzystają z niego Release summary
+i System Assistant. Pozostale ekrany zachowuja swoje zasady
 wyboru. Wartosci odtworzone z historii/importu spoza katalogu pozostaja
 widoczne jako niedostepna opcja, bez automatycznej zmiany i emisji eventu.
 
@@ -374,8 +380,10 @@ Cztery zakładki konfiguracji System Assistant mają wspólny wzorzec listy:
 licznik wpisów i Dodaj, bez powtarzania nazwy aktywnej zakładki. Nazwa wpisu
 z pomocniczym opisem znajduje się po lewej, a
 ikonowe akcje 32 px po prawej. Usuwanie jest zawsze ostatnią akcją wiersza.
-Skille, Auth i Profile rozwijają edytor inline; Kontrakty zachowują podgląd
-i eksport. Wewnętrzne separatory są zastąpione odstępami; delikatny hover
+Skille, Auth i Profile rozwijają edytor inline; Kontrakty mają ikonę ołówka
+rozwijającą shared text-field „Nazwa API” i zachowują podgląd oraz eksport.
+Nazwę (1–100 znaków, nie same białe znaki) utrwala wspólny zapis konfiguracji.
+Wewnętrzne separatory są zastąpione odstępami; delikatny hover
 obejmuje całą belkę z obszarem akcji. Jedna subtelna linia oddziela listę od
 sticky paska akcji; wiersze listy pozostają bez separatorów. Pasek grupuje
 import, eksport i `Zapisz konfigurację` dla całego zestawu. Pokazuje komunikaty

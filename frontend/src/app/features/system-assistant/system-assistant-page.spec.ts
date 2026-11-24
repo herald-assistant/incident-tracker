@@ -707,6 +707,64 @@ describe('SystemAssistantPage', () => {
     expect(root.querySelectorAll<HTMLElement>('.assistant-definition-body')[1].hidden).toBe(false);
     fixture.destroy();
   });
+  it('edits only the API name in the draft, preserves it across tabs and saves it with the configuration', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    const api = {id: 'crm', name: 'CRM', yaml: 'openapi: 3.0.3\ninfo:\n  title: CRM\n'};
+    const profile = {...testProfile, apiBindings: [{apiId: 'crm', authProfileId: null}]};
+    page.configuration.set({apis: [api], skills: [], authProfiles: [], profiles: [profile]});
+    page.workspaceView.set('contracts'); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const body = () => root.querySelector<HTMLElement>('#assistant-api-name-0')!;
+    const edit = root.querySelector<HTMLButtonElement>('[aria-label="Edytuj nazwę API CRM"]')!;
+    expect(body().hidden).toBe(true);
+    edit.click(); fixture.detectChanges();
+    expect(body().hidden).toBe(false); expect(edit.getAttribute('aria-expanded')).toBe('true');
+    expect(page.dirty()).toBe(false);
+    const input = body().querySelector<HTMLInputElement>('input')!;
+    expect(input.maxLength).toBe(100); expect(input.required).toBe(true);
+    input.value = 'Obsługa klientów'; input.dispatchEvent(new Event('input', {bubbles: true})); fixture.detectChanges();
+    expect(page.configuration().apis).toEqual([{...api, name: 'Obsługa klientów'}]);
+    expect(page.configuration().profiles).toEqual([profile]); expect(page.dirty()).toBe(true);
+    expect(root.querySelector('.assistant-contract h3')!.textContent).toBe('Obsługa klientów');
+    http.expectNone('/api/system-assistant/configuration');
+    page.workspaceView.set('profiles'); fixture.detectChanges();
+    root.querySelector<HTMLButtonElement>('.assistant-definition-toggle')!.click(); fixture.detectChanges();
+    expect(root.querySelector('.assistant-profile-resources')!.textContent).toContain('Obsługa klientów');
+    page.workspaceView.set('contracts'); fixture.detectChanges();
+    expect(body().hidden).toBe(false); expect(body().querySelector<HTMLInputElement>('input')!.value).toBe('Obsługa klientów');
+    page.save(); fixture.detectChanges();
+    const save = http.expectOne('/api/system-assistant/configuration');
+    expect(save.request.body).toEqual(page.configuration());
+    expect(body().querySelector<HTMLInputElement>('input')!.disabled).toBe(true);
+    page.updateApiName('crm', 'Ignored'); page.toggleApiName('crm');
+    expect(page.configuration().apis[0].name).toBe('Obsługa klientów'); expect(body().hidden).toBe(false);
+    save.flush(page.configuration()); http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    fixture.detectChanges(); expect(page.dirty()).toBe(false);
+    expect(page.configuration().apis[0]).toEqual({...api, name: 'Obsługa klientów'});
+    fixture.destroy();
+  });
+
+  it.each(['', '   ', 'x'.repeat(101)])('opens the API name editor and blocks saving invalid name %s', name => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.configuration.update(value => ({...value, apis: [{id: 'crm', name, yaml: 'yaml'}]}));
+    page.save(); fixture.detectChanges();
+    expect(page.workspaceView()).toBe('contracts'); expect(page.editingApiId()).toBe('crm');
+    expect(fixture.nativeElement.querySelector('#assistant-api-name-0').hidden).toBe(false);
+    expect(page.saveError()).toBe(page.apiNameError(name));
+    http.expectNone('/api/system-assistant/configuration'); fixture.destroy();
+  });
+
+  it('keeps the edited API name after a failed save and clears editor state when that API is deleted', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.configuration.update(value => ({...value, apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}]}));
+    page.toggleApiName('crm'); page.updateApiName('crm', 'Nowa nazwa'); page.save();
+    http.expectOne('/api/system-assistant/configuration').flush({message: 'Zapis niedostępny'}, {status: 503, statusText: 'Unavailable'});
+    expect(page.configuration().apis[0].name).toBe('Nowa nazwa');
+    expect(page.dirty()).toBe(true); expect(page.editingApiId()).toBe('crm');
+    page.remove('apis', 0); expect(page.editingApiId()).toBeNull();
+    fixture.destroy();
+  });
+
   it('opens invalid authentication on save so its field errors stay visible', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     page.configuration.update(value => ({...value, authProfiles: [newAuthProfile('BASIC', 'invalid', 'Do poprawy', 'http://localhost')]}));

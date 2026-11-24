@@ -766,7 +766,7 @@
   function EmbeddedAssistant(config, onExit) {
     this.config = config; this.onExit = onExit; this.disposed = false;
     this.state = 'idle'; this.timer = null; this.nonce = ''; this.contextId = ''; this.context = null;
-    this.normalWidth = 660; this.maximized = false; this.resizeGesture = null;
+    this.normalWidth = 700; this.maximized = false; this.resizeGesture = null;
     this.host = element('div', '');
     this.host.dataset.tdwBrowserToolRoot = 'system-assistant';
     this.shadowRoot = this.host.attachShadow({ mode: testMode ? 'open' : 'closed' });
@@ -958,7 +958,7 @@
   };
   const ASSISTANT_STYLES = `
     :host { all: initial; display: block; position: fixed; right: 8px; bottom: 8px;
-      width: min(var(--assistant-panel-width, 660px), calc(100vw - 16px)); height: calc(100dvh - 16px);
+      width: min(var(--assistant-panel-width, 700px), calc(100vw - 16px)); height: calc(100dvh - 16px);
       z-index: 2147483646; font: 14px/1.45 system-ui, sans-serif; color: #172b4d; }
     :host([hidden]), [hidden] { display: none !important; }
     * { box-sizing: border-box; }

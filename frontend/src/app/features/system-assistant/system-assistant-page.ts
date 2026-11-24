@@ -66,6 +66,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   protected readonly api = inject(SystemAssistantApi);
   protected readonly destroyRef = inject(DestroyRef);
   readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [], authProfiles: [] });
+  readonly editingApiId = signal<string | null>(null);
   readonly expandedDefinitions = signal<Record<'skills' | 'profiles' | 'authProfiles', ReadonlySet<string>>>({
     skills: new Set(), profiles: new Set(), authProfiles: new Set()
   });
@@ -78,7 +79,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }));
   readonly profileOptions = computed(() => this.availableProfiles().map(profile => ({value: profile.id, label: profile.name})));
   readonly selectedProfileId = computed(() => this.availableProfiles().some(profile => profile.id === this.profileId()) ? this.profileId() : '');
-  readonly profileNotice = computed(() => this.availableProfiles().length ? 'Wybierz profil przed wysłaniem wiadomości.'
+  readonly profileNotice = computed(() => this.availableProfiles().length ? 'Wybierz profil i model przed wysłaniem wiadomości.'
     : this.embedded ? 'Brak profili pasujących do strony. Dodaj lub popraw profil w konfiguracji TDW.' : 'Dodaj profil w zakładce Profile.');
   readonly tools = signal<AssistantTool[]>([]);
   readonly toolsLoading = signal(false);
@@ -441,8 +442,20 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     this.configuration.update(value => ({...value, skills: value.skills.map((item, i) => i === index ? {...item, [key]: content} : item)}));
     this.dirty.set(true); this.notice.set('');
   }
+  toggleApiName(id: string): void {
+    if (!this.configurationBusy()) this.editingApiId.set(this.editingApiId() === id ? null : id);
+  }
+  updateApiName(id: string, name: string): void {
+    if (this.configurationBusy() || !this.configuration().apis.some(api => api.id === id)) return;
+    this.configuration.update(value => ({...value, apis: value.apis.map(api => api.id === id ? {...api, name} : api)}));
+    this.dirty.set(true); this.notice.set('');
+  }
+  apiNameError(name: string): string {
+    return !name.trim() ? 'Podaj nazwę API.' : name.length > 100 ? 'Nazwa API może mieć do 100 znaków.' : '';
+  }
   remove(kind: 'apis' | 'skills' | 'profiles', index: number): void {
     if (this.configurationBusy()) return;
+    if (kind === 'apis' && this.editingApiId() === this.configuration().apis[index]?.id) this.editingApiId.set(null);
     if (kind === 'skills') {
       this.expandedDefinitions.update(value => ({...value, skills: new Set([...value.skills]
         .map(Number).filter(current => current !== index).map(current => '' + (current > index ? current - 1 : current)))}));
@@ -464,6 +477,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       const value = await readJsonFile(file, 'Plik konfiguracji nie zawiera poprawnego JSON-a.');
       if (this.destroyRef.destroyed) return;
       const configuration = parseConfigurationFile(value);
+      this.editingApiId.set(null);
       this.expandedDefinitions.set({skills: new Set(), profiles: new Set(), authProfiles: new Set()});
       this.configuration.set(configuration); this.dirty.set(true); this.saveError.set('');
       this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}, Auth: ${configuration.authProfiles.length}). Zapisz, aby ją aktywować.`);
@@ -520,6 +534,11 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   save(): void {
     if (this.configurationBusy()) return;
+    const invalidApi = this.configuration().apis.find(api => this.apiNameError(api.name));
+    if (invalidApi) {
+      this.editingApiId.set(invalidApi.id); this.workspaceView.set('contracts');
+      this.saveError.set(this.apiNameError(invalidApi.name)); return;
+    }
     this.authValidationVisible.set(true);
     if (this.configuration().authProfiles.some(profile => Object.keys(authErrors(profile)).length)) {
       for (const profile of this.configuration().authProfiles) {

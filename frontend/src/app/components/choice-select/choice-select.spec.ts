@@ -110,6 +110,39 @@ describe('ChoiceSelectComponent', () => {
     expect(await select.isDisabled()).toBe(false);
   });
 
+  it('shows the placeholder only in the empty field and lists only supplied choices', async () => {
+    fixture.componentInstance.options.set([{ value: 'crm-standard', label: 'CRM Standard' }]);
+    fixture.componentInstance.control.setValue('');
+    fixture.detectChanges();
+    const changed = vi.fn();
+    fixture.componentInstance.control.valueChanges.subscribe(changed);
+    const field = fixture.nativeElement.querySelector('[role="combobox"]') as HTMLElement;
+    expect(field.textContent).toContain('Wybierz');
+    await select.open();
+    expect(await Promise.all((await select.getOptions()).map(option => option.getText()))).toEqual(['CRM Standard']);
+    expect(changed).not.toHaveBeenCalled();
+    await select.clickOptions({ text: 'CRM Standard' });
+    expect(fixture.componentInstance.control.value).toBe('crm-standard');
+    expect(changed).toHaveBeenCalledExactlyOnceWith('crm-standard');
+  });
+
+  it('keeps a nonempty restored value visible while its catalog is unavailable', async () => {
+    fixture.componentInstance.options.set([]);
+    fixture.componentInstance.control.setValue('crm-detail');
+    fixture.detectChanges();
+    const changed = vi.fn();
+    fixture.componentInstance.control.valueChanges.subscribe(changed);
+    expect(await select.getValueText()).toBe('crm-detail');
+    await select.open();
+    const options = await select.getOptions();
+    expect(options.length).toBe(1);
+    expect(await options[0].getText()).toBe('crm-detail');
+    expect(await options[0].isDisabled()).toBe(true);
+    await select.close();
+    expect(fixture.componentInstance.control.value).toBe('crm-detail');
+    expect(changed).not.toHaveBeenCalled();
+  });
+
   it('preserves a restored value while options arrive, without emitting another change', async () => {
     fixture.componentInstance.options.set([]);
     fixture.componentInstance.control.setValue('crm-detail');

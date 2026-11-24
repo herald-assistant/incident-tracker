@@ -121,6 +121,11 @@
                       </div>
                     </div>
                     <div class="assistant-definition-actions assistant-contract-actions">
+                      <button class="assistant-definition-action" type="button" matTooltip="Edytuj nazwę API" [disabled]="configurationBusy()"
+                        [attr.aria-label]="'Edytuj nazwę API ' + item.name" [attr.aria-expanded]="editingApiId() === item.id"
+                        [attr.aria-controls]="'assistant-api-name-' + i" (click)="toggleApiName(item.id)">
+                        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                      </button>
                       <button class="assistant-definition-action" type="button" matTooltip="Podgląd" [disabled]="configurationBusy()" (click)="viewContract(item)" [attr.aria-label]="'Podgląd kontraktu ' + item.name">
                         <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
                       </button>
@@ -131,6 +136,10 @@
                         <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                       </button>
                     </div>
+                  </div>
+                  <div class="assistant-definition-body" [id]="'assistant-api-name-' + i" [hidden]="editingApiId() !== item.id">
+                    <app-text-field label="Nazwa API" [value]="item.name" [maxLength]="100" [required]="true"
+                      [error]="apiNameError(item.name)" [disabled]="configurationBusy()" (valueChange)="updateApiName(item.id, $event)" />
                   </div>
                 </li>
               } @empty { <li class="assistant-empty">Nie dodano kontraktów. Wczytaj plik i wybierz potrzebne operacje.</li> }
@@ -182,10 +191,7 @@
         @if (loginNotice()) { <p role="status">{{loginNotice()}}</p> }
         @if (dirty()) { <p role="status">Masz niezapisane zmiany. Chat korzysta z ostatniego poprawnie zapisanego zestawu.</p> }
         @if (!selectedProfileId() && !historyOpen()) {
-          <p role="status">{{profileNotice()}}
-            @if (embedded) { <a href="/system-assistant" target="_blank" rel="noopener noreferrer">Konfiguracja profili</a> }
-            @else { <button type="button" class="assistant-chat-action" aria-label="Otwórz konfigurację profili" (click)="workspaceView.set('profiles')"><span class="material-symbols-outlined" aria-hidden="true">settings</span></button> }
-          </p>
+          <p role="status">{{profileNotice()}}</p>
         }
         <app-analysis-follow-up-chat data-form-tour="assistant-chat" [messages]="messages()" [canUseChat]="canChat()" [isSubmitting]="submitting()"
           [error]="chatError()" [needsAuth]="!authReady()" [compact]="true" [staticPanel]="true" [openByDefault]="true"
@@ -193,7 +199,7 @@
           placeholder="Wiadomość…" unavailableMessage="Sprawdź dostępność feature'a, model i PAT Copilota w Workspace Settings."
           (sendMessage)="send($event)" (clearError)="chatError.set('')" (connectAuth)="auth.openSettings()">
         <div chatActions class="assistant-ai-controls" data-form-tour="assistant-model">
-          <app-choice-select class="assistant-profile-select" ariaLabel="Profil" placeholder="Profil" [options]="profileOptions()" [value]="selectedProfileId()"
+          <app-choice-select class="assistant-profile-select" ariaLabel="Profil" placeholder="Wybierz Profil" [options]="profileOptions()" [value]="selectedProfileId()"
             [disabled]="busy()" (valueChange)="profileId.set($event)" (opened)="refreshProfiles()" />
           <app-ai-execution-controls [compact]="true" [catalog]="catalog()" [model]="model()" [reasoningEffort]="reasoningEffort()"
             [allowDefaultSelection]="true" [loading]="catalogLoading()" [error]="catalogError()" [disabled]="busy()"

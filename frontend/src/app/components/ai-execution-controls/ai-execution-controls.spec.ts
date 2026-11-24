@@ -119,10 +119,10 @@ describe('AiExecutionControlsComponent', () => {
     fixture.componentRef.setInput('model', '');
     fixture.componentRef.setInput('reasoningEffort', '');
     fixture.detectChanges();
-    expect(await model.getValueText()).toBe(text);
+    expect(fixture.nativeElement.querySelector('#crm-model').textContent).toContain(text);
     expect(await effort.getValueText()).toBe('Domyślny: Średni');
     await model.open();
-    expect(await (await model.getOptions({ text }))[0].isDisabled()).toBe(true);
+    expect(await model.getOptions({ text })).toHaveLength(0);
     expect(await model.getOptions({ text: 'Auto' })).toHaveLength(1);
     expect(fixture.componentInstance.model()).toBe('');
     expect(modelChanged).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('AiExecutionControlsComponent', () => {
     fixture.componentRef.setInput('model', '');
     fixture.componentRef.setInput('reasoningEffort', '');
     fixture.detectChanges();
-    expect(await model.getValueText()).toBe('Wybierz model AI');
+    expect(fixture.nativeElement.querySelector('#crm-model').textContent).toContain('Wybierz model');
     expect(await effort.getValueText()).toBe('Najpierw wybierz model');
     expect(await effort.isDisabled()).toBe(true);
     fixture.componentRef.setInput('model', 'auto');
@@ -161,6 +161,20 @@ describe('AiExecutionControlsComponent', () => {
     await effort.open();
     await effort.clickOptions({ text: 'Domyślny: Średni' });
     expect(effortChanged).toHaveBeenCalledExactlyOnceWith('');
+  });
+
+  it.each([false, true])('keeps the model placeholder outside the list with compact=%s', async compact => {
+    fixture.componentRef.setInput('compact', compact);
+    fixture.componentRef.setInput('allowDefaultSelection', true);
+    fixture.componentRef.setInput('catalog', { ...catalog(), defaultModel: '' });
+    fixture.componentRef.setInput('model', '');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#crm-model').textContent).toContain('Wybierz model');
+    await model.open();
+    expect(await Promise.all((await model.getOptions()).map(option => option.getText()))).toEqual(['CRM Analysis', 'Auto']);
+    expect(modelChanged).not.toHaveBeenCalled();
+    await model.clickOptions({ text: 'CRM Analysis' });
+    expect(modelChanged).toHaveBeenCalledExactlyOnceWith('crm-analysis');
   });
 
   it('keeps imported model and effort values that are absent from the current catalog', async () => {

@@ -13,8 +13,9 @@ szkic i polling podczas zmiany widoku. Nie pamiętaj wyboru w storage.
 Przewodnik pokazuje kontrolki aktywnego widoku. Skille, Kontrakty, Auth i Profile mają
 wspólny zapis całego zestawu oraz błąd bezpośrednio nad przyciskiem.
 Kontrakty dodawaj wyłącznie przez modal importu z nazwą i wyborem operacji; po imporcie mają
-podgląd lokalnym Swagger UI, eksport bieżącego YAML-a i usuwanie. Nie przywracaj edytora YAML,
-ręcznych pól kontraktu ani Try it out. Przełączanie zakładek zachowuje szkic.
+edycję samej nazwy API inline, podgląd lokalnym Swagger UI, eksport bieżącego YAML-a
+i usuwanie. Nazwę utrwala wspólny zapis konfiguracji. Nie przywracaj edytora YAML,
+edycji ID ani Try it out. Przełączanie zakładek zachowuje szkic.
 Import i podgląd reuse'ują feature-owned OpenApiRenderer. Checkboxy są pluginem
 Swagger UI, a stan wyboru, filtry i strony po 50 operacji należą do Angulara.
 Nie przywracaj równoległej listy endpointów ani wykonywania API w ramce.
