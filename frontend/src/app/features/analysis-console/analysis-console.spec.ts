@@ -656,7 +656,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(copyButtons[0].textContent).not.toContain('Kopiuj');
     expect(copyButtons[1].textContent).not.toContain('Kopiuj');
     expect(copyButtons[0].getAttribute('aria-label')).toContain('Kopiuj wiadomość');
-    expect(fixture.nativeElement.querySelector('.chat-message__copy-loader')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.analysis-chat__agent-loader')).toBeNull();
   });
 
   it('should render compact tool feedback on chat messages', async () => {
@@ -690,7 +690,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).toContain('Tool nie zwrócił tabel pasujących do pytania.');
   });
 
-  it('should show a copy-sized loader instead of a copy action while the last AI message is pending', async () => {
+  it('should show the agent loader above the composer while the last AI message is pending', async () => {
     const { fixture } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
     component.job.set(completedJobWithPendingChat());
@@ -703,10 +703,11 @@ describe('AnalysisConsoleComponent auth flow', () => {
     const pendingAssistant = fixture.nativeElement.querySelector(
       '.chat-message--assistant'
     ) as HTMLElement | null;
-    const loader = pendingAssistant?.querySelector('.chat-message__copy-loader') as HTMLElement | null;
+    const loader = fixture.nativeElement.querySelector('.analysis-chat__form > .analysis-chat__agent-loader') as HTMLElement | null;
 
     expect(copyButtons).toHaveLength(1);
     expect(pendingAssistant?.textContent).toContain('AI analizuje polecenie');
+    expect(pendingAssistant?.querySelector('.chat-message__actions')).toBeNull();
     expect(loader).not.toBeNull();
     expect(loader?.getAttribute('aria-label')).toBe('AI przygotowuje odpowiedź');
   });

@@ -1519,26 +1519,6 @@ body .flow-tree-node__badges .confidence-pill,
   color: var(--danger-text);
 }
 
-.chat-message__copy-loader {
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  position: relative;
-}
-
-.chat-message__copy-loader::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border: 2px solid rgba(12, 102, 228, 0.22);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-}
-
 .chat-message__body {
   min-width: 0;
 }

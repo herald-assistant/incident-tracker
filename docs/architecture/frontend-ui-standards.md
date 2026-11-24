@@ -322,6 +322,15 @@ Uruchom testy i build frontendu zgodnie z [root AGENTS](../../AGENTS.md).
 Produkcyjny bundle w `src/main/resources/static` pochodzi z builda i jest
 commitowany razem ze zrodlami. Nie edytuj wygenerowanych plikow recznie.
 
+## Wskaźnik pracy agenta w chacie
+
+Wspólny `analysis-follow-up-chat` pokazuje jeden loader 24 px na środku,
+absolutnie 8 px nad formularzem wiadomości, podczas wysyłania lub odpowiedzi
+AI ze statusem `IN_PROGRESS`. Dotyczy follow-upów i obu widoków System
+Assistant. Loader pozostaje widoczny bez hovera, nie zajmuje miejsca
+w układzie ani nie przechwytuje interakcji; respektuje `prefers-reduced-motion`
+i ma dostępny opis. Pasek akcji wiadomości nie zawiera loadera.
+
 ## Kompaktowy chat operacyjny
 
 System Assistant używa wspólnego `analysis-follow-up-chat` z `compact=true`

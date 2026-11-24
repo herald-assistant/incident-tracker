@@ -60,7 +60,6 @@
 
             @if (
               canCopyChatMessage(message) ||
-              isLastPendingAssistantMessage(message, messages()) ||
               message.toolEvidenceSections.length > 0 ||
               message.toolFeedback.length > 0
             ) {
@@ -78,13 +77,6 @@
                       {{ copiedChatMessageId() === message.id ? 'task_alt' : 'content_copy' }}
                     </span>
                   </button>
-                } @else if (isLastPendingAssistantMessage(message, messages())) {
-                  <span
-                    class="chat-message__copy-loader"
-                    data-clipboard-exclude
-                    aria-label="AI przygotowuje odpowiedź"
-                    title="AI przygotowuje odpowiedź"
-                  ></span>
                 }
 
                 @if (message.toolEvidenceSections.length > 0) {
@@ -152,6 +144,15 @@
     </div>
 
     <form class="analysis-chat__form" novalidate (submit)="submit($event)">
+      @if (isSubmitting() || hasActiveAssistantMessage()) {
+        <span
+          class="analysis-chat__agent-loader"
+          role="status"
+          aria-label="AI przygotowuje odpowiedź"
+          title="AI przygotowuje odpowiedź"
+        ></span>
+      }
+
       @if (compact() && displayedError()) {
         <p class="form-error">{{ displayedError() }}</p>
       }

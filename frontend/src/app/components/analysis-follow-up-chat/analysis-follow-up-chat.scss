@@ -2,6 +2,31 @@
   display: block;
 }
 
+.analysis-chat__form {
+  position: relative;
+}
+
+.analysis-chat__agent-loader {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: calc(50% - 12px);
+  z-index: 1;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: spin 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analysis-chat__agent-loader {
+    animation: none;
+  }
+}
+
 :host(.is-compact) {
   display: flex;
   flex: 1;

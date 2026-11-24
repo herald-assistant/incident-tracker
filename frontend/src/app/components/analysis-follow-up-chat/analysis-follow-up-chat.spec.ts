@@ -9,6 +9,46 @@ import { AnalysisFollowUpChatComponent } from './analysis-follow-up-chat';
   </app-analysis-follow-up-chat>` })
 class CompactChatHost { sent = ''; actions = 0; }
 
+describe('AnalysisFollowUpChatComponent agent progress', () => {
+  it.each([false, true])('keeps one composer loader throughout a turn (compact=%s)', async (compact) => {
+    await TestBed.configureTestingModule({imports: [AnalysisFollowUpChatComponent]}).compileComponents();
+    const fixture = TestBed.createComponent(AnalysisFollowUpChatComponent);
+    fixture.componentRef.setInput('compact', compact);
+    fixture.componentRef.setInput('canUseChat', true);
+    fixture.componentRef.setInput('openByDefault', true);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const loaders = () => root.querySelectorAll('.analysis-chat__agent-loader');
+    expect(loaders()).toHaveLength(0);
+
+    fixture.componentRef.setInput('isSubmitting', true);
+    fixture.detectChanges();
+    expect(loaders()).toHaveLength(1);
+    expect(loaders()[0].closest('form')).not.toBeNull();
+    expect(loaders()[0].closest('.analysis-chat__messages')).toBeNull();
+    expect(loaders()[0].getAttribute('role')).toBe('status');
+    expect(loaders()[0].getAttribute('aria-label')).toBe('AI przygotowuje odpowiedź');
+
+    const pending = {...assistantMessage(false), status: 'IN_PROGRESS' as const, content: ''};
+    fixture.componentRef.setInput('messages', [pending]);
+    fixture.detectChanges();
+    expect(loaders()).toHaveLength(1);
+    fixture.componentRef.setInput('isSubmitting', false);
+    fixture.detectChanges();
+    expect(loaders()).toHaveLength(1);
+    expect(root.querySelector('textarea')?.disabled).toBe(true);
+    expect(root.querySelector('.chat-message__actions')).toBeNull();
+
+    for (const status of ['COMPLETED', 'FAILED'] as const) {
+      fixture.componentRef.setInput('messages', [{...pending, status}]);
+      fixture.detectChanges();
+      expect(loaders()).toHaveLength(0);
+      expect(root.querySelector('textarea')?.disabled).toBe(false);
+      expect(root.querySelector('.chat-message__copy-button')).not.toBeNull();
+    }
+  });
+});
+
 describe('AnalysisFollowUpChatComponent compact composer', () => {
   it('projects auxiliary actions into the composer without submitting or losing a draft', async () => {
     await TestBed.configureTestingModule({imports: [CompactChatHost]}).compileComponents();
