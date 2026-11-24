@@ -104,6 +104,21 @@
   --mat-sys-title-small-font: var(--font-sans);
 }
 
+// The standalone Browser Tools frame also owns CDK overlays, so apply its
+// palette at the document root rather than only inside the chat component.
+:root:has(app-system-assistant-page .assistant-workspace--embedded) {
+  color-scheme: light;
+  --color-bg: #fbfcfe;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-surface-muted: #e9eef5;
+  --color-border: #d6e0ed;
+  --color-border-strong: #c7d7ee;
+  --color-muted: #44546f;
+  --color-primary-soft: #e9f2ff;
+  --control-border-hover: #a8b8cc;
+}
+
 *,
 *::before,
 *::after {

@@ -343,6 +343,12 @@ i ma dostępny opis. Pasek akcji wiadomości nie zawiera loadera.
 
 ## Kompaktowy chat operacyjny
 
+Osadzony System Assistant używa palety Browser Tools: tło `#fbfcfe`, białe
+powierzchnie i pola, chłodne szarości hover/disabled oraz obramowania
+`#d6e0ed` / `#c7d7ee`. Warunkowe tokeny dokumentu obejmują też CDK overlay
+selectów; osłona Browser Tools używa tej samej palety. Pełny ekran zachowuje
+domyślne tła TDW. Zmiana palety nie modyfikuje układu ani działania kontrolek.
+
 System Assistant używa wspólnego `analysis-follow-up-chat` z `compact=true`
 w panelu Browser Tools i zakładce Rozmowa. Historia przewija się samodzielnie;
 edytor (2–4 wiersze) i jeden wiersz akcji pozostają na dole. Brak powtórzonego

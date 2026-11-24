@@ -48,8 +48,8 @@ test('left-edge dragging resizes in both directions, clamps width and keeps the 
   handle.hasPointerCapture = id => captured.has(id); handle.releasePointerCapture = id => captured.delete(id);
   pointer(current, handle, 'pointerdown', 632);
   assert.equal(captured.has(1), true); assert.equal(panel.hasAttribute('data-resizing'), true);
-  pointer(current, current.window, 'pointermove', 432, 2); assert.equal(panelWidth(panel), 560);
-  pointer(current, current.window, 'pointermove', 432); assert.equal(panelWidth(panel), 760);
+  pointer(current, current.window, 'pointermove', 432, 2); assert.equal(panelWidth(panel), 660);
+  pointer(current, current.window, 'pointermove', 432); assert.equal(panelWidth(panel), 860);
   pointer(current, current.window, 'pointermove', -2000); assert.equal(panelWidth(panel), 1184);
   pointer(current, current.window, 'pointermove', 2000); assert.equal(panelWidth(panel), 320);
   pointer(current, current.window, 'pointerup', 2000);
@@ -65,7 +65,7 @@ test('maximization restores custom width, survives hide/reopen and responds to v
   const handle = panel.shadowRoot.querySelector('.assistant-resize-handle');
   const maximize = panel.shadowRoot.querySelector('.assistant-maximize');
   assert.equal(maximize.nextElementSibling.className, 'assistant-close');
-  pointer(current, handle, 'pointerdown', 600); pointer(current, current.window, 'pointermove', 460); pointer(current, current.window, 'pointerup', 460);
+  pointer(current, handle, 'pointerdown', 600); pointer(current, current.window, 'pointermove', 560); pointer(current, current.window, 'pointerup', 560);
   assert.equal(panelWidth(panel), 700); maximize.click();
   assert.equal(panelWidth(panel), 1184); assert.equal(handle.hidden, true);
   assert.equal(maximize.getAttribute('aria-pressed'), 'true'); assert.equal(maximize.title, 'Przywróć rozmiar panelu');
@@ -85,7 +85,7 @@ test('the resize separator supports keyboard width control within the same limit
   const panel = current.panel(); const handle = panel.shadowRoot.querySelector('[role=separator]');
   const key = (name, shiftKey = false) => handle.dispatchEvent(new current.window.KeyboardEvent('keydown', {key: name, shiftKey, bubbles: true, cancelable: true}));
   assert.equal(handle.tabIndex, 0); assert.equal(handle.getAttribute('aria-orientation'), 'vertical');
-  key('ArrowLeft'); assert.equal(panelWidth(panel), 580); key('ArrowRight', true); assert.equal(panelWidth(panel), 530);
+  key('ArrowLeft'); assert.equal(panelWidth(panel), 680); key('ArrowRight', true); assert.equal(panelWidth(panel), 630);
   key('Home'); assert.equal(panelWidth(panel), 320); key('End'); assert.equal(panelWidth(panel), 1184);
   assert.equal(handle.getAttribute('aria-valuenow'), '1184'); key('ArrowLeft'); assert.equal(panelWidth(panel), 1184);
 });

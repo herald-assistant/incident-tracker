@@ -554,7 +554,8 @@ ma kompaktowy układ: przewijana historia, edytor i jeden pasek akcji na dole.
 Model/reasoning korzysta z shared compact 32 px; kontekst strony jest pod
 ikoną informacji, nowa rozmowa pod ikoną. Tok AI i koszty nie są renderowane w panelu
 osadzonym; pełny ekran używa standardowego shared aside. Bez powtórzonych nagłówków i opisów. Enter wysyła, Shift+Enter wstawia
-nową linię. Ramka zajmuje wysokość viewportu z marginesem 8 px.
+nową linię. Ramka startuje z szerokością 660 px, ograniczoną dostępnym
+viewportem, i zajmuje wysokość viewportu z marginesem 8 px.
 Lewą krawędź można przeciągać (Pointer Events z capture i osłoną iframe);
 minimum to 320 px albo szerokość mniejszego viewportu minus marginesy.
 Maksimum to szerokość viewportu minus 16 px. Przycisk obok zamknięcia
