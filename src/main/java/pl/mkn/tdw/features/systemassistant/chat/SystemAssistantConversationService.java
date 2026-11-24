@@ -92,8 +92,6 @@ public class SystemAssistantConversationService {
                 if (conversation.busy())
                     throw error("CHAT_BUSY", UserFacingErrorType.CONFLICT, "Poczekaj na zakończenie poprzedniej odpowiedzi.");
                 if (conversation.dirty) persist(conversation);
-                if (conversation.messages.size() >= 40)
-                    throw error("CHAT_LIMIT", UserFacingErrorType.BAD_REQUEST, "Limit 20 tur. Rozpocznij nową rozmowę.");
                 var configuration = configurations.snapshot().forProfile(request.profileId());
                 requireApiAuthentication(configuration);
                 var user = AnalysisChatMessageState.completedUser(UUID.randomUUID().toString(), request.message(), Instant.now());

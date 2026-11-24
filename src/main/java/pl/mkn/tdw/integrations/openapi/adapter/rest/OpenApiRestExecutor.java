@@ -97,9 +97,7 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
             if (arguments.has("body")) request.contentType(MediaType.APPLICATION_JSON)
                     .body(mapper.writeValueAsBytes(arguments.get("body")));
             return request.exchange((sent, response) -> {
-                var bytes = response.getBody().readNBytes(65_537);
-                if (bytes.length > 65_536)
-                    return unknown(operation, "Odpowiedź przekracza 64 KiB. Nie ustalono pełnego wyniku.");
+                var bytes = response.getBody().readAllBytes();
                 JsonNode body;
                 try {
                     body = responseBody(operation, response.getStatusCode().value(), response.getHeaders().getContentType(), bytes);

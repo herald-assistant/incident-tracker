@@ -67,7 +67,8 @@ Nie rozszerzaj tego na obiekty query, array path ani zagnieżdżone tablice.
 Response content obsługuje application/json i text/plain ze string schema.
 Metadane media types są per status/default; Accept wynika z kontraktu.
 Text/plain dekoduj wskazanym charsetem lub UTF-8 i zachowuj jako TextNode,
-bez fallbacku błędnego JSON do tekstu. Limit odpowiedzi jest przed dekodowaniem.
+bez fallbacku błędnego JSON do tekstu. Odczytuj pełne body bez aplikacyjnego
+limitu rozmiaru odpowiedzi; timeouty transportu pozostają.
 Fixtures mają być małe i fikcyjne; graniczne rozmiary/grafy generuj w testach.
 Nie kopiuj kontraktów operatora ani ich nazw domenowych do fixtures.
 

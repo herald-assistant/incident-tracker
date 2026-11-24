@@ -69,6 +69,74 @@ class SystemAssistantChatTest {
     private SystemAssistantMessageRequest message(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null); }
 
     @Test
+    void acceptsLongMessagesAndPassesFullHistoryWithToolResultsToAi() throws Exception {
+        var mapper = new ObjectMapper();
+        var prompts = new SystemAssistantPrompt(mapper);
+        var longMessage = "Pytanie " + "ą".repeat(13_000) + " KONIEC_WIADOMOSCI";
+        var longResult = "Wynik " + "ż".repeat(120_000) + " KONIEC_WYNIKU";
+        var seenPrompts = new CopyOnWriteArrayList<String>();
+        var ai = mock(SystemAssistantAiPort.class);
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
+            seenPrompts.add(prompts.conversation(invocation.getArgument(2), invocation.getArgument(3)));
+            Consumer<AnalysisEvidenceSection> sink = invocation.getArgument(5);
+            sink.accept(new AnalysisEvidenceSection("openapi", "call", List.of(new AnalysisEvidenceItem("result",
+                    List.of(new AnalysisEvidenceAttribute("result", longResult))))));
+            return new SystemAssistantAiPort.Reply("Odpowiedź", null);
+        });
+        var service = service(SystemAssistantTestSupport.configuration((id, yaml) -> List.of()), ai);
+        try (var validator = new org.springframework.validation.beanvalidation.LocalValidatorFactoryBean()) {
+            validator.afterPropertiesSet();
+            var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
+                    new pl.mkn.tdw.features.systemassistant.api.SystemAssistantConversationController(service))
+                    .setControllerAdvice(new pl.mkn.tdw.api.ApiExceptionHandler()).setValidator(validator).build();
+            var id = service.create(null).id();
+            var endpoint = "/api/system-assistant/conversations/" + id + "/messages";
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(endpoint)
+                    .contentType("application/json").content(mapper.writeValueAsString(message("   "))))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(endpoint)
+                    .contentType("application/json").content(mapper.writeValueAsString(message(longMessage))))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isAccepted());
+            await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(endpoint)
+                    .contentType("application/json").content(mapper.writeValueAsString(message("Kontynuuj"))))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isAccepted());
+            await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
+            assertThat(seenPrompts).hasSize(2);
+            assertThat(seenPrompts.get(1)).hasSizeGreaterThan(120_000).contains(longMessage, longResult, "Kontynuuj");
+            assertThat(service.get(id).messages()).hasSize(4)
+                    .allSatisfy(message -> assertThat(message.status()).isEqualTo("COMPLETED"));
+        } finally { service.close(); }
+    }
+
+    @Test
+    void continuesPastTwentyTurnsAfterRestoringConversation() {
+        var configurations = SystemAssistantTestSupport.configuration((id, yaml) -> List.of());
+        var ai = mock(SystemAssistantAiPort.class);
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new SystemAssistantAiPort.Reply("Odpowiedź", null));
+        var service = service(configurations, ai);
+        String id;
+        try {
+            id = service.create(null).id();
+            for (var turn = 1; turn <= 20; turn++) {
+                service.send(id, message("Tura " + turn));
+                await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
+            }
+        } finally { service.close(); }
+        var restored = service(configurations, ai);
+        try {
+            assertThat(restored.get(id).messages()).hasSize(40);
+            restored.send(id, message("Tura 21"));
+            await().atMost(5, TimeUnit.SECONDS).until(() -> !restored.get(id).busy());
+            assertThat(restored.get(id).messages()).hasSize(42)
+                    .allSatisfy(message -> assertThat(message.status()).isEqualTo("COMPLETED"));
+            assertThat(SystemAssistantTestSupport.history(workspace).load(id).conversation().messages()).hasSize(42);
+            verify(ai, times(21)).answer(any(), any(), any(), any(), any(), any(), any());
+        } finally { restored.close(); }
+    }
+
+    @Test
     void freezesAcceptedTurnAndUsesCurrentSkillsOnNextMessage() throws Exception {
         var configurations = SystemAssistantTestSupport.configuration((id, yaml) -> List.of());
         configurations.save(config("FIRST"));

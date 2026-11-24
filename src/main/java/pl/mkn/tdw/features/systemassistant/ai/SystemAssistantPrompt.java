@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService.Snapshot;
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
-import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import java.util.List;
 
 @Component
@@ -49,8 +48,6 @@ public class SystemAssistantPrompt {
                 prompt.append("Wyniki wykonanych działań: ").append(json(message.toolEvidenceSections())).append('\n');
         }
         prompt.append("Odpowiedz na ostatnią wiadomość USER. Wcześniejsze zlecenia nie są zleceniem ponownego wykonania.");
-        if (prompt.length() > 120_000) throw new SystemAssistantException("CONVERSATION_TOO_LARGE",
-                UserFacingErrorType.BAD_REQUEST, "Historia jest zbyt długa. Rozpocznij nową rozmowę; nie ucięto danych.");
         return prompt.toString();
     }
     private String json(Object value) {

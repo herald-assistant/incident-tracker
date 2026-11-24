@@ -85,7 +85,18 @@ class OpenApiTextResponseTest {
         assertThat(call("readState", 204, "text/plain", "").body().isNull()).isTrue();
     }
 
-    @Test void rejectsInvalidFormatsAndOverLimitWithoutTreatingBrokenJsonAsText() {
+    @Test void preservesFullTextAndJsonResponsesLargerThan64KiB() throws Exception {
+        var text = "ą".repeat(70_000) + " KONIEC_ODPOWIEDZI";
+        var plain = call("readState", 200, "text/plain", text);
+        assertThat(plain.outcome()).isEqualTo("RESPONSE_RECEIVED");
+        assertThat(plain.body().asText()).isEqualTo(text);
+        var json = mapper.createObjectNode().put("value", text).put("lastField", "READY");
+        var result = call("writeJson", 200, "application/json", mapper.writeValueAsBytes(json));
+        assertThat(result.outcome()).isEqualTo("RESPONSE_RECEIVED");
+        assertThat(result.body()).isEqualTo(json);
+    }
+
+    @Test void rejectsInvalidFormatsWithoutTreatingBrokenJsonAsText() {
         assertThat(call("writeJson", 200, "application/json", "broken").outcome()).isEqualTo("OUTCOME_UNKNOWN");
         assertThat(call("writeJson", 200, "application/json", " \n ").outcome()).isEqualTo("OUTCOME_UNKNOWN");
         assertThat(call("writeJson", 200, "text/plain", "READY").outcome()).isEqualTo("OUTCOME_UNKNOWN");
@@ -93,8 +104,5 @@ class OpenApiTextResponseTest {
         assertThat(call("readState", 200, "text/html", "{}").outcome()).isEqualTo("REQUEST_FAILED");
         assertThat(call("readState", 200, "text/plain; charset=not-a-charset", "x").outcome()).isEqualTo("REQUEST_FAILED");
         assertThat(call("readState", 200, "text/plain", new byte[]{(byte) 0xC3, 0x28}).outcome()).isEqualTo("REQUEST_FAILED");
-        var atLimit = "ą".repeat(32_768);
-        assertThat(call("readState", 200, "text/plain", atLimit).body().asText()).isEqualTo(atLimit);
-        assertThat(call("readState", 200, "text/plain", atLimit + "x").outcome()).isEqualTo("REQUEST_FAILED");
     }
 }

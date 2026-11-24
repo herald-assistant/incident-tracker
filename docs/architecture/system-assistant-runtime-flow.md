@@ -176,8 +176,9 @@ kodowanie lub charset daje nieustalony wynik, bez zastępowania znaków.
 Brak Content-Type zachowuje obsługę JSON. Nie ma fallbacku błędnego JSON do
 tekstu ani interpretacji tekstu wyglądającego jak JSON. Pusty text/plain
 zwraca pusty string; 204/205 i pusty JSON zwracają null. Pozostałe media
-types z niepustym body są nieobsługiwane. Limit 64 KiB dotyczy bytes przed
-dekodowaniem; Auth, status HTTP i guard potencjalnego zapisu pozostają.
+types z niepustym body są nieobsługiwane. Adapter odczytuje pełne body bez
+aplikacyjnego limitu rozmiaru odpowiedzi; Auth, status HTTP i guard
+potencjalnego zapisu pozostają.
 
 Query array pozostaje tablicą JSON w `arguments.query.<name>` SDK/MCP.
 Wykonawca HTTP serializuje `style: form` (także domyślne): `explode: true`
@@ -236,7 +237,8 @@ Limity: 12 kontraktów po 1000000 znaków, do 60 operacji w kontrakcie i 100
 w zestawie; 20 skilli po 20000 znaków. Źródło może mieć do 2000000
 bajtów/znaków i 5000 operacji. Projekcja argumentów ma do 250000 znaków na
 narzędzie i 1000000 łącznie w katalogu. Limit dotyczy także rozwinięcia refs.
-Argumenty callbacka mają limit 65536 znaków, odpowiedź HTTP — 64 KiB.
+Argumenty callbacka mają limit 65536 znaków. Odpowiedź HTTP jest odczytywana
+w całości, bez aplikacyjnego limitu rozmiaru.
 Connect timeout wynosi 3 s, read timeout 8 s. Przekroczenia są jawne;
 odpowiedź nie jest po cichu przycinana ani zastępowana pustym sukcesem.
 
@@ -438,10 +440,13 @@ Analysis History. Nie ma importu rozmowy z pliku.
 8. Cleanup usuwa jednorazową sesję SDK. Następna tura tworzy nową sesję,
    korzystając z bieżącej konfiguracji i historii TDW.
 
-Rozmowy mają trwały transkrypt we wspólnej historii; limit to 20 tur w rozmowie.
+Rozmowy mają trwały transkrypt we wspólnej historii, bez aplikacyjnego limitu
+liczby tur ani długości wiadomości użytkownika. Wiadomość musi być niepusta.
 Kolejka ma 16 oczekujących miejsc i 2 workers. Nie jest durable queue.
-Historia promptu ma limit 120000 znaków: przekroczenie jest błędem, bez
-cichego skracania. Restart odtwarza transkrypt, ale nie ponawia działań
+Historia promptu zawiera cały transkrypt i wyniki narzędzi, bez aplikacyjnego
+limitu znaków ani skracania. Nadal obowiązuje pojemność kontekstu wybranego
+modelu; większe treści zwiększają zużycie pamięci, dysku i tokenów.
+Restart odtwarza transkrypt, ale nie ponawia działań
 ani przerwanych tur. Kontynuacja wymaga nowej wiadomości użytkownika.
 
 Bez report tools i initial reportu. Analysis History przechowuje transkrypt,

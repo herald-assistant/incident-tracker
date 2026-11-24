@@ -85,7 +85,8 @@ i MCP. Treść trafia jako string do istniejącego pola `body` wyniku narzędzia
 TDW wysyła `Accept` z deklaracji OpenAPI, a odpowiedź odczytuje według
 `Content-Type` i charsetu (domyślnie UTF-8). Tekst nie jest zamieniany na JSON
 nawet wtedy, gdy wygląda jak JSON. Błędny application/json nadal jest błędem.
-Obowiązuje limit 64 KiB i dotychczasowa blokada po nieustalonym zapisie.
+Odpowiedź jest odczytywana w całości, bez aplikacyjnego limitu rozmiaru body.
+Nadal obowiązuje blokada po nieustalonym zapisie.
 Request body nadal obsługuje wyłącznie application/json.
 
 ## Operacje PATCH
@@ -229,6 +230,13 @@ utworzeniu, również gdy otwierasz ją z innej strony. Nawigacja w aplikacji
 nie przepina automatycznie kontekstu chatu.
 
 ## Zapis i ograniczenia
+
+Rozmowa nie ma aplikacyjnego limitu liczby tur, długości wiadomości ani historii
+przekazywanej do AI. Historia i wyniki narzędzi nie są automatycznie skracane;
+nadal obowiązuje pojemność kontekstu wybranego modelu. Adapter OpenAPI odczytuje
+pełne odpowiedzi HTTP bez limitu rozmiaru body, z dotychczasowymi timeoutami
+połączenia 3 s i odczytu 8 s. Większe treści wymagają więcej pamięci, miejsca
+na dysku i tokenów.
 
 Wymagany jest włączony lokalny workspace TDW. Aktualna konfiguracja jest
 zapisana w `${tdw.workspace.directory}/system-assistant/configuration.json`,

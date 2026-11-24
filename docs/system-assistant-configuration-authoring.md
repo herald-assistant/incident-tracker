@@ -224,7 +224,8 @@ bez opisania braku. Szczegółowy kontrakt jest w
 [runtime Auth](architecture/http-api-authentication.md).
 
 Wykonawca nie śledzi redirectów i nie ponawia żądań. Connect timeout to 3 s,
-read timeout 8 s, odpowiedź do 64 KiB, argumenty do 65 536 znaków.
+read timeout 8 s, pełna odpowiedź bez aplikacyjnego limitu rozmiaru body,
+argumenty do 65 536 znaków.
 Zwróć uwagę na paginację i wielkość wyników. Nie dodawaj fikcyjnego `limit`,
 jeżeli endpoint go nie przyjmuje. Timeout zapisu może oznaczać nieustalony wynik.
 
