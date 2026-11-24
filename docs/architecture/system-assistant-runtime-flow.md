@@ -116,9 +116,23 @@ rozpoczyna login z conversationId/profileId i returnPath ze ścisłej listy
 /system-assistant albo /system-assistant/chat. Callback wiąże te dane z state
 i przeglądarką, po czym przywraca tę samą rozmowę, profil i pełny lub osadzony
 widok. Cookie tdw_oidc_browser ma HttpOnly, SameSite=None i zawsze Secure.
-Bez zachowania szkicu i automatycznej wysyłki. Embedded zachowuje tylko
-zweryfikowany ingress w sessionStorage na maks. 5 min, aby odtworzyć filtr
-profili niezależny od historycznego pageContext. Bez nowego handshake,
+Odrzucona wiadomość jest zachowana w sessionStorage na maks. 5 min w obu
+widokach, razem z conversationId/profileId/returnPath, modelem/reasoning
+i terminem ważności.
+Embedded dołącza opcjonalny zweryfikowany ingress, pełny ekran context=null.
+Po pasującym callbacku success wiadomość jest wysyłana automatycznie dokładnie
+raz do tej samej idle rozmowy i profilu, z pierwotnymi preferencjami AI.
+Wznowienie czeka na zamontowany chat, odczyt rozmowy, konfigurację, katalog
+modeli i status PAT. Failed callback, niezgodny scope, błąd odczytu lub busy
+zostawia tekst w polu, bez odroczonego wysłania po usunięciu przeszkody.
+Nie ma komunikatu o przywracaniu tekstu. Cache jest konsumowany przy odczycie;
+niepoprawny, wygasły, stary kształt lub inny scope jest odrzucany.
+Ponowny AUTH_LOGIN_REQUIRED wznowionego POST nie uruchamia kolejnego loginu.
+Nieustalony wynik POST nadal uruchamia tylko reconciliation odczytem, bez retry.
+Treść nie trafia do URL, state dostawcy ani API loginu. Niedostępny storage
+blokuje przekierowanie i zachowuje tekst w polu; błąd rozpoczęcia loginu
+usuwa cache i również zachowuje tekst. Filtr profili używa zweryfikowanego
+ingress niezależnie od historycznego pageContext. Bez nowego handshake,
 zmiany sandbox/CSP i popupów. Blokada third-party cookies lub osadzania
 providera nadal może uniemożliwić login. Ręczny login z Auth wraca do Auth.
 Kontrakt, mechanikę i ograniczenia opisuje
@@ -572,17 +586,24 @@ błąd pollingu zachowuje snapshot i daje retry odczytu, bez ponawiania poleceni
 Nowa rozmowa odłącza dotychczasowy chat w UI, pozostawiając zapis w historii.
 Klik aktywnego linku nawigacji nie remountuje ekranu.
 
-## Wybór rozmowy w panelu osadzonym
+## Wybór rozmowy na pełnym ekranie i w panelu osadzonym
 
 Spójny kafelek System Assistant w Browser Tools otwiera w tej samej ramce
 wybór nowej lub zapisanej rozmowy. Feature-owned picker pobiera wyłącznie
 metadane ze wspólnego history API na originie TDW, filtruje feature
 system-assistant, wyszukuje po nazwie i pokazuje kolejne partie po 50 wpisów.
+Na `/system-assistant` ikona `Historia rozmów` w pasku akcji chatu zakładki
+Rozmowa otwiera ten sam picker. Pełny ekran zachowuje początkową zakładkę
+Skille; historia nie jest pobierana do czasu jej otwarcia. Wybór rozmowy
+aktualizuje `localRunId` w URL.
 Pełny transkrypt jest pobierany dopiero po wyborze ID. Rodzic ramki nie
 otrzymuje listy, tytułów ani wiadomości; handshake pozostaje bez zmian.
 
-Ikona historii w composerze wraca do wyboru. Otwarcie nie przeładowuje
-iframe, a anulowanie zachowuje bieżący chat. Przy przełączaniu feature
+Ikona historii w composerze wraca do wyboru w obu trybach. Otwarcie nie
+przeładowuje iframe ani nie remountuje chatu, a anulowanie zachowuje bieżący
+chat i szkic. Na pełnym ekranie picker pozostaje w zakładce Rozmowa;
+przełączanie zakładek zachowuje wyszukiwanie. Aside jest ukryty w historii
+i wraca z rozmową. Przy przełączaniu feature
 zachowuje w pamięci szkic, błąd i wiadomość bez potwierdzenia dla danego ID;
 nowa rozmowa wraca do roboczego nowego szkicu. Błąd wyboru pozostawia listę
 i poprzednią rozmowę. Aktywna tura/wczytywanie blokują zmianę. Odpowiedzi

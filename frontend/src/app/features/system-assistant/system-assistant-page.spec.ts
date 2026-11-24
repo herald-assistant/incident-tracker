@@ -25,6 +25,10 @@ function savedConversation(): AssistantConversation {
 }
 const currentIngress = {origin: 'https://crm.example', pathname: '/tickets/CRM-202', title: 'CRM ticket', capturedAt: '2026-11-23T10:00:00Z'};
 const loginContextKey = 'tdw.system-assistant.login-context';
+const loginMessage = 'Sprawdź klienta';
+const savedLoginContext = (embedded: boolean) => ({conversationId: 'saved-chat', profileId: 'crm_selected',
+  returnPath: embedded ? '/system-assistant/chat' : '/system-assistant', expiresAt: Date.now() + 60_000,
+  context: embedded ? currentIngress : null, message: loginMessage, model: 'original-model', reasoningEffort: 'high'});
 
 describe('SystemAssistantPage', () => {
   let http: HttpTestingController;
@@ -52,12 +56,26 @@ describe('SystemAssistantPage', () => {
     if (fixture.componentInstance.embedded) { http.expectOne('/api/analysis/runs').flush({runs}); fixture.detectChanges(); }
     return fixture;
   }
+  function returningFromLogin(embedded: boolean) {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
+    Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
+      value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth: 'success'}), configurable: true});
+    TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.setItem(loginContextKey, JSON.stringify(savedLoginContext(embedded)));
+    const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
+    return fixture;
+  }
+  function loadLoginConfiguration() {
+    http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles: [{...testProfile, id: 'crm_selected'}]});
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
+  }
   it.each([{existing: false, embedded: false}, {existing: true, embedded: false}, {existing: false, embedded: true}, {existing: true, embedded: true}])(
-    'redirects rejected turns to OIDC without saving a draft or retrying (existing=$existing, embedded=$embedded)', ({existing, embedded}) => {
+    'preserves rejected messages across OIDC without retrying (existing=$existing, embedded=$embedded)', ({existing, embedded}) => {
       const assign = vi.mocked(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).location.assign);
       TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
       const fixture = ready(); const page = fixture.componentInstance;
       page.workspaceView.set('conversation'); page.historyOpen.set(false);
+      page.model.set('original-model'); page.reasoningEffort.set('high');
       if (embedded) page.ingress.restoreContext(currentIngress);
       if (existing) page.conversation.set(savedConversation());
       fixture.detectChanges();
@@ -69,19 +87,22 @@ describe('SystemAssistantPage', () => {
         {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc', message: 'Zaloguj'}, {status: 409, statusText: 'Conflict'});
       const login = http.expectOne('/api/system-assistant/auth/crm_oidc/login');
       expect(login.request.body).toEqual({conversationId: 'saved-chat', profileId: 'test_profile', returnPath: embedded ? '/system-assistant/chat' : '/system-assistant'});
-      expect(page.unsentMessage()).toBe(''); expect(chat.messageText()).toBe('');
+      expect(page.unsentMessage()).toBe(''); expect(chat.messageText()).toBe(loginMessage);
       const cached = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey);
-      if (embedded) {
-        expect(JSON.parse(cached!)).toEqual({conversationId: 'saved-chat', profileId: 'test_profile', expiresAt: expect.any(Number), context: currentIngress});
-        expect(cached).not.toContain('Sprawdź klienta'); expect(cached).not.toContain('Poprzednia odpowiedź');
-      } else expect(cached).toBeNull();
+      expect(JSON.parse(cached!)).toEqual({conversationId: 'saved-chat', profileId: 'test_profile',
+        returnPath: embedded ? '/system-assistant/chat' : '/system-assistant', expiresAt: expect.any(Number),
+        context: embedded ? currentIngress : null, message: loginMessage, model: 'original-model', reasoningEffort: 'high'});
+      expect(JSON.parse(cached!).expiresAt).toBeGreaterThan(Date.now());
+      expect(JSON.parse(cached!).expiresAt).toBeLessThanOrEqual(Date.now() + 300_000);
+      expect(cached).not.toContain('Poprzednia odpowiedź');
+      expect(login.request.body).not.toHaveProperty('message');
       http.expectNone('/api/system-assistant/conversations/saved-chat');
       login.flush({authorizationUrl: 'https://sso.example.com/authorize?state=opaque'});
       expect(assign).toHaveBeenCalledExactlyOnceWith('https://sso.example.com/authorize?state=opaque');
       page.send('Nie ponawiaj'); http.expectNone('/api/system-assistant/conversations/saved-chat/messages');
       fixture.destroy();
     });
-  it.each([false, true])('keeps a failed login start recoverable without retaining a draft or ingress cache (embedded=%s)', embedded => {
+  it.each([false, true])('keeps the message in the editor after a failed login start and clears the cache (embedded=%s)', embedded => {
     TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const fixture = ready(); const page = fixture.componentInstance;
     page.historyOpen.set(false); if (embedded) page.ingress.restoreContext(currentIngress);
@@ -91,41 +112,157 @@ describe('SystemAssistantPage', () => {
     http.expectOne('/api/system-assistant/auth/crm_oidc/login').flush({message: 'Dostawca niedostępny'}, {status: 400, statusText: 'Bad Request'});
     expect(page.submitting()).toBe(false); expect(page.chatError()).toBe('Dostawca niedostępny');
     expect(page.unsentMessage()).toBe(''); expect(page.authBusyId()).toBe('');
+    expect(fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance.messageText()).toBe(loginMessage);
     expect(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey)).toBeNull(); fixture.destroy();
   });
-  it.each([{auth: 'success', embedded: false}, {auth: 'failed', embedded: false}, {auth: 'success', embedded: true}, {auth: 'failed', embedded: true}])(
-    'returns from OIDC to the exact chat/profile and view without sending (auth=$auth, embedded=$embedded)', ({auth, embedded}) => {
+  it.each([false, true].flatMap(embedded => ['success', 'failed'].flatMap(auth => [false, true].map(configFirst => ({embedded, auth, configFirst})))))(
+    'resumes exactly once after successful OIDC and retains failed login drafts (auth=$auth, embedded=$embedded, configFirst=$configFirst)', ({auth, embedded, configFirst}) => {
     TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
       value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth}), configurable: true});
     const storage = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage;
-    if (embedded) storage.setItem(loginContextKey, JSON.stringify({conversationId: 'saved-chat', profileId: 'crm_selected', expiresAt: Date.now() + 60_000, context: currentIngress}));
+    storage.setItem(loginContextKey, JSON.stringify(savedLoginContext(embedded)));
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
     const page = fixture.componentInstance;
     expect(page.profileId()).toBe('crm_selected');
-    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    if (!configFirst) http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
     http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles: [{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/tickets/*'}]});
     http.expectOne('/api/system-assistant/configuration/tools').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
     http.expectOne('/api/auth/github/status').flush({configured: true});
+    if (configFirst) {
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('textarea').value).toBe(loginMessage);
+      expect(page.canChat()).toBe(false);
+      http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    }
     fixture.detectChanges();
+    if (auth === 'success') {
+      const resumed = http.expectOne('/api/system-assistant/conversations/saved-chat/messages');
+      expect(resumed.request.body).toEqual({message: loginMessage, profileId: 'crm_selected', model: 'original-model', reasoningEffort: 'high'});
+      expect(page.busy()).toBe(true);
+      resumed.flush(savedConversation()); fixture.detectChanges();
+    }
     expect(page.workspaceView()).toBe('conversation'); expect(page.selectedProfileId()).toBe('crm_selected');
     expect(page.messages()).toHaveLength(2); expect(page.unsentMessage()).toBe('');
     expect(page.historyOpen()).toBe(false); expect(page.canChat()).toBe(true);
     expect(page.pageContext()).toEqual(savedConversation().pageContext);
+    const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
+    expect(chat.messageText()).toBe(auth === 'success' ? '' : loginMessage);
+    expect(fixture.nativeElement.querySelector('textarea').value).toBe(auth === 'success' ? '' : loginMessage);
+    expect(page.loginNotice()).not.toContain('Przywrócono');
+    if (auth === 'success') expect(page.loginNotice()).toBe('');
+    expect(storage.getItem(loginContextKey)).toBeNull();
+    chat.messageText.set('Poprawiona wiadomość'); fixture.detectChanges();
+    expect(chat.messageText()).toBe('Poprawiona wiadomość');
     if (embedded) {
       expect(page.ingress.context()).toEqual(currentIngress); expect(storage.getItem(loginContextKey)).toBeNull();
       expect(fixture.nativeElement.querySelector('app-analysis-feature-aside')).toBeNull();
     }
     http.expectNone(request => request.method === 'POST'); fixture.destroy();
   });
-  it.each(['expired', 'wrong_chat', 'wrong_profile', 'extra_context', 'broken'])('rejects %s login context without using historical context for profile selection', kind => {
-    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+  it.each([false, true])('waits for PAT readiness before resuming the rejected message (embedded=%s)', embedded => {
+    const fixture = returningFromLogin(embedded);
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    loadLoginConfiguration(); fixture.detectChanges();
+    http.expectNone(request => request.method === 'POST');
+    http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
+    http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(savedConversation());
+    fixture.detectChanges(); fixture.detectChanges();
+    http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+
+  it.each([false, true])('stops a second login requirement instead of looping (embedded=%s)', embedded => {
+    const fixture = returningFromLogin(embedded);
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    loadLoginConfiguration(); http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
+    http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
+      {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('textarea').value).toBe(loginMessage);
+    expect(fixture.componentInstance.busy()).toBe(false);
+    expect(fixture.componentInstance.chatError()).toContain('po zalogowaniu');
+    expect(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey)).toBeNull();
+    expect(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).location.assign).not.toHaveBeenCalled();
+    http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+
+  it.each([false, true])('reconciles a failed resumed POST without another send (embedded=%s)', embedded => {
+    const fixture = returningFromLogin(embedded);
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    loadLoginConfiguration(); http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
+    http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush({}, {status: 503, statusText: 'Unavailable'});
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation()); fixture.detectChanges();
+    expect(fixture.componentInstance.unsentMessage()).toBe(loginMessage);
+    http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+
+  it.each([false, true].flatMap(embedded => ['busy', 'profile_changed', 'pat_missing', 'load_failed'].map(blocker => ({embedded, blocker}))))(
+    'retains the draft without deferred sending after $blocker (embedded=$embedded)', ({embedded, blocker}) => {
+    const fixture = returningFromLogin(embedded); const page = fixture.componentInstance;
+    const load = http.expectOne('/api/system-assistant/conversations/saved-chat');
+    if (blocker === 'load_failed') load.flush({}, {status: 503, statusText: 'Unavailable'});
+    else load.flush(savedConversation());
+    loadLoginConfiguration(); http.expectOne('/api/auth/github/status').flush({configured: blocker !== 'pat_missing'});
+    if (blocker === 'busy') page.conversation.update(value => ({...value!, busy: true}));
+    if (blocker === 'profile_changed') page.profileId.set('other');
+    fixture.detectChanges(); expect(fixture.nativeElement.querySelector('textarea').value).toBe(loginMessage);
+    http.expectNone(request => request.method === 'POST');
+    page.conversation.set(savedConversation()); page.restoreError.set(false); page.authReady.set(true); page.profileId.set('crm_selected');
+    fixture.detectChanges(); http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+
+  it.each([false, true])('cancels the queued resume when the operator sends another message (embedded=%s)', embedded => {
+    const fixture = returningFromLogin(embedded);
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    loadLoginConfiguration(); http.expectOne('/api/auth/github/status').flush({configured: true});
+    fixture.componentInstance.send('Inne polecenie');
+    const sent = http.expectOne('/api/system-assistant/conversations/saved-chat/messages');
+    expect(sent.request.body.message).toBe('Inne polecenie'); sent.flush(savedConversation()); fixture.detectChanges();
+    http.expectNone(request => request.method === 'POST'); fixture.destroy();
+  });
+
+  it.each([false, true])('consumes a login message only once, including a panel without ingress (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
       value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth: 'success'}), configurable: true});
-    const cached = {conversationId: kind === 'wrong_chat' ? 'other-chat' : 'saved-chat',
-      profileId: kind === 'wrong_profile' ? 'other-profile' : 'crm_selected', expiresAt: kind === 'expired' ? 0 : Date.now() + 60_000,
-      context: kind === 'extra_context' ? {...currentIngress, cookies: 'not-allowed'} : currentIngress};
+    const storage = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage;
+    storage.setItem(loginContextKey, JSON.stringify({...savedLoginContext(embedded), context: null}));
+    const openReturn = () => {
+      const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
+      http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+      http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles: [{...testProfile, id: 'crm_selected'}]});
+      http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+      http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
+      http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
+      return fixture;
+    };
+    const first = openReturn();
+    http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(savedConversation()); first.detectChanges();
+    expect(first.nativeElement.querySelector('textarea').value).toBe('');
+    expect(first.componentInstance.canChat()).toBe(true); expect(storage.getItem(loginContextKey)).toBeNull(); first.destroy();
+    const reloaded = openReturn(); expect(reloaded.nativeElement.querySelector('textarea').value).toBe('');
+    expect(reloaded.componentInstance.canChat()).toBe(true);
+    http.expectNone(request => request.method === 'POST'); reloaded.destroy();
+  });
+
+  it.each([false, true].flatMap(embedded => ['expired', 'future_expiry', 'wrong_chat', 'wrong_profile', 'wrong_view', 'extra_context', 'invalid_message', 'empty_message', 'invalid_model', 'invalid_effort', 'extra_field', 'manual_shape', 'old_shape', 'broken'].map(kind => ({embedded, kind}))))(
+    'rejects $kind login context without restoring its message (embedded=$embedded)', ({embedded, kind}) => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
+    Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
+      value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth: 'success'}), configurable: true});
+    const cached: Record<string, unknown> = {...savedLoginContext(embedded),
+      conversationId: kind === 'wrong_chat' ? 'other-chat' : 'saved-chat',
+      profileId: kind === 'wrong_profile' ? 'other-profile' : 'crm_selected',
+      returnPath: kind === 'wrong_view' ? embedded ? '/system-assistant' : '/system-assistant/chat' : savedLoginContext(embedded).returnPath,
+      expiresAt: kind === 'expired' ? 0 : kind === 'future_expiry' ? Date.now() + 600_000 : Date.now() + 60_000,
+      context: kind === 'extra_context' ? {...currentIngress, cookies: 'not-allowed'} : embedded ? currentIngress : null,
+      message: kind === 'invalid_message' ? 42 : kind === 'empty_message' ? '   ' : loginMessage};
+    if (kind === 'extra_field') cached['extra'] = 'invalid';
+    if (kind === 'invalid_model') cached['model'] = 42;
+    if (kind === 'invalid_effort') cached['reasoningEffort'] = null;
+    if (kind === 'manual_shape' || kind === 'old_shape') { delete cached['model']; delete cached['reasoningEffort']; }
+    if (kind === 'old_shape') { delete cached['message']; delete cached['returnPath']; }
     TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.setItem(loginContextKey, kind === 'broken' ? '{' : JSON.stringify(cached));
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges(); const page = fixture.componentInstance;
     http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
@@ -135,11 +272,13 @@ describe('SystemAssistantPage', () => {
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
     http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
     expect(page.conversation()?.id).toBe('saved-chat'); expect(page.historyOpen()).toBe(false);
-    expect(page.ingress.context()).toBeNull(); expect(page.selectedProfileId()).toBe(''); expect(page.canChat()).toBe(false);
+    expect(page.ingress.context()).toBeNull(); expect(page.selectedProfileId()).toBe(embedded ? '' : 'crm_selected');
+    expect(page.canChat()).toBe(!embedded); expect(fixture.nativeElement.querySelector('textarea').value).toBe('');
+    expect(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey)).toBeNull();
     http.expectNone(request => request.method === 'POST'); fixture.destroy();
   });
-  it('does not start login when the browser blocks storage needed to preserve embedded context', () => {
-    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+  it.each([false, true])('keeps the message and does not start login when storage is blocked (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const browser = TestBed.inject(SYSTEM_ASSISTANT_WINDOW);
     vi.spyOn(browser.sessionStorage, 'setItem').mockImplementation(() => { throw new DOMException('Blocked', 'SecurityError'); });
     const fixture = ready(); const page = fixture.componentInstance;
@@ -149,6 +288,7 @@ describe('SystemAssistantPage', () => {
       {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
     http.expectNone('/api/system-assistant/auth/crm_oidc/login'); expect(browser.location.assign).not.toHaveBeenCalled();
     expect(page.submitting()).toBe(false); expect(page.unsentMessage()).toBe('');
+    expect(fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance.messageText()).toBe(loginMessage);
     expect(page.chatError()).toContain('Przeglądarka blokuje'); fixture.destroy();
   });
   it('assigns independent API authentication in two profiles through the shared select', async () => {
@@ -224,11 +364,14 @@ describe('SystemAssistantPage', () => {
     request.flush(saved); expect(page.pageContext()).toEqual(saved.pageContext);
     page.activeProfiles.set([]); expect(page.canChat()).toBe(false); fixture.destroy();
   });
-  it('continues a saved conversation inside the same embedded chat and preserves drafts when switching', () => {
-    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+  it.each([false, true])('continues a saved conversation and preserves drafts when switching (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const fixture = ready(); const page = fixture.componentInstance;
+    page.workspaceView.set('conversation');
     const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
-    page.newConversation(); chat.messageText.set('Szkic nowej rozmowy'); page.openConversationHistory(); fixture.detectChanges();
+    page.newConversation(); fixture.detectChanges();
+    chat.messageText.set('Szkic nowej rozmowy'); page.openConversationHistory(); fixture.detectChanges();
+    http.expectOne('/api/analysis/runs').flush({runs: []});
     page.continueConversation('saved-chat'); expect(page.restoring()).toBe(true);
     http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation()); fixture.detectChanges();
     expect(page.historyOpen()).toBe(false); expect(page.pageContext()).toEqual(savedConversation().pageContext);
@@ -237,11 +380,12 @@ describe('SystemAssistantPage', () => {
     page.newConversation(); fixture.detectChanges(); expect(chat.messageText()).toBe('Szkic nowej rozmowy');
     page.openConversationHistory(); fixture.detectChanges(); http.expectOne('/api/analysis/runs').flush({runs: []});
     page.continueConversation('saved-chat'); http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation()); fixture.detectChanges();
-    expect(chat.messageText()).toBe('Szkic kontynuacji'); expect(fixture.nativeElement.querySelector('app-analysis-feature-aside')).toBeNull();
+    expect(chat.messageText()).toBe('Szkic kontynuacji');
+    expect(fixture.nativeElement.querySelector('app-analysis-feature-aside') !== null).toBe(!embedded);
     http.expectNone(request => request.method === 'DELETE'); fixture.destroy();
   });
-  it('keeps the current embedded conversation after a failed choice and ignores late reconciliation of another chat', () => {
-    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+  it.each([false, true])('keeps the current conversation after a failed choice and ignores late reconciliation (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const fixture = ready(); const page = fixture.componentInstance;
     page.conversation.set(savedConversation()); page.historyOpen.set(false); fixture.detectChanges(); page.send('Nieustalony wynik');
     http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush({}, {status: 503, statusText: 'Unavailable'});
@@ -255,6 +399,47 @@ describe('SystemAssistantPage', () => {
     reconcile.flush({...savedConversation(), messages: []}); expect(page.messages()).toHaveLength(2);
     page.conversation.set({...savedConversation(), id: 'other', busy: true}); page.openConversationHistory();
     expect(page.historyOpen()).toBe(false); fixture.destroy();
+  });
+
+  it.each([false, true])('opens history from the composer and returns without losing the current draft (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.workspaceView.set('conversation'); page.historyOpen.set(false);
+    page.conversation.set(savedConversation()); fixture.detectChanges();
+    const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
+    chat.messageText.set('Niedokończone pytanie'); page.chatError.set('Błąd poprzedniej próby'); page.unsentMessage.set('Bez potwierdzenia');
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const history = root.querySelector<HTMLButtonElement>('.analysis-chat__actions [aria-label="Historia rozmów"]')!;
+    expect(history).not.toBeNull(); history.click(); fixture.detectChanges();
+    http.expectOne('/api/analysis/runs').flush({runs: []}); fixture.detectChanges();
+    expect(root.querySelector<HTMLElement>('.assistant-chat')?.hidden).toBe(true);
+    expect(root.querySelector<HTMLElement>('.assistant-history')?.hidden).toBe(false);
+    expect(root.querySelector('app-analysis-feature-aside')).toBeNull();
+    http.expectNone(request => request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE');
+    root.querySelector<HTMLButtonElement>('[aria-label="Wróć do rozmowy"]')!.click(); fixture.detectChanges();
+    expect(page.historyOpen()).toBe(false); expect(root.querySelector<HTMLElement>('.assistant-chat')?.hidden).toBe(false);
+    expect(fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance).toBe(chat);
+    expect(chat.messageText()).toBe('Niedokończone pytanie');
+    expect(page.chatError()).toBe('Błąd poprzedniej próby'); expect(page.unsentMessage()).toBe('Bez potwierdzenia');
+    page.conversation.update(value => ({...value!, busy: true})); fixture.detectChanges();
+    expect(history.disabled).toBe(true); history.click(); expect(page.historyOpen()).toBe(false);
+    fixture.destroy();
+  });
+
+  it('keeps history inside the conversation tab and preserves its search across configuration tabs', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.workspaceView.set('conversation'); page.openConversationHistory(); fixture.detectChanges();
+    http.expectOne('/api/analysis/runs').flush({runs: []}); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const search = root.querySelector<HTMLInputElement>('[aria-label="Szukaj rozmowy"]')!;
+    search.value = 'CRM'; search.dispatchEvent(new Event('input', {bubbles: true}));
+    page.workspaceView.set('skills'); fixture.detectChanges();
+    expect(root.querySelector<HTMLElement>('.assistant-history')?.hidden).toBe(true);
+    page.workspaceView.set('conversation'); fixture.detectChanges();
+    expect(root.querySelector<HTMLElement>('.assistant-history')?.hidden).toBe(false);
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Szukaj rozmowy"]')?.value).toBe('CRM');
+    http.expectNone('/api/analysis/runs'); fixture.destroy();
   });
   it('opens a history conversation directly in chat and continues the existing ID with its original context', () => {
     Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {value: convertToParamMap({localRunId: 'saved-chat'}), configurable: true});

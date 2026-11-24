@@ -2,10 +2,6 @@
   @if (error()) { <p role="alert">{{ error() }}</p> }
   @if (ready()) {
     @if (embedded) {
-      @if (historyOpen()) {
-        <app-assistant-conversation-picker [disabled]="busy()" [currentId]="conversation()?.id || ''" [selectionError]="historyError()"
-          (selected)="continueConversation($event)" (newConversation)="newConversation()" (cancelled)="historyOpen.set(false)" />
-      }
       <ng-container [ngTemplateOutlet]="chatView" />
     } @else {
     <app-analysis-result-tabs [tabs]="workspaceTabs" [activeTabId]="workspaceView()" [equalWidth]="true"
@@ -172,7 +168,13 @@
     }
   }
   <ng-template #chatView>
-      <section class="assistant-chat assistant-view" [class.assistant-chat--with-aside]="!embedded && messages().length > 0" [hidden]="(embedded && historyOpen()) || (!embedded && workspaceView() !== 'conversation')" [attr.aria-labelledby]="embedded ? null : 'system-assistant-view-tab-conversation'" [attr.aria-label]="embedded ? 'Rozmowa System Assistant' : null">
+      @if (historyOpen()) {
+        <section class="assistant-history assistant-view" [hidden]="!embedded && workspaceView() !== 'conversation'" aria-label="Wybór rozmowy System Assistant">
+          <app-assistant-conversation-picker [disabled]="busy()" [currentId]="conversation()?.id || ''" [selectionError]="historyError()"
+            (selected)="continueConversation($event)" (newConversation)="newConversation()" (cancelled)="historyOpen.set(false)" />
+        </section>
+      }
+      <section class="assistant-chat assistant-view" [class.assistant-chat--with-aside]="!embedded && messages().length > 0" [hidden]="historyOpen() || (!embedded && workspaceView() !== 'conversation')" [attr.aria-labelledby]="embedded ? null : 'system-assistant-view-tab-conversation'" [attr.aria-label]="embedded ? 'Rozmowa System Assistant' : null">
         @if (restoring()) { <p role="status">Wczytywanie rozmowy…</p> }
         @if (ingress.status() === 'waiting') { <p role="status">Oczekiwanie na kontekst strony…</p> }
         @if (ingress.error()) { <p role="alert">{{ingress.error()}}</p> }
@@ -197,11 +199,9 @@
             [allowDefaultSelection]="true" [loading]="catalogLoading()" [error]="catalogError()" [disabled]="busy()"
             (modelChange)="chooseModel($event)" (reasoningEffortChange)="reasoningEffort.set($event)" />
         </div>
-          @if (embedded) {
-            <button chatActions class="assistant-chat-action" type="button" aria-label="Historia rozmów" matTooltip="Historia rozmów" [disabled]="busy()" (click)="openConversationHistory()">
-              <span class="material-symbols-outlined" aria-hidden="true">history</span>
-            </button>
-          }
+          <button chatActions class="assistant-chat-action" type="button" aria-label="Historia rozmów" matTooltip="Historia rozmów" [disabled]="busy()" (click)="openConversationHistory()">
+            <span class="material-symbols-outlined" aria-hidden="true">history</span>
+          </button>
           @if (pageContext(); as page) {
             <button chatActions class="assistant-chat-action" type="button" aria-label="Kontekst strony przy otwarciu"
               [matTooltip]="page.title + ' · ' + page.origin + page.pathname + ' · ' + page.capturedAt">
@@ -233,7 +233,7 @@
             </button>
           }
         </app-analysis-follow-up-chat>
-        @if (!embedded && workspaceView() === 'conversation' && messages().length) {
+        @if (!embedded && !historyOpen() && workspaceView() === 'conversation' && messages().length) {
           <app-analysis-feature-aside [showProgress]="false" [showChat]="false" [showFeedback]="false" [aiActive]="busy()"
             [aiCount]="activities().length" [chatMessages]="messages()">
             <div aiPanel><app-analysis-steps-panel [aiActivityEvents]="activities()" [toolEvidenceSections]="evidence()"

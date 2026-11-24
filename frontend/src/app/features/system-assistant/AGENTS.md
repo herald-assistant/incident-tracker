@@ -35,10 +35,19 @@ OIDC używa zapisanej konfiguracji. Powrót ręcznego logowania wybiera Auth.
 w ramce, bez zmiany sandbox/CSP. Backend wiąże chat/profil/returnPath z state;
 returnPath to wyłącznie /system-assistant lub /system-assistant/chat.
 Powrót odtwarza localRunId i profil w obu trybach, embedded zamyka picker.
-Na czas loginu zapisuje tylko zweryfikowany ingress i ID w sessionStorage
-z TTL 5 min; cache jest jednorazowy i walidowany. Nie używaj historycznego
-pageContext do filtra profili. Bez storage szkicu, ponawiania wiadomości,
-popupów lub przekazywania tokenów do FE. Inne błędy nadal wymagają
+Na czas loginu oba widoki zapisują w sessionStorage odrzuconą wiadomość,
+conversationId, profileId, returnPath, model/reasoning i termin ważności (5 min); tylko ramka
+dołącza opcjonalny zweryfikowany ingress. Cache ma jeden aktualny kształt,
+jest ściśle walidowany, wiązany z rozmową/profilem/widokiem i konsumowany
+jednorazowo. Callback success wznawia wysłanie dokładnie raz po gotowości
+chatu, rozmowy, konfiguracji, katalogu AI i PAT, z tym samym profilem oraz
+preferencjami. Bez komunikatu o przywracaniu tekstu. Failed lub brak gotowości
+zachowuje tekst w polu; nie uzbraja późniejszej wysyłki po zmianie scope.
+Ponowny AUTH_LOGIN_REQUIRED wznowionej próby kończy się błędem, bez pętli loginu.
+Błąd storage blokuje przekierowanie i zachowuje
+tekst; błąd rozpoczęcia loginu usuwa cache, ale zachowuje pole.
+Nie używaj historycznego pageContext do filtra profili. Bez storage szkicu
+konfiguracji, ponawiania zaakceptowanych wiadomości, popupów lub tokenów w FE. Inne błędy wymagają
 dotychczasowego reconciliation; nie wolno przekierowywać po błędzie narzędzia.
 Usunięcie używanego Auth jest blokowane do zmiany selectów zależnych przypisań w profilach.
 Kontrakty dodajemy tylko w modalu importu z nazwą i wyborem operacji. Wiersz
@@ -59,10 +68,14 @@ pełnym ekranie zachowaj standardowy aside. Nie przywracaj inline aside.
 
 Panel osadzony zaczyna od feature-owned pickera nowych/zapisanych rozmów,
 korzystającego ze wspólnego history API wyłącznie na originie TDW. Rodzic
-nie dostaje metadanych ani wiadomości. Ikona historii wraca do listy, wybór
+nie dostaje metadanych ani wiadomości. Ten sam picker i ikona historii są
+dostępne na pełnym ekranie w zakładce Rozmowa. Pełny ekran nadal zaczyna od
+Skilli, bez automatycznego otwierania historii. Ikona wraca do listy, wybór
 nie remountuje iframe. Zachowuj szkice/błędy/wiadomości bez potwierdzenia
 per ID; stare odpowiedzi HTTP nie mogą nadpisać nowego wyboru. Aktywna tura
-blokuje przełączanie. Pełny ekran i kontrakt V1 pozostają bez zmian.
+blokuje przełączanie w obu trybach. Chat pozostaje zamontowany pod ukrytą
+historią; aside jest widoczny tylko przy rozmowie na pełnym ekranie.
+Wybór na pełnym ekranie aktualizuje localRunId; kontrakt V1 pozostaje bez zmian.
 
 Profile są przypisaniami do wspólnych katalogów API/skilli. Per tura wymagane
 profileId rozwiązuje bieżące zasoby i pomija brakujące; nie blokuje profilu

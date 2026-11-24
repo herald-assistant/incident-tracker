@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { afterRenderEffect, Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -33,6 +33,13 @@ import { AssistantAuthProfile, AssistantOidcConnection } from './system-assistan
 import { AUTH_TYPES, authErrors, newAuthProfile } from './assistant-auth';
 import { ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NAME, configurationFile, parseConfigurationFile } from './system-assistant-configuration-file';
 
+interface LoginMessage {
+  conversationId: string;
+  profileId: string;
+  message: string;
+  autoSend: boolean;
+}
+
 @Component({
   selector: 'app-system-assistant-page',
   imports: [AssistantAuthProfiles, ChoiceSelectComponent, AssistantConversationPicker, NgTemplateOutlet, AnalysisResultTabsComponent, DialogModule, TextFieldComponent, MatTooltipModule, AnalysisFollowUpChatComponent, AiExecutionControlsComponent, AnalysisFeatureAsideComponent, AnalysisStepsPanelComponent, BrowserToolsSetupComponent],
@@ -46,6 +53,9 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private readonly route = inject(ActivatedRoute, {optional: true});
   private readonly router = inject(Router, {optional: true});
   readonly embedded = this.route?.snapshot.data['embeddedChat'] === true;
+  private readonly loginReturnPath = this.embedded ? '/system-assistant/chat' : '/system-assistant';
+  private readonly pendingLoginMessage = signal<LoginMessage | null>(null);
+  private readonly authStatusLoaded = signal(false);
   readonly historyOpen = signal(this.embedded);
   readonly historyError = signal('');
   private conversationGeneration = 0;
@@ -156,16 +166,36 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private picker?: DialogRef<OpenApiPickerResult>;
   private viewer?: DialogRef<void>;
 
-  constructor() { this.destroyRef.onDestroy(() => { this.picker?.close(); this.viewer?.close(); }); }
+  constructor() {
+    this.destroyRef.onDestroy(() => { this.picker?.close(); this.viewer?.close(); });
+    afterRenderEffect(() => {
+      const pending = this.pendingLoginMessage();
+      const chat = this.chatPanel();
+      if (!pending || !chat) return;
+      const conversation = this.conversation();
+      if (this.restoredId !== pending.conversationId || (conversation && conversation.id !== pending.conversationId)) {
+        this.pendingLoginMessage.set(null); return;
+      }
+      chat.messageText.set(pending.message);
+      if (pending.autoSend && (this.restoring() || !this.ready() || this.catalogLoading() || !this.authStatusLoaded())) return;
+      this.pendingLoginMessage.set(null);
+      if (!pending.autoSend || !this.canChat() || this.busy() || conversation?.id !== pending.conversationId
+          || this.selectedProfileId() !== pending.profileId) return;
+      chat.messageText.set(''); this.drafts.delete(pending.conversationId);
+      this.unsentMessage.set(pending.message); this.submitting.set(true); this.chatError.set('');
+      this.submitMessage(pending.conversationId, pending.message, true);
+    });
+  }
 
   ngOnInit(): void {
     const authReturn = this.route?.snapshot.queryParamMap?.get('auth');
-    if (this.embedded && authReturn && this.restoredId) this.restoreLoginContext();
+    if ((authReturn === 'success' || authReturn === 'failed') && this.restoredId) this.restoreLoginContext(authReturn === 'success');
     this.ingress.start();
     if (authReturn) {
-      const message = authReturn === 'success' ? 'Zalogowano. Wpisz wiadomość, aby kontynuować rozmowę.'
-        : 'Nie udało się zalogować. Wpisz i wyślij wiadomość, aby spróbować ponownie.';
-      if (this.restoredId) { this.workspaceView.set('conversation'); this.loginNotice.set(message); }
+      if (this.restoredId) {
+        this.workspaceView.set('conversation');
+        this.loginNotice.set(authReturn === 'success' ? '' : 'Nie udało się zalogować. Spróbuj ponownie.');
+      }
       else {
         this.workspaceView.set('auth');
         this.notice.set(authReturn === 'success' ? 'Zalogowano. API może korzystać z połączenia OIDC.'
@@ -188,8 +218,8 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       error: () => { this.catalogLoading.set(false); this.catalogError.set('Nie udało się pobrać katalogu modeli. Odśwież stronę, aby spróbować ponownie.'); }
     });
     this.auth.getStatus().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: value => this.authReady.set(value.configured),
-      error: () => this.chatError.set('Nie udało się sprawdzić PAT Copilota. Sprawdź Workspace Settings.')
+      next: value => { this.authReady.set(value.configured); this.authStatusLoaded.set(true); },
+      error: () => { this.authStatusLoaded.set(true); this.chatError.set('Nie udało się sprawdzić PAT Copilota. Sprawdź Workspace Settings.'); }
     });
   }
   chooseModel(model: string): void {
@@ -197,6 +227,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   send(message: string): void {
     if (!this.canChat() || this.busy()) return;
+    this.pendingLoginMessage.set(null);
     this.loginNotice.set('');
     this.unsentMessage.set(message);
     this.submitting.set(true); this.chatError.set('');
@@ -208,7 +239,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       });
     } else this.submitMessage(existing.id, message);
   }
-  private submitMessage(id: string, message: string): void {
+  private submitMessage(id: string, message: string, resumedAfterLogin = false): void {
     const generation = this.conversationGeneration;
     const profileId = this.selectedProfileId();
     const previousMessageIds = new Set(this.conversation()?.messages.map(item => item.id) ?? []);
@@ -217,9 +248,14 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       error: error => {
         if (error instanceof HttpErrorResponse && error.status === 409 && error.error?.code === 'AUTH_LOGIN_REQUIRED'
             && typeof error.error.authProfileId === 'string' && error.error.authProfileId) {
-          this.unsentMessage.set(''); this.chatPanel()?.messageText.set('');
-          this.loginForConversation(error.error.authProfileId, id, profileId);
-          return; // Explicitly rejected before acceptance: no reconciliation or message retry.
+          this.unsentMessage.set(''); this.chatPanel()?.messageText.set(message);
+          if (resumedAfterLogin) {
+            this.submitting.set(false);
+            this.chatError.set('Nie udało się uzyskać dostępu do API po zalogowaniu. Spróbuj ponownie.');
+            return;
+          }
+          this.loginForConversation(error.error.authProfileId, id, profileId, message);
+          return; // Rejected before acceptance; only a successful bound login can resume it.
         }
         this.submitting.set(false); this.chatError.set(this.message(error));
         // Lost HTTP response may still mean the turn was accepted. Reconcile without resubmitting.
@@ -234,15 +270,14 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       }
     });
   }
-  private loginForConversation(authProfileId: string, conversationId: string, profileId: string): void {
-    if (!this.rememberLoginContext(conversationId, profileId)) {
+  private loginForConversation(authProfileId: string, conversationId: string, profileId: string, message: string): void {
+    if (!this.rememberLoginContext(conversationId, profileId, message)) {
       this.submitting.set(false);
-      this.chatError.set('Przeglądarka blokuje zachowanie kontekstu ramki. Otwórz pełny widok TDW, aby się zalogować.');
+      this.chatError.set('Przeglądarka blokuje zachowanie wiadomości na czas logowania. Treść pozostaje w polu; sprawdź ustawienia prywatności i spróbuj ponownie.');
       return;
     }
     this.authBusyId.set(authProfileId); this.loginNotice.set('Przekierowywanie do logowania…');
-    const returnPath = this.embedded ? '/system-assistant/chat' : '/system-assistant';
-    this.api.loginAuth(authProfileId, {conversationId, profileId, returnPath}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.loginAuth(authProfileId, {conversationId, profileId, returnPath: this.loginReturnPath}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: result => this.browser.location.assign(result.authorizationUrl),
       error: error => {
         this.clearLoginContext();
@@ -250,30 +285,37 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       }
     });
   }
-  private rememberLoginContext(conversationId: string, profileId: string): boolean {
-    if (!this.embedded) return true;
-    const context = this.ingress.context();
+  private rememberLoginContext(conversationId: string, profileId: string, message: string): boolean {
+    const context = this.embedded ? this.ingress.context() : null;
     try {
-      if (context) this.browser.sessionStorage.setItem(this.loginContextKey,
-        JSON.stringify({conversationId, profileId, expiresAt: Date.now() + 300_000, context}));
-      else this.clearLoginContext();
+      this.browser.sessionStorage.setItem(this.loginContextKey,
+        JSON.stringify({conversationId, profileId, returnPath: this.loginReturnPath, expiresAt: Date.now() + 300_000, context, message,
+          model: this.model(), reasoningEffort: this.reasoningEffort()}));
       return true;
-    } catch { return !context; }
+    } catch { this.clearLoginContext(); return false; }
   }
-  private restoreLoginContext(): void {
+  private restoreLoginContext(autoSend: boolean): void {
     try {
       const raw = this.browser.sessionStorage.getItem(this.loginContextKey);
       if (!raw) return;
+      this.browser.sessionStorage.removeItem(this.loginContextKey);
       const saved = JSON.parse(raw);
-      if (!saved || typeof saved !== 'object' || Array.isArray(saved) || Object.keys(saved).length !== 4
-          || !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now()) { this.clearLoginContext(); return; }
-      if (saved.conversationId !== this.restoredId || saved.profileId !== this.profileId()) return;
-      this.clearLoginContext();
-      this.ingress.restoreContext(saved.context);
+      const keys = ['conversationId', 'profileId', 'returnPath', 'expiresAt', 'context', 'message', 'model', 'reasoningEffort'];
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved) || Object.keys(saved).length !== keys.length
+          || !keys.every(key => Object.hasOwn(saved, key))
+          || !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now() || saved.expiresAt > Date.now() + 300_000
+          || saved.conversationId !== this.restoredId || saved.profileId !== this.profileId() || saved.returnPath !== this.loginReturnPath
+          || typeof saved.message !== 'string' || !saved.message.trim()
+          || typeof saved.model !== 'string' || typeof saved.reasoningEffort !== 'string') return;
+      if (this.embedded) {
+        if (saved.context !== null && !this.ingress.restoreContext(saved.context)) return;
+      } else if (saved.context !== null) return;
+      this.drafts.set(this.restoredId, {text: saved.message, error: '', unsent: ''});
+      this.model.set(saved.model); this.reasoningEffort.set(saved.reasoningEffort);
+      this.pendingLoginMessage.set({conversationId: saved.conversationId, profileId: saved.profileId, message: saved.message, autoSend});
     } catch { this.clearLoginContext(); }
   }
   private clearLoginContext(): void {
-    if (!this.embedded) return;
     try { this.browser.sessionStorage.removeItem(this.loginContextKey); } catch { /* Storage may be blocked in an iframe. */ }
   }
   restoreMessage(): void { this.chatPanel()?.messageText.set(this.unsentMessage()); this.unsentMessage.set(''); }
@@ -311,6 +353,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   continueConversation(id: string): void {
     if (this.busy()) return;
+    this.pendingLoginMessage.set(null);
     this.restoring.set(true); this.historyError.set('');
     this.api.conversation(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: conversation => {
@@ -333,13 +376,14 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   newConversation(): void {
     if (this.busy()) return;
-    if (this.embedded && !this.conversation() && !this.restoreError()) { this.historyOpen.set(false); return; }
-    if (this.embedded) this.saveDraft();
+    this.pendingLoginMessage.set(null);
+    if (!this.conversation() && !this.restoreError()) { this.historyOpen.set(false); return; }
+    this.saveDraft();
     this.conversationGeneration++;
     this.pollSubscription?.unsubscribe();
     this.conversation.set(null); this.chatError.set(''); this.unsentMessage.set(''); this.restoreError.set(false);
     this.chatPanel()?.messageText.set(''); this.updateConversationUrl(null); this.historyOpen.set(false);
-    if (this.embedded) this.restoreDraft('');
+    this.restoreDraft('');
   }
   loadTools(): void {
     this.toolsSubscription?.unsubscribe();

@@ -196,11 +196,18 @@ ręczny login w edytorze Auth. Login z rozmowy używa aktywnego zapisu.
 Błąd auth nie ponawia automatycznie operacji biznesowej.
 Jeśli OIDC wymaga ponownego logowania, wysłanie wiadomości najpierw próbuje
 odnowić token. Gdy to niemożliwe, TDW przekierowuje do dostawcy bez uruchamiania
-AI. Po logowaniu wrócisz do tej samej rozmowy i profilu. Wpisz wiadomość
-ponownie — szkic nie jest zachowywany ani automatycznie wysyłany. Próba działa
+AI. Po udanym logowaniu wrócisz do tej samej rozmowy i profilu, a TDW samo
+wyśle wcześniej odrzuconą wiadomość, z wybranym modelem i poziomem rozumowania.
+Robi to jeden raz, gdy rozmowa jest gotowa. Gdy logowanie się nie powiedzie
+lub wznowienie jest zablokowane, tekst pozostanie w polu do ręcznej obsługi.
+Nieustalony wynik wysłania nie powoduje automatycznej kolejnej próby. Flow działa
 też w ramce: returnPath odtwarza kompaktowy widok tej samej rozmowy i profil,
-bez przejścia na pełny TDW. Na czas logowania ramka przechowuje tylko kontekst
-strony do filtra profili (sessionStorage, 5 min), bez wiadomości i tokenów.
+bez przejścia na pełny TDW. Na czas logowania oba widoki przechowują wiadomość
+tymczasowo w danej karcie (sessionStorage, 5 min). Ramka zachowuje również
+zweryfikowany kontekst strony do filtra profili. Wpis jest jednorazowy i
+przypisany do rozmowy, profilu oraz widoku. Gdy przeglądarka blokuje ten zapis,
+TDW pozostawia tekst w polu i pokazuje błąd przed przekierowaniem. Błąd
+rozpoczęcia loginu również zachowuje tekst. Tokeny pozostają na backendzie.
 Cookie logowania ma SameSite=None; Secure. Potrzebne są HTTPS (z wyjątkami
 przeglądarki dla localhost) i zgoda na third-party cookies; provider musi
 pozwalać na iframe. Zabezpieczenia ramki pozostają bez zmian.
@@ -213,6 +220,11 @@ określać sposób odczytu danych, wykonywania obliczeń i potwierdzania zmian.
 Rozmowy są trwale zapisywane w historii. Kontynuacja zachowuje wcześniejszy
 kontekst, ale korzysta z bieżących skilli i narzędzi.
 Z `Platform / Analysis History` otwórz zapis, aby wrócić do zakładki Rozmowa.
+Możesz też użyć ikony `Historia rozmów` w pasku akcji chatu na pełnej stronie
+`/system-assistant`. Otwiera tę samą listę co panel Browser Tools: wyszukaj
+rozmowę i wybierz ją, aby kontynuować. Strzałka powrotu zachowuje bieżącą
+rozmowę i wpisany tekst. Przełączanie rozmów zachowuje robocze szkice osobno
+dla każdej rozmowy; podczas pracy AI przycisk historii jest zablokowany.
 `Nowa rozmowa` pozostawia poprzednią w historii. Usuwanie jest osobną akcją
 i pozostaje zablokowane podczas aktywnej tury.
 

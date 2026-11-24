@@ -17,9 +17,14 @@ ponawia POST/PUT/PATCH/DELETE. Przed przyjęciem tury sprawdzamy/odnawiamy wymag
 Powrót do konkretnego chatu/profilu i returnPath jest związany z jednorazowym
 state i browser binding. Dozwolone są wyłącznie /system-assistant i
 /system-assistant/chat. Cookie ma SameSite=None; Secure; brak cookie nadal
-odrzuca callback. Embedded odtwarza localRunId i tylko zweryfikowany ingress
-z krótkiego sessionStorage (5 min), niezależnie od historycznego pageContext.
-Szkic nie jest zachowywany, wiadomość nie jest automatycznie wysyłana.
+odrzuca callback. Oba widoki zachowują odrzuconą wiadomość w jednorazowym
+sessionStorage (5 min), związanym z conversationId/profileId/returnPath,
+z pierwotnym modelem i reasoning. Udany callback wznawia wysłanie jeden raz
+po gotowości tej samej idle rozmowy i profilu, bez komunikatu o odtworzeniu
+tekstu. Nieudany callback pozostawia wiadomość w polu. Ponowne wymaganie
+loginu w tej próbie nie uruchamia pętli; nieustalony POST nie jest ponawiany. Embedded
+odtwarza też zweryfikowany ingress, niezależnie od historycznego pageContext.
+Szkic konfiguracji i tokeny nie są zachowywane w przeglądarce na czas loginu.
 Schema argumentów SDK/MCP jest projekcją requestu: pomija readOnly, mapuje
 nullable na null i zachowuje format jako adnotację. Wykonanie waliduje
 schema OpenAPI po adaptacji do JSON Schema, z kompozycją i bez zdalnego resolvera.

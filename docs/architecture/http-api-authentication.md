@@ -163,14 +163,24 @@ wraca do powiązanej rozmowy. Przy braku poprawnego browser binding nie ma
 powrotu do prywatnej rozmowy ani wymiany kodu; pozostaje ogólny błąd Auth.
 
 localRunId jest odtwarzany w obu widokach. Embedded zamyka picker i pokazuje
-kompaktowy chat bez aside; pełny widok zachowuje standardowe aside. Nie ma
-zachowania szkicu, automatycznej wysyłki ani tokenów w FE. Na czas logowania
-ramka przechowuje w sessionStorage wyłącznie ostatni zweryfikowany ingress,
-conversationId/profileId i termin ważności (5 min). Po pasującym powrocie
-odczytuje go jednorazowo; błąd rozpoczęcia loginu usuwa cache. Obcy, wygasły
-lub uszkodzony kontekst jest odrzucany. Filtr profili używa tego ingress,
-nigdy historycznego pageContext rozmowy. Gdy storage jest niedostępny,
-a kontekst jest potrzebny, FE pokazuje błąd przed rozpoczęciem logowania.
+kompaktowy chat bez aside; pełny widok zachowuje standardowe aside. Na czas
+logowania oba widoki przechowują w sessionStorage odrzuconą wiadomość,
+conversationId/profileId/returnPath, model/reasoning i termin ważności (5 min). Ramka dołącza
+opcjonalny ostatni zweryfikowany ingress; pełny ekran zapisuje context=null.
+Po pasującym powrocie success frontend wysyła odrzuconą wiadomość dokładnie
+raz, po gotowości edytora, właściwej idle rozmowy, profilu, konfiguracji,
+katalogu AI i PAT, z pierwotnymi preferencjami. Nie pokazuje komunikatu
+o odtworzeniu tekstu. Failed lub zablokowane wznowienie pozostawia pole
+do ręcznej obsługi. Ponowny AUTH_LOGIN_REQUIRED tej próby nie uruchamia
+kolejnego loginu, a nieustalony wynik POST używa wyłącznie reconciliation.
+To wznowienie requestu odrzuconego przed akceptacją, bez retry zaakceptowanej
+tury ani operacji biznesowej. Tokeny pozostają na backendzie. Rekord jest
+ściśle walidowany i konsumowany jednorazowo przy odczycie. Obcy, wygasły,
+uszkodzony lub poprzedni kształt jest odrzucany. Filtr profili używa ingress,
+nigdy historycznego pageContext rozmowy. Treść wiadomości nie trafia do API
+loginu, URL ani state dostawcy. Niedostępny storage blokuje przekierowanie
+i zachowuje tekst w edytorze. Błąd rozpoczęcia loginu usuwa cache i zachowuje
+tekst. Szkic konfiguracji nie jest przechowywany na czas logowania.
 
 SameSite=None; Secure umożliwia cookie w cross-site iframe przy dopuszczonych
 third-party cookies. Wymaga HTTPS (przeglądarki mają wyjątki dla localhost);
