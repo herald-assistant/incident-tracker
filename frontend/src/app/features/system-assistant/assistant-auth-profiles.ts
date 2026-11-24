@@ -20,12 +20,15 @@ export class AssistantAuthProfiles {
   readonly showErrors = input(false);
   readonly busyId = input('');
   readonly connections = input<Record<string, AssistantOidcConnection>>({});
+  readonly expandedIds = input<ReadonlySet<string>>(new Set());
+  readonly expansionToggled = output<string>();
   readonly profilesChange = output<AssistantAuthProfile[]>();
   readonly login = output<string>();
   readonly disconnect = output<string>();
   readonly types = AUTH_TYPES;
   readonly methods = [{value: 'client_secret_basic', label: 'Basic — nagłówek'}, {value: 'client_secret_post', label: 'Parametry formularza'}];
   readonly oidcMethods = [{value: 'none', label: 'Bez sekretu — klient publiczny'}, ...this.methods];
+  typeLabel(type: AssistantAuthType): string { return this.types.find(item => item.value === type)?.label || type; }
 
   update(index: number, key: keyof AssistantAuthProfile, value: string): void {
     if (this.disabled()) return;

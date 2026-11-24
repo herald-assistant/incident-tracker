@@ -11,6 +11,7 @@ describe('Assistant Auth profiles', () => {
     const fixture = TestBed.createComponent(AssistantAuthProfiles);
     const basic = {...newAuthProfile('BASIC', 'crm', 'CRM access', 'http://localhost'), username: 'operator', password: 'public-test-password'};
     fixture.componentRef.setInput('profiles', [basic]); fixture.componentRef.setInput('apis', []);
+    fixture.componentRef.setInput('expandedIds', new Set(['crm']));
     let emitted: AssistantAuthProfile[] = [];
     fixture.componentInstance.profilesChange.subscribe(value => { emitted = value; fixture.componentRef.setInput('profiles', value); });
     fixture.detectChanges();
@@ -29,6 +30,7 @@ describe('Assistant Auth profiles', () => {
     const fixture = TestBed.createComponent(AssistantAuthProfiles);
     const profile = newAuthProfile('OIDC', 'crm', 'CRM OIDC', 'http://localhost');
     fixture.componentRef.setInput('profiles', [profile]);
+    fixture.componentRef.setInput('expandedIds', new Set(['crm']));
     fixture.componentRef.setInput('apis', [{id: 'crm_api', name: 'CRM API', yaml: ''}]);
     fixture.componentRef.setInput('assistantProfiles', [{id: 'work', name: 'CRM work', urlPattern: '*', apiBindings: [{apiId: 'crm_api', authProfileId: 'crm'}], skillIds: []}]);
     fixture.componentRef.setInput('dirty', true); fixture.componentRef.setInput('showErrors', true);

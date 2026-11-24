@@ -24,10 +24,20 @@
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
             @for (item of configuration().skills; track $index; let i = $index) {
               <section class="assistant-definition">
-                <app-text-field [disabled]="configurationBusy()" label="ID skilla" [value]="item.id" (valueChange)="updateSkill(i, 'id', $event)" />
-                <app-text-field [disabled]="configurationBusy()" label="Nazwa skilla" [value]="item.name" (valueChange)="updateSkill(i, 'name', $event)" />
-                <app-text-field [disabled]="configurationBusy()" label="Instrukcje Markdown" type="textarea" [rows]="6" [value]="item.content" (valueChange)="updateSkill(i, 'content', $event)" />
-                <button class="secondary-button" type="button" (click)="remove('skills', i)">Usuń skill {{item.name}}</button>
+                <div class="assistant-definition-heading">
+                  <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
+                    [attr.aria-expanded]="expandedDefinitions().skills.has('' + i)" [attr.aria-controls]="'assistant-skill-body-' + i"
+                    (click)="toggleDefinition('skills', '' + i)">
+                    <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy skill'}}</span><span class="assistant-definition-meta">{{item.id || 'Brak ID'}}</span></span>
+                    <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
+                  </button>
+                </div>
+                <div class="assistant-definition-body" [id]="'assistant-skill-body-' + i" [hidden]="!expandedDefinitions().skills.has('' + i)">
+                  <app-text-field [disabled]="configurationBusy()" label="ID skilla" [value]="item.id" (valueChange)="updateSkill(i, 'id', $event)" />
+                  <app-text-field [disabled]="configurationBusy()" label="Nazwa skilla" [value]="item.name" (valueChange)="updateSkill(i, 'name', $event)" />
+                  <app-text-field [disabled]="configurationBusy()" label="Instrukcje Markdown" type="textarea" [rows]="6" [value]="item.content" (valueChange)="updateSkill(i, 'content', $event)" />
+                  <button class="secondary-button" type="button" (click)="remove('skills', i)">Usuń skill {{item.name}}</button>
+                </div>
               </section>
             } @empty { <p class="assistant-empty">Dodaj instrukcje określające sposób pracy asystenta.</p> }
           </fieldset>
@@ -36,6 +46,7 @@
             <app-assistant-auth-profiles [profiles]="configuration().authProfiles" [apis]="configuration().apis" [assistantProfiles]="configuration().profiles"
               [disabled]="configurationBusy()" [dirty]="dirty()" [showErrors]="authValidationVisible()"
               [busyId]="authBusyId()" [connections]="authConnections()" (profilesChange)="updateAuthProfiles($event)"
+              [expandedIds]="expandedDefinitions().authProfiles" (expansionToggled)="toggleDefinition('authProfiles', $event)"
               (login)="loginAuth($event)" (disconnect)="disconnectAuth($event)" />
           </fieldset>
           @if (authStatusError()) { <p role="alert">{{authStatusError()}} <button type="button" class="secondary-button" (click)="loadAuthStatus()">Odśwież stan logowania</button></p> }
@@ -43,33 +54,41 @@
           <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-profiles" aria-labelledby="system-assistant-view-tab-profiles">
             @for (item of configuration().profiles; track item.id; let i = $index) {
               <section class="assistant-definition assistant-profile">
-                <div class="assistant-profile-heading"><span>{{item.name}}</span>
+                <div class="assistant-definition-heading">
+                  <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
+                    [attr.aria-expanded]="expandedDefinitions().profiles.has(item.id)" [attr.aria-controls]="'assistant-profile-body-' + i"
+                    (click)="toggleDefinition('profiles', item.id)">
+                    <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy profil'}}</span><span class="assistant-definition-meta">{{item.urlPattern || 'Brak wzorca URL'}}</span></span>
+                    <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
+                  </button>
                   @if (profileWarning(item); as warning) {
                     <span class="material-symbols-outlined assistant-profile-warning" role="img" tabindex="0" aria-label="Brakujące zasoby profilu" [matTooltip]="warning">warning</span>
                   }
                 </div>
-                <app-text-field label="Nazwa profilu" [value]="item.name" [maxLength]="100" [required]="true" [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'name', $event)" />
-                <app-text-field label="Wzorzec URL" [value]="item.urlPattern" [maxLength]="2300" [required]="true" hint="* oznacza dowolny ciąg. Dopasowanie do origin + ścieżka, bez query i hash." [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'urlPattern', $event)" />
-                <div class="assistant-profile-resources">
-                  <fieldset><legend>Skille</legend>
-                    @for (resource of profileResources(item, 'skills'); track resource.id) {
-                      <label><input type="checkbox" [checked]="item.skillIds.includes(resource.id)" (change)="toggleProfileResource(i, 'skillIds', resource.id, $any($event.target).checked)" />{{resource.name}}</label>
-                    } @empty { <p>Nie dodano skilli.</p> }
-                  </fieldset>
-                  <fieldset><legend>API</legend>
-                    @for (resource of profileResources(item, 'apis'); track resource.id) {
-                      <div class="assistant-profile-api">
-                        <label><input type="checkbox" [checked]="profileHasApi(item, resource.id)" (change)="toggleProfileApi(i, resource.id, $any($event.target).checked)" />{{resource.name}}</label>
-                        @if (profileHasApi(item, resource.id)) {
-                          <app-choice-select label="Uwierzytelnianie" [ariaLabel]="'Uwierzytelnianie API ' + resource.name + ' w profilu ' + item.name"
-                            [options]="apiAuthOptions(item, resource.id)" [value]="profileApiAuth(item, resource.id)" [disabled]="configurationBusy()"
-                            (valueChange)="updateProfileApiAuth(i, resource.id, $event)" />
-                        }
-                      </div>
-                    } @empty { <p>Nie dodano API.</p> }
-                  </fieldset>
+                <div class="assistant-definition-body" [id]="'assistant-profile-body-' + i" [hidden]="!expandedDefinitions().profiles.has(item.id)">
+                  <app-text-field label="Nazwa profilu" [value]="item.name" [maxLength]="100" [required]="true" [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'name', $event)" />
+                  <app-text-field label="Wzorzec URL" [value]="item.urlPattern" [maxLength]="2300" [required]="true" hint="* oznacza dowolny ciąg. Dopasowanie do origin + ścieżka, bez query i hash." [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'urlPattern', $event)" />
+                  <div class="assistant-profile-resources">
+                    <fieldset><legend>Skille</legend>
+                      @for (resource of profileResources(item, 'skills'); track resource.id) {
+                        <label><input type="checkbox" [checked]="item.skillIds.includes(resource.id)" (change)="toggleProfileResource(i, 'skillIds', resource.id, $any($event.target).checked)" />{{resource.name}}</label>
+                      } @empty { <p>Nie dodano skilli.</p> }
+                    </fieldset>
+                    <fieldset><legend>API</legend>
+                      @for (resource of profileResources(item, 'apis'); track resource.id) {
+                        <div class="assistant-profile-api">
+                          <label><input type="checkbox" [checked]="profileHasApi(item, resource.id)" (change)="toggleProfileApi(i, resource.id, $any($event.target).checked)" />{{resource.name}}</label>
+                          @if (profileHasApi(item, resource.id)) {
+                            <app-choice-select label="Uwierzytelnianie" [ariaLabel]="'Uwierzytelnianie API ' + resource.name + ' w profilu ' + item.name"
+                              [options]="apiAuthOptions(item, resource.id)" [value]="profileApiAuth(item, resource.id)" [disabled]="configurationBusy()"
+                              (valueChange)="updateProfileApiAuth(i, resource.id, $event)" />
+                          }
+                        </div>
+                      } @empty { <p>Nie dodano API.</p> }
+                    </fieldset>
+                  </div>
+                  <button class="secondary-button" type="button" (click)="remove('profiles', i)">Usuń profil {{item.name}}</button>
                 </div>
-                <button class="secondary-button" type="button" (click)="remove('profiles', i)">Usuń profil {{item.name}}</button>
               </section>
             } @empty { <p>Nie dodano profili.</p> }
           </fieldset>

@@ -56,6 +56,9 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   protected readonly api = inject(SystemAssistantApi);
   protected readonly destroyRef = inject(DestroyRef);
   readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [], authProfiles: [] });
+  readonly expandedDefinitions = signal<Record<'skills' | 'profiles' | 'authProfiles', ReadonlySet<string>>>({
+    skills: new Set(), profiles: new Set(), authProfiles: new Set()
+  });
   readonly activeProfiles = signal<AssistantProfile[]>([]);
   readonly profileId = signal(this.route?.snapshot.queryParamMap?.get('profileId') || '');
   readonly availableProfiles = computed(() => this.activeProfiles().filter(profile => {
@@ -349,8 +352,10 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   addProfile(): void {
     if (this.configurationBusy() || this.configuration().profiles.length >= 20) return;
+    const id = crypto.randomUUID();
     this.configuration.update(value => ({...value, profiles: [...value.profiles,
-      {id: crypto.randomUUID(), name: 'Nowy profil', urlPattern: '*', apiBindings: [], skillIds: []}]}));
+      {id, name: 'Nowy profil', urlPattern: '*', apiBindings: [], skillIds: []}]}));
+    this.setDefinitionExpanded('profiles', id, true);
     this.dirty.set(true); this.notice.set('');
   }
   updateProfile(index: number, key: 'name' | 'urlPattern', content: string): void {
@@ -373,7 +378,9 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   addSkill(): void {
     if (this.configurationBusy()) return;
     const id = `skill_${crypto.randomUUID().slice(0, 8)}`;
+    const index = this.configuration().skills.length;
     this.configuration.update(value => ({...value, skills: [...value.skills, {id, name: 'Nowy skill', content: ''}]}));
+    this.setDefinitionExpanded('skills', '' + index, true);
     this.dirty.set(true); this.notice.set('');
   }
   updateSkill(index: number, key: 'id' | 'name' | 'content', content: string): void {
@@ -383,6 +390,10 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   remove(kind: 'apis' | 'skills' | 'profiles', index: number): void {
     if (this.configurationBusy()) return;
+    if (kind === 'skills') {
+      this.expandedDefinitions.update(value => ({...value, skills: new Set([...value.skills]
+        .map(Number).filter(current => current !== index).map(current => '' + (current > index ? current - 1 : current)))}));
+    } else if (kind === 'profiles') this.setDefinitionExpanded('profiles', this.configuration().profiles[index].id, false);
     this.configuration.update(value => ({ ...value, [kind]: value[kind].filter((_, i) => i !== index) }));
     this.dirty.set(true); this.notice.set('');
   }
@@ -400,6 +411,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       const value = await readJsonFile(file, 'Plik konfiguracji nie zawiera poprawnego JSON-a.');
       if (this.destroyRef.destroyed) return;
       const configuration = parseConfigurationFile(value);
+      this.expandedDefinitions.set({skills: new Set(), profiles: new Set(), authProfiles: new Set()});
       this.configuration.set(configuration); this.dirty.set(true); this.saveError.set('');
       this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}, Auth: ${configuration.authProfiles.length}). Zapisz, aby ją aktywować.`);
       this.workspaceView.set('skills');
@@ -457,6 +469,9 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (this.configurationBusy()) return;
     this.authValidationVisible.set(true);
     if (this.configuration().authProfiles.some(profile => Object.keys(authErrors(profile)).length)) {
+      for (const profile of this.configuration().authProfiles) {
+        if (Object.keys(authErrors(profile)).length) this.setDefinitionExpanded('authProfiles', profile.id, true);
+      }
       this.workspaceView.set('auth'); this.saveError.set('Uzupełnij zaznaczone pola uwierzytelniania.'); return;
     }
     this.saving.set(true); this.error.set(''); this.saveError.set(''); this.notice.set('');
@@ -472,6 +487,17 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (this.configurationBusy() || this.configuration().authProfiles.length >= 20) return;
     const profile = newAuthProfile('BASIC', `auth_${crypto.randomUUID().slice(0, 8)}`, 'Nowe uwierzytelnianie', window.location.origin);
     this.updateAuthProfiles([...this.configuration().authProfiles, profile]);
+    this.setDefinitionExpanded('authProfiles', profile.id, true);
+  }
+  toggleDefinition(kind: 'skills' | 'profiles' | 'authProfiles', id: string): void {
+    if (!this.configurationBusy()) this.setDefinitionExpanded(kind, id, !this.expandedDefinitions()[kind].has(id));
+  }
+  private setDefinitionExpanded(kind: 'skills' | 'profiles' | 'authProfiles', id: string, expanded: boolean): void {
+    this.expandedDefinitions.update(value => {
+      const ids = new Set(value[kind]);
+      if (expanded) ids.add(id); else ids.delete(id);
+      return {...value, [kind]: ids};
+    });
   }
   updateAuthProfiles(authProfiles: AssistantAuthProfile[]): void {
     if (this.configurationBusy()) return;

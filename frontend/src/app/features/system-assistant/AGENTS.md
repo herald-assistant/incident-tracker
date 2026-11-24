@@ -17,6 +17,10 @@ modal zmienia tylko szkic, a Zapisz aktywuje konfigurację. Pełne źródło
 nie jest przechowywane po zamknięciu modalu; anulowanie zachowuje szkic.
 
 Konfiguracja używa shared analysis-result-tabs. Auth ma formularze inline, bez modali CRUD.
+Skille, profile i Auth startują zwinięte do belek z nazwą oraz odpowiednio ID,
+wzorcem URL lub typem uwierzytelniania. Nowy wpis jest rozwinięty. Stan zwinięcia
+należy do strony, przetrwa przełączenie zakładki i nie trafia do konfiguracji ani
+storage. Import resetuje go do zwiniętego; niepoprawny Auth rozwija się przy zapisie.
 Dane dostępowe są jawne w polach tekstowych i eksporcie konfiguracji.
 OIDC używa zapisanej konfiguracji. Powrót ręcznego logowania wybiera Auth.
 409 AUTH_LOGIN_REQUIRED przy wysłaniu rozpoczyna login i location.assign także

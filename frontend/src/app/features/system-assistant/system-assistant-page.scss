@@ -1,3 +1,5 @@
+@use './assistant-definition';
+
 :host { display: block; }
 .assistant-workspace { max-width: 1200px; margin: 0 auto; padding: 1rem; }
 .assistant-workspace--embedded { max-width: none; padding: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -7,7 +9,6 @@
 .assistant-configuration { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 1rem; }
 summary { cursor: pointer; padding: .5rem 0; }
 fieldset { border: 0; padding: .75rem 0; min-width: 0; }
-.assistant-definition { display: grid; gap: .75rem; padding: 1rem 0; border-bottom: 1px solid var(--color-border); }
 .assistant-definition h3 { margin: 0; font-size: 1rem; font-weight: 500; }
 .assistant-contracts { list-style: none; margin: 12px 0; padding: 0; }
 .assistant-contract { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
@@ -49,7 +50,6 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .assistant-chat--with-aside { margin-right: 48px; }
 
 .assistant-profile-select { min-width: 0; --field-min-height: 32px; --field-font-size: 12px; --field-padding-inline: 8px; --field-padding-block: 4px; }
-.assistant-profile-heading { display: flex; align-items: center; gap: 8px; }
 .assistant-profile-warning { color: var(--color-warning, #946200); cursor: help; }
 .assistant-profile-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .assistant-profile-resources fieldset { display: grid; gap: 8px; align-content: start; }

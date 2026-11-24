@@ -157,6 +157,7 @@ describe('SystemAssistantPage', () => {
     page.configuration.update(value => ({...value, authProfiles: [auth], apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}],
       profiles: [testProfile, {...testProfile, id: 'other', name: 'Other CRM', apiBindings: [{apiId: 'crm', authProfileId: null}]}]}));
     page.toggleProfileApi(0, 'crm', true); page.workspaceView.set('profiles'); fixture.detectChanges();
+    fixture.nativeElement.querySelector('.assistant-profile .assistant-definition-toggle').click(); fixture.detectChanges();
     expect(page.configuration().profiles[0].apiBindings).toEqual([{apiId: 'crm', authProfileId: null}]);
     const select = await choice(fixture, '.assistant-profile:first-child .assistant-profile-api mat-select');
     expect(await select.getValueText()).toBe('No Auth');
@@ -420,6 +421,59 @@ describe('SystemAssistantPage', () => {
       if (originalCreate) Object.defineProperty(URL, 'createObjectURL', originalCreate); else Reflect.deleteProperty(URL, 'createObjectURL');
       if (originalRevoke) Object.defineProperty(URL, 'revokeObjectURL', originalRevoke); else Reflect.deleteProperty(URL, 'revokeObjectURL');
     }
+  });
+  it.each(['skills', 'profiles', 'auth'] as const)('collapses existing %s, opens a new item and preserves expansion and edits across tabs', view => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.configuration.set({apis: [], skills: [{id: 'triage', name: 'Analiza CRM', content: 'Reguły'}], profiles: [testProfile],
+      authProfiles: [{...newAuthProfile('BASIC', 'crm_access', 'Dostęp CRM', 'http://localhost'), username: 'operator', password: 'public-test-password'}]});
+    page.workspaceView.set(view); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const heading = () => root.querySelector<HTMLButtonElement>('.assistant-definition-toggle')!;
+    const body = () => root.querySelector<HTMLElement>('.assistant-definition-body')!;
+    const expected = {skills: ['Analiza CRM', 'triage'], profiles: ['Test CRM', '*'], auth: ['Dostęp CRM', 'Basic']}[view];
+    expect(heading().textContent).toContain(expected[0]); expect(heading().textContent).toContain(expected[1]);
+    expect(heading().textContent).not.toContain('public-test-password');
+    expect(heading().getAttribute('aria-expanded')).toBe('false'); expect(body().hidden).toBe(true);
+    expect(heading().getAttribute('aria-controls')).toBe(body().id);
+    heading().click(); fixture.detectChanges();
+    expect(body().hidden).toBe(false); expect(page.dirty()).toBe(false);
+    const field = body().querySelector<HTMLInputElement>('input')!;
+    field.value = 'Robocza zmiana'; field.dispatchEvent(new Event('input', {bubbles: true})); fixture.detectChanges();
+    expect(page.dirty()).toBe(true);
+    heading().click(); fixture.detectChanges(); expect(body().hidden).toBe(true);
+    if (view === 'skills') page.addSkill(); else if (view === 'profiles') page.addProfile(); else page.addAuth();
+    fixture.detectChanges();
+    const bodies = root.querySelectorAll<HTMLElement>('.assistant-definition-body');
+    expect(bodies).toHaveLength(2); expect(bodies[0].hidden).toBe(true); expect(bodies[1].hidden).toBe(false);
+    page.workspaceView.set('conversation'); fixture.detectChanges(); page.workspaceView.set(view); fixture.detectChanges();
+    expect(body().hidden).toBe(true);
+    expect(root.querySelectorAll<HTMLElement>('.assistant-definition-body')[1].hidden).toBe(false);
+    heading().click(); fixture.detectChanges();
+    expect(body().querySelector<HTMLInputElement>('input')!.value).toBe('Robocza zmiana');
+    fixture.destroy();
+  });
+  it('keeps the skill expansion with the edited row after changing its ID and deleting an earlier row', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.configuration.update(value => ({...value, skills: [{id: 'first', name: 'Pierwszy', content: ''}, {id: 'second', name: 'Drugi', content: ''}]}));
+    fixture.detectChanges();
+    fixture.nativeElement.querySelectorAll('.assistant-definition-toggle')[1].click(); fixture.detectChanges();
+    page.updateSkill(1, 'id', 'renamed'); page.remove('skills', 0); fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.assistant-definition-toggle')!.textContent).toContain('renamed');
+    expect(root.querySelector<HTMLElement>('.assistant-definition-body')!.hidden).toBe(false);
+    page.addSkill(); fixture.detectChanges(); page.remove('skills', 1); page.addSkill(); fixture.detectChanges();
+    expect(root.querySelectorAll<HTMLElement>('.assistant-definition-body')[1].hidden).toBe(false);
+    fixture.destroy();
+  });
+  it('opens invalid authentication on save so its field errors stay visible', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.configuration.update(value => ({...value, authProfiles: [newAuthProfile('BASIC', 'invalid', 'Do poprawy', 'http://localhost')]}));
+    page.workspaceView.set('auth'); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.assistant-definition-body').hidden).toBe(true);
+    page.save(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.assistant-definition-body').hidden).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Podaj login.');
+    http.expectNone('/api/system-assistant/configuration'); fixture.destroy();
   });
   it('starts on skills and preserves work across four flat views', () => {
     const fixture = ready(); const page = fixture.componentInstance;

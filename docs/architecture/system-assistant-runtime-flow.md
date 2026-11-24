@@ -306,6 +306,13 @@ wpisaną wiadomość; polling trwa również poza widokiem Rozmowa. Przełączen
 nie zapisuje konfiguracji i nie tworzy ani nie wysyła rozmowy.
 
 Skille, Kontrakty, Auth i Profile korzystają ze wspólnej oprawy zapisu całego zestawu.
+Skille, profile i Auth są początkowo zwinięte. Kliknięcie belki rozwija edytor;
+belka pokazuje nazwę i odpowiednio ID skilla, wzorzec URL profilu albo typ Auth.
+Ostrzeżenie o brakujących zasobach profilu pozostaje dostępne po zwinięciu.
+Dodany wpis jest od razu rozwinięty. Zwijanie zachowuje szkic, a przełączanie
+zakładek zachowuje stan belek; stan jest wyłącznie lokalny dla otwartej strony.
+Import konfiguracji rozpoczyna ze zwiniętymi wpisami. Zapis rozwija niepoprawne
+wpisy Auth, aby pokazać błędy pól.
 Akcje `Dodaj skill` lub `Dodaj OpenAPI` oraz wyróżniony `Zapisz` są na dole,
 wyrównane do prawej; `Zapisz` jest ostatni. Komunikaty konfiguracji i błąd
 zapisu są nad tym paskiem. Pierwszy widok
