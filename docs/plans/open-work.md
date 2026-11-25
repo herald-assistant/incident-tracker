@@ -93,22 +93,20 @@ osobnego zatwierdzonego planu i wlasnego quality baseline.
 - [ ] Skorygowac skille, template'y i testy tylko dla brakow wykazanych przez
   smoke test.
 
-## 2. Snippet ranking pod primary flow i focus areas
+## 2. Pokrycie primary flow i dalsze strojenie rankingu snippetow
 
 Status: draft
 
 Potrzeba / dlaczego: zwiekszyc wartosc initial contextu Flow Explorera przy
 malym budzecie tokenowym.
 
-Proponowane rozwiazanie: ranking oparty o role elementu w primary flow i
-focus areas, uzupelniony jawnymi coverage diagnostics.
+Proponowane rozwiazanie: uzupelnic istniejacy ranking rol i focus areas
+o brakujace coverage diagnostics; dalsze zmiany rankingu oprzec o wykazane
+braki kontekstu.
 
 - [ ] Potwierdzic aktualny baseline rankingu w `features.flowexplorer`.
-- [ ] Priorytetyzowac controller/API entrypoint, primary use-case service,
-  input mapper, persistence/update/save i response mapper przed
-  drugorzednymi detalami read/response.
-- [ ] Traktowac focus areas jako kierunek rankingu, a nie poziom glebokosci
-  analizy.
+- [ ] Po smoke testach skorygowac kolejnosc mapperow i operacji zapisu tylko
+  wtedy, gdy obecny ranking pomija material istotny dla primary flow.
 - [ ] Dodac coverage diagnostics dla primary roles covered/missing.
 - [ ] Dodac CRM-specific, zanonimizowane testy rankingu i budzetu.
 
@@ -119,20 +117,18 @@ Status: draft
 Potrzeba / dlaczego: mierzyc jakosc i koszt runu w powtarzalny sposob przed
 optymalizacja kolejnych fragmentow.
 
-Proponowane rozwiazanie: feature-local quality report zbudowany z juz
-dostepnych usage, activity i context coverage, publikowany w diagnostic
-export.
+Proponowane rozwiazanie: uzupelnic istniejace FlowExplorerExportDiagnostics
+o brakujace oceny jakosci, wykorzystujac juz dostepne usage, activity
+i context coverage.
 
 - [ ] Zweryfikowac, ktore quality signals sa juz dostepne bez nowej
   telemetryki.
-- [ ] Dodac feature-local `FlowExplorerRunQualityReport` albo rownowazny
-  kontrakt pod `features.flowexplorer`.
-- [ ] Zmapowac usage, activity i context coverage na pierwsze quality
-  signals.
-- [ ] Uwzglednic tool calls, denied/redundant attempts, context rebuild,
-  repository rediscovery, tokens, snippet budget, primary flow role coverage
-  i noncanonical tool inputs.
-- [ ] Dodac quality report do diagnostic exportu bez rozszerzania
+- [ ] Dodac do diagnostyki brakujace quality signals, przede wszystkim
+  denied/redundant attempts, context rebuild, repository rediscovery,
+  primary flow role coverage i noncanonical tool inputs.
+- [ ] Powiazac oceny jakosci z istniejacymi licznikami usage, activity,
+  snippet budget i clipping notes, bez dublowania tych samych danych.
+- [ ] Pozostawic nowe oceny jakosci w diagnostic exporcie bez rozszerzania
   user-facing exportu.
 - [ ] Dodac CRM-specific, zanonimizowane testy kontraktu i eksportu.
 
@@ -151,26 +147,24 @@ limitowana lista next reads w wyniku operatora.
 - [ ] Przyciac inline `suggestedNextReads` do top N pozycji dla focus areas.
 - [ ] Pelna liste pozostawic tylko w diagnostic artifact, jezeli nadal jest
   potrzebna.
-- [ ] Dla nowych AI/UI consumers preferowac strukturalne `nextReads`, a
-  `suggestedNextReads` traktowac jako jawna kompatybilnosc przejsciowa.
+- [ ] Jesli strukturalne `nextReads` zastapia tekstowe `suggestedNextReads`,
+  zmienic wszystkich konsumentow i usunac poprzedni ksztalt bez migracji
+  ani rownoleglej sciezki kompatybilnosci.
 - [ ] Dodac CRM-specific, zanonimizowane testy sortowania, grupowania i
   limitow.
 
-## 5. Result contract: fact, inference, unknown
+## 5. Walidacja result contract: fact, inference, unknown
 
 Status: draft
 
 Potrzeba / dlaczego: zmniejszyc ryzyko prezentowania inferencji modelu jako
 potwierdzonego faktu.
 
-Proponowane rozwiazanie: oznaczenia epistemiczne w skillu i kontrakcie wyniku,
-source references dla mocnych twierdzen oraz quality flags.
+Proponowane rozwiazanie: uzupelnic istniejace zasady source references
+i oznaczania inferencji o walidacje albo quality flags w kontrakcie wyniku.
 
-- [ ] Dostosowac runtime skill `flow-explorer-write-report`.
 - [ ] Dostosowac parser i DTO, jezeli kontrakt wymaga strukturalnej zmiany.
 - [ ] Wprowadzic walidacje albo quality flags dla zbyt pewnych twierdzen.
-- [ ] Wymagac source reference dla mocnych twierdzen albo oznaczenia ich jako
-  inference/unknown.
 - [ ] Dodac CRM-specific, zanonimizowane testy parsera, kontraktu i
   prezentacji.
 
@@ -184,13 +178,15 @@ do debugowania platformy i nie ujawniac niepotrzebnie kodu ani promptu.
 Proponowane rozwiazanie: dwa jawnie nazwane kontrakty eksportu z osobnymi
 politykami zawartosci i importu.
 
-- [ ] Zdefiniowac wersjonowane kontrakty user-facing i diagnostic exportu.
+- [ ] Zdefiniowac osobne biezace kontrakty user-facing i diagnostic exportu
+  w wersji 1, z aktualizacja wszystkich konsumentow i usunieciem poprzednich
+  ksztaltow oraz ich lokalnych artefaktow, bez migracji.
 - [ ] Usunac surowy kod i pelny prompt z user-facing exportu.
 - [ ] Dodac quality report i pelne artifacts tylko do diagnostic exportu.
 - [ ] Dostosowac UI, import i dokumentacje roznicy pomiedzy eksportem do
   podgladu a local workspace do kontynuacji.
-- [ ] Dodac testy round-trip, migracji wersji i braku danych diagnostycznych w
-  user-facing eksporcie.
+- [ ] Dodac testy round-trip aktualnego formatu, odrzucenia poprzednich
+  ksztaltow i braku danych diagnostycznych w user-facing eksporcie.
 
 ## 7. Flow Explorer UX polish
 
@@ -227,16 +223,12 @@ dopiero po porownaniu co najmniej dwoch rzeczywistych konsumentow.
 - [ ] Stopniowo wzmacniac guard albo ArchUnit rules dla `features`,
   `aiplatform`, `agenttools`, `integrations`, `api`, `shared` i
   `localworkspace`.
-- [ ] Nie wymuszac pelnego cycle-free graphu, dopoki pozostale wyjatki nie
-  maja zaplanowanej migracji.
 - [ ] Porownac Incident Analysis, Flow Explorer i Change Verification oraz
   potwierdzic neutralnosc `AnalysisEvidenceSection`,
   `AnalysisAiActivityEvent`, `AnalysisAiUsage` i
   `AnalysisAiToolFeedback`.
 - [ ] Wydzielic neutralny run/job projection tylko wtedy, gdy podobienstwa sa
   potwierdzone w co najmniej dwoch feature'ach.
-- [ ] Wydzielic wspolne UI timeline, prompt, usage i tool evidence tylko przy
-  zgodnej semantyce i lifecycle.
 - [ ] Wrocic do neutralnego per-run budget request tylko po potwierdzeniu
   realnej potrzeby wielu feature'ow.
 
@@ -253,7 +245,7 @@ decyzje w `../architecture/key-decisions.md`.
 
 - [ ] Rozstrzygnac, czy source refs maja zostac stringami, czy przejsc na
   strukturalny kontrakt z `file`, `method`, `line` i `toolCallId`.
-- [ ] Rozstrzygnac, czy DB tools wejda do Flow Explorera jako V2 runtime data,
+- [ ] Rozstrzygnac, czy DB tools wejda do Flow Explorera jako runtime data,
   czy pozostana czescia natural-language data diagnostics.
 - [ ] Rozstrzygnac, czy GitLab endpoint discovery ma miec scalony widok z
   wielu repozytoriow, czy primary repository pozostaje podstawa.
@@ -276,9 +268,5 @@ diagnostyka operator-facing bez przywracania niewidocznej telemetryki.
   CSV i brak konfiguracji Elasticsearch/Kibana.
 - [ ] Dopracowac timeouty i retry tylko dla operacji, dla ktorych istnieje
   jawna semantyka idempotencji oraz wartosc produktowa.
-- [ ] Potwierdzic brak fallbacku follow-up chat do nowej sesji; awaria
-  wznowienia tej samej sesji ma byc jawna.
 - [ ] Dodac widoczne error/raw-response diagnostics tam, gdzie pomagaja
   operatorowi albo developerowi zrozumiec awarie.
-- [ ] Potwierdzic, ze nie istnieje niewidoczna telemetryka sesji Copilota;
-  ewentualny powrot wymaga osobnej potrzeby, planu, testow i widocznego celu.

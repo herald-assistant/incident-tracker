@@ -87,16 +87,14 @@ Bearer, OAuth2 i OIDC; załączniki pozostają poza bieżącym zakresem.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- [Historia kodu w follow-up](needs/gitlab-history-in-follow-up.md) oraz
-  [kontrakt narzędzi historii GitLaba](architecture/gitlab-code-history-tools.md)
-  opisują dostępne odczyty commitów, diffów i wcześniejszego kodu.
+- [Kontrakt narzędzi historii GitLaba](architecture/gitlab-code-history-tools.md)
+  opisuje dostępne odczyty commitów, diffów i wcześniejszego kodu.
   Każdy z pięciu feature’ów używa jednej allowlisty dla initial i follow-up
   oraz guidance w opisach narzędzi. Historia nie wymaga grantów SHA;
   wspólny resolver zachowuje przypięcia branchy i tagów do commitów.
 
 - Biezacy kontrakt Release summary opisuje
   [runtime Release summary](architecture/release-summary-runtime-flow.md).
-  Potrzebę wyboru okresu opisuje [zakres dat](needs/release-summary-date-range.md).
 
 - Rozpoznanie elementu z capture, przejście od żądania HTTP do kodu backendu
   i wznowienie rozmowy z historii opisuje [przepływ UX Inspectora](architecture/ux-inspector-runtime-flow.md).
@@ -107,6 +105,9 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
+  Ma status `draft`; nie ma obecnie otwartych dokumentów potrzeb ani innych
+  planów wykonawczych. Zrealizowane potrzeby i zakończone plany usuwamy,
+  a opis działającego rozwiązania pozostaje w dokumentacji kanonicznej.
 
 Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako
 archiwum. Aktualny stan Behavior Change Assessment, Technical Change Assessment i Delivery Trends jest opisany w odpowiednich dokumentach
@@ -219,4 +220,3 @@ przez `SERVER_PORT` lub argument `--server.port`.
 ## Operational Context
 
 - [Model, tools i zasady uzycia](architecture/operational-context-model-tools-and-usage.md)
-- [Zrealizowana potrzeba mapy dalszej analizy](needs/operational-context-navigation-map.md)
