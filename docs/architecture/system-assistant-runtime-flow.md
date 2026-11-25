@@ -150,12 +150,51 @@ z lokalizacją przed zapisem.
 | Dokument | JSON/YAML, `3.0.x` i `3.1.x`, metadata info/tags/externalDocs, paths, components.schemas, zachowane `x-*` | Swagger 2, inne wersje i nieobsługiwane pola wykonawcze |
 | Server | Jeden jawny top-level URL HTTP(S) z dowolnym poprawnym hostem DNS/IP/localhost, opcjonalny base path | Brak hosta, nieprawidłowy port, credentials, query/hash, server variables i override path/operation |
 | Operacje | GET, POST, PUT, DELETE, PATCH; wymagany unikalny operationId z liter/cyfr/underscore | HEAD/OPTIONS/TRACE i pozostałe metody, callbacks/webhooks, operacyjne `$ref` |
-| Parametry | Scalar path/query oraz jednowymiarowe query array z jawnym scalar items; path required; dziedziczenie path-level i override operacji; opcjonalne header zachowane w dokumentacji i pomijane przy wykonaniu | Wymagane header, cookies, obiekty query, array path, tablice obiektów/tablic/null i nullable tablice query, pozostałe style i content wykonywanych parametrów |
-| Body | POST/PUT/PATCH `application/json`, wymagane lub opcjonalne body | GET/DELETE body, multipart, binary, pozostałe media types |
+| Parametry | Scalar path/query, query array ze scalar items, płaski query object z form/explode true; path required, opcjonalny jawny catch-all na ostatnim segmencie; dziedziczenie i override; opcjonalne header są dokumentacją | Wymagane header, cookies, array path, zagnieżdżone/null wartości query object, pozostałe style/content i nullable tablice query |
+| Body | POST/PUT/PATCH oraz DELETE w 3.1: `application/json`, wymagane lub opcjonalne body; `schema: {}` dopuszcza dowolny JSON | GET body, DELETE body w 3.0, multipart, binary request, pozostałe request media types |
 | Schema | object/array/scalars, properties/items/required/enum, `allOf`/`oneOf`/`anyOf`, discriminator jako guidance wariantów, boolean lub typowane additionalProperties, uniqueItems, pattern, limity, readOnly/writeOnly, format i metadata; w 3.0 nullable, w 3.1 null/tablica typów/const | not, patternProperties, multipleOf, inne nieobsługiwane keywords i niestandardowe dialekty |
 | References | Lokalne `#/components/schemas/...`; requesty: acykliczna projekcja inline do 30000 węzłów i 64 poziomów; odpowiedzi: ograniczony graf z produktywną rekursją; rodzeństwo schema `$ref` w 3.1 zachowuje przecięcie ograniczeń | Zewnętrzne refs, cykliczne aliasy, rekurencyjne requesty, rodzeństwo `$ref` w 3.0, przekroczenie budżetu |
-| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json lub text/plain ze string schema | Response refs, headers, links, pozostałe content types |
+| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json, text/plain ze string schema lub */* | Response refs, headers, links, pozostałe jawne content types |
 | Auth | security i components.securitySchemes dla Basic/Bearer/OAuth2/openIdConnect; wykonanie według wybranego profilu Auth | apiKey, digest, credentials w URL i model-facing Authorization |
+
+### Generyczne ścieżki i query
+
+Zwykła operacja `paths` może mieć parametr `in: path`, `required: true`,
+`schema.type: string` i `x-tdw-catch-all: true`. To rozszerzenie TDW, nie
+standardowy wildcard OpenAPI. Parametr musi wystąpić raz, jako ostatni pełny
+segment wzorca, np. `/{resourcePath}` albo `/rest/{resourcePath}`.
+AI przekazuje `path.resourcePath: "rest/api/3/issue/DEMO-1"`. Wartość nie
+zaczyna się `/`, nie zawiera URL, `%`, query/hash, backslash, znaków
+sterujących lub segmentów `.`/`..`. Każdy segment jest kodowany osobno;
+server host i base path pozostają stałe. Zwykłe parametry nadal są
+pojedynczymi segmentami. Flaga przechodzi przez preview/select/document,
+zapis YAML V1 i wspólny parsed kontrakt SDK/MCP, bez nowego endpointu.
+
+Standardowy parametr query `type: object`, `style: form`, `explode: true`
+(także domyślne true) rozwija klucze mapy do nazw parametrów URL. Np.
+parametr nazwany `params` dostaje `query.params: {fields: "summary,status"}`.
+Wartości to string/number/boolean; nie obsługujemy zagnieżdżonych obiektów,
+tablic w mapie ani null, których serializacja nie jest częścią tego wariantu.
+Jawne query arrays nadal obsługują powtarzane klucze/CSV. Schema mapy jest
+walidowany; klucze i wartości kodowane osobno, kolizja z innym parametrem
+lub mapą jest błędem przed HTTP. Pusta mapa jest dozwolona.
+
+Metodę określa zwykła operacja get/post/put/patch/delete. Swobodne JSON body
+opisuje `schema: {}`; DELETE body wymaga OpenAPI 3.1, GET nie ma body.
+Host pochodzi z servers, Auth z captured przypisania API–Auth w profilu.
+AI nie może przekazać URL, metody ani nagłówków poza zdefiniowanym schema.
+Skutki nadal określa `x-tdw-operation-effect`, bez zgadywania po metodzie.
+
+Odpowiedź z `content: {'*/*': {schema: {}}}` zachowuje dowolny JSON (także
+application/*+json), tekst text/* z charset/UTF-8 albo reprezentację binarną
+`{encoding: "base64", contentType: "...", data: "..."}` dla innych typów
+i braku Content-Type. Status HTTP pozostaje w OpenApiResult. Błędny JSON
+nie ma fallbacku do tekstu i nadal blokuje dalsze mutacje po nieustalonym wyniku.
+Nie ma nowego retry, redirectu ani wyboru Auth przez AI.
+
+[Przykładowy kontrakt Jira](../examples/system-assistant/jira-generic-http.yaml)
+udostępnia pięć metod na przykładowym hoście; przed użyciem operator podaje
+własny host i przypina Auth w profilu.
 
 Nazwa narzędzia ma maksymalnie 64 znaki. Pełna postać to
 `oa_<apiId>_<operationId>`; gdy jest dłuższa, importer zachowuje jej pierwsze
@@ -181,7 +220,8 @@ Authorization z operator-owned Auth pozostaje odrębnym mechanizmem.
 
 Metadane operacji zachowują media types odpowiedzi dla każdego statusu oraz
 `default`, także puste deklaracje bez content. `Accept` zawiera sumę typów
-z dokumentu; przy braku content pozostaje application/json. Rzeczywisty
+z dokumentu; przy braku content pozostaje application/json. Poniższe reguły
+dotyczą deklaracji bez `*/*`; dekodowanie jawnego wildcardu opisano wyżej. Rzeczywisty
 `Content-Type` rozstrzyga odczyt: application/json jest parsowany jako JSON,
 a text/plain jako tekstowy JsonNode w istniejącym `body` wyniku. Text/plain
 wymaga deklaracji dla danego statusu lub default; jawny status bez content

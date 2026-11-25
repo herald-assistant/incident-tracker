@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info:
+  title: Jira — generyczne HTTP
+  version: '1.0'
+servers:
+  - url: https://example.atlassian.net
+paths:
+  /{resourcePath}:
+    parameters:
+      - name: resourcePath
+        in: path
+        required: true
+        x-tdw-catch-all: true
+        description: Ścieżka API względem adresu serwera.
+        schema:
+          type: string
+          minLength: 1
+      - name: params
+        in: query
+        style: form
+        explode: true
+        description: Dowolne nazwy parametrów query i ich skalarne wartości.
+        schema:
+          type: object
+          additionalProperties: {}
+    get:
+      operationId: genericGet
+      summary: GET na wybranej ścieżce API
+      x-tdw-operation-effect: READ_ONLY
+      responses:
+        default:
+          description: Odpowiedź serwera bez narzuconej struktury danych.
+          content:
+            '*/*':
+              schema: {}
+    post:
+      operationId: genericPost
+      summary: POST na wybranej ścieżce API
+      x-tdw-operation-effect: MUTATION
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {}
+      responses:
+        default:
+          description: Odpowiedź serwera bez narzuconej struktury danych.
+          content:
+            '*/*':
+              schema: {}
+    put:
+      operationId: genericPut
+      summary: PUT na wybranej ścieżce API
+      x-tdw-operation-effect: MUTATION
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {}
+      responses:
+        default:
+          description: Odpowiedź serwera bez narzuconej struktury danych.
+          content:
+            '*/*':
+              schema: {}
+    patch:
+      operationId: genericPatch
+      summary: PATCH na wybranej ścieżce API
+      x-tdw-operation-effect: MUTATION
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {}
+      responses:
+        default:
+          description: Odpowiedź serwera bez narzuconej struktury danych.
+          content:
+            '*/*':
+              schema: {}
+    delete:
+      operationId: genericDelete
+      summary: DELETE na wybranej ścieżce API
+      x-tdw-operation-effect: MUTATION
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {}
+      responses:
+        default:
+          description: Odpowiedź serwera bez narzuconej struktury danych.
+          content:
+            '*/*':
+              schema: {}

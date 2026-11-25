@@ -58,7 +58,7 @@ class OpenApiSelectionTest {
                 .doesNotContain("updateTicket", "simulateCost", "unused", "NeverUsed", "example.invalid");
         var operations = importer.parse("crm", prepared.yaml());
         assertThat(operations).hasSize(1);
-        assertThat(operations.get(0).parameters()).containsExactly(new pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation.Parameter("id", "path", false));
+        assertThat(operations.get(0).parameters()).containsExactly(new pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation.Parameter("id", "path", false, false, false));
     }
     @Test void retainsSharedPathParametersAndSelectedMethodsWithoutExtraEndpoints() throws Exception {
         var prepared = selection.select("crm", fixture().toString(), List.of(

@@ -37,13 +37,14 @@ obejmuje wszystkie dostępne operacje kontraktu, niezależnie od filtrów
 i strony; `Odznacz wszystko` usuwa cały wybór. Niedostępne operacje mają
 opis powodu. Anulowanie importu zachowuje poprzedni szkic.
 
-Wiersz kontraktu ma akcje `Podgląd`, `Eksportuj YAML` i `Usuń`. Podgląd nie
+Wiersz kontraktu ma akcje `Edytuj nazwę API`, `Podgląd`, `Eksportuj YAML` i `Usuń`.
+Ołówek rozwija pole nazwy; zmianę utrwala wspólny zapis konfiguracji. Podgląd nie
 wykonuje żądań do API. Aby zmienić zestaw operacji, usuń kontrakt ze szkicu
 i zaimportuj nowy plik; oba kroki możesz aktywować jednym zapisem.
 Licznik na belce pokazuje aktywne operacje zapisanego kontraktu, a tooltip
 ich metody i ścieżki. Nowo dodany kontrakt ma zero aktywnych operacji do zapisu.
 
-Ikony obok zakładek oferują `Importuj konfigurację` i `Eksportuj konfigurację`.
+Ikony w dolnym pasku obok zapisu oferują `Importuj konfigurację` i `Eksportuj konfigurację`.
 Eksport obejmuje cały bieżący szkic kontraktów, skilli, profili i Auth,
 również niezapisany.
 Import zastępuje szkic; wymaga `Zapisz`, aby aktywować zestaw. Niepoprawny
@@ -66,7 +67,39 @@ AI przekazuje np. `{"query":{"productIds":[101,102]}}`. Dla domyślnego
 przy `explode: false` wysyła `productIds=101,102`. Elementy są kodowane osobno
 i walidowane zgodnie ze schema, także enum, uniqueItems i limity liczby.
 Opcjonalny parametr można pominąć. Pusta tablica jest odrzucana przed HTTP;
-obiekty query, tablice zagnieżdżone i null nie należą do tego zakresu.
+tablice zagnieżdżone i null nie należą do tego zakresu.
+
+## Generyczne wywołania na hoście kontraktu
+
+[Przykładowy YAML Jira](examples/system-assistant/jira-generic-http.yaml)
+udostępnia GET, POST, PUT, PATCH i DELETE dla ścieżki wybranej przez AI.
+Podmień przykładowy host w servers i przypnij API oraz Auth do profilu.
+Kontrakt importuje się i wybiera jego metody w zwykłym modalu Kontrakty.
+
+`x-tdw-catch-all: true` na wymaganym parametrze path string pozwala wstawić
+wiele segmentów na końcu wzorca. Zwykłe OpenAPI opisuje metody, query object,
+body i responses; tylko catch-all jest rozszerzeniem TDW. Przykładowe argumenty:
+
+```json
+{
+  "path": {"resourcePath": "rest/api/3/issue/DEMO-1"},
+  "query": {"params": {"fields": "summary,status", "expand": "changelog"}}
+}
+```
+
+Query object z form/explode true rozwija mapę do parametrów URL. Wartości
+to tekst, liczba lub boolean; listę można przekazać jako tekst CSV, a jawne
+parametry query array nadal obsługują powtarzane klucze. Pusta mapa pomija
+query. Kolizje nazw, null i zagnieżdżenia są odrzucane przed wysłaniem.
+
+POST/PUT/PATCH oraz DELETE w OpenAPI 3.1 mogą mieć dowolną strukturę JSON
+przez `schema: {}` i argument `body`. GET nie przyjmuje body. Odpowiedź
+`*/*` zwraca status i JSON, tekst albo obiekt z encoding=base64, contentType
+i data dla danych binarnych. Host, base path i Auth pozostają z konfiguracji.
+Ścieżka nie przyjmuje URL, początkowego `/`, `%`, query/hash, backslash,
+znaków sterujących i segmentów `.`/`..`. W query używaj osobnej mapy.
+Metodę i skutki wybiera definicja operacji, nie argument AI; nadal obowiązuje
+brak automatycznego ponawiania zapisów i blokada po nieustalonym wyniku.
 
 ## Certyfikaty API i dostawcy logowania
 

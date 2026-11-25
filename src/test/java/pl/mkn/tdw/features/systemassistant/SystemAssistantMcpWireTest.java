@@ -28,6 +28,44 @@ import static org.assertj.core.api.Assertions.*;
 @DirtiesContext
 class SystemAssistantMcpWireTest {
     @Test
+    void exposesAndExecutesGenericPathsQueryAndJsonThroughMcp() throws Exception {
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var query = new java.util.concurrent.atomic.AtomicReference<String>();
+        var method = new java.util.concurrent.atomic.AtomicReference<String>();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/api/rest/api/3/issue/DEMO-1", exchange -> {
+            calls.incrementAndGet(); query.set(exchange.getRequestURI().getRawQuery()); method.set(exchange.getRequestMethod());
+            var bytes = exchange.getRequestBody().readAllBytes();
+            if (bytes.length == 0) bytes = "[]".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        api.start();
+        try {
+            var source = Files.readString(Path.of("src/test/resources/openapi/generic-http-api.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("demo", "Demo", source)), List.of()));
+            configurations.load();
+            assertThat(configurations.current().apis().get(0).yaml()).contains("x-tdw-catch-all: true");
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port).endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                var tools = client.listTools().tools();
+                assertThat(tools).hasSize(5);
+                var schema = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(tools.stream()
+                        .filter(tool -> tool.name().equals("oa_demo_genericGet")).findFirst().orElseThrow().inputSchema());
+                assertThat(schema.path("properties").path("query").path("properties").path("params").path("type").asText()).isEqualTo("object");
+                var args = Map.<String, Object>of("path", Map.of("resourcePath", "rest/api/3/issue/DEMO-1"),
+                        "query", Map.of("params", Map.of("fields", "summary,status")), "body", Map.of("arbitrary", List.of(1, 2, 3)));
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_demo_genericPatch", args)).isError()).isFalse();
+                assertThat(method).hasValue("PATCH"); assertThat(query).hasValue("fields=summary%2Cstatus");
+                assertThat(client.callTool(new McpSchema.CallToolRequest("oa_demo_genericGet", Map.of("path", Map.of("resourcePath", "../outside")))).isError()).isTrue();
+                assertThat(calls).hasValue(1);
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
     void exposesNestedPatternsAndRejectsViolationsBeforeHttpThroughMcp() throws Exception {
         var calls = new java.util.concurrent.atomic.AtomicInteger();
         var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

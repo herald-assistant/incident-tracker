@@ -29,7 +29,7 @@ class OpenApiOptionalHeaderTest {
         assertThat(prepared.yaml()).contains("correlationId", "X-Client", "Authorization", "untrusted-header-default");
         assertThat(selection.document("items", prepared.yaml()).specification().path("paths").path("/items/{id}").path("parameters")).hasSize(3);
         var operation = importer.parse("items", prepared.yaml()).get(0);
-        assertThat(operation.parameters()).containsExactly(new OpenApiOperation.Parameter("id", "path", false));
+        assertThat(operation.parameters()).containsExactly(new OpenApiOperation.Parameter("id", "path", false, false, false));
         assertThat(operation.inputSchema().toString()).doesNotContain("correlationId", "X-Client", "Authorization", "untrusted");
         assertThat(operation.validationSchema().toString()).doesNotContain("correlationId", "X-Client", "Authorization", "untrusted");
         assertThat(operation.description()).contains("pomijane").doesNotContain("untrusted-header-default", "untrusted-authorization-default");

@@ -33,7 +33,7 @@ class OpenApiQueryArrayTest {
         var prepared = selection.select("items", document.toString(), List.of(new OpenApiSelection.OperationKey("GET", "/items/{id}")));
         assertThat(prepared.yaml()).contains("#/components/schemas/Ids", "uniqueItems", "explode: false").doesNotContain("/csv:");
         var operation = importer.parse("items", prepared.yaml()).get(0);
-        assertThat(operation.parameters()).contains(new OpenApiOperation.Parameter("ids", "query", false), new OpenApiOperation.Parameter("tags", "query", true));
+        assertThat(operation.parameters()).contains(new OpenApiOperation.Parameter("ids", "query", false, false, false), new OpenApiOperation.Parameter("tags", "query", true, false, false));
         assertThat(operation.parameters().stream().filter(p -> p.name().equals("ids"))).hasSize(1);
         var schema = operation.inputSchema().path("properties").path("query").path("properties").path("ids");
         assertThat(schema.path("type").asText()).isEqualTo("array");

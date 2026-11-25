@@ -66,6 +66,10 @@ public class OpenApiImporter implements OpenApiImportPort {
                 for (var param : OpenApiParameters.effective(item, op)) {
                     var in = param.path("in").asText(); var name = param.path("name").asText();
                     if (param.has("required") && !param.get("required").isBoolean()) error(path, "required musi być boolean.");
+                    if (param.has("x-tdw-catch-all") && !param.get("x-tdw-catch-all").isBoolean())
+                        error(path, "x-tdw-catch-all musi być boolean.");
+                    var catchAll = param.path("x-tdw-catch-all").asBoolean();
+                    if (catchAll && !in.equals("path")) error(path, "x-tdw-catch-all jest dozwolone tylko na parametrze path.");
                     if (in.equals("header")) {
                         if (!param.path("name").isTextual() || name.isBlank()) error(path, "Nagłówek wymaga nazwy.");
                         if (!OpenApiParameters.optionalHeader(param)) error(path, "Wymagany nagłówek „" + name + "” nie jest obsługiwany. Narzędzie nie przesyła parametrów header.");
@@ -78,7 +82,21 @@ public class OpenApiImporter implements OpenApiImportPort {
                     OpenApiSchema.check(schema, path + "/" + name, 0);
                     // OpenAPI readOnly applies to schema properties, not a whole parameter.
                     if (schema instanceof ObjectNode object) object.remove("readOnly");
-                    if (!SCALAR_TYPES.contains(schema.path("type").asText())) {
+                    var queryObject = in.equals("query") && schema.path("type").asText().equals("object");
+                    if (catchAll) {
+                        var token = "{" + name + "}";
+                        if (!schema.path("type").asText().equals("string") || !path.endsWith("/" + token)
+                                || path.indexOf(token) != path.lastIndexOf(token))
+                            error(path, "Catch-all wymaga string i ostatniego pełnego segmentu /{parametr}.");
+                        ((ObjectNode) schema).put("description", schema.path("description").asText("")
+                                + "\nŚcieżka względna z wieloma segmentami, bez początkowego /, URL, %, query/hash i segmentów . lub ... Host i base path pochodzą z kontraktu.");
+                    }
+                    if (queryObject) {
+                        if (!param.path("explode").asBoolean(true) || schema.path("nullable").asBoolean())
+                            error(path, "Query object wymaga form, explode: true i nie-nullowego obiektu.");
+                        ((ObjectNode) schema).put("description", schema.path("description").asText("")
+                                + "\nQuery: płaska mapa nazw i wartości string/number/boolean. Klucze są parametrami URL; bez zagnieżdżeń, tablic i null.");
+                    } else if (!SCALAR_TYPES.contains(schema.path("type").asText())) {
                         if (!in.equals("query") || !schema.path("type").asText().equals("array")
                                 || schema.path("nullable").asBoolean()
                                 || !SCALAR_TYPES.contains(schema.path("items").path("type").asText())
@@ -95,7 +113,7 @@ public class OpenApiImporter implements OpenApiImportPort {
                         group.withArray("required").add(name);
                         if (!required.toString().contains("\"" + in + "\"")) required.add(in);
                     }
-                    parameters.add(new OpenApiOperation.Parameter(name, in, param.path("explode").asBoolean(in.equals("query"))));
+                    parameters.add(new OpenApiOperation.Parameter(name, in, param.path("explode").asBoolean(in.equals("query")), catchAll, queryObject));
                 }
                 var tokens = new HashSet<String>();
                 var matcher = java.util.regex.Pattern.compile("\\{([^{}]+)}").matcher(path);
@@ -104,7 +122,8 @@ public class OpenApiImporter implements OpenApiImportPort {
                 parameters.stream().filter(p -> p.in().equals("path")).forEach(p -> declared.add(p.name()));
                 if (!tokens.equals(declared) || path.replaceAll("\\{[^{}]+}", "").matches(".*[{}].*")) error(path, "Niezgodne parametry ścieżki.");
                 if (op.has("requestBody")) {
-                    if (method.equals("get") || method.equals("delete")) error(path, "Body tylko dla POST/PUT/PATCH.");
+                    if (method.equals("get") || method.equals("delete") && !root.path("openapi").asText().startsWith("3.1."))
+                        error(path, "Body dla POST/PUT/PATCH oraz DELETE w OpenAPI 3.1; GET bez body.");
                     var body = op.get("requestBody"); fields(body, path, "description", "required", "content");
                     if (body.has("required") && !body.get("required").isBoolean()) error(path, "required musi być boolean.");
                     var schema = requestSchema(root, body.path("content"), path + "/requestBody");
@@ -148,8 +167,8 @@ public class OpenApiImporter implements OpenApiImportPort {
     }
 
     private List<String> responseContent(JsonNode root, JsonNode content, String path) {
-        fields(content, path + "/content", "application/json", "text/plain");
-        if (content.isEmpty()) error(path, "Wymagane application/json lub text/plain.");
+        fields(content, path + "/content", "application/json", "text/plain", "*/*");
+        if (content.isEmpty()) error(path, "Wymagane application/json, text/plain lub */*.");
         var types = new ArrayList<String>();
         var entries = content.fields();
         var resolver = new OpenApiSchemaResolver(mapper, root);
@@ -160,10 +179,10 @@ public class OpenApiImporter implements OpenApiImportPort {
             if (entry.getKey().equals("text/plain")) {
                 var schema = resolver.request(media.path("schema"), path);
                 if (!schema.path("type").asText().equals("string")) error(path, "text/plain wymaga schema type: string.");
-            } else resolver.response(media.path("schema"), path);
+            } else if (!entry.getKey().equals("*/*") || media.has("schema")) resolver.response(media.path("schema"), path);
             types.add(entry.getKey());
         }
-        if (types.isEmpty()) error(path, "Wymagane application/json lub text/plain.");
+        if (types.isEmpty()) error(path, "Wymagane application/json, text/plain lub */*.");
         return List.copyOf(types);
     }
     private ObjectNode objectSchema() {

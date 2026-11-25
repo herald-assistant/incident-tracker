@@ -136,13 +136,25 @@ Do 60 operacji na YAML, maksymalnie 100 łącznie we wszystkich API.
 | Path item | Tylko obsługiwane metody, `parameters`, `summary`, `description` |
 | Operacja | Tylko `operationId`, `summary`, `description`, `parameters`, `requestBody`, `responses`, `tags`, `deprecated`, `externalDocs`, `security` |
 | `operationId` | Wymagany, unikalny w kontrakcie, regex `[a-zA-Z][a-zA-Z0-9_]*`; pełny identyfikator pozostaje w dokumencie i opisie narzędzia. Nazwa `oa_<apiId>_<operationId>` ponad 64 znaki jest automatycznie skracana do 47 znaków prefiksu + `_` + 16 cyfr hex SHA-256 pełnej nazwy UTF-8; kolizja blokuje publikację |
-| Parametry | Wykonywane są scalar `path`/`query` oraz query array z jawnym scalar items (string/integer/number/boolean, bez null); opcjonalne `header` pozostają dokumentacją bez wysyłania; nazwa `[a-zA-Z][a-zA-Z0-9_]{0,63}`; path zawsze `required: true`; domyślny style albo `simple` dla path / `form` dla query |
-| Pola parametru | `name`, `in`, `description`, `required`, `schema`, `style`, `explode`, `deprecated`, `example`; query array: form + explode true/domyślne (powtarzane klucze) lub false (CSV, elementy kodowane osobno); pusta tablica odrzucana przed HTTP, optional pomijany tylko przy braku argumentu; bez object query, array path, tablic obiektów/tablic/null i nullable tablic; wymagane header i cookies nieobsługiwane |
-| Body | POST/PUT/PATCH i `application/json`; body PATCH może być opcjonalne albo nieobecne; pola `description`, `required`, `content`; media object ma `schema` i opcjonalne `example` |
-| Responses | Wymagana niepusta mapa; kody w cudzysłowach `"100"`–`"599"` lub `default`; odpowiedź ma `description` i opcjonalne `content`: application/json albo text/plain ze schema type string; bez headers, links i response refs |
+| Parametry | Scalar `path`/`query`, query array z scalar items oraz query object z płaskimi skalarnymi wartościami; opcjonalne `header` są dokumentacją; nazwa `[a-zA-Z][a-zA-Z0-9_]{0,63}`; path required; simple dla path / form dla query |
+| Pola parametru | `name`, `in`, `description`, `required`, `schema`, `style`, `explode`, `deprecated`, `example`; query array: form + explode true/default (powtarzane klucze) lub false (CSV); query object: form + explode true/default, schema mapy i kodowanie kluczy, bez null/tablic/zagnieżdżeń; x-tdw-catch-all na string path pozwala na wiele segmentów (opis poniżej); array path, wymagane header i cookies nieobsługiwane |
+| Body | POST/PUT/PATCH oraz DELETE w OpenAPI 3.1: `application/json`, wymagane lub opcjonalne; `schema: {}` to dowolny JSON; GET bez body; pola `description`, `required`, `content`; media object ma `schema` i opcjonalne `example` |
+| Responses | Niepusta mapa kodów `"100"`–`"599"` lub default; description i opcjonalne content: application/json, text/plain ze schema type string albo `*/*`; wildcard zwraca JSON, text lub obiekt base64 dla binary; bez headers, links i response refs |
 | Components | `components.schemas` oraz `components.securitySchemes` dla Basic/Bearer/OAuth2/openIdConnect; bez katalogów parameters, responses i requestBodies |
 | References | Lokalne `#/components/schemas/...`; requesty acykliczne do 64 poziomów i 30000 węzłów; odpowiedzi mogą mieć produktywną rekursję; rodzeństwo schema `$ref` dozwolone tylko w 3.1 |
-| YAML | Bez duplikatów kluczy, kotwic/aliasów i własnych tagów; rozszerzenia `x-*` są zachowane jako metadata; skutki określa wyłącznie `x-tdw-operation-effect` |
+| YAML | Bez duplikatów kluczy, kotwic/aliasów i własnych tagów; `x-*` są zachowane; skutki określa x-tdw-operation-effect, wielosegmentową ścieżkę włącza x-tdw-catch-all na parametrze path |
+
+Generyczne API może użyć standardowego `/{resourcePath}` z parametrem
+`name: resourcePath`, `in: path`, `required: true`, `schema: {type: string}`
+i rozszerzeniem TDW `x-tdw-catch-all: true`. Flaga wymaga ostatniego pełnego
+segmentu i jednego wystąpienia parametru. AI podaje `path.resourcePath` jako
+ścieżkę względną bez początkowego `/`, URL, `%`, query/hash, backslash,
+znaków sterujących i segmentów `.`/`..`. Host i base path pochodzą z servers,
+Auth z profilu. Zwykły path bez flagi nadal jest jednym segmentem.
+Query object nazwany `params` dostaje argument `query.params`, np.
+`{"jql":"project = DEMO","maxResults":20}`. Body jest osobnym argumentem `body`.
+Nie dodawaj fikcyjnego endpointu proxy ani hosta/Auth w argumentach AI.
+[Gotowy przykład YAML](examples/system-assistant/jira-generic-http.yaml).
 
 Obsługiwane schematy i dialekty opisuje aktualny
 [runtime](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).

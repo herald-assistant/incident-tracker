@@ -47,23 +47,52 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
         var arguments = requestArguments.json();
         OpenApiSchema.validate(operation.validationSchema(), arguments, "arguments");
         var base = operation.server().toString().replaceAll("/+$", "");
-        var uri = UriComponentsBuilder.fromUriString(base + operation.path());
+        var pathTemplate = operation.path();
         var variables = new LinkedHashMap<String, String>();
         // Reserve all path variables before generating any query template variables.
+        operation.parameters().stream().filter(parameter -> parameter.in().equals("path"))
+                .forEach(parameter -> variables.put(parameter.name(), ""));
         for (var parameter : operation.parameters()) {
             if (!parameter.in().equals("path")) continue;
             var value = arguments.path(parameter.in()).get(parameter.name());
             if (value == null) continue;
+            if (parameter.catchAll()) {
+                var path = value.asText();
+                if (path.isEmpty() || path.startsWith("/") || path.contains("\\") || path.contains("%")
+                        || path.contains("?") || path.contains("#") || path.matches("(?i)^[a-z][a-z0-9+.-]*:.*") || path.chars().anyMatch(Character::isISOControl))
+                    throw new OpenApiException("Catch-all wymaga względnej ścieżki bez URL, początkowego /, %, query/hash i znaków sterujących.");
+                var segments = new ArrayList<String>();
+                for (var segment : path.split("/", -1)) {
+                    if (segment.equals(".") || segment.equals("..")) throw new OpenApiException("Niedozwolony segment ścieżki.");
+                    segments.add(queryVariable(variables, segment));
+                }
+                pathTemplate = pathTemplate.replace("{" + parameter.name() + "}", String.join("/", segments));
+                continue;
+            }
             if (value.asText().contains("/") || value.asText().contains("\\") || value.asText().contains("%"))
                 throw new OpenApiException("Parametr path musi być pojedynczym segmentem bez slash i kodowania URL.");
             if (value.asText().equals(".") || value.asText().equals(".."))
                 throw new OpenApiException("Niedozwolony segment ścieżki.");
             variables.put(parameter.name(), value.asText());
         }
+        var uri = UriComponentsBuilder.fromUriString(base + pathTemplate);
+        var queryNames = new java.util.HashSet<String>();
         for (var parameter : operation.parameters()) {
             if (!parameter.in().equals("query")) continue;
             var value = arguments.path("query").get(parameter.name());
             if (value == null) continue;
+            if (parameter.queryObject()) {
+                var fields = value.fields();
+                while (fields.hasNext()) {
+                    var field = fields.next();
+                    validateQueryName(field.getKey(), queryNames);
+                    if (!field.getValue().isValueNode() || field.getValue().isNull())
+                        throw new OpenApiException("Query object wymaga skalarnych wartości bez null i zagnieżdżeń.");
+                    uri.queryParam(queryVariable(variables, field.getKey()), queryVariable(variables, field.getValue().asText()));
+                }
+                continue;
+            }
+            validateQueryName(parameter.name(), queryNames);
             if (value.isArray()) {
                 if (value.isEmpty()) throw new OpenApiException("Query „" + parameter.name() + "”: pusta tablica nie ma obsługiwanej reprezentacji URL. Podaj elementy albo pomiń opcjonalny parametr.");
                 var placeholders = new ArrayList<String>();
@@ -116,14 +145,24 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
 
     private JsonNode responseBody(OpenApiOperation operation, int status, MediaType contentType, byte[] bytes) throws java.io.IOException {
         if (status == 204 || status == 205) return mapper.nullNode();
+        var declared = operation.responseContentTypes().getOrDefault(Integer.toString(status),
+                operation.responseContentTypes().getOrDefault("default", List.of()));
+        if (declared.contains("*/*")) {
+            if (bytes.length == 0) return mapper.nullNode();
+            if (contentType != null && contentType.getType().equalsIgnoreCase("application")
+                    && (contentType.getSubtype().equalsIgnoreCase("json") || contentType.getSubtype().toLowerCase(java.util.Locale.ROOT).endsWith("+json"))) {
+                var json = mapper.readTree(bytes);
+                if (json == null || json.isMissingNode()) throw new IllegalArgumentException("Brak wartości JSON.");
+                return json;
+            }
+            if (contentType != null && contentType.getType().equalsIgnoreCase("text")) return decodeText(contentType, bytes);
+            return mapper.createObjectNode().put("encoding", "base64")
+                    .put("contentType", contentType == null ? "application/octet-stream" : contentType.toString())
+                    .put("data", java.util.Base64.getEncoder().encodeToString(bytes));
+        }
         if (contentType != null && contentType.getType().equalsIgnoreCase("text") && contentType.getSubtype().equalsIgnoreCase("plain")) {
-            var declared = operation.responseContentTypes().getOrDefault(Integer.toString(status),
-                    operation.responseContentTypes().getOrDefault("default", List.of()));
             if (!declared.contains("text/plain")) throw new IllegalArgumentException("Niezadeklarowane text/plain.");
-            var charset = contentType.getCharset() == null ? StandardCharsets.UTF_8 : contentType.getCharset();
-            var text = charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes)).toString();
-            return mapper.getNodeFactory().textNode(text);
+            return decodeText(contentType, bytes);
         }
         if (bytes.length == 0) return mapper.nullNode();
         if (contentType != null && !(contentType.getType().equalsIgnoreCase("application") && contentType.getSubtype().equalsIgnoreCase("json")))
@@ -138,6 +177,17 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
         while (variables.containsKey(key)) key = "_" + key;
         variables.put(key, value);
         return "{" + key + "}";
+    }
+
+    private JsonNode decodeText(MediaType contentType, byte[] bytes) throws java.nio.charset.CharacterCodingException {
+        var charset = contentType.getCharset() == null ? StandardCharsets.UTF_8 : contentType.getCharset();
+        return mapper.getNodeFactory().textNode(charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString());
+    }
+
+    private void validateQueryName(String name, java.util.Set<String> names) {
+        if (name.isBlank() || name.chars().anyMatch(Character::isISOControl)) throw new OpenApiException("Query wymaga niepustej nazwy bez znaków sterujących.");
+        if (!names.add(name)) throw new OpenApiException("Powtórzona nazwa query: " + name);
     }
 
     private OpenApiResult unknown(OpenApiOperation operation, String message) {

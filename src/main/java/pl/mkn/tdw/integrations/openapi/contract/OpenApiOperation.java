@@ -30,7 +30,7 @@ public record OpenApiOperation(String name, String description, String method, U
         return validationSchema.deepCopy();
     }
 
-    public record Parameter(String name, String in, boolean explode) {
+    public record Parameter(String name, String in, boolean explode, boolean catchAll, boolean queryObject) {
     }
 
     public boolean mutation() {

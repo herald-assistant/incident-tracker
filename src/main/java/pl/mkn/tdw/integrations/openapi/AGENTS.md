@@ -62,12 +62,27 @@ true/default lub false. Metadata Parameter przechowuje efektywne explode;
 SDK/MCP przekazują JSON array do wspólnego wykonawcy. Koduj każdy element
 osobno, zachowaj kolejność i ograniczenia schema; nie wklejaj argumentów
 do URI template. Pusta tablica jest jawnym błędem przed HTTP, nie omission.
-Nie rozszerzaj tego na obiekty query, array path ani zagnieżdżone tablice.
+Query object obsługuje form i explode true/default: płaska mapa skalarnych
+wartości staje się parametrami URL. Waliduj schema mapy, koduj także klucze,
+odrzucaj null, zagnieżdżenia, arrays w mapie oraz kolizje nazw po rozwinięciu.
+Array path i zagnieżdżone tablice pozostają poza zakresem.
 
-Response content obsługuje application/json i text/plain ze string schema.
+Parametr path string może mieć jawne x-tdw-catch-all: true tylko na ostatnim,
+pojedynczym pełnym segmencie wzorca. Wartość to względna ścieżka bez
+początkowego /, URL, %, query/hash, backslash, znaków sterujących i segmentów
+. lub ... Każdy segment koduj osobno; nie zmieniaj hosta ani base path.
+Zwykły parametr bez tej flagi nadal przyjmuje tylko pojedynczy segment.
+Metadata wykonawcze pochodzą z importera i są wspólne dla SDK/MCP.
+DELETE może mieć JSON body tylko w OpenAPI 3.1; GET pozostaje bez body.
+
+Response content obsługuje application/json, text/plain ze string schema i */*.
 Metadane media types są per status/default; Accept wynika z kontraktu.
 Text/plain dekoduj wskazanym charsetem lub UTF-8 i zachowuj jako TextNode,
-bez fallbacku błędnego JSON do tekstu. Odczytuj pełne body bez aplikacyjnego
+bez fallbacku błędnego JSON do tekstu. Jawny wildcard */* dekoduje application/json
+i application/*+json jako JSON, text/* według charset/UTF-8, pozostałe jako
+obiekt {encoding: base64, contentType, data}. Brak Content-Type oznacza dane
+binarne; błędny zadeklarowany JSON nadal ma nieustalony wynik dla mutacji.
+Odczytuj pełne body bez aplikacyjnego
 limitu rozmiaru odpowiedzi; timeouty transportu pozostają.
 Fixtures mają być małe i fikcyjne; graniczne rozmiary/grafy generuj w testach.
 Nie kopiuj kontraktów operatora ani ich nazw domenowych do fixtures.
