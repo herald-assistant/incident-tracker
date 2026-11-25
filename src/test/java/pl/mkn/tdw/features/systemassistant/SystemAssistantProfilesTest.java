@@ -60,7 +60,7 @@ class SystemAssistantProfilesTest {
         var ai = org.mockito.Mockito.mock(pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort.class);
         org.mockito.Mockito.when(ai.answer(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> {
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> {
             seen.add(invocation.getArgument(1));
             return new pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort.Reply("Odpowiedź CRM", null);
         });

@@ -62,6 +62,13 @@ chacie nie zmienia globalnego MCP. Wzorzec URL filtruje wyłącznie select
 w ramce, na podstawie ingress; pełny ekran pokazuje wszystkie profile.
 Kontrakty i szczegóły: [runtime System Assistant](system-assistant-runtime-flow.md).
 
+Pliki zwracane przez OpenAPI są efemerycznymi wynikami narzędzi. Neutralny
+callback oddziela tekst i binaria; adaptery SDK/MCP przekazują obrazy do modelu
+w tej samej turze. PDF używa wspólnego renderera stron, DOCX tekstu i osadzonych
+obrazów. Bez zapisu pliku do przyszłych tur i bez automatycznego pobierania URL
+z JSON. Ponowne wywołanie operacji wykonuje nowe HTTP. Ręczne załączniki rozmowy
+zachowują swój trwały lifecycle. Binaria nie trafiają do logów/activity TDW.
+
 ## Odczyt dużych wyników narzędzi Copilota
 
 Platforma udostępnia `tool_output_read_chunk` w create i resume. CLI
@@ -507,7 +514,7 @@ domyslne prepared adaptery. Testy tworza wlasne prepared fixtures.
 
 ## 8. Artefakty Copilota sa inline w promptcie
 
-Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
+Incident flow nie uzywa SDK attachments jako zrodla evidence. System Assistant ma feature-owned adapter plików rozmowy do SDK BlobAttachment, z trwałym zapisem w katalogu runu i metadanymi poza exportEnvelope. Artefakty
 incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie.
 `MessageOptions` dostaje finalny prompt przez `setPrompt(prompt)`.
 

@@ -6,6 +6,13 @@ dynamiczny katalog, odrębny od globalnego MCP TDW; nie rejestruj tych callback�
 jako globalnego ToolCallbackProvider. Nieustalony zapis blokuje kolejne
 mutacje tej samej tury, bez samoczynnego retry.
 
+Pliki odpowiedzi są efemeryczne. ToolContentCallback zwraca tekst i binaria:
+PDF jako obrazy wszystkich stron przez wspólny common.documents.PdfPageRenderer,
+DOCX jako tekst i osadzone obsługiwane obrazy przez DocxContentReader, obrazy
+bezpośrednio. SDK i MCP mapują ten neutralny wynik na własny transport.
+Nie zapisuj pobranych plików do rozmowy ani nie pobieraj automatycznie URL z JSON.
+Tekst wyniku zachowuje status/outcome HTTP i nie zawiera base64 obrazów.
+
 Katalog i factory przyjmują neutralne OpenApiExecution: operację wraz
 z captured profilem Auth. Definicje SDK/MCP zawierają tylko opis i input
 schema operacji, bez poświadczeń. AI nie wybiera profilu i nie podaje

@@ -55,6 +55,11 @@ export class SystemAssistantApi {
     return this.http.get<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}`);
   }
 
+  attach(id: string, file: File) {
+    return this.http.post<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}/attachments`, file,
+      {params: {name: file.name}, headers: {'Content-Type': 'application/octet-stream'}});
+  }
+
   send(id: string, message: string, profileId: string, model: string, reasoningEffort: string) {
     return this.http.post<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}/messages`, {
       message, profileId, ...(model ? {model} : {}), ...(reasoningEffort ? {reasoningEffort} : {})

@@ -9,8 +9,7 @@ z zapisanej aktualnej treści. Ekran: `/system-assistant`.
 
 Operator może podłączyć HTTP(S) API dowolnego systemu, z hostem DNS, IP lub
 localhost, w obsługiwanym podzbiorze OpenAPI 3.0.x/3.1.x opisanym poniżej.
-Bieżący zakres obsługuje jedną osobę w workspace. Obsługuje source auth Basic/Bearer/OAuth2/OIDC. Nie obejmuje załączników,
-approval workflow ani integracji CLP.
+Bieżący zakres obsługuje jedną osobę w workspace. Obsługuje source auth Basic/Bearer/OAuth2/OIDC. Obejmuje załączniki PNG/JPEG/WebP/GIF, PDF i DOCX. Nie obejmuje approval workflow ani integracji CLP.
 Konfigurację, rozmowę i testy opisuje [instrukcja obsługi](../system-assistant.md).
 Skille określają sposób pracy AI, nie egzekwują uprawnień biznesowych.
 Kontrakt operatora lub jego proxy może ograniczać i orkiestrować wywołania API;
@@ -86,6 +85,7 @@ portem i poza schema argumentów AI. Nie ma starszego overloadu wykonania.
 | `POST /api/system-assistant/conversations` | `{pageContext}` lub null context; `201` i pusta rozmowa bez AI |
 | `GET /api/system-assistant/conversations/{id}` | ID, busy, przypięty pageContext i neutralne wiadomości |
 | `POST /api/system-assistant/conversations/{id}/messages` | `{message, profileId, model?, reasoningEffort?}`; `202` i natychmiastowy snapshot; `409 AUTH_LOGIN_REQUIRED` z authProfileId przed przyjęciem, jeżeli wymagane OIDC nie jest gotowe |
+| `POST /api/system-assistant/conversations/{id}/attachments?name={filename}` | `application/octet-stream`; trwały strumieniowy zapis jednego pliku i snapshot rozmowy z listą `attachments: [{id,name,mimeType,size}]`; aktywna tura daje `409` |
 | `DELETE /api/system-assistant/conversations/{id}` | `204`; aktywna tura daje `409` |
 | `GET /api/analysis/runs` | Wspólny indeks historii; rozmowy mają `feature=system-assistant` |
 | `GET /api/analysis/runs/{id}/export` | Archiwalny JSON transkryptu; bez konfiguracji API/skilli |
@@ -154,7 +154,7 @@ z lokalizacją przed zapisem.
 | Body | POST/PUT/PATCH oraz DELETE w 3.1: `application/json`, wymagane lub opcjonalne body; `schema: {}` dopuszcza dowolny JSON | GET body, DELETE body w 3.0, multipart, binary request, pozostałe request media types |
 | Schema | object/array/scalars, properties/items/required/enum, `allOf`/`oneOf`/`anyOf`, discriminator jako guidance wariantów, boolean lub typowane additionalProperties, uniqueItems, pattern, limity, readOnly/writeOnly, format i metadata; w 3.0 nullable, w 3.1 null/tablica typów/const | not, patternProperties, multipleOf, inne nieobsługiwane keywords i niestandardowe dialekty |
 | References | Lokalne `#/components/schemas/...`; requesty: acykliczna projekcja inline do 30000 węzłów i 64 poziomów; odpowiedzi: ograniczony graf z produktywną rekursją; rodzeństwo schema `$ref` w 3.1 zachowuje przecięcie ograniczeń | Zewnętrzne refs, cykliczne aliasy, rekurencyjne requesty, rodzeństwo `$ref` w 3.0, przekroczenie budżetu |
-| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json, text/plain ze string schema lub */* | Response refs, headers, links, pozostałe jawne content types |
+| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json, text/plain ze string schema, wspierane MIME plików ze string/binary schema lub */* | Response refs, headers, links, pozostałe jawne content types |
 | Auth | security i components.securitySchemes dla Basic/Bearer/OAuth2/openIdConnect; wykonanie według wybranego profilu Auth | apiKey, digest, credentials w URL i model-facing Authorization |
 
 ### Generyczne ścieżki i query
@@ -186,9 +186,10 @@ AI nie może przekazać URL, metody ani nagłówków poza zdefiniowanym schema.
 Skutki nadal określa `x-tdw-operation-effect`, bez zgadywania po metodzie.
 
 Odpowiedź z `content: {'*/*': {schema: {}}}` zachowuje dowolny JSON (także
-application/*+json), tekst text/* z charset/UTF-8 albo reprezentację binarną
+application/*+json), tekst text/* z charset/UTF-8, wspierany plik według Content-Type albo reprezentację binarną
 `{encoding: "base64", contentType: "...", data: "..."}` dla innych typów
-i braku Content-Type. Status HTTP pozostaje w OpenApiResult. Błędny JSON
+i braku Content-Type. Dla rozpoznanych plików nie umieszczamy base64 w JSON wyniku.
+Status HTTP pozostaje w OpenApiResult. Błędny JSON
 nie ma fallbacku do tekstu i nadal blokuje dalsze mutacje po nieustalonym wyniku.
 Nie ma nowego retry, redirectu ani wyboru Auth przez AI.
 
@@ -505,7 +506,7 @@ Analysis History. Nie ma importu rozmowy z pliku.
    zmienia ich hosta, schema ani handlera.
 4. Feature składa NEW `CopilotRunRequest`: wyłącznie aktualne tools i
    skille przypisane do profilu inline jako durable instructions, `skillsEnabled=false`, jawny
-   transcript i mały kontekst strony. Nie używa SDK attachments.
+   transcript i mały kontekst strony. Feature-owned adapter po prepare dodaje wszystkie zapisane pliki rozmowy do MessageOptions jako SDK BlobAttachment (base64, MIME, oryginalna nazwa).
 5. Instrukcje jawnie podają aktualną listę tools i ich liczbę, także zero.
    Historia zawiera wiadomości i wyniki działań, bez dawnych promptów,
    YAML-i i skilli jako aktywnej konfiguracji.
@@ -531,6 +532,75 @@ a otwarcie kieruje do feature-owned chatu. Istniejące analizy
 zachowują swoje report-first oraz EXISTING continuation. Zewnętrzna
 diagnostyka OTLP pozostaje konfiguracją platformy; feature nie tworzy
 osobnego magazynu telemetryki ani historycznych konfiguracji.
+
+## Załączniki rozmowy
+
+### Plik jako odpowiedź OpenAPI
+
+Response content przyjmuje `image/png`, `image/jpeg`, `image/webp`, `image/gif`,
+`application/pdf` i `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+ze `schema: {type: string, format: binary}`. Działa też istniejący `*/*`.
+Rzeczywisty Content-Type określa format; dla jawnego MIME musi być zgodny
+z deklaracją odpowiedniego statusu/default. Nazwa pochodzi z Content-Disposition,
+jest normalizowana do basename albo zastępowana `response.<ext>`.
+
+REST zwraca neutralny `OpenApiFile` w pamięci poza tekstowym JSON, którego body
+zawiera nazwę, MIME i rozmiar. `agenttools.content.ToolContentCallback` przenosi
+tekst i binaria niezależnie od SDK/MCP. Wspólny `common.documents.PdfPageRenderer`
+renderuje wszystkie strony PDF do JPEG 144 DPI, tak samo jak przy uploadzie.
+DOCX jest odczytywany przez JDK ZIP/StAX: tekst dokumentu, nagłówków, stopek,
+przypisów i komentarzy oraz obsługiwane obrazy z word/media. Bez odtwarzania
+układu Worda, wykonywania relacji zewnętrznych ani DTD. Obrazy są przekazywane
+bezpośrednio. Wszystkie modele używają tej samej ścieżki.
+
+Adapter Copilota zwraca `ToolResultObject` z `binaryResultsForLlm`, MCP tekst
+i image content. Model otrzymuje treść po tool call w tej samej turze.
+Nie zapisujemy pobranego pliku przy runie ani nie dołączamy go automatycznie
+w następnych turach. Ponowne wywołanie toola wykonuje nowe HTTP z bieżącym
+wynikiem; nie ma cache ani automatycznego pobierania adresów URL z JSON.
+Zwykły tekstowy wynik (w tym tekst odczytany z DOCX) podlega dotychczasowemu
+capture/history; binaria obrazów nie trafiają do activity, logów TDW ani eksportu.
+Jawny zewnętrzny OTLP zachowuje własną konfigurację capture-content.
+Błąd odczytu pliku zachowuje status i outcome wykonanego HTTP, dodaje
+`fileDelivery: FAILED` i nie ponawia operacji. Write guard pozostaje.
+
+### Pliki dodane przez operatora
+
+Upload `application/octet-stream` z nazwą w query zapisuje dane bezpośrednio w
+`${tdw.workspace.directory}/runs/{id}/attachments/{uuid}.{extension}`. Oryginalna
+nazwa jest metadaną, MIME wynika z dozwolonego rozszerzenia. Upload wymaga
+istniejącej rozmowy i tego samego operation guard co send/delete; podczas tury
+zwraca konflikt. Nie uruchamia AI. Endpoint i UI nie nakładają limitu liczby
+ani rozmiaru plików i nie sprawdzają kompatybilności modelu. Nadal obowiązują
+limity transportu, zasobów i CLI/modelu.
+
+Metadane są w `storeSnapshot.state.attachments` lokalnego run.json, poza
+`exportEnvelope`, i w snapshotach feature API. Zapis transkryptu zachowuje ten
+snapshot; brak załączników to pusta lista. Eksport rozmowy nie zawiera ani
+binariów, ani katalogu załączników. Odczyt historii odtwarza metadane, a każda
+NEW tura czyta ponownie pliki i przekazuje je jako SDK blobs. PDFBox renderuje
+wszystkie strony PDF w pamięci do JPEG (144 DPI), z nazwą dokumentu i numerem
+strony, jednakowo dla każdego modelu. Zachowuje to także skany i diagramy;
+omija pomijanie natywnego PDF w ścieżce GPT z narzędziami. Pozostałe formaty
+pozostają natywnymi blobs. Oryginał PDF pozostaje w runie, bez zapisu pochodnych,
+OCR, zmiany modelu ani tools/policy. Brak zapisanego
+pliku kończy turę jawnym błędem. Activity SDK zawiera tylko metadane attachments,
+bez base64 i ścieżek plikowych. Zewnętrzny OTLP zachowuje swoją jawną konfigurację.
+
+Oba widoki mają przycisk wyboru wielu plików w slocie akcji shared chatu i listę
+oczekujących nazw przy composerze. Przy przyjęciu wiadomości metadane nowych
+plików dostają `messageId` tej wiadomości USER; null oznacza oczekujący plik.
+Powiązanie jest zapisane przed AI i odtwarzane z historią, poza eksportem.
+Odrzucenie przed przyjęciem nie przypisuje plików, a odrzucenie przez kolejkę
+cofa powiązanie razem z wiadomością. Shared chat dostaje mapę nazw per ID
+wiadomości i pokazuje je nad jej treścią; kolejne tury nie powielają etykiet.
+Nie odtwarzamy dawnych powiązań z diagnostyki. Wybranie plików tworzy pustą rozmowę, jeśli to potrzebne,
+i zapisuje je kolejno przed kolejną wiadomością. Upload blokuje wysyłanie,
+wybór rozmowy i kolejne dodawanie. Po odświeżeniu nazwy wracają z GET rozmowy.
+Nie ma usuwania pojedynczych plików ani osobnego cache na czas OIDC. Istniejące
+odtwarzanie tekstu OIDC pozostaje. Pliki pozostają do usunięcia runu przez
+feature API albo Analysis History; neutralny store usuwa cały katalog rekurencyjnie.
+Nieudany zapis może pozostawić nieprzypisany plik, który też usuwa dopiero run.
 
 ## Wykonanie i wynik operacji
 
@@ -687,3 +757,9 @@ prawdziwy Copilot, sześć tur na fikcyjnym CRM, odczyt, kalkulacja, jeden zapis
 i read-back, dodanie/edycja/usunięcie API oraz skilli, pusty katalog i usage.
 Test korzysta z istniejącego PAT Workspace Settings, izolowanego katalogu
 CLI i nie zapisuje konfiguracji pilota do workspace operatora.
+Osobny przypadek `readsScannedPdfAndUsesOpenApiAcrossNewSessions` sprawdza
+dwustronicowy PDF bez warstwy tekstowej razem z rzeczywistym odczytem OpenAPI,
+także po przejściu do kolejnej NEW sesji.
+`readsFilesReturnedByApiWithoutSavingAttachments` sprawdza pliki jako wyniki
+OpenAPI: zmieniający się PDF po ponownym pobraniu, PNG i DOCX z osadzonym
+obrazem, bez zapisanych załączników i base64 w historii TDW.

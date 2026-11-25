@@ -14,6 +14,7 @@ import pl.mkn.tdw.integrations.openapi.contract.OpenApiException;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiResult;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiFile;
 import pl.mkn.tdw.integrations.openapi.service.OpenApiSchema;
 import pl.mkn.tdw.integrations.openapi.service.OpenApiTarget;
 
@@ -128,19 +129,40 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
             return request.exchange((sent, response) -> {
                 var bytes = response.getBody().readAllBytes();
                 JsonNode body;
+                OpenApiFile file = null;
                 try {
-                    body = responseBody(operation, response.getStatusCode().value(), response.getHeaders().getContentType(), bytes);
+                    var status = response.getStatusCode().value();
+                    var contentType = response.getHeaders().getContentType();
+                    var mime = contentType == null ? "" : contentType.getType().toLowerCase(java.util.Locale.ROOT)
+                            + "/" + contentType.getSubtype().toLowerCase(java.util.Locale.ROOT);
+                    var declared = operation.responseContentTypes().getOrDefault(Integer.toString(status),
+                            operation.responseContentTypes().getOrDefault("default", List.of()));
+                    if (status != 204 && status != 205 && OpenApiFile.EXTENSIONS.containsKey(mime)
+                            && (declared.contains(mime) || declared.contains("*/*"))) {
+                        var name = response.getHeaders().getContentDisposition().getFilename();
+                        name = fileName(name, OpenApiFile.EXTENSIONS.get(mime));
+                        file = new OpenApiFile(name, mime, bytes);
+                        body = mapper.createObjectNode().put("name", name).put("contentType", mime).put("size", bytes.length);
+                    } else body = responseBody(operation, status, contentType, bytes);
                 } catch (java.io.IOException | IllegalArgumentException ex) {
                     return unknown(operation, "Odpowiedź ma nieobsługiwany typ, niepoprawny JSON lub kodowanie tekstu. Nie ustalono wyniku biznesowego.");
                 }
                 return new OpenApiResult("RESPONSE_RECEIVED", response.getStatusCode().value(), body,
-                        "Odpowiedź HTTP nie potwierdza wszystkich skutków biznesowych.");
+                        "Odpowiedź HTTP nie potwierdza wszystkich skutków biznesowych.", file);
             });
         } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
             throw new OpenApiException("Nie udało się przygotować JSON request body.");
         } catch (org.springframework.web.client.RestClientException ex) {
             return unknown(operation, "Błąd połączenia lub timeout. Nie ponawiaj samoczynnie zapisu; ustal stan przez odczyt.");
         }
+    }
+
+    private static String fileName(String name, String extension) {
+        if (name == null) return "response." + extension;
+        name = name.replace('\\', '/');
+        name = name.substring(name.lastIndexOf('/') + 1).strip();
+        if (name.isBlank() || name.chars().anyMatch(Character::isISOControl)) return "response." + extension;
+        return name;
     }
 
     private JsonNode responseBody(OpenApiOperation operation, int status, MediaType contentType, byte[] bytes) throws java.io.IOException {

@@ -30,6 +30,13 @@ Neutralny `agenttools.openapi.mcp.OpenApiMcpEndpoint` nie jest globalnym
 tylko po włączeniu feature'a. Nie ma importów sibling feature'ów ani logiki
 System Assistant w platformie. [Runtime](system-assistant-runtime-flow.md).
 
+Plikowy wynik HTTP należy do `integrations.openapi.contract.OpenApiFile`.
+Neutralny `agenttools.content.ToolContentCallback`/`ToolContentResult` przenosi
+tekst i binaria do SDK oraz MCP; nie zależy od providera ani feature'a.
+`common.documents` posiada współdzielony renderer PDF i odczyt tekstu/obrazów
+DOCX, bez storage, HTTP i semantyki sesji. Platforma mapuje gotowy wynik na SDK,
+bez logiki OpenAPI lub rozpoznawania formatu pliku.
+
 Produkt jest platforma AI-augmented system analysis. Dedykowane feature'y
 skladaja reusable capability, ale zadna warstwa reusable nie zna konkretnego
 feature'a.

@@ -64,11 +64,79 @@ describe('SystemAssistantPage', () => {
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
     return fixture;
   }
+  it.each([false, true])('saves attachments before messages and blocks upload while busy (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.workspaceView.set('conversation'); page.historyOpen.set(false); fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('input[type=file][aria-label="Wybierz załączniki"]') as HTMLInputElement;
+    const first = new File(['one'], 'report.pdf'); const second = new File(['two'], 'picture.png');
+    Object.defineProperty(input, 'files', {value: [first, second], configurable: true});
+    page.attachFiles(input); fixture.detectChanges();
+    expect(page.uploading()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.analysis-chat__form [role=status]').textContent).toContain('Zapisywanie');
+    expect(fixture.nativeElement.querySelector('button[aria-label="Załącz pliki"]').disabled).toBe(true);
+    http.expectOne('/api/system-assistant/conversations').flush({id: 'attachments', busy: false, pageContext: null, messages: []});
+    const saved = {id: 'attachments', busy: false, pageContext: null, messages: [],
+      attachments: [{id: 'file-1', name: first.name, mimeType: 'application/pdf', size: 3}]};
+    const upload = http.expectOne(req => req.url.endsWith('/attachments/attachments'));
+    expect(upload.request.body).toBe(first); upload.flush(saved);
+    const next = http.expectOne(req => req.url.endsWith('/attachments/attachments'));
+    expect(next.request.body).toBe(second);
+    next.flush({...saved, attachments: [...saved.attachments, {id: 'file-2', name: second.name, mimeType: 'image/png', size: 3}]});
+    fixture.detectChanges();
+    expect(page.uploading()).toBe(false);
+    expect(page.pendingAttachmentNames()).toEqual(['report.pdf', 'picture.png']);
+    expect(fixture.nativeElement.querySelector('.analysis-chat__form .chat-attachments').textContent).toContain('report.pdf');
+    http.expectNone('/api/system-assistant/conversations/attachments/messages');
+    page.conversation.set({...saved, busy: true}); fixture.detectChanges();
+    page.attachFiles(input);
+    expect(fixture.nativeElement.querySelector('button[aria-label="Załącz pliki"]').disabled).toBe(true);
+    http.expectNone(req => req.url.endsWith('/attachments/attachments'));
+  });
+  it('preserves the draft and unlocks the chat after an upload error', () => {
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.workspaceView.set('conversation'); page.historyOpen.set(false);
+    page.conversation.set({id: 'saved', busy: false, pageContext: null, messages: []}); fixture.detectChanges();
+    const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
+    chat.messageText.set('Zbadaj plik');
+    const input = fixture.nativeElement.querySelector('input[aria-label="Wybierz załączniki"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {value: [new File(['data'], 'report.pdf')]});
+    page.attachFiles(input);
+    http.expectOne(req => req.url.endsWith('/saved/attachments')).flush({message: 'Błąd zapisu'}, {status: 503, statusText: 'Unavailable'});
+    http.expectOne('/api/system-assistant/conversations/saved').flush({id: 'saved', busy: false, pageContext: null, messages: [],
+      attachments: [{id: 'accepted-file', name: 'report.pdf', mimeType: 'application/pdf', size: 4}]});
+    expect(page.uploading()).toBe(false);
+    expect(page.pendingAttachmentNames()).toEqual(['report.pdf']);
+    expect(page.chatError()).toBeTruthy();
+    expect(chat.messageText()).toBe('Zbadaj plik');
+    http.expectNone('/api/system-assistant/conversations/saved/messages');
+  });
   function loadLoginConfiguration() {
     http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles: [{...testProfile, id: 'crm_selected'}]});
     http.expectOne('/api/system-assistant/configuration/tools').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
   }
+  it.each([false, true])('shows attachment names at their messages in the conversation snapshot (embedded=%s)', embedded => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.workspaceView.set('conversation'); page.historyOpen.set(false);
+    if (embedded) page.ingress.restoreContext(currentIngress);
+    const saved = savedConversation();
+    page.conversation.set({...saved, messages: [...saved.messages, ...saved.messages.map(message => ({...message, id: 'next-' + message.id}))],
+      attachments: [
+        {id: 'one', name: 'first.pdf', mimeType: 'application/pdf', size: 1, messageId: 'saved-0'},
+        {id: 'two', name: 'second.png', mimeType: 'image/png', size: 2, messageId: 'next-saved-0'},
+        {id: 'three', name: 'pending.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: 3, messageId: null}
+      ]});
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const users = root.querySelectorAll('.chat-message--user');
+    expect(users[0].querySelector('.chat-attachments')?.textContent).toContain('first.pdf');
+    expect(users[1].querySelector('.chat-attachments')?.textContent).toContain('second.png');
+    expect(users[1].textContent).not.toContain('first.pdf');
+    expect(root.querySelector('.analysis-chat__form .chat-attachments')?.textContent).toContain('pending.docx');
+    expect(root.querySelector('.assistant-attachments')).toBeNull();
+  });
   it.each([{existing: false, embedded: false}, {existing: true, embedded: false}, {existing: false, embedded: true}, {existing: true, embedded: true}])(
     'preserves rejected messages across OIDC without retrying (existing=$existing, embedded=$embedded)', ({existing, embedded}) => {
       const assign = vi.mocked(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).location.assign);

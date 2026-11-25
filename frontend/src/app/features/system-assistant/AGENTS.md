@@ -3,8 +3,12 @@
 Chat-first konfigurowalny feature. Reuse shared chat, steps/activity/evidence,
 usage, preferencje AI i kontrolki. Ekran posiada bieżący szkic konfiguracji,
 walidację i requesty. Nie importuje innych feature'ów. Konfiguracja to jeden
-aktualny zestaw, bez wersjonowania. Auth źródłowe: Basic/Bearer/OAuth2/OIDC, z formularzami inline i selectem Auth przy API w profilu, domyślnie No Auth. Bez załączników.
+aktualny zestaw, bez wersjonowania. Auth źródłowe: Basic/Bearer/OAuth2/OIDC, z formularzami inline i selectem Auth przy API w profilu, domyślnie No Auth. Oba widoki mają przycisk wielokrotnego uploadu PNG/JPEG/WebP/GIF, PDF i DOCX w istniejącym slocie akcji chatu oraz nazwy zapisanych plików. Upload jest sekwencyjny, strumieniowy, bez limitów TDW i kontroli modelu; blokuje wysyłanie/nawigację i jest niedostępny podczas tury. Pliki zapisujemy trwale przy rozmowie, bez tymczasowego storage FE/OIDC. Usuwa je wyłącznie usunięcie rozmowy.
 Browser Tools przekazuje wyłącznie mały page-context przez sprawdzony handshake.
+Nazwy nowych plików renderuj nad pierwszą przyjętą wiadomością wskazaną przez
+messageId w metadanych. Przed wysłaniem są przy composerze. Nie powielaj etykiet
+w następnych turach ani nie twórz zbiorczej listy nad historią. Shared chat
+posiada prezentację; feature dostarcza mapę nazw i listę oczekujących plików.
 Akcja osadza chat TDW w iframe /system-assistant/chat poza AppShell. Reuse
 jednego template'u rozmowy; pełny ekran ma zakładki Skille, Kontrakty, Auth, Profile, Rozmowa i Uruchamianie w systemie. Transfer V1
 sprawdza parent/contentWindow, origin, nonce i dokładne pola; nie przywracaj

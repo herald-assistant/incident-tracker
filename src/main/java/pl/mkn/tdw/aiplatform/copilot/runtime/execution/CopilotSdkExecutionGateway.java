@@ -564,7 +564,15 @@ public class CopilotSdkExecutionGateway {
             put(details, "transformedContentPreview", abbreviate(data.transformedContent(), 1_200));
             put(details, "transformedContentLength", data.transformedContent() != null ? data.transformedContent().length() : 0);
             put(details, "attachmentCount", data.attachments() != null ? data.attachments().size() : 0);
-            put(details, "attachments", data.attachments());
+            put(details, "attachments", data.attachments() == null ? java.util.List.of() : data.attachments().stream().map(attachment -> {
+                var metadata = new LinkedHashMap<String, Object>();
+                if (attachment instanceof Map<?, ?> fields) {
+                    for (var key : java.util.List.of("type", "displayName", "mimeType")) {
+                        if (fields.get(key) instanceof String value) metadata.put(key, value);
+                    }
+                }
+                return metadata;
+            }).toList());
             return activity(
                     event,
                     "MESSAGE",
@@ -662,6 +670,8 @@ public class CopilotSdkExecutionGateway {
                     ? toolResultContentFactory.capture(data.result().content()) : null);
             put(details, "resultDetailedContent", data.result() != null
                     ? toolResultContentFactory.capture(data.result().detailedContent()) : null);
+            put(details, "binaryResultCount", data.result() != null && data.result().binaryResultsForLlm() != null
+                    ? data.result().binaryResultsForLlm().size() : 0);
             if (Boolean.TRUE.equals(data.success()) && data.result() != null && isSkillResult(data)) {
                 put(details, "skillContent", abbreviate(data.result().detailedContent(), MAX_CAPTURED_SKILL_CONTENT_LENGTH));
             }

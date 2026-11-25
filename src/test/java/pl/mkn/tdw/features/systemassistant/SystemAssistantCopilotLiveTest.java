@@ -2,6 +2,9 @@ package pl.mkn.tdw.features.systemassistant;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,6 +20,11 @@ import pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationServi
 import pl.mkn.tdw.features.systemassistant.config.*;
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import java.net.InetSocketAddress;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.file.*;
 import java.time.Duration;
 import java.util.*;
@@ -41,6 +49,103 @@ class SystemAssistantCopilotLiveTest {
     @Autowired SystemAssistantConfigurationService configurations;
     @Autowired CopilotModelOptionsProvider models;
     @Autowired ObjectMapper mapper;
+
+    @Test
+    void readsFilesReturnedByApiWithoutSavingAttachments() throws Exception {
+        var pdfReads = new AtomicInteger();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        api.createContext("/file", exchange -> {
+            try {
+                var format = exchange.getRequestURI().getPath().substring("/file/".length());
+                byte[] bytes;
+                String mime;
+                if (format.equals("pdf")) {
+                    bytes = pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.pdf("PDF-" + (830 + pdfReads.incrementAndGet()));
+                    mime = "application/pdf";
+                } else if (format.equals("png")) {
+                    bytes = pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.png("IMAGE-627"); mime = "image/png";
+                } else {
+                    bytes = pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.docx("WORD-682");
+                    mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                }
+                exchange.getResponseHeaders().set("Content-Type", mime);
+                exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes);
+            } catch (Exception failure) { throw new RuntimeException(failure); }
+            finally { exchange.close(); }
+        });
+        api.start();
+        String id = null;
+        try {
+            configurations.save(config(pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.yaml(
+                    "http://127.0.0.1:" + api.getAddress().getPort()), null, "Odpowiadaj krótko po polsku."));
+            id = chats.create(null).id();
+            var model = Optional.ofNullable(System.getenv("COPILOT_TEST_MODEL")).orElse("gpt-6.1-terra");
+            assertThat(turn(id, "Wywołaj getFile raz z format=pdf. Odczytaj FILE-CODE z otrzymanego pliku.", model).content())
+                    .contains("PDF-831");
+            assertThat(turn(id, "Ponownie wywołaj getFile raz z format=pdf. Odczytaj aktualny FILE-CODE, nie korzystaj z poprzedniego wyniku.", model).content())
+                    .contains("PDF-832");
+            assertThat(pdfReads).hasValue(2);
+            assertThat(turn(id, "Wywołaj getFile z format=png i odczytaj FILE-CODE z obrazu.", model).content()).contains("IMAGE-627");
+            assertThat(turn(id, "Wywołaj getFile z format=docx. Odczytaj FILE-CODE z tekstu oraz osobno z osadzonego obrazu.", model).content())
+                    .contains("WORD-682", "EMBEDDED-831");
+            assertThat(chats.get(id).attachments()).isEmpty();
+            assertThat(mapper.writeValueAsString(chats.get(id))).doesNotContain("iVBORw0KGgo", "/9j/4AAQSk", "binaryResultsForLlm");
+        } finally {
+            if (id != null && !chats.get(id).busy()) chats.remove(id);
+            api.stop(0);
+        }
+    }
+
+    @Test
+    void readsScannedPdfAndUsesOpenApiAcrossNewSessions() throws Exception {
+        var reads = new AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/tickets", exchange -> {
+            reads.incrementAndGet();
+            var bytes = mapper.writeValueAsBytes(Map.of("id", "CRM-101", "status", "OPEN"));
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        server.start();
+        String id = null;
+        try {
+            var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-api.yaml"))
+                    .replace(":8099", ":" + server.getAddress().getPort());
+            configurations.save(config(yaml, null, "Odpowiadaj krótko po polsku."));
+            id = chats.create(null).id();
+            chats.attach(id, "scan.pdf", new ByteArrayInputStream(scannedPdf()));
+            var model = Optional.ofNullable(System.getenv("COPILOT_TEST_MODEL")).orElse("gpt-5.6-luna");
+            var first = turn(id, "Odczytaj oba DOCUMENT-CODE ze stron załączonego PDF. "
+                    + "Następnie użyj getTicket dla CRM-101 i podaj status.", model);
+            assertThat(first.content()).contains("ALPHA-726", "BETA-918", "OPEN");
+            assertThat(first.toolEvidenceSections()).isNotEmpty();
+            var second = turn(id, "Ponownie odczytaj oba DOCUMENT-CODE z załączonego PDF i użyj "
+                    + "getTicket dla CRM-101, podając aktualny status.", model);
+            assertThat(second.content()).contains("ALPHA-726", "BETA-918", "OPEN");
+            assertThat(second.toolEvidenceSections()).isNotEmpty();
+            assertThat(reads.get()).isGreaterThanOrEqualTo(2);
+        } finally {
+            if (id != null && !chats.get(id).busy()) chats.remove(id);
+            server.stop(0);
+        }
+    }
+
+    private static byte[] scannedPdf() throws Exception {
+        try (var document = new PDDocument(); var bytes = new ByteArrayOutputStream()) {
+            for (var code : List.of("ALPHA-726", "BETA-918")) {
+                var image = new BufferedImage(1000, 200, BufferedImage.TYPE_INT_RGB);
+                var graphics = image.createGraphics();
+                graphics.setColor(Color.WHITE); graphics.fillRect(0, 0, 1000, 200);
+                graphics.setColor(Color.BLACK); graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 36));
+                graphics.drawString("DOCUMENT-CODE: " + code, 30, 100); graphics.dispose();
+                var page = new PDPage(new PDRectangle(500, 100)); document.addPage(page);
+                try (var content = new PDPageContentStream(document, page)) {
+                    content.drawImage(LosslessFactory.createFromImage(document, image), 0, 0, 500, 100);
+                }
+            }
+            document.save(bytes); return bytes.toByteArray();
+        }
+    }
 
     @Test
     void completesCrmTaskAndUsesEditedToolsAndSkillsInSameChat() throws Exception {

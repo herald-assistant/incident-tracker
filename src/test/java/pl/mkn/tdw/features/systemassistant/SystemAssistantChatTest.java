@@ -30,7 +30,7 @@ class SystemAssistantChatTest {
     void httpAcceptsOneTurnAndRetainsEvidenceWhenAiFails() throws Exception {
         var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
         var ai = mock(SystemAssistantAiPort.class);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
             Consumer<AnalysisEvidenceSection> sink = invocation.getArgument(5);
             sink.accept(new AnalysisEvidenceSection("openapi", "call", List.of(new AnalysisEvidenceItem("saved", List.of()))));
             entered.countDown(); release.await(5, TimeUnit.SECONDS);
@@ -76,7 +76,7 @@ class SystemAssistantChatTest {
         var longResult = "Wynik " + "ż".repeat(120_000) + " KONIEC_WYNIKU";
         var seenPrompts = new CopyOnWriteArrayList<String>();
         var ai = mock(SystemAssistantAiPort.class);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
             seenPrompts.add(prompts.conversation(invocation.getArgument(2), invocation.getArgument(3)));
             Consumer<AnalysisEvidenceSection> sink = invocation.getArgument(5);
             sink.accept(new AnalysisEvidenceSection("openapi", "call", List.of(new AnalysisEvidenceItem("result",
@@ -113,7 +113,7 @@ class SystemAssistantChatTest {
     void continuesPastTwentyTurnsAfterRestoringConversation() {
         var configurations = SystemAssistantTestSupport.configuration((id, yaml) -> List.of());
         var ai = mock(SystemAssistantAiPort.class);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any()))
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new SystemAssistantAiPort.Reply("Odpowiedź", null));
         var service = service(configurations, ai);
         String id;
@@ -132,7 +132,7 @@ class SystemAssistantChatTest {
             assertThat(restored.get(id).messages()).hasSize(42)
                     .allSatisfy(message -> assertThat(message.status()).isEqualTo("COMPLETED"));
             assertThat(SystemAssistantTestSupport.history(workspace).load(id).conversation().messages()).hasSize(42);
-            verify(ai, times(21)).answer(any(), any(), any(), any(), any(), any(), any());
+            verify(ai, times(21)).answer(any(), any(), any(), any(), any(), any(), any(), any());
         } finally { restored.close(); }
     }
 
@@ -148,7 +148,7 @@ class SystemAssistantChatTest {
             public Reply answer(String turnId, SystemAssistantConfigurationService.Snapshot configuration,
                     SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                     SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
-                    Consumer<AnalysisAiActivityEvent> activity) {
+                    Consumer<AnalysisAiActivityEvent> activity, List<SystemAssistantAiPort.Attachment> attachments) {
                 seen.add(configuration.configuration().skills().get(0).content()); historySeen.set(history);
                 entered.countDown();
                 try { if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException(); }

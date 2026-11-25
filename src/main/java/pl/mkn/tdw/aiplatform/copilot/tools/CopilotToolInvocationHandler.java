@@ -3,6 +3,10 @@ package pl.mkn.tdw.aiplatform.copilot.tools;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.rpc.ToolInvocation;
+import com.github.copilot.rpc.ToolResultObject;
+import com.github.copilot.rpc.ToolBinaryResult;
+import pl.mkn.tdw.agenttools.content.ToolContentCallback;
+import pl.mkn.tdw.agenttools.content.ToolContentResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
@@ -62,7 +66,9 @@ public class CopilotToolInvocationHandler {
 
             try {
                 var toolContext = toolContextFactory.buildToolContext(sessionContext, invocation);
-                var rawResult = callback.call(argumentsJson, toolContext);
+                ToolContentResult contentResult = callback instanceof ToolContentCallback rich
+                        ? rich.callWithContent(argumentsJson, toolContext) : null;
+                var rawResult = contentResult == null ? callback.call(argumentsJson, toolContext) : contentResult.text();
                 afterInvocation(new CopilotToolInvocationPolicyResult(
                         sessionContext,
                         invocation.getSessionId(),
@@ -82,7 +88,11 @@ public class CopilotToolInvocationHandler {
                         nanosToMillis(toolStart),
                         null
                 ));
-                var parsedResult = parseToolResult(rawResult);
+                Object parsedResult = contentResult == null || contentResult.binaries().isEmpty() ? parseToolResult(rawResult)
+                        : new ToolResultObject("success", rawResult, contentResult.binaries().stream().map(binary ->
+                                new ToolBinaryResult(java.util.Base64.getEncoder().encodeToString(binary.content()),
+                                        binary.mimeType(), binary.mimeType().startsWith("image/") ? "image" : "file", binary.name()))
+                                .toList(), null, null, null);
 
                 return CompletableFuture.completedFuture(parsedResult);
             }

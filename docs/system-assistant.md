@@ -8,6 +8,22 @@ Feature jest domyślnie wyłączony; uruchom TDW z
 `--system-assistant.enabled=true`. Wybór adresu nasłuchiwania TDW jest
 niezależny od tej flagi. AI wymaga skonfigurowanego PAT Copilota w Workspace Settings.
 
+## Załączniki rozmowy
+
+W zakładce Rozmowa i panelu Browser Tools przycisk spinacza dodaje wiele plików
+PNG/JPEG/WebP/GIF, PDF lub DOCX. Są zapisywane przed następną wiadomością;
+przed wysłaniem nazwy pojawiają się przy polu wiadomości. Przy przyjęciu
+wiadomości nowe pliki są do niej przypisywane; ich nazwy widać nad tą
+wiadomością, także po ponownym otwarciu rozmowy. Nie powtarzamy etykiet
+przy kolejnych wiadomościach. Podczas zapisu i pracy AI dodawanie jest
+zablokowane. Pliki pozostają dostępne w kolejnych turach i po ponownym otwarciu
+rozmowy. Usunięcie rozmowy usuwa także pliki; eksport ich nie zawiera.
+PDF jest przekazywany jako obrazy wszystkich stron, jednakowo dla każdego
+modelu; oryginalny plik pozostaje przy rozmowie.
+TDW nie ogranicza liczby ani rozmiaru plików i nie weryfikuje zgodności modelu;
+faktyczny odczyt zależy od modelu oraz limitów CLI. Nie ma osobnego odtwarzania
+niewysłanych plików po logowaniu.
+
 ## Konfiguracja
 
 Cały zestaw można też przygotować poza TDW na podstawie repozytorium lub dokumentów.
@@ -94,12 +110,33 @@ query. Kolizje nazw, null i zagnieżdżenia są odrzucane przed wysłaniem.
 
 POST/PUT/PATCH oraz DELETE w OpenAPI 3.1 mogą mieć dowolną strukturę JSON
 przez `schema: {}` i argument `body`. GET nie przyjmuje body. Odpowiedź
-`*/*` zwraca status i JSON, tekst albo obiekt z encoding=base64, contentType
-i data dla danych binarnych. Host, base path i Auth pozostają z konfiguracji.
+`*/*` zwraca status i JSON, tekst, wspierany plik jako zawartość wyniku narzędzia
+albo obiekt z encoding=base64, contentType i data dla pozostałych danych binarnych.
+Host, base path i Auth pozostają z konfiguracji.
 Ścieżka nie przyjmuje URL, początkowego `/`, `%`, query/hash, backslash,
 znaków sterujących i segmentów `.`/`..`. W query używaj osobnej mapy.
 Metodę i skutki wybiera definicja operacji, nie argument AI; nadal obowiązuje
 brak automatycznego ponawiania zapisów i blokada po nieustalonym wyniku.
+
+## Pliki zwracane przez API
+
+Operacja może zwrócić PNG/JPEG/WebP/GIF, PDF lub DOCX. W YAML deklarujesz
+odpowiedni MIME, np.:
+
+```yaml
+responses:
+  '200':
+    description: Dokument
+    content:
+      application/pdf:
+        schema: {type: string, format: binary}
+```
+
+API powinno zwracać właściwy Content-Type. PDF trafia do AI jako obrazy wszystkich
+stron, DOCX jako odczytany tekst i osadzone obsługiwane obrazy, a obrazy bezpośrednio.
+Model dostaje zawartość w tej samej turze po wywołaniu narzędzia. Plik nie jest
+zapisywany w załącznikach rozmowy; ponowne użycie wymaga kolejnego wywołania API,
+które pobiera aktualny wynik. Adres URL w JSON sam nie uruchamia pobrania.
 
 ## Certyfikaty API i dostawcy logowania
 
@@ -301,7 +338,7 @@ wyniku operacji sprawdź stan systemu przed ponownym zleceniem zapisu.
 Błąd odświeżania chatu pozwala ponowić odczyt, bez ponawiania polecenia.
 
 Feature obsługuje Basic, Bearer, OAuth2 Client Credentials i OIDC. Nie przejmuje
-logowania ze strony i nie obsługuje załączników. Skille są
+logowania ze strony. Obsługuje załączniki rozmowy PNG/JPEG/WebP/GIF, PDF i DOCX. Skille są
 instrukcjami pracy, nie mechanizmem nadawania uprawnień. Importer obsługuje
 wybrane konstrukcje OpenAPI, w tym readOnly, format i nullable;
 pełna macierz i limity są w [runtime flow](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).

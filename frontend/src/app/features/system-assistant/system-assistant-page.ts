@@ -22,7 +22,7 @@ import { AnalysisJobPollingService } from '../../core/services/analysis-job-poll
 import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, defaultReasoningEffortForAiModel } from '../../core/utils/analysis-ai-model-options.utils';
-import { Subscription } from 'rxjs';
+import { concatMap, from, of, Subscription, switchMap } from 'rxjs';
 import type { FormTourSource } from '../../core/models/form-tour';
 import { SystemAssistantIngress, SYSTEM_ASSISTANT_WINDOW } from './system-assistant-ingress.service';
 import { AssistantConversationPicker } from './assistant-conversation-picker';
@@ -146,6 +146,16 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     ];
   });
   readonly submitting = signal(false);
+  readonly uploading = signal(false);
+  readonly pendingAttachmentNames = computed(() => (this.conversation()?.attachments ?? [])
+    .filter(file => !file.messageId).map(file => file.name));
+  readonly messageAttachmentNames = computed(() => {
+    const names: Record<string, string[]> = Object.create(null);
+    for (const file of this.conversation()?.attachments ?? []) {
+      if (file.messageId) (names[file.messageId] ??= []).push(file.name);
+    }
+    return names;
+  });
   readonly authReady = signal(false);
   readonly catalog = signal(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly catalogLoading = signal(true);
@@ -155,8 +165,8 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly messages = computed(() => this.conversation()?.messages ?? []);
   readonly activities = computed(() => this.messages().flatMap(message => message.aiActivityEvents));
   readonly evidence = computed(() => this.messages().flatMap(message => message.toolEvidenceSections));
-  readonly busy = computed(() => this.restoring() || this.submitting() || !!this.conversation()?.busy);
-  readonly canChat = computed(() => !this.historyOpen() && !this.restoring() && !this.restoreError() && this.configurationAvailable() && this.ingress.status() !== 'waiting' && this.authReady() && !this.catalogLoading() && !this.catalogError()
+  readonly busy = computed(() => this.restoring() || this.uploading() || this.submitting() || !!this.conversation()?.busy);
+  readonly canChat = computed(() => !this.uploading() && !this.historyOpen() && !this.restoring() && !this.restoreError() && this.configurationAvailable() && this.ingress.status() !== 'waiting' && this.authReady() && !this.catalogLoading() && !this.catalogError()
     && !!this.selectedProfileId() && !!(this.model() || this.catalog().defaultModel));
   private readonly polling = inject(AnalysisJobPollingService);
   private readonly optionsApi = inject(AiOptionsApiService);
@@ -225,6 +235,35 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   }
   chooseModel(model: string): void {
     this.model.set(model); this.reasoningEffort.set(defaultReasoningEffortForAiModel(this.catalog(), model));
+  }
+  attachFiles(input: HTMLInputElement): void {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length || !this.canChat() || this.busy()) return;
+    this.uploading.set(true); this.chatError.set('');
+    const generation = this.conversationGeneration;
+    const conversation = this.conversation();
+    const source = conversation ? of(conversation) : this.api.create(this.ingress.context());
+    source.pipe(
+      switchMap(snapshot => {
+        this.conversation.set(snapshot); this.updateConversationUrl(snapshot.id);
+        return from(files).pipe(concatMap(file => this.api.attach(snapshot.id, file)));
+      }), takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: snapshot => { if (generation === this.conversationGeneration) this.conversation.set(snapshot); },
+      error: error => {
+        this.chatError.set(this.message(error));
+        const id = this.conversation()?.id;
+        if (!id) { this.uploading.set(false); return; }
+        // A lost response can still mean the file was saved. Reconcile without retrying the upload.
+        this.api.conversation(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: snapshot => { if (generation === this.conversationGeneration) this.conversation.set(snapshot); },
+          error: () => this.uploading.set(false),
+          complete: () => this.uploading.set(false)
+        });
+      },
+      complete: () => this.uploading.set(false)
+    });
   }
   send(message: string): void {
     if (!this.canChat() || this.busy()) return;

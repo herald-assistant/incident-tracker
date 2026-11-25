@@ -33,6 +33,9 @@ export class AnalysisFollowUpChatComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly messages = input<AnalysisChatMessageResponse[]>([]);
+  readonly messageAttachmentNames = input<Record<string, readonly string[]>>({});
+  readonly pendingAttachmentNames = input<readonly string[]>([]);
+  readonly uploadingAttachments = input(false);
   readonly error = input('');
   readonly canUseChat = input(false);
   readonly unavailableMessage = input('Chat jest dostępny dopiero dla zakończonej analizy uruchomionej w backendzie.');

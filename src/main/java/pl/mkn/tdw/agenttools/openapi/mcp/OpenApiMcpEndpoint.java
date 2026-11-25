@@ -12,6 +12,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 import pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog;
 import pl.mkn.tdw.agenttools.openapi.OpenApiToolSetFactory;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
+import pl.mkn.tdw.agenttools.content.ToolContentCallback;
+import pl.mkn.tdw.agenttools.content.ToolContentResult;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -89,13 +91,24 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
                         .filter(item -> item.operation().name().equals(name)).findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("Operacja nie jest już dostępna w wybranym profilu."));
                 var guard = guard(sessionId);
-                String raw;
+                ToolContentResult content;
                 synchronized (guard) {
-                    raw = callbacks.create(List.of(execution), guard).get(0).call(mapper.writeValueAsString(arguments));
+                    content = ((ToolContentCallback) callbacks.create(List.of(execution), guard).get(0))
+                            .callWithContent(mapper.writeValueAsString(arguments), null);
                 }
+                var raw = content.text();
                 var result = mapper.readTree(raw);
                 var failed = !result.path("outcome").asText().equals("RESPONSE_RECEIVED") || result.path("statusCode").asInt(500) >= 300;
-                return McpSchema.CallToolResult.builder().addTextContent(raw).isError(failed).build();
+                var resultContent = new ArrayList<McpSchema.Content>();
+                resultContent.add(new McpSchema.TextContent(raw));
+                for (var binary : content.binaries()) {
+                    var data = Base64.getEncoder().encodeToString(binary.content());
+                    if (binary.mimeType().startsWith("image/"))
+                        resultContent.add(new McpSchema.ImageContent(null, data, binary.mimeType()));
+                    else resultContent.add(new McpSchema.EmbeddedResource(null,
+                            new McpSchema.BlobResourceContents("urn:tdw:openapi-file:" + UUID.randomUUID(), binary.mimeType(), data)));
+                }
+                return McpSchema.CallToolResult.builder().content(resultContent).isError(failed).build();
             } catch (Exception exception) {
                 return McpSchema.CallToolResult.builder().addTextContent(exception instanceof pl.mkn.tdw.integrations.openapi.contract.OpenApiException
                         || exception instanceof IllegalArgumentException ? exception.getMessage() : "Nie udało się wykonać operacji OpenAPI.").isError(true).build();

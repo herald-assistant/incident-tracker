@@ -75,12 +75,16 @@ Zwykły parametr bez tej flagi nadal przyjmuje tylko pojedynczy segment.
 Metadata wykonawcze pochodzą z importera i są wspólne dla SDK/MCP.
 DELETE może mieć JSON body tylko w OpenAPI 3.1; GET pozostaje bez body.
 
-Response content obsługuje application/json, text/plain ze string schema i */*.
+Response content obsługuje application/json, text/plain ze string schema, */*
+oraz image/png, image/jpeg, image/webp, image/gif, application/pdf i DOCX MIME
+ze string/binary schema. Wspierany plik według rzeczywistego Content-Type
+jest typowanym OpenApiFile w pamięci; JSON body zawiera tylko metadane.
+Bez zależności od renderowania, SDK, MCP i storage rozmowy.
 Metadane media types są per status/default; Accept wynika z kontraktu.
 Text/plain dekoduj wskazanym charsetem lub UTF-8 i zachowuj jako TextNode,
 bez fallbacku błędnego JSON do tekstu. Jawny wildcard */* dekoduje application/json
 i application/*+json jako JSON, text/* według charset/UTF-8, pozostałe jako
-obiekt {encoding: base64, contentType, data}. Brak Content-Type oznacza dane
+obiekt {encoding: base64, contentType, data} dla pozostałych binariów. Brak Content-Type oznacza dane
 binarne; błędny zadeklarowany JSON nadal ma nieustalony wynik dla mutacji.
 Odczytuj pełne body bez aplikacyjnego
 limitu rozmiaru odpowiedzi; timeouty transportu pozostają.

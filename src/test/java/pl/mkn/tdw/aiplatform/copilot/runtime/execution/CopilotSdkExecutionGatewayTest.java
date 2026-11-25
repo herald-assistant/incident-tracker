@@ -79,6 +79,21 @@ import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolEvidenceSes
 class CopilotSdkExecutionGatewayTest {
 
     @Test
+    void shouldCaptureOnlyAttachmentMetadataInActivity() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var event = mapper.readValue("""
+                {"type":"user.message","data":{"content":"Pytanie","attachments":[
+                  {"type":"blob","displayName":"report.pdf","mimeType":"application/pdf","data":"BINARY_BASE64"},
+                  {"type":"file","displayName":"picture.png","path":"C:/private/picture.png"}]}}
+                """, com.github.copilot.generated.UserMessageEvent.class);
+        var gateway = executionGateway(new CopilotSdkProperties(), toolEvidenceSessionStore(mapper));
+        var activity = (AnalysisAiActivityEvent) ReflectionTestUtils.invokeMethod(gateway, "toActivityEvent", event);
+        assertThat(activity.details()).containsEntry("attachmentCount", 2);
+        assertThat(activity.details().get("attachments").toString()).contains("report.pdf", "application/pdf", "picture.png")
+                .doesNotContain("BINARY_BASE64", "C:/private");
+    }
+
+    @Test
     void shouldCaptureFullSkillResultAndStructuredResultsForEveryTool() {
         var gateway = executionGateway(new CopilotSdkProperties(),
                 toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()));
@@ -112,15 +127,42 @@ class CopilotSdkExecutionGatewayTest {
                 "resultContentPreview", "resultDetailedContentPreview");
     }
 
+    @Test
+    void shouldKeepBinaryToolPayloadsOutOfActivityAndApplicationLogs() {
+        var event = completedToolEvent("safe metadata", Map.of(), null,
+                List.of(Map.of("type", "image", "mimeType", "image/png", "data", "BINARY_SECRET_PAYLOAD")));
+        var gateway = executionGateway(new CopilotSdkProperties(),
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()));
+        var activity = (AnalysisAiActivityEvent) ReflectionTestUtils.invokeMethod(gateway, "toActivityEvent", event);
+        assertThat(activity.details()).containsEntry("binaryResultCount", 1);
+        assertThat(activity.toString()).doesNotContain("BINARY_SECRET_PAYLOAD");
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(CopilotSessionEventLogger.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start(); logger.addAppender(appender);
+        try {
+            var session = mock(CopilotSession.class);
+            when(session.getSessionId()).thenReturn("binary-session");
+            CopilotSessionEventLogger.logSessionEvent(event, session, CopilotSessionEventLogger.newSessionLogSummary("binary-run"));
+            assertThat(appender.list).isNotEmpty();
+            assertThat(appender.list.stream().map(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage))
+                    .allSatisfy(message -> assertThat(message).doesNotContain("BINARY_SECRET_PAYLOAD"));
+        } finally { logger.detachAppender(appender); appender.stop(); }
+    }
+
     private ToolExecutionCompleteEvent completedToolEvent(String detailedContent, Map<String, Object> toolTelemetry) {
         return completedToolEvent(detailedContent, toolTelemetry, null);
     }
 
     private ToolExecutionCompleteEvent completedToolEvent(
             String detailedContent, Map<String, Object> toolTelemetry, String toolName) {
+        return completedToolEvent(detailedContent, toolTelemetry, toolName, null);
+    }
+
+    private ToolExecutionCompleteEvent completedToolEvent(
+            String detailedContent, Map<String, Object> toolTelemetry, String toolName, List<Object> binaries) {
         var event = new ToolExecutionCompleteEvent();
         var result = new ToolExecutionCompleteResult(
-                "Tool completed", detailedContent, null, null, null, null, null, null);
+                "Tool completed", detailedContent, null, binaries, null, null, null, null);
         event.setData(new ToolExecutionCompleteEvent.ToolExecutionCompleteEventData(
                 "tool-call-1",
                 true,

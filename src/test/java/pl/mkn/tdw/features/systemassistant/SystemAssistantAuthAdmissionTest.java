@@ -38,7 +38,7 @@ class SystemAssistantAuthAdmissionTest {
         var oidc = mock(OidcLoginPort.class);
         when(oidc.authorization(auth)).thenThrow(new HttpAuthException("Login required")).thenReturn("Bearer test-token");
         var ai = mock(SystemAssistantAiPort.class);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenReturn(new SystemAssistantAiPort.Reply("Gotowe", null));
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(new SystemAssistantAiPort.Reply("Gotowe", null));
         var service = new SystemAssistantConversationService(configuration, ai, SystemAssistantTestSupport.history(workspace),
                 new LocalAnalysisRunOperationGuard(), oidc);
         try {
@@ -52,7 +52,7 @@ class SystemAssistantAuthAdmissionTest {
                     .andExpect(header().string("Cache-Control", "no-store"));
             assertThat(service.get(id).messages()).isEmpty();
             assertThat(service.get(id).busy()).isFalse();
-            verify(ai, never()).answer(any(), any(), any(), any(), any(), any(), any());
+            verify(ai, never()).answer(any(), any(), any(), any(), any(), any(), any(), any());
             service.send(id, new SystemAssistantMessageRequest("Sprawdź klienta ponownie", "crm", null, null));
             await().until(() -> !service.get(id).busy());
             assertThat(service.get(id).messages()).hasSize(2);

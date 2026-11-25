@@ -12,7 +12,13 @@ public final class LocalAnalysisRunSnapshotWriter {
 
     public static void save(LocalAnalysisRunStore store, JsonNode envelope,
                             LocalAnalysisRunContinuation continuation, Metadata metadata) {
-        var record = LocalAnalysisRunRecord.v1(envelope, continuation);
+        save(store, envelope, continuation, null, metadata);
+    }
+
+    public static void save(LocalAnalysisRunStore store, JsonNode envelope,
+                            LocalAnalysisRunContinuation continuation, LocalAnalysisRunStoreSnapshot snapshot,
+                            Metadata metadata) {
+        var record = LocalAnalysisRunRecord.v1(envelope, continuation).withStoreSnapshot(snapshot);
         var index = new LocalAnalysisRunIndexEntry(
                 metadata.runId(), LocalAnalysisRunRecord.SCHEMA, LocalAnalysisRunRecord.VERSION,
                 "runs/" + metadata.runId() + "/run.json", metadata.feature(), metadata.displayName(),

@@ -111,7 +111,7 @@ public class CopilotSessionEventLogger {
                 data.model(),
                 data.interactionId(),
                 data.parentToolCallId(),
-                abbreviate(String.valueOf(data.result()), 500),
+                abbreviate(data.result() == null ? null : data.result().content(), 500),
                 abbreviate(String.valueOf(data.error()), 300)
         );
     }

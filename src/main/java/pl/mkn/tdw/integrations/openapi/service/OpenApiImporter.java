@@ -167,8 +167,10 @@ public class OpenApiImporter implements OpenApiImportPort {
     }
 
     private List<String> responseContent(JsonNode root, JsonNode content, String path) {
-        fields(content, path + "/content", "application/json", "text/plain", "*/*");
-        if (content.isEmpty()) error(path, "Wymagane application/json, text/plain lub */*.");
+        var supported = new ArrayList<>(pl.mkn.tdw.integrations.openapi.contract.OpenApiFile.EXTENSIONS.keySet());
+        supported.addAll(List.of("application/json", "text/plain", "*/*"));
+        fields(content, path + "/content", supported.toArray(String[]::new));
+        if (content.isEmpty()) error(path, "Wymagany obsługiwany typ odpowiedzi.");
         var types = new ArrayList<String>();
         var entries = content.fields();
         var resolver = new OpenApiSchemaResolver(mapper, root);
@@ -176,13 +178,17 @@ public class OpenApiImporter implements OpenApiImportPort {
             var entry = entries.next();
             if (entry.getKey().startsWith("x-")) continue;
             var media = entry.getValue(); fields(media, path, "schema", "example");
-            if (entry.getKey().equals("text/plain")) {
+            if (pl.mkn.tdw.integrations.openapi.contract.OpenApiFile.EXTENSIONS.containsKey(entry.getKey())) {
+                var schema = resolver.request(media.path("schema"), path);
+                if (!schema.path("type").asText().equals("string") || !schema.path("format").asText().equals("binary"))
+                    error(path, "Plik wymaga schema type: string, format: binary.");
+            } else if (entry.getKey().equals("text/plain")) {
                 var schema = resolver.request(media.path("schema"), path);
                 if (!schema.path("type").asText().equals("string")) error(path, "text/plain wymaga schema type: string.");
             } else if (!entry.getKey().equals("*/*") || media.has("schema")) resolver.response(media.path("schema"), path);
             types.add(entry.getKey());
         }
-        if (types.isEmpty()) error(path, "Wymagane application/json, text/plain lub */*.");
+        if (types.isEmpty()) error(path, "Wymagany obsługiwany typ odpowiedzi.");
         return List.copyOf(types);
     }
     private ObjectNode objectSchema() {

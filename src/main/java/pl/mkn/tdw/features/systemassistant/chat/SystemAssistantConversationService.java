@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantAttachment;
+import java.io.InputStream;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantLoginRequiredException;
@@ -82,6 +84,22 @@ public class SystemAssistantConversationService {
         }
     }
 
+    public SystemAssistantConversation attach(String id, String name, InputStream content) {
+        try (var lease = lease(id)) {
+            var conversation = find(id, true);
+            synchronized (conversation) {
+                if (conversation.busy()) throw error("CHAT_BUSY", UserFacingErrorType.CONFLICT,
+                        "Poczekaj na zakończenie poprzedniej odpowiedzi.");
+                if (conversation.dirty) persist(conversation);
+                conversation.attachments.add(history.writeAttachment(id, name, content));
+                conversations.put(id, conversation);
+                persist(conversation);
+                conversations.remove(id, conversation);
+                return conversation.snapshot();
+            }
+        }
+    }
+
     public SystemAssistantConversation send(String id, SystemAssistantMessageRequest request) {
         ai.requireReady();
         var lease = lease(id);
@@ -96,6 +114,9 @@ public class SystemAssistantConversationService {
                 requireApiAuthentication(configuration);
                 var user = AnalysisChatMessageState.completedUser(UUID.randomUUID().toString(), request.message(), Instant.now());
                 var assistant = AnalysisChatMessageState.inProgressAssistant(UUID.randomUUID().toString(), Instant.now());
+                var previousAttachments = List.copyOf(conversation.attachments);
+                conversation.attachments.replaceAll(file -> file.messageId() != null ? file
+                        : new SystemAssistantAttachment(file.id(), file.name(), file.mimeType(), file.size(), user.id()));
                 conversation.messages.add(user.snapshot());
                 var transcript = List.copyOf(conversation.messages);
                 conversation.active = assistant;
@@ -117,7 +138,7 @@ public class SystemAssistantConversationService {
                                             assistant.addActivity(activity);
                                             persist(accepted);
                                         }
-                                    });
+                                    }, history.readAttachments(id, accepted.attachments));
                             synchronized (accepted) {
                                 assistant.complete(reply.content(), null, reply.usage());
                             }
@@ -145,6 +166,8 @@ public class SystemAssistantConversationService {
                 } catch (RuntimeException exception) {
                     conversation.messages.remove(conversation.messages.size() - 1);
                     conversation.active = null;
+                    conversation.attachments.clear();
+                    conversation.attachments.addAll(previousAttachments);
                     if (exception instanceof RejectedExecutionException) {
                         persist(conversation);
                         throw error("AI_BUSY", UserFacingErrorType.SERVICE_UNAVAILABLE, "Kolejka lokalna jest pełna. Spróbuj później.");
@@ -191,6 +214,7 @@ public class SystemAssistantConversationService {
             if (current != null) return current;
             var stored = history.load(id);
             var conversation = new Conversation(id, stored.conversation().pageContext(), stored.createdAt(), stored.conversation().messages());
+            conversation.attachments.addAll(stored.conversation().attachments());
             validate(conversation.page);
             if (stored.conversation().busy() || conversation.messages.stream().anyMatch(message -> "IN_PROGRESS".equals(message.status()))) {
                 for (var i = 0; i < conversation.messages.size(); i++) {
@@ -243,6 +267,7 @@ public class SystemAssistantConversationService {
         final SystemAssistantConversation.PageContext page;
         final Instant createdAt;
         final List<AnalysisChatMessageResponse> messages;
+        final List<SystemAssistantAttachment> attachments = new ArrayList<>();
         AnalysisChatMessageState active;
         boolean dirty;
 
@@ -260,7 +285,7 @@ public class SystemAssistantConversationService {
         synchronized SystemAssistantConversation snapshot() {
             var transcript = new ArrayList<>(messages);
             if (active != null) transcript.add(active.snapshot());
-            return new SystemAssistantConversation(id, busy(), page, List.copyOf(transcript));
+            return new SystemAssistantConversation(id, busy(), page, List.copyOf(transcript), List.copyOf(attachments));
         }
     }
 }

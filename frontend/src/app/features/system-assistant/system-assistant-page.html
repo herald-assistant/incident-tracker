@@ -194,10 +194,19 @@
           <p role="status">{{profileNotice()}}</p>
         }
         <app-analysis-follow-up-chat data-form-tour="assistant-chat" [messages]="messages()" [canUseChat]="canChat()" [isSubmitting]="submitting()"
+          [messageAttachmentNames]="messageAttachmentNames()" [pendingAttachmentNames]="pendingAttachmentNames()" [uploadingAttachments]="uploading()"
           [error]="chatError()" [needsAuth]="!authReady()" [compact]="true" [staticPanel]="true" [openByDefault]="true"
           ariaLabel="Rozmowa System Assistant" emptyText=""
           placeholder="Wiadomość…" unavailableMessage="Sprawdź dostępność feature'a, model i PAT Copilota w Workspace Settings."
           (sendMessage)="send($event)" (clearError)="chatError.set('')" (connectAuth)="auth.openSettings()">
+          <span chatActions>
+            <input #attachmentInput hidden type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.docx" aria-label="Wybierz załączniki"
+              [disabled]="busy() || !canChat()" (change)="attachFiles(attachmentInput)" />
+            <button class="assistant-chat-action" type="button" aria-label="Załącz pliki" [matTooltip]="uploading() ? 'Zapisywanie załączników…' : 'Załącz pliki'"
+              [disabled]="busy() || !canChat()" (click)="attachmentInput.click()">
+              <span class="material-symbols-outlined" aria-hidden="true">attach_file</span>
+            </button>
+          </span>
         <div chatActions class="assistant-ai-controls" data-form-tour="assistant-model">
           <app-choice-select class="assistant-profile-select" ariaLabel="Profil" placeholder="Wybierz Profil" [options]="profileOptions()" [value]="selectedProfileId()"
             [disabled]="busy()" (valueChange)="profileId.set($event)" (opened)="refreshProfiles()" />

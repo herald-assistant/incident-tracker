@@ -62,9 +62,10 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
     public Reply answer(String turnId, Snapshot configuration,
                         SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                         SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
-                        Consumer<AnalysisAiActivityEvent> activity) {
+                        Consumer<AnalysisAiActivityEvent> activity, List<Attachment> attachments) {
         var run = assemble(turnId, configuration, page, history, request, evidence, activity);
         var prepared = preparation.prepare(run);
+        prepared.messageOptions().setAttachments(SystemAssistantAttachments.prepare(attachments));
         try {
             var result = gateway.execute(prepared);
             return new Reply(result.content(), result.usage());

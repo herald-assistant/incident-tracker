@@ -42,6 +42,9 @@
             [class.chat-message--assistant]="message.role === 'ASSISTANT'"
             [class.chat-message--failed]="message.status === 'FAILED'"
           >
+            @if (messageAttachmentNames()[message.id]?.length) {
+              <ng-container [ngTemplateOutlet]="attachmentNames" [ngTemplateOutletContext]="{$implicit: messageAttachmentNames()[message.id], label: 'Załączniki wiadomości'}" />
+            }
             <div class="chat-message__content">
               @if (message.status === 'IN_PROGRESS') {
                 <p class="chat-message__pending">
@@ -157,6 +160,12 @@
         <p class="form-error">{{ displayedError() }}</p>
       }
 
+      @if (uploadingAttachments()) {
+        <p class="chat-attachment-status" role="status">Zapisywanie załączników…</p>
+      }
+      @if (pendingAttachmentNames().length) {
+        <ng-container [ngTemplateOutlet]="attachmentNames" [ngTemplateOutletContext]="{$implicit: pendingAttachmentNames(), label: 'Załączniki do następnej wiadomości'}" />
+      }
       <app-text-field
         [label]="compact() ? '' : inputLabel()"
         [ariaLabel]="inputLabel()"
@@ -248,3 +257,14 @@
     </div>
   }
 </dialog>
+
+<ng-template #attachmentNames let-names let-label="label">
+  <ul class="chat-attachments" [attr.aria-label]="label" data-clipboard-exclude>
+    @for (name of names; track $index) {
+      <li class="chat-attachments__file">
+        <span class="material-symbols-outlined" aria-hidden="true">attach_file</span>
+        <span>{{ name }}</span>
+      </li>
+    }
+  </ul>
+</ng-template>

@@ -96,7 +96,7 @@ Przed wieksza zmiana zacznij od:
   i nie ustawia ani nie waliduje adresu nasłuchiwania TDW. Docelowe API HTTP(S)
   mogą wskazywać dowolny poprawny host; nie dodawaj reguł loopback-only ani
   założeń o fikcyjnych danych. Auth API obsługuje Basic, Bearer, OAuth2 i OIDC przez pary API–Auth przypisane w profilu asystenta;
-  jawne pola są w tym samym JSON-ie konfiguracji. Załączniki pozostają odrębnym zakresem. Parser/REST należy
+  jawne pola są w tym samym JSON-ie konfiguracji. Załączniki PNG/JPEG/WebP/GIF, PDF i DOCX są trwale zapisane przy runie rozmowy, poza eksportem; każda NEW tura dołącza je jako SDK blobs. Upload jest dostępny wyłącznie podczas idle, bez limitów TDW i walidacji kompatybilności modelu. Parser/REST należy
   do `integrations.openapi`, callbacki i neutralny MCP do `agenttools.openapi`.
   Nie dodawaj tej semantyki do globalnego Copilot runtime lub skill root.
   Rozmowy mają trwały transkrypt V1 we wspólnej historii. localRunId
@@ -276,7 +276,7 @@ Zasady granic:
   uzycia skilli, available tools, hidden context, evidence sink i response
   parser maja pochodzic od feature'a, a nie byc zakodowane jako stale
   zalozenia platformy.
-- Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
+- Incident flow nie uzywa SDK attachments jako zrodla evidence. System Assistant przekazuje pliki rozmowy jako SDK BlobAttachment w swoim adapterze AI. Artefakty
   incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie,
   a `MessageOptions` dostaje tylko `setPrompt(prompt)`.
 - Nie zakladaj lokalnych sciezek plikowych dla artefaktow Copilota. Jesli

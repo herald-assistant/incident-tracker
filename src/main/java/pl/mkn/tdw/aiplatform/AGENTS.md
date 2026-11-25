@@ -118,6 +118,10 @@ globalnie do konsumentow bez konfiguracji overflow.
 
 - `aiplatform.*` nie moze importowac `analysis.*`, `features.*` ani
   `integrations.*`.
+- Opcjonalny neutralny `agenttools.content.ToolContentCallback` dostarcza tekst
+  do policy/logging i binaria do wyniku SDK. Platforma nie rozpoznaje PDF/DOCX,
+  nie pobiera plików i ich nie zapisuje; mapuje gotowe binaria bez umieszczania
+  base64 w activity/logach aplikacji.
 - Platforma moze zalezec od malych neutralnych kontraktow `shared.*`,
   `common.*`, neutralnych keys/nazw z `agenttools.*` oraz bibliotek
   SDK/technicznych.

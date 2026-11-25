@@ -21,7 +21,7 @@ System Assistant (`system-assistant.enabled=false` domyślnie) używa
 neutralnego importera/REST `integrations.openapi`, callbacków i osobnego MCP
 `agenttools.openapi`. Chat-first feature `features.systemassistant` posiada
 bieżącą konfigurację i tworzy NEW per tura bez raportu analitycznego.
-Trwałe rozmowy są zapisywane we wspólnej Analysis History. Browser Tools
+Trwałe rozmowy są zapisywane we wspólnej Analysis History. Pliki rozmowy są zapisywane w katalogu runu i dołączane jako SDK blobs w każdej turze; PDF jest renderowany w pamięci do obrazów wszystkich stron dla każdego modelu. Metadane pozostają poza eksportowanym transkryptem. Browser Tools
 pozwala wybrać nową lub wcześniejszą rozmowę w osadzonym panelu bez pełnego TDW.
 Kontynuacja zachowuje pierwotny kontekst, a narzędzia i skille pobiera z aktualnej
 konfiguracji. Obecne analizy i globalny katalog

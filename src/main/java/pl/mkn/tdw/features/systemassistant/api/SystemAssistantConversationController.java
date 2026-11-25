@@ -11,6 +11,9 @@ import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageReques
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantLoginRequiredException;
 
 import java.net.URI;
+import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/system-assistant/conversations")
@@ -50,5 +53,11 @@ public class SystemAssistantConversationController {
     public ResponseEntity<Void> remove(@PathVariable String id) {
         conversations.remove(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/{id}/attachments", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public SystemAssistantConversation attach(@PathVariable String id, @RequestParam String name,
+                                               HttpServletRequest request) throws IOException {
+        return conversations.attach(id, name, request.getInputStream());
     }
 }

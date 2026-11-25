@@ -10,6 +10,16 @@ describe('SystemAssistantApi', () => {
     api = TestBed.inject(SystemAssistantApi); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('streams attachments with an encoded name and no multipart envelope', () => {
+    const file = new File(['fixture'], 'opis #1.pdf', {type: 'application/pdf'});
+    api.attach('a/b', file).subscribe();
+    const request = http.expectOne(req => req.url === '/api/system-assistant/conversations/a%2Fb/attachments');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.params.get('name')).toBe(file.name);
+    expect(request.request.headers.get('Content-Type')).toBe('application/octet-stream');
+    expect(request.request.body).toBe(file);
+    request.flush({});
+  });
   it('previews and prepares a subset without saving configuration', () => {
     api.previewOpenApi('crm', 'source').subscribe();
     const preview = http.expectOne('/api/system-assistant/configuration/openapi/preview');

@@ -9,6 +9,32 @@ import { AnalysisFollowUpChatComponent } from './analysis-follow-up-chat';
   </app-analysis-follow-up-chat>` })
 class CompactChatHost { sent = ''; actions = 0; }
 
+describe('AnalysisFollowUpChatComponent attachment names', () => {
+  it.each([false, true])('places file names above the matching messages and pending names in the composer (compact=%s)', async compact => {
+    await TestBed.configureTestingModule({imports: [AnalysisFollowUpChatComponent]}).compileComponents();
+    const fixture = TestBed.createComponent(AnalysisFollowUpChatComponent);
+    fixture.componentRef.setInput('compact', compact);
+    fixture.componentRef.setInput('openByDefault', true);
+    fixture.componentRef.setInput('messages', [
+      {...assistantMessage(false), id: 'first', role: 'USER', content: 'Pierwsze pytanie'},
+      {...assistantMessage(false), id: 'second', role: 'USER', content: 'Drugie pytanie'}
+    ]);
+    fixture.componentRef.setInput('messageAttachmentNames', {first: ['report.pdf', 'report.pdf'], second: ['picture.png']});
+    fixture.componentRef.setInput('pendingAttachmentNames', ['next.docx']);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const rows = root.querySelectorAll('.chat-message');
+    expect(rows[0].querySelectorAll('.chat-attachments__file')).toHaveLength(2);
+    expect(rows[0].querySelector('.chat-attachments')?.textContent).toContain('report.pdf');
+    expect(rows[1].querySelector('.chat-attachments')?.textContent).toContain('picture.png');
+    expect(rows[1].querySelector('.chat-attachments')?.textContent).not.toContain('report.pdf');
+    expect(rows[0].querySelector('.chat-attachments')!.compareDocumentPosition(rows[0].querySelector('.chat-message__content')!)
+      & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(root.querySelector('form .chat-attachments')?.textContent).toContain('next.docx');
+    expect(root.querySelector('.analysis-chat__messages')?.textContent).not.toContain('next.docx');
+  });
+});
+
 describe('AnalysisFollowUpChatComponent agent progress', () => {
   it.each([false, true])('keeps one composer loader throughout a turn (compact=%s)', async (compact) => {
     await TestBed.configureTestingModule({imports: [AnalysisFollowUpChatComponent]}).compileComponents();

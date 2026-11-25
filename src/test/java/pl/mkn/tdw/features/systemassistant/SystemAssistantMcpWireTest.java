@@ -28,6 +28,43 @@ import static org.assertj.core.api.Assertions.*;
 @DirtiesContext
 class SystemAssistantMcpWireTest {
     @Test
+    void returnsPdfPagesAndDocxEmbeddedImagesAsMcpContent() throws Exception {
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        api.createContext("/file", exchange -> {
+            try {
+                calls.incrementAndGet();
+                var docx = exchange.getRequestURI().getPath().endsWith("docx");
+                var bytes = docx ? pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.docx("WORD-682")
+                        : pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.pdf("PDF-831");
+                exchange.getResponseHeaders().set("Content-Type", docx
+                        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf");
+                exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes);
+            } catch (Exception ex) { throw new RuntimeException(ex); }
+            finally { exchange.close(); }
+        });
+        api.start();
+        try {
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("files", "Files",
+                    pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.yaml("http://127.0.0.1:" + api.getAddress().getPort()))), List.of()));
+            var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port)
+                    .endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+            try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+                client.initialize();
+                for (var format : List.of("pdf", "docx", "pdf")) {
+                    var result = client.callTool(new McpSchema.CallToolRequest("oa_files_getFile", Map.of("path", Map.of("format", format))));
+                    assertThat(result.isError()).isFalse();
+                    assertThat(result.content()).filteredOn(McpSchema.ImageContent.class::isInstance).hasSize(1);
+                    var text = ((McpSchema.TextContent) result.content().get(0)).text();
+                    assertThat(text).contains("CURRENT_TURN_ONLY").doesNotContain("base64");
+                    if (format.equals("docx")) assertThat(text).contains("WORD-682");
+                }
+                assertThat(calls).hasValue(3);
+            }
+        } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
+    }
+
+    @Test
     void exposesAndExecutesGenericPathsQueryAndJsonThroughMcp() throws Exception {
         var calls = new java.util.concurrent.atomic.AtomicInteger();
         var query = new java.util.concurrent.atomic.AtomicReference<String>();

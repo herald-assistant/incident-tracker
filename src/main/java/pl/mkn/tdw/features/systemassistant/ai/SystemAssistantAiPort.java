@@ -11,6 +11,8 @@ public interface SystemAssistantAiPort {
     void requireReady();
     Reply answer(String turnId, Snapshot configuration, SystemAssistantConversation.PageContext page,
                  List<AnalysisChatMessageResponse> history, SystemAssistantMessageRequest request,
-                 Consumer<AnalysisEvidenceSection> evidence, Consumer<AnalysisAiActivityEvent> activity);
+                 Consumer<AnalysisEvidenceSection> evidence, Consumer<AnalysisAiActivityEvent> activity,
+                 List<Attachment> attachments);
+    record Attachment(String name, String mimeType, byte[] content) { }
     record Reply(String content, AnalysisAiUsage usage) {}
 }

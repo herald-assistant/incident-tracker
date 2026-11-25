@@ -46,7 +46,7 @@ class SystemAssistantConversationHistoryTest {
         var seenPage = new AtomicReference<SystemAssistantConversation.PageContext>();
         var transcript = new AtomicReference<List<AnalysisChatMessageResponse>>();
         var ai = mock(SystemAssistantAiPort.class);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
             seen.set(call.getArgument(1)); seenPage.set(call.getArgument(2)); transcript.set(call.getArgument(3));
             return new SystemAssistantAiPort.Reply("Odpowiedź", null);
         });
@@ -83,7 +83,7 @@ class SystemAssistantConversationHistoryTest {
         var assistant = AnalysisChatMessageState.inProgressAssistant("assistant", now);
         assistant.addToolEvidence(new AnalysisEvidenceSection("api", "writes", List.of(new AnalysisEvidenceItem("Zapis wykonany", List.of()))));
         history.save(now, new SystemAssistantConversation(id, true, null,
-                List.of(AnalysisChatMessageState.completedUser("user", "Zapisz", now).snapshot(), assistant.snapshot())));
+                List.of(AnalysisChatMessageState.completedUser("user", "Zapisz", now).snapshot(), assistant.snapshot()), java.util.List.of()));
         var ai = mock(SystemAssistantAiPort.class);
         try (var service = new ServiceClose(new SystemAssistantConversationService(mock(SystemAssistantConfigurationService.class), ai, history, new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             service.service.recoverInterruptedTurns();
@@ -97,7 +97,7 @@ class SystemAssistantConversationHistoryTest {
     @Test void aFailedFinalWriteCanBeRecoveredWithoutReplayingTheAnswer() throws Exception {
         var store = spy(store()); var history = history(store);
         var ai = mock(SystemAssistantAiPort.class); var finished = new CountDownLatch(1);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenReturn(new SystemAssistantAiPort.Reply("Wykonano", null));
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(new SystemAssistantAiPort.Reply("Wykonano", null));
         try (var service = new ServiceClose(new SystemAssistantConversationService(SystemAssistantTestSupport.configuration((id, yaml) -> List.of()), ai,
                 history, new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             var id = service.service.create(null).id();
@@ -113,7 +113,7 @@ class SystemAssistantConversationHistoryTest {
             assertThatThrownBy(() -> service.service.get(id)).isInstanceOf(SystemAssistantException.class);
             doCallRealMethod().when(store).save(any(), any());
             assertThat(service.service.get(id).messages().get(1).content()).isEqualTo("Wykonano");
-            verify(ai, times(1)).answer(any(), any(), any(), any(), any(), any(), any());
+            verify(ai, times(1)).answer(any(), any(), any(), any(), any(), any(), any(), any());
         }
     }
 
@@ -121,14 +121,14 @@ class SystemAssistantConversationHistoryTest {
         var store = spy(store()); var history = history(store); var guard = new LocalAnalysisRunOperationGuard();
         var configurations = SystemAssistantTestSupport.configuration((id, yaml) -> List.of());
         var ai = mock(SystemAssistantAiPort.class); var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
-        when(ai.answer(any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
             entered.countDown(); release.await(5, TimeUnit.SECONDS); return new SystemAssistantAiPort.Reply("Gotowe", null);
         });
         try (var service = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history, guard, mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             var id = service.service.create(null).id();
             doThrow(new IllegalStateException("storage offline")).when(store).save(any(), any());
             assertThatThrownBy(() -> service.service.send(id, request("Nie wykonuj"))).isInstanceOf(SystemAssistantException.class);
-            verify(ai, never()).answer(any(), any(), any(), any(), any(), any(), any());
+            verify(ai, never()).answer(any(), any(), any(), any(), any(), any(), any(), any());
             doCallRealMethod().when(store).save(any(), any());
             service.service.send(id, request("Wykonaj")); assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             assertThat(guard.tryAcquire(id)).isEmpty(); assertThatThrownBy(() -> service.service.remove(id)).isInstanceOf(SystemAssistantException.class);
