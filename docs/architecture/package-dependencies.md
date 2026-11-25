@@ -462,6 +462,12 @@ jezeli wspoldzielona jest tylko jego nazwa albo ksztalt, a nie semantyka.
 bezpieczne parsowanie payloadu. Nie zawiera orchestration, kontraktow feature'a
 ani integracji.
 
+`common.documents.DocumentAttachmentPreparer` współdzieli preparację plików
+między załącznikami System Assistanta i operator API File Reader: PDF przez
+`PdfPageRenderer`, pozostałe jako natywne bajty. Nie zna SDK, sesji, storage
+ani modelu. `DocxContentReader` zapewnia techniczny odczyt/pojedynczą walidację
+dokumentu dla narzędzi OpenAPI i podglądu operatora.
+
 ### `localworkspace`
 
 Warstwa posiada neutralny lokalny zapis:

@@ -120,6 +120,10 @@ brak automatycznego ponawiania zapisów i blokada po nieustalonym wyniku.
 
 ## Pliki zwracane przez API
 
+Pliki można sprawdzić bez uruchamiania AI w `Tool Workbench / File Reader`:
+podgląd pokazuje wszystkie strony PDF i obrazy, a dla DOCX wyłącznie wynik
+walidacji odczytu. [Szczegóły](architecture/file-reader-workbench.md).
+
 Operacja może zwrócić PNG/JPEG/WebP/GIF, PDF lub DOCX. W YAML deklarujesz
 odpowiedni MIME, np.:
 
@@ -137,6 +141,15 @@ stron, DOCX jako odczytany tekst i osadzone obsługiwane obrazy, a obrazy bezpo�
 Model dostaje zawartość w tej samej turze po wywołaniu narzędzia. Plik nie jest
 zapisywany w załącznikach rozmowy; ponowne użycie wymaga kolejnego wywołania API,
 które pobiera aktualny wynik. Adres URL w JSON sam nie uruchamia pobrania.
+
+Jeżeli API zwraca `application/octet-stream` albo pomija Content-Type,
+zamiast `application/pdf` zadeklaruj `application/octet-stream` z tym samym
+`schema: {type: string, format: binary}`. Asystent rozpozna obsługiwany
+format z bajtów. DOCX wymaga struktury ZIP z dokumentem Worda; zwykły ZIP
+nie wystarczy. Nieobsługiwany format lub niezgodny konkretny Content-Type
+zwraca `fileDelivery: FAILED`, zachowując status wykonanego HTTP.
+Nie należy wtedy automatycznie powtarzać operacji zapisu.
+Samo `*/*` ani nazwa z rozszerzeniem nie włącza takiego rozpoznawania.
 
 ## Certyfikaty API i dostawcy logowania
 

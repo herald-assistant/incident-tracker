@@ -154,7 +154,7 @@ z lokalizacją przed zapisem.
 | Body | POST/PUT/PATCH oraz DELETE w 3.1: `application/json`, wymagane lub opcjonalne body; `schema: {}` dopuszcza dowolny JSON | GET body, DELETE body w 3.0, multipart, binary request, pozostałe request media types |
 | Schema | object/array/scalars, properties/items/required/enum, `allOf`/`oneOf`/`anyOf`, discriminator jako guidance wariantów, boolean lub typowane additionalProperties, uniqueItems, pattern, limity, readOnly/writeOnly, format i metadata; w 3.0 nullable, w 3.1 null/tablica typów/const | not, patternProperties, multipleOf, inne nieobsługiwane keywords i niestandardowe dialekty |
 | References | Lokalne `#/components/schemas/...`; requesty: acykliczna projekcja inline do 30000 węzłów i 64 poziomów; odpowiedzi: ograniczony graf z produktywną rekursją; rodzeństwo schema `$ref` w 3.1 zachowuje przecięcie ograniczeń | Zewnętrzne refs, cykliczne aliasy, rekurencyjne requesty, rodzeństwo `$ref` w 3.0, przekroczenie budżetu |
-| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json, text/plain ze string schema, wspierane MIME plików ze string/binary schema lub */* | Response refs, headers, links, pozostałe jawne content types |
+| Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json, text/plain ze string schema, wspierane MIME plików lub application/octet-stream ze string/binary schema lub */* | Response refs, headers, links, pozostałe jawne content types |
 | Auth | security i components.securitySchemes dla Basic/Bearer/OAuth2/openIdConnect; wykonanie według wybranego profilu Auth | apiKey, digest, credentials w URL i model-facing Authorization |
 
 ### Generyczne ścieżki i query
@@ -228,11 +228,13 @@ a text/plain jako tekstowy JsonNode w istniejącym `body` wyniku. Text/plain
 wymaga deklaracji dla danego statusu lub default; jawny status bez content
 nie dziedziczy default. Charset pochodzi z nagłówka, domyślnie UTF-8; błędne
 kodowanie lub charset daje nieustalony wynik, bez zastępowania znaków.
-Brak Content-Type zachowuje obsługę JSON. Nie ma fallbacku błędnego JSON do
+Brak Content-Type zachowuje obsługę JSON poza jawną deklaracją odpowiedzi
+application/octet-stream, opisaną w sekcji plików. Nie ma fallbacku błędnego JSON do
 tekstu ani interpretacji tekstu wyglądającego jak JSON. Pusty text/plain
 zwraca pusty string; 204/205 i pusty JSON zwracają null. Pozostałe media
-types z niepustym body są nieobsługiwane. Adapter odczytuje pełne body bez
-aplikacyjnego limitu rozmiaru odpowiedzi; Auth, status HTTP i guard
+types z niepustym body są nieobsługiwane poza obsługą plików opisaną poniżej.
+Adapter odczytuje pełne body bez aplikacyjnego limitu rozmiaru odpowiedzi;
+Auth, status HTTP i guard
 potencjalnego zapisu pozostają.
 
 Query array pozostaje tablicą JSON w `arguments.query.<name>` SDK/MCP.
@@ -544,6 +546,20 @@ Rzeczywisty Content-Type określa format; dla jawnego MIME musi być zgodny
 z deklaracją odpowiedniego statusu/default. Nazwa pochodzi z Content-Disposition,
 jest normalizowana do basename albo zastępowana `response.<ext>`.
 
+Jawne `application/octet-stream` ze `schema: {type: string, format: binary}`
+dla danego statusu lub `default` włącza rozpoznawanie pliku z bajtów po HTTP
+2xx, z wyłączeniem 204/205. Działa bez Content-Type, z application/octet-stream
+oraz z konkretnym binarnym MIME zgodnym z wykrytym formatem. Rozpoznawane są
+PDF, PNG, JPEG, GIF i WebP po sygnaturze; DOCX wymaga ZIP z wpisem
+`word/document.xml`. Nazwa i rozszerzenie pliku nie są dowodem formatu.
+Nieznany format, pusta odpowiedź plikowa lub niezgodność Content-Type daje
+`outcome: RESPONSE_RECEIVED`, zachowany status HTTP i `fileDelivery: FAILED`,
+bez pliku ani base64. Operacja nie jest ponawiana. JSON/text korzysta z
+dotychczasowego dekodowania; błędy HTTP nie uruchamiają tej detekcji.
+Rozpoznanie nie dowodzi kompletnego odczytu dokumentu; PDF i DOCX przechodzą
+jeszcze przez swoje czytniki. Samo `*/*` nie włącza rozpoznawania bajtów:
+ogólny/brakujący MIME nadal daje reprezentację base64.
+
 REST zwraca neutralny `OpenApiFile` w pamięci poza tekstowym JSON, którego body
 zawiera nazwę, MIME i rozmiar. `agenttools.content.ToolContentCallback` przenosi
 tekst i binaria niezależnie od SDK/MCP. Wspólny `common.documents.PdfPageRenderer`
@@ -586,6 +602,11 @@ pozostają natywnymi blobs. Oryginał PDF pozostaje w runie, bez zapisu pochodny
 OCR, zmiany modelu ani tools/policy. Brak zapisanego
 pliku kończy turę jawnym błędem. Activity SDK zawiera tylko metadane attachments,
 bez base64 i ścieżek plikowych. Zewnętrzny OTLP zachowuje swoją jawną konfigurację.
+
+Neutralny `common.documents.DocumentAttachmentPreparer` posiada preparację
+PDF oraz mapę rozszerzeń MIME załączników. Feature mapuje jego wynik na SDK
+blobs. Ten sam mechanizm zasila [File Reader w Tool Workbench](file-reader-workbench.md),
+który pokazuje obrazy bez AI, a dla DOCX zwraca tylko walidację odczytu.
 
 Oba widoki mają przycisk wyboru wielu plików w slocie akcji shared chatu i listę
 oczekujących nazw przy composerze. Przy przyjęciu wiadomości metadane nowych

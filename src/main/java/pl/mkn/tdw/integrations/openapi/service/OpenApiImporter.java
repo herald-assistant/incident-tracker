@@ -168,7 +168,7 @@ public class OpenApiImporter implements OpenApiImportPort {
 
     private List<String> responseContent(JsonNode root, JsonNode content, String path) {
         var supported = new ArrayList<>(pl.mkn.tdw.integrations.openapi.contract.OpenApiFile.EXTENSIONS.keySet());
-        supported.addAll(List.of("application/json", "text/plain", "*/*"));
+        supported.addAll(List.of("application/json", "text/plain", "application/octet-stream", "*/*"));
         fields(content, path + "/content", supported.toArray(String[]::new));
         if (content.isEmpty()) error(path, "Wymagany obsługiwany typ odpowiedzi.");
         var types = new ArrayList<String>();
@@ -178,7 +178,8 @@ public class OpenApiImporter implements OpenApiImportPort {
             var entry = entries.next();
             if (entry.getKey().startsWith("x-")) continue;
             var media = entry.getValue(); fields(media, path, "schema", "example");
-            if (pl.mkn.tdw.integrations.openapi.contract.OpenApiFile.EXTENSIONS.containsKey(entry.getKey())) {
+            if (pl.mkn.tdw.integrations.openapi.contract.OpenApiFile.EXTENSIONS.containsKey(entry.getKey())
+                    || entry.getKey().equals("application/octet-stream")) {
                 var schema = resolver.request(media.path("schema"), path);
                 if (!schema.path("type").asText().equals("string") || !schema.path("format").asText().equals("binary"))
                     error(path, "Plik wymaga schema type: string, format: binary.");

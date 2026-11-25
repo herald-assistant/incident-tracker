@@ -139,7 +139,7 @@ Do 60 operacji na YAML, maksymalnie 100 łącznie we wszystkich API.
 | Parametry | Scalar `path`/`query`, query array z scalar items oraz query object z płaskimi skalarnymi wartościami; opcjonalne `header` są dokumentacją; nazwa `[a-zA-Z][a-zA-Z0-9_]{0,63}`; path required; simple dla path / form dla query |
 | Pola parametru | `name`, `in`, `description`, `required`, `schema`, `style`, `explode`, `deprecated`, `example`; query array: form + explode true/default (powtarzane klucze) lub false (CSV); query object: form + explode true/default, schema mapy i kodowanie kluczy, bez null/tablic/zagnieżdżeń; x-tdw-catch-all na string path pozwala na wiele segmentów (opis poniżej); array path, wymagane header i cookies nieobsługiwane |
 | Body | POST/PUT/PATCH oraz DELETE w OpenAPI 3.1: `application/json`, wymagane lub opcjonalne; `schema: {}` to dowolny JSON; GET bez body; pola `description`, `required`, `content`; media object ma `schema` i opcjonalne `example` |
-| Responses | Niepusta mapa kodów `"100"`–`"599"` lub default; description i opcjonalne content: application/json, text/plain ze schema type string, image/png, image/jpeg, image/webp, image/gif, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document ze schema `{type: string, format: binary}` albo `*/*`; wspierany plik jest treścią wyniku narzędzia (PDF: obrazy stron; DOCX: tekst i osadzone obrazy), bez zapisu do kolejnych tur; inne binary wildcard pozostają obiektem base64; bez headers, links i response refs |
+| Responses | Niepusta mapa kodów `"100"`–`"599"` lub default; description i opcjonalne content: application/json, text/plain ze schema type string, image/png, image/jpeg, image/webp, image/gif, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document lub application/octet-stream ze schema `{type: string, format: binary}` albo `*/*`; wspierany plik jest treścią wyniku narzędzia (PDF: obrazy stron; DOCX: tekst i osadzone obrazy), bez zapisu do kolejnych tur; inne binary wildcard pozostają obiektem base64; bez headers, links i response refs |
 | Components | `components.schemas` oraz `components.securitySchemes` dla Basic/Bearer/OAuth2/openIdConnect; bez katalogów parameters, responses i requestBodies |
 | References | Lokalne `#/components/schemas/...`; requesty acykliczne do 64 poziomów i 30000 węzłów; odpowiedzi mogą mieć produktywną rekursję; rodzeństwo schema `$ref` dozwolone tylko w 3.1 |
 | YAML | Bez duplikatów kluczy, kotwic/aliasów i własnych tagów; `x-*` są zachowane; skutki określa x-tdw-operation-effect, wielosegmentową ścieżkę włącza x-tdw-catch-all na parametrze path |
@@ -238,6 +238,16 @@ bez opisania braku. Szczegółowy kontrakt jest w
 Wykonawca nie śledzi redirectów i nie ponawia żądań. Connect timeout to 3 s,
 read timeout 8 s, pełna odpowiedź bez aplikacyjnego limitu rozmiaru body,
 argumenty do 65 536 znaków.
+
+Gdy API zwraca plik jako `application/octet-stream` albo nie wysyła
+Content-Type, zadeklaruj odpowiedź `application/octet-stream` ze
+`schema: {type: string, format: binary}`. Platforma rozpoznaje obsługiwane
+PDF/DOCX/obrazy z pobranych bajtów. Nie wystarczy nazwa z rozszerzeniem ani
+deklaracja w skillu. DOCX jest rozpoznawany po wpisie `word/document.xml`
+w ZIP. Nie używaj tej deklaracji dla operacji zwracającej JSON lub tekst.
+Przy konkretnym binarnym Content-Type wymagane jest dopasowanie do wykrytego
+formatu; brak rozpoznania daje `fileDelivery: FAILED` po wykonanym HTTP.
+
 Zwróć uwagę na paginację i wielkość wyników. Nie dodawaj fikcyjnego `limit`,
 jeżeli endpoint go nie przyjmuje. Timeout zapisu może oznaczać nieustalony wynik.
 

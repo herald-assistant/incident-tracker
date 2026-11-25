@@ -27,13 +27,23 @@ public final class DocxContentReader {
             for (var entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
                 var name = entry.getName();
                 if (name.matches("word/(document|header[0-9]*|footer[0-9]*|footnotes|endnotes|comments)\\.xml")) {
-                    if (name.equals("word/document.xml")) foundDocument = true;
                     text.append('\n').append(name).append('\n');
                     var xml = factory.createXMLStreamReader(new ByteArrayInputStream(zip.readAllBytes()));
                     try {
+                        var rootChecked = false;
                         while (xml.hasNext()) {
                             var event = xml.next();
                             if (event == XMLStreamConstants.DTD) throw new IllegalArgumentException("DOCX DTD is not supported");
+                            if (event == XMLStreamConstants.START_ELEMENT && !rootChecked) {
+                                rootChecked = true;
+                                if (name.equals("word/document.xml")) {
+                                    if (!xml.getLocalName().equals("document") || !List.of(
+                                            "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+                                            "http://purl.oclc.org/ooxml/wordprocessingml/main").contains(xml.getNamespaceURI()))
+                                        throw new IllegalArgumentException("Invalid Word document root");
+                                    foundDocument = true;
+                                }
+                            }
                             if (event == XMLStreamConstants.START_ELEMENT && xml.getLocalName().equals("t"))
                                 text.append(xml.getElementText());
                             else if (event == XMLStreamConstants.START_ELEMENT && xml.getLocalName().equals("tab")) text.append('\t');

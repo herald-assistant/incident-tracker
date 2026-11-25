@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import pl.mkn.tdw.common.documents.DocumentAttachmentPreparer;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantAttachment;
@@ -36,10 +37,6 @@ public class SystemAssistantConversationHistory {
     private final LocalAnalysisRunStore store;
     private final ObjectMapper mapper;
     private final LocalWorkspaceProperties workspace;
-    private static final Map<String, String> MEDIA_TYPES = Map.of(
-            "png", "image/png", "jpg", "image/jpeg", "jpeg", "image/jpeg", "webp", "image/webp",
-            "gif", "image/gif", "pdf", "application/pdf",
-            "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 
     public record Archive(String schema, int version, Instant createdAt, SystemAssistantConversation conversation) { }
 
@@ -125,7 +122,8 @@ public class SystemAssistantConversationHistory {
             try (var output = Files.newOutputStream(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
                 input.transferTo(output);
             }
-            return new SystemAssistantAttachment(attachmentId, name, MEDIA_TYPES.get(extension), Files.size(path), null);
+            return new SystemAssistantAttachment(attachmentId, name,
+                    DocumentAttachmentPreparer.mimeTypeForName(name), Files.size(path), null);
         } catch (IOException exception) {
             throw new SystemAssistantException("ATTACHMENT_SAVE_FAILED", UserFacingErrorType.SERVICE_UNAVAILABLE,
                     "Nie udało się zapisać załączników rozmowy.");
@@ -157,7 +155,7 @@ public class SystemAssistantConversationHistory {
 
     private static String extension(String name) {
         var extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
-        if (!MEDIA_TYPES.containsKey(extension)) throw invalidAttachment();
+        if (DocumentAttachmentPreparer.mimeTypeForName(name) == null) throw invalidAttachment();
         return extension;
     }
 

@@ -962,6 +962,21 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Page URL');
   });
 
+  it('opens File Reader in Tool Workbench without AI options or model requests', async () => {
+    const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl('/file-reader');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-file-reader-page')).not.toBeNull();
+    expect(element.querySelector('a.app-shell__nav-item[aria-label="File Reader"]')).not.toBeNull();
+    expect(element.querySelector('.workbench-header')).toBeNull();
+    expect(element.querySelector('.app-shell__info-tooltip')?.textContent).toContain('POST /api/files/preview');
+    expect(element.textContent).toContain('Załącz pliki');
+    expect(element.querySelector('app-ai-execution-controls')).toBeNull();
+  });
+
   it('should redirect the legacy evidence route to elastic', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);

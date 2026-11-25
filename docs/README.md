@@ -66,7 +66,7 @@ implementacje niezatwierdzonego planu.
 ## System Assistant
 
 [Instrukcja obsługi](system-assistant.md) opisuje sześć widoków: Skille,
-Kontrakty, Profile, Rozmowę i Uruchamianie w systemie. Feature udostępnia import
+Kontrakty, Auth, Profile, Rozmowę i Uruchamianie w systemie. Feature udostępnia import
 wybranych operacji OpenAPI, podgląd Swagger UI, eksport YAML i przenoszenie
 całego zestawu konfiguracji. Trwałą rozmowę można kontynuować z Analysis
 History lub bezpośrednio w panelu Browser Tools, z pierwotnym kontekstem
@@ -79,7 +79,10 @@ pozwala przygotować cały plik importu na podstawie repozytoriów lub dokument�
 w zewnętrznym chacie, np. Codex lub VS Code.
 Feature jest domyślnie wyłączony. Obsługuje hosty HTTP(S) bez ograniczenia
 do loopback. [Auth API](architecture/http-api-authentication.md) obejmuje Basic,
-Bearer, OAuth2 i OIDC; załączniki pozostają poza bieżącym zakresem.
+Bearer, OAuth2 i OIDC; obsługę załączników opisuje instrukcja obsługi.
+
+[File Reader w Tool Workbench](architecture/file-reader-workbench.md) pozwala
+sprawdzić pliki bez AI: zobaczyć obrazy/strony PDF i zweryfikować DOCX.
 
 ## Aktualne potrzeby i plany
 

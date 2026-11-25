@@ -308,6 +308,24 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'file-reader',
+        loadComponent: () => import('./features/file-reader/file-reader-page').then(module => module.FileReaderPage),
+        data: {
+          section: 'Tool Workbench',
+          title: 'File Reader',
+          capabilityInfo: {
+            description: 'Podgląd załączników przygotowanych do AI bez uruchamiania modelu. PDF jako obrazy stron, obrazy bez zmian; DOCX tylko walidacja.',
+            badges: ['Bez AI', 'Bez zapisu plików'],
+            meta: [
+              { label: 'Endpoint', value: 'POST /api/files/preview' },
+              { label: 'Formaty', value: 'PNG, JPEG, WebP, GIF, PDF i DOCX' },
+              { label: 'PDF', value: 'Wszystkie strony jako JPEG 144 DPI, tak samo jak w załącznikach chatu' },
+              { label: 'DOCX', value: 'Sprawdzenie odczytu ZIP/XML; bez zwracania treści i bez potwierdzania interpretacji przez model' }
+            ]
+          }
+        }
+      },
+      {
         path: 'config-drift-viewer-tools',
         loadComponent: () =>
           import(

@@ -1,0 +1,118 @@
+<div class="page-shell file-reader">
+  <main class="source-workspace">
+    <div class="source-layout">
+      <aside class="analysis-card source-tool-panel" aria-label="Pliki do odczytu">
+        <div class="section-heading">
+          <h2>Pliki</h2>
+          <span class="panel-chip">{{ files().length }}</span>
+        </div>
+        <input #fileInput hidden type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.docx"
+          aria-label="Wybierz pliki" [disabled]="busy()" (change)="selectFiles(fileInput)" />
+        <button class="secondary-button file-reader__attach" type="button" [disabled]="busy()" (click)="fileInput.click()">
+          <span class="material-symbols-outlined" aria-hidden="true">attach_file</span>Załącz pliki
+        </button>
+        @if (files().length) {
+          <ul class="file-reader__files">
+            @for (selected of files(); track selected.id) {
+              <li>
+                <span class="file-reader__filename">{{ selected.file.name }}<small>{{ size(selected.file.size) }}</small></span>
+                <button class="json-icon-button" type="button" [disabled]="busy()" (click)="removeFile(selected.id)"
+                  [attr.aria-label]="'Usuń plik ' + selected.file.name" matTooltip="Usuń plik">
+                  <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+              </li>
+            }
+          </ul>
+          <button class="secondary-button" type="button" [disabled]="busy()" (click)="clear()">Wyczyść listę</button>
+        } @else {
+          <p class="field-hint">Wybierz jeden lub kilka plików PNG, JPEG, WebP, GIF, PDF lub DOCX.</p>
+        }
+      </aside>
+
+      <section class="source-main">
+        <article class="analysis-card source-runner">
+          <div class="section-heading">
+            <div>
+              <h2>Podgląd danych dla AI</h2>
+              <p class="field-hint">PDF jako obrazy wszystkich stron, obrazy w oryginalnej postaci. Dla DOCX tylko sprawdzenie poprawności.</p>
+            </div>
+            <span class="panel-chip file-reader__no-ai">Bez uruchamiania AI</span>
+          </div>
+          <div class="source-runner__actions">
+            <button class="primary-button" type="button" [disabled]="busy() || !files().length"
+              [attr.aria-busy]="busy()" (click)="readFiles()">
+              <span class="material-symbols-outlined" aria-hidden="true">{{ busy() ? 'hourglass_top' : 'play_arrow' }}</span>
+              {{ busy() ? 'Odczytywanie…' : 'Odczytaj pliki' }}
+            </button>
+          </div>
+          @if (busy()) { <p role="status">Odczytywanie: {{ currentFile() }}</p> }
+        </article>
+
+        @if (results().length) {
+          <article class="analysis-card source-result" aria-label="Wyniki odczytu">
+            @for (result of results(); track result.id) {
+              @let failed = !!result.error || result.response?.status !== 'READY';
+              <section class="file-reader__result" [attr.aria-label]="result.name">
+                <div class="section-heading">
+                  <div class="file-reader__result-info">
+                    <h3>{{ result.name }}</h3>
+                    @if (result.response; as response) {
+                      <p class="field-hint">@if (response.mimeType) { {{ response.mimeType }} · }{{ size(response.size) }}</p>
+                    }
+                  </div>
+                  <span class="status-pill" [class.status-pill--done]="!failed" [class.status-pill--error]="failed">
+                    {{ failed ? 'Błąd' : 'Gotowe' }}
+                  </span>
+                </div>
+                @if (failed || result.response?.validationOnly || !result.response?.images?.length) {
+                  <p [class.form-error]="failed" [attr.role]="failed ? 'alert' : 'status'">{{ result.response?.message || result.error }}</p>
+                }
+                @if (result.response; as response) {
+                  @for (image of response.images; track $index) {
+                    <figure class="file-reader__image">
+                      @if (response.mimeType === 'application/pdf') {
+                        <figcaption>Strona {{ $index + 1 }} / {{ response.images.length }} · {{ size(image.size) }}</figcaption>
+                      } @else if (response.images.length > 1 || image.name !== result.name || image.mimeType !== response.mimeType || image.size !== response.size) {
+                        <figcaption>{{ image.name }} · {{ size(image.size) }}</figcaption>
+                      }
+                      <img [src]="'data:' + image.mimeType + ';base64,' + image.data" [alt]="image.name" loading="lazy" />
+                    </figure>
+                  }
+                }
+              </section>
+            }
+          </article>
+        }
+
+        @if (files().length) {
+          <details class="source-json-panel" [open]="!results().length">
+            <summary class="json-response-panel__header">
+              <span>Request preview</span>
+              <span class="file-reader__json-actions">
+                <button class="json-icon-button" type="button" aria-label="Kopiuj request" [matTooltip]="copied() === 'request' ? 'Skopiowano' : 'Kopiuj request'"
+                  (click)="$event.preventDefault(); copy('request')"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
+                <button class="json-icon-button" type="button" aria-label="Pobierz request" matTooltip="Pobierz request"
+                  (click)="$event.preventDefault(); download('request')"><span class="material-symbols-outlined" aria-hidden="true">download</span></button>
+              </span>
+            </summary>
+            <app-text-field type="textarea" appearance="code" class="json-output" ariaLabel="Request preview" [readonly]="true" [value]="requestJson()" />
+          </details>
+        }
+        @if (results().length) {
+          <details class="source-json-panel">
+            <summary class="json-response-panel__header">
+              <span>JSON odpowiedzi</span>
+              <span class="file-reader__json-actions">
+                <button class="json-icon-button" type="button" aria-label="Kopiuj odpowiedź" [matTooltip]="copied() === 'response' ? 'Skopiowano' : 'Kopiuj odpowiedź'"
+                  (click)="$event.preventDefault(); copy('response')"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
+                <button class="json-icon-button" type="button" aria-label="Pobierz odpowiedź" matTooltip="Pobierz odpowiedź"
+                  (click)="$event.preventDefault(); download('response')"><span class="material-symbols-outlined" aria-hidden="true">download</span></button>
+              </span>
+            </summary>
+            <app-text-field type="textarea" appearance="code" class="json-output" ariaLabel="JSON odpowiedzi" [readonly]="true" [value]="responseJson()" />
+          </details>
+        }
+      </section>
+    </div>
+  </main>
+</div>

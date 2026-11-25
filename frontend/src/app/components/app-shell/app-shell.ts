@@ -160,6 +160,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'GitLab Source', route: '/gitlab', icon: 'source' },
       { label: 'Jira Source', route: '/jira', icon: 'assignment' },
       { label: 'Confluence Source', route: '/confluence', icon: 'article' },
+      { label: 'File Reader', route: '/file-reader', icon: 'attach_file' },
       {
         label: 'Config Drift Viewer',
         route: '/config-drift-viewer-tools',

@@ -337,7 +337,7 @@ Na dzisiaj projekt ma:
   w jednym wspolnym tabie `Koszt AI` bocznego panelu; glowny wynik i kroki
   przebiegu nie powielaja tych danych,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
-  `GET /confluence`, `GET /config-drift-viewer-tools`, `GET /database` i
+  `GET /confluence`, `GET /file-reader`, `GET /config-drift-viewer-tools`, `GET /database` i
   `GET /operational-context` do recznego
   testowania, debugowania i zbierania inputu z reusable capability bez
   przenoszenia logiki incident analysis do tych widokow,
@@ -542,6 +542,11 @@ walidacje. Elasticsearch nadal ma osobny lokalny wyjatek.
   Angularowy ekran `Tool Workbench / Confluence Source` do recznego pobierania
   tekstu strony przez `POST /api/confluence/page/content`, wraz z
   rozpoznanym `pageId`, wersja i jawnymi ograniczeniami adaptera.
+- `GET /file-reader`
+  Angularowy ekran `Tool Workbench / File Reader`: podgląd obrazów i wszystkich
+  stron PDF przygotowanych tak jak załączniki chatu oraz wyłącznie walidacja
+  DOCX przez `POST /api/files/preview`, bez AI, sesji i zapisu plików.
+  Kontrakt: [File Reader](file-reader-workbench.md).
 - `GET /config-drift-viewer-tools`
   Angularowy ekran `Tool Workbench / Config Drift Viewer`. Tworzy
   krotkozyjacy readonly preview pojedynczego scope'u i leniwie pokazuje source

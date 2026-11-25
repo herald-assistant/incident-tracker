@@ -137,7 +137,21 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
                             + "/" + contentType.getSubtype().toLowerCase(java.util.Locale.ROOT);
                     var declared = operation.responseContentTypes().getOrDefault(Integer.toString(status),
                             operation.responseContentTypes().getOrDefault("default", List.of()));
-                    if (status != 204 && status != 205 && OpenApiFile.EXTENSIONS.containsKey(mime)
+                    var textual = mime.startsWith("text/") || mime.equals("application/json") || mime.endsWith("+json");
+                    if (status >= 200 && status < 300 && status != 204 && status != 205
+                            && declared.contains("application/octet-stream") && !textual) {
+                        var detected = OpenApiBinaryFormat.detect(bytes);
+                        if (detected == null || (!mime.isEmpty() && !mime.equals("application/octet-stream")
+                                && !mime.equals(detected)))
+                            return new OpenApiResult("RESPONSE_RECEIVED", status,
+                                    mapper.createObjectNode().put("fileDelivery", "FAILED")
+                                            .put("fileError", "Nie rozpoznano obsługiwanego formatu pliku lub jest on niezgodny z Content-Type."),
+                                    "HTTP wykonano, ale zawartości pliku nie można przekazać do AI.", null);
+                        var name = fileName(response.getHeaders().getContentDisposition().getFilename(),
+                                OpenApiFile.EXTENSIONS.get(detected));
+                        file = new OpenApiFile(name, detected, bytes);
+                        body = mapper.createObjectNode().put("name", name).put("contentType", detected).put("size", bytes.length);
+                    } else if (status != 204 && status != 205 && OpenApiFile.EXTENSIONS.containsKey(mime)
                             && (declared.contains(mime) || declared.contains("*/*"))) {
                         var name = response.getHeaders().getContentDisposition().getFilename();
                         name = fileName(name, OpenApiFile.EXTENSIONS.get(mime));

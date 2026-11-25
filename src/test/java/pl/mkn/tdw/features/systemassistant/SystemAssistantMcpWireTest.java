@@ -27,8 +27,9 @@ import static org.assertj.core.api.Assertions.*;
 })
 @DirtiesContext
 class SystemAssistantMcpWireTest {
-    @Test
-    void returnsPdfPagesAndDocxEmbeddedImagesAsMcpContent() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void returnsPdfPagesAndDocxEmbeddedImagesAsMcpContent(boolean genericResponse) throws Exception {
         var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         var calls = new java.util.concurrent.atomic.AtomicInteger();
         api.createContext("/file", exchange -> {
@@ -37,16 +38,18 @@ class SystemAssistantMcpWireTest {
                 var docx = exchange.getRequestURI().getPath().endsWith("docx");
                 var bytes = docx ? pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.docx("WORD-682")
                         : pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.pdf("PDF-831");
-                exchange.getResponseHeaders().set("Content-Type", docx
+                if (!genericResponse) exchange.getResponseHeaders().set("Content-Type", docx
                         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf");
+                else if (!docx) exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
                 exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes);
             } catch (Exception ex) { throw new RuntimeException(ex); }
             finally { exchange.close(); }
         });
         api.start();
         try {
-            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("files", "Files",
-                    pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.yaml("http://127.0.0.1:" + api.getAddress().getPort()))), List.of()));
+            var yaml = pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.yaml("http://127.0.0.1:" + api.getAddress().getPort());
+            if (genericResponse) yaml = yaml.replace("application/pdf:", "application/octet-stream:");
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("files", "Files", yaml)), List.of()));
             var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port)
                     .endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
             try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {

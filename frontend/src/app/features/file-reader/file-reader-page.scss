@@ -1,0 +1,19 @@
+.file-reader__attach,
+.file-reader__json-actions { display: inline-flex; align-items: center; gap: 8px; }
+.file-reader__no-ai { white-space: nowrap; flex-shrink: 0; }
+.file-reader__files { list-style: none; margin: 0; padding: 0; }
+.file-reader__files li { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.file-reader__filename { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.file-reader__filename small { display: block; color: var(--text-muted); margin-top: 4px; }
+.file-reader__result { display: grid; gap: 12px; min-width: 0; }
+.file-reader__result-info { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.file-reader__result + .file-reader__result { padding-top: 20px; border-top: 1px solid var(--border); }
+.file-reader__result p { margin: 0; }
+.file-reader__image { margin: 0; display: grid; gap: 8px; }
+.file-reader__image figcaption { color: var(--text-muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+.file-reader__image img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); }
+.file-reader__result h3 { margin: 0; font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 760px) {
+  .source-layout { grid-template-columns: minmax(0, 1fr); }
+  .source-tool-panel { position: static; max-height: none; }
+}

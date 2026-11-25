@@ -76,16 +76,24 @@ Metadata wykonawcze pochodzą z importera i są wspólne dla SDK/MCP.
 DELETE może mieć JSON body tylko w OpenAPI 3.1; GET pozostaje bez body.
 
 Response content obsługuje application/json, text/plain ze string schema, */*
-oraz image/png, image/jpeg, image/webp, image/gif, application/pdf i DOCX MIME
+oraz image/png, image/jpeg, image/webp, image/gif, application/pdf, DOCX MIME i application/octet-stream
 ze string/binary schema. Wspierany plik według rzeczywistego Content-Type
 jest typowanym OpenApiFile w pamięci; JSON body zawiera tylko metadane.
 Bez zależności od renderowania, SDK, MCP i storage rozmowy.
 Metadane media types są per status/default; Accept wynika z kontraktu.
+Jawne application/octet-stream ze string/binary schema rozpoznaje wspierany
+format z bajtów po HTTP 2xx z wyłączeniem 204/205, gdy odpowiedź jest binarna
+lub nie ma Content-Type. DOCX wymaga wpisu word/document.xml w ZIP.
+Konkretny binarny MIME musi zgadzać się z wykrytym formatem; brak rozpoznania
+lub niezgodność zachowuje status/outcome HTTP i daje fileDelivery FAILED,
+bez pliku, base64 ani retry. Nie rozpoznawaj po nazwie lub rozszerzeniu.
+Nie zmieniaj dekodowania JSON/text, błędów HTTP ani samego wildcardu.
 Text/plain dekoduj wskazanym charsetem lub UTF-8 i zachowuj jako TextNode,
 bez fallbacku błędnego JSON do tekstu. Jawny wildcard */* dekoduje application/json
 i application/*+json jako JSON, text/* według charset/UTF-8, pozostałe jako
-obiekt {encoding: base64, contentType, data} dla pozostałych binariów. Brak Content-Type oznacza dane
-binarne; błędny zadeklarowany JSON nadal ma nieustalony wynik dla mutacji.
+obiekt {encoding: base64, contentType, data} dla pozostałych binariów.
+W samym wildcardzie brak Content-Type oznacza dane binarne; błędny zadeklarowany
+JSON nadal ma nieustalony wynik dla mutacji.
 Odczytuj pełne body bez aplikacyjnego
 limitu rozmiaru odpowiedzi; timeouty transportu pozostają.
 Fixtures mają być małe i fikcyjne; graniczne rozmiary/grafy generuj w testach.
