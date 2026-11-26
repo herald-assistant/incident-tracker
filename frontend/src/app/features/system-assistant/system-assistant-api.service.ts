@@ -4,6 +4,7 @@ import {
   AssistantConfiguration,
   AssistantProfileOption,
   AssistantConversation,
+  AssistantCurrentPage,
   AssistantPageContext,
   AssistantTool,
   AssistantOidcConnection,
@@ -53,7 +54,8 @@ export class SystemAssistantApi {
   }
 
   create(pageContext: AssistantPageContext | null = null) {
-    return this.http.post<AssistantConversation>(`${this.base}/conversations`, {pageContext});
+    const openingPage = pageContext && {origin: pageContext.origin, pathname: pageContext.pathname, title: pageContext.title, capturedAt: pageContext.capturedAt};
+    return this.http.post<AssistantConversation>(`${this.base}/conversations`, {pageContext: openingPage});
   }
 
   conversation(id: string) {
@@ -65,9 +67,9 @@ export class SystemAssistantApi {
       {params: {name: file.name}, headers: {'Content-Type': 'application/octet-stream'}});
   }
 
-  send(id: string, message: string, profileId: string, model: string, reasoningEffort: string) {
+  send(id: string, message: string, profileId: string, model: string, reasoningEffort: string, pageContext: AssistantCurrentPage | null = null) {
     return this.http.post<AssistantConversation>(`${this.base}/conversations/${encodeURIComponent(id)}/messages`, {
-      message, profileId, ...(model ? {model} : {}), ...(reasoningEffort ? {reasoningEffort} : {})
+      message, profileId, ...(pageContext && {pageContext}), ...(model ? {model} : {}), ...(reasoningEffort ? {reasoningEffort} : {})
     });
   }
 }

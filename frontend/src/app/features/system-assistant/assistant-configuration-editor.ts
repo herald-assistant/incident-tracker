@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, input, model, OnInit, output, signal} from '@angular/core';
+import {Component, computed, DestroyRef, inject, input, linkedSignal, model, OnInit, output, signal} from '@angular/core';
 import {Dialog, DialogModule, DialogRef} from '@angular/cdk/dialog';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -17,6 +17,17 @@ import {ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NAM
 import {SYSTEM_ASSISTANT_WINDOW} from './system-assistant-ingress.service';
 import {AssistantApiDefinition, AssistantAuthProfile, AssistantConfiguration, AssistantOidcConnection, AssistantProfile, AssistantProfileOption, AssistantTool} from './system-assistant.models';
 
+const EMPTY_CONFIGURATION: AssistantConfiguration = {apis: [], skills: [], profiles: [], authProfiles: []};
+
+function sameConfigurationValue(left: unknown, right: unknown): boolean {
+  // Optional Auth fields loaded as null are displayed and edited as empty strings.
+  if (left === right || (left === null && right === '') || (left === '' && right === null)) return true;
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key =>
+    Object.hasOwn(right, key) && sameConfigurationValue(Reflect.get(left, key), Reflect.get(right, key)));
+}
+
 @Component({
   selector: 'app-assistant-configuration-editor',
   imports: [AssistantAuthProfiles, ChoiceSelectComponent, DialogModule, MatTooltipModule, TextFieldComponent],
@@ -26,7 +37,6 @@ import {AssistantApiDefinition, AssistantAuthProfile, AssistantConfiguration, As
 export class AssistantConfigurationEditor implements OnInit {
   readonly workspaceView = input.required<string>();
   readonly tabRequested = output<string>();
-  readonly dirty = model(false);
   readonly error = model('');
   readonly notice = model('');
   readonly authBusyId = model('');
@@ -39,7 +49,13 @@ export class AssistantConfigurationEditor implements OnInit {
   private readonly dialogs = inject(Dialog);
   private picker?: DialogRef<OpenApiPickerResult>;
   private viewer?: DialogRef<void>;
-  readonly configuration = signal<AssistantConfiguration>({ apis: [], skills: [], profiles: [], authProfiles: [] });
+  private readonly savedConfiguration = signal<AssistantConfiguration | null>(null);
+  readonly configuration = linkedSignal(() => this.savedConfiguration() ?? EMPTY_CONFIGURATION);
+  readonly dirty = computed(() => {
+    const saved = this.savedConfiguration();
+    // With an unreadable configuration, even an explicitly imported empty draft can repair it.
+    return saved ? this.differsFrom(saved) : this.configuration() !== EMPTY_CONFIGURATION;
+  });
   readonly editingApiId = signal<string | null>(null);
   readonly expandedDefinitions = signal<Record<'skills' | 'profiles' | 'authProfiles', ReadonlySet<string>>>({
     skills: new Set(), profiles: new Set(), authProfiles: new Set()
@@ -73,10 +89,14 @@ export class AssistantConfigurationEditor implements OnInit {
     this.destroyRef.onDestroy(() => { this.picker?.close(); this.viewer?.close(); });
   }
 
+  differsFrom(snapshot: AssistantConfiguration | undefined): boolean {
+    return !sameConfigurationValue(this.configuration(), snapshot);
+  }
+
   ngOnInit(): void {
     this.api.configuration().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: value => {
-        this.configuration.set(value);
+        this.savedConfiguration.set(value);
         this.loaded.emit(value.profiles);
         this.loadTools();
         this.loadAuthStatus();
@@ -99,18 +119,18 @@ export class AssistantConfigurationEditor implements OnInit {
     this.configuration.update(value => ({...value, profiles: [...value.profiles,
       {id, name: 'Nowy profil', urlPattern: '*', apiBindings: [], skillIds: []}]}));
     this.setDefinitionExpanded('profiles', id, true);
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   updateProfile(index: number, key: 'name' | 'urlPattern', content: string): void {
     if (this.configurationBusy()) return;
     this.configuration.update(value => ({...value, profiles: value.profiles.map((item, i) => i === index ? {...item, [key]: content} : item)}));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   toggleProfileResource(index: number, key: 'skillIds', id: string, checked: boolean): void {
     if (this.configurationBusy()) return;
     this.configuration.update(value => ({...value, profiles: value.profiles.map((item, i) => i === index
       ? {...item, [key]: checked ? [...new Set([...item[key], id])] : item[key].filter(current => current !== id)} : item)}));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   profileWarning(profile: AssistantProfile): string { return missingProfileResources(profile, this.configuration()); }
   profileSummary(profile: AssistantProfile): string {
@@ -128,12 +148,12 @@ export class AssistantConfigurationEditor implements OnInit {
     const index = this.configuration().skills.length;
     this.configuration.update(value => ({...value, skills: [...value.skills, {id, name: 'Nowy skill', content: ''}]}));
     this.setDefinitionExpanded('skills', '' + index, true);
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   updateSkill(index: number, key: 'id' | 'name' | 'content', content: string): void {
     if (this.configurationBusy()) return;
     this.configuration.update(value => ({...value, skills: value.skills.map((item, i) => i === index ? {...item, [key]: content} : item)}));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   toggleApiName(id: string): void {
     if (!this.configurationBusy()) this.editingApiId.set(this.editingApiId() === id ? null : id);
@@ -141,7 +161,7 @@ export class AssistantConfigurationEditor implements OnInit {
   updateApiName(id: string, name: string): void {
     if (this.configurationBusy() || !this.configuration().apis.some(api => api.id === id)) return;
     this.configuration.update(value => ({...value, apis: value.apis.map(api => api.id === id ? {...api, name} : api)}));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   apiNameError(name: string): string {
     return !name.trim() ? 'Podaj nazwę API.' : name.length > 100 ? 'Nazwa API może mieć do 100 znaków.' : '';
@@ -154,7 +174,7 @@ export class AssistantConfigurationEditor implements OnInit {
         .map(Number).filter(current => current !== index).map(current => '' + (current > index ? current - 1 : current)))}));
     } else if (kind === 'profiles') this.setDefinitionExpanded('profiles', this.configuration().profiles[index].id, false);
     this.configuration.update(value => ({ ...value, [kind]: value[kind].filter((_, i) => i !== index) }));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   exportConfiguration(): void {
     if (this.configurationBusy()) return;
@@ -172,8 +192,9 @@ export class AssistantConfigurationEditor implements OnInit {
       const configuration = parseConfigurationFile(value);
       this.editingApiId.set(null);
       this.expandedDefinitions.set({skills: new Set(), profiles: new Set(), authProfiles: new Set()});
-      this.configuration.set(configuration); this.dirty.set(true); this.saveError.set('');
-      this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}, Auth: ${configuration.authProfiles.length}). Zapisz, aby ją aktywować.`);
+      this.configuration.set(configuration); this.saveError.set('');
+      if (!this.dirty()) this.notice.set('Wczytana konfiguracja jest zgodna z zapisaną.');
+      else this.notice.set(`Wczytano konfigurację do szkicu (kontrakty: ${configuration.apis.length}, skille: ${configuration.skills.length}, profile: ${configuration.profiles.length}, Auth: ${configuration.authProfiles.length}). Zapisz, aby ją aktywować.`);
       this.tabRequested.emit('skills');
     } catch (error) {
       if (!this.destroyRef.destroyed) this.error.set(error instanceof Error ? error.message : 'Nie udało się odczytać pliku konfiguracji.');
@@ -203,7 +224,6 @@ export class AssistantConfigurationEditor implements OnInit {
       this.picker = undefined;
       if (!result) return;
       this.configuration.update(value => ({...value, apis: [...value.apis, {id, name: result.title, yaml: result.yaml}]}));
-      this.dirty.set(true);
       this.notice.set(`Operacje w zestawie: ${result.operationCount}. Zapisz konfigurację, aby je udostępnić.`);
     });
   }
@@ -242,7 +262,7 @@ export class AssistantConfigurationEditor implements OnInit {
     this.saving.set(true); this.error.set(''); this.saveError.set(''); this.notice.set('');
     this.api.save(this.configuration()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: value => {
-        this.configuration.set(value); this.loaded.emit(value.profiles); this.saving.set(false); this.dirty.set(false);
+        this.savedConfiguration.set(value); this.loaded.emit(value.profiles); this.saving.set(false);
         this.notice.set('Zapisano. Kolejna tura użyje bieżącego zestawu API i skilli.'); this.loadTools();
       },
       error: error => { this.saving.set(false); this.saveError.set(assistantErrorMessage(error)); }
@@ -266,7 +286,7 @@ export class AssistantConfigurationEditor implements OnInit {
   }
   updateAuthProfiles(authProfiles: AssistantAuthProfile[]): void {
     if (this.configurationBusy()) return;
-    this.configuration.update(value => ({...value, authProfiles})); this.dirty.set(true); this.notice.set('');
+    this.configuration.update(value => ({...value, authProfiles})); this.notice.set('');
   }
   profileHasApi(profile: AssistantProfile, apiId: string): boolean { return profile.apiBindings.some(binding => binding.apiId === apiId); }
   profileApiAuth(profile: AssistantProfile, apiId: string): string { return profile.apiBindings.find(binding => binding.apiId === apiId)?.authProfileId || ''; }
@@ -282,13 +302,13 @@ export class AssistantConfigurationEditor implements OnInit {
     this.configuration.update(value => ({...value, profiles: value.profiles.map((profile, i) => i !== index ? profile : {...profile,
       apiBindings: checked ? this.profileHasApi(profile, apiId) ? profile.apiBindings : [...profile.apiBindings, {apiId, authProfileId: null}]
         : profile.apiBindings.filter(binding => binding.apiId !== apiId)})}));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   updateProfileApiAuth(index: number, apiId: string, authProfileId: string): void {
     if (this.configurationBusy()) return;
     this.configuration.update(value => ({...value, profiles: value.profiles.map((profile, i) => i !== index ? profile : {...profile,
       apiBindings: profile.apiBindings.map(binding => binding.apiId === apiId ? {...binding, authProfileId: authProfileId || null} : binding)})}));
-    this.dirty.set(true); this.notice.set('');
+    this.notice.set('');
   }
   loadAuthStatus(): void {
     const generation = ++this.authStatusGeneration;
@@ -304,7 +324,14 @@ export class AssistantConfigurationEditor implements OnInit {
     if (this.dirty() || this.configurationBusy() || this.authBusyId()) return;
     this.authBusyId.set(id); this.saveError.set('');
     this.api.loginAuth(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: result => this.browser.location.assign(result.authorizationUrl),
+      next: result => {
+        if (this.dirty()) {
+          this.authBusyId.set('');
+          this.saveError.set('Konfiguracja zmieniła się podczas logowania. Zapisz lub cofnij zmiany i spróbuj ponownie.');
+          return;
+        }
+        this.browser.location.assign(result.authorizationUrl);
+      },
       error: error => { this.authBusyId.set(''); this.saveError.set(assistantErrorMessage(error)); }
     });
   }

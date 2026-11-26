@@ -36,7 +36,7 @@ class SystemAssistantConversationHistoryTest {
         return new FileSystemLocalAnalysisRunStore(properties, new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
     }
     SystemAssistantConversationHistory history(LocalAnalysisRunStore store) { return new SystemAssistantConversationHistory(store, mapper, properties); }
-    SystemAssistantMessageRequest request(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null); }
+    SystemAssistantMessageRequest request(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null, null); }
 
     @Test void reopensPersistedTranscriptWithOriginalPageAndCurrentSkillsAndTools() throws Exception {
         var store = store(); var configurations = mock(SystemAssistantConfigurationService.class);

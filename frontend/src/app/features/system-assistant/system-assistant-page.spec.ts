@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AssistantConfigurationEditor } from './assistant-configuration-editor';
 import { SystemAssistantPage } from './system-assistant-page';
-import { AssistantConversation } from './system-assistant.models';
+import { AssistantConfiguration, AssistantConversation } from './system-assistant.models';
 import { Dialog } from '@angular/cdk/dialog';
 import { OpenApiOperationPicker } from './openapi-operation-picker';
 import { By } from '@angular/platform-browser';
@@ -28,42 +28,53 @@ function savedConversation(): AssistantConversation {
       toolEvidenceSections: [], aiActivityEvents: [], toolFeedback: [], prompt: ''
     }))};
 }
-const currentIngress = {origin: 'https://crm.example', pathname: '/tickets/CRM-202', title: 'CRM ticket', capturedAt: '2026-11-23T10:00:00Z'};
+const bridgeNonce = 'bridge_123456789012345678901234';
+const currentIngress = {url: 'https://crm.example/tickets/CRM-202?tab=details#owner', origin: 'https://crm.example', pathname: '/tickets/CRM-202', title: 'CRM ticket', capturedAt: '2026-11-23T10:00:00Z'};
 const loginContextKey = 'tdw.system-assistant.login-context';
 const loginMessage = 'Sprawdź klienta';
 const savedLoginContext = (embedded: boolean) => ({conversationId: 'saved-chat', profileId: 'crm_selected',
   returnPath: embedded ? '/system-assistant/chat' : '/system-assistant', expiresAt: Date.now() + 60_000,
-  context: embedded ? currentIngress : null, message: loginMessage, model: 'original-model', reasoningEffort: 'high'});
+  context: embedded ? currentIngress : null, nonce: embedded ? bridgeNonce : null, message: loginMessage, model: 'original-model', reasoningEffort: 'high'});
 
 describe('SystemAssistantPage', () => {
   let http: HttpTestingController;
+  let parentPage = currentIngress;
   beforeEach(() => {
+    parentPage = currentIngress;
     TestBed.configureTestingModule({ imports: [SystemAssistantPage], providers: [provideHttpClient(), provideHttpClientTesting(),
       {provide: SYSTEM_ASSISTANT_WINDOW, useFactory: () => {
         const cache = new Map<string, string>();
-        return {location: {hash: '', assign: vi.fn()}, removeEventListener: vi.fn(), clearTimeout: vi.fn(), sessionStorage: {
+        const events = new EventTarget();
+        const parent = {postMessage(data: {type: string; nonce: string; contextId?: string}) {
+          if (data.type !== 'TDW_SYSTEM_ASSISTANT_READY' && data.type !== 'TDW_SYSTEM_ASSISTANT_REQUEST') return;
+          const reply = new MessageEvent('message', {origin: currentIngress.origin, data: {
+            type: data.contextId ? 'TDW_SYSTEM_ASSISTANT_UPDATE' : 'TDW_SYSTEM_ASSISTANT_CONTEXT',
+            protocolVersion: 1, nonce: data.nonce, contextId: data.contextId || 'opening_page', context: parentPage}});
+          Object.defineProperty(reply, 'source', {value: parent}); events.dispatchEvent(reply);
+        }};
+        return Object.assign(events, {location: {hash: '', assign: vi.fn()}, confirm: vi.fn(), parent, setTimeout: vi.fn(), clearTimeout: vi.fn(), sessionStorage: {
           getItem: (key: string) => cache.get(key) ?? null,
           setItem: (key: string, value: string) => { cache.set(key, value); }, removeItem: (key: string) => { cache.delete(key); }
-        }};
+        }});
       }},
       {provide: ActivatedRoute, useValue: {snapshot: {data: {embeddedChat: false}}}}] });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
   const testProfile = {id: 'test_profile', name: 'Test CRM', urlPattern: '*', apiBindings: [], skillIds: []};
-  function loadProfiles(profiles: typeof testProfile[]) {
+  function loadConfiguration({profiles = [testProfile], ...resources}: Partial<AssistantConfiguration> = {}) {
     if (TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat']) {
       http.expectOne('/api/system-assistant/configuration/profiles').flush(profiles.map(({id, name, urlPattern}) => ({id, name, urlPattern})));
       http.expectNone('/api/system-assistant/configuration');
       http.expectNone('/api/system-assistant/configuration/tools');
     } else {
-      http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles});
+      http.expectOne('/api/system-assistant/configuration').flush({apis: [], skills: [], authProfiles: [], profiles, ...resources});
       http.expectOne('/api/system-assistant/configuration/tools').flush([]);
     }
   }
-  function ready(runs: LocalAnalysisRunListItemResponse[] = []) {
+  function ready(runs: LocalAnalysisRunListItemResponse[] = [], configuration: Partial<AssistantConfiguration> = {}) {
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
-    loadProfiles([testProfile]);
+    loadConfiguration(configuration);
     http.expectOne('/api/analysis/ai/options').flush({ defaultModel: 'test-model', defaultReasoningEffort: '', defaultReasoningEfforts: [], models: [] });
     http.expectOne('/api/auth/github/status').flush({ configured: true, settingsUrl: '/workspace-settings' });
     fixture.componentInstance.profileId.set('test_profile'); fixture.detectChanges();
@@ -126,14 +137,14 @@ describe('SystemAssistantPage', () => {
     http.expectNone('/api/system-assistant/conversations/saved/messages');
   });
   function loadLoginConfiguration() {
-    loadProfiles([{...testProfile, id: 'crm_selected'}]);
+    loadConfiguration({profiles: [{...testProfile, id: 'crm_selected'}]});
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
   }
   it.each([false, true])('shows attachment names at their messages in the conversation snapshot (embedded=%s)', embedded => {
     TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const fixture = ready(); const page = fixture.componentInstance;
     page.workspaceView.set('conversation'); page.historyOpen.set(false);
-    if (embedded) page.ingress.restoreContext(currentIngress);
+    if (embedded) page.ingress.reconnect(currentIngress, bridgeNonce);
     const saved = savedConversation();
     page.conversation.set({...saved, messages: [...saved.messages, ...saved.messages.map(message => ({...message, id: 'next-' + message.id}))],
       attachments: [
@@ -157,7 +168,7 @@ describe('SystemAssistantPage', () => {
       const fixture = ready(); const page = fixture.componentInstance;
       page.workspaceView.set('conversation'); page.historyOpen.set(false);
       page.model.set('original-model'); page.reasoningEffort.set('high');
-      if (embedded) page.ingress.restoreContext(currentIngress);
+      if (embedded) page.ingress.reconnect(currentIngress, bridgeNonce);
       if (existing) page.conversation.set(savedConversation());
       fixture.detectChanges();
       const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
@@ -172,7 +183,7 @@ describe('SystemAssistantPage', () => {
       const cached = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.getItem(loginContextKey);
       expect(JSON.parse(cached!)).toEqual({conversationId: 'saved-chat', profileId: 'test_profile',
         returnPath: embedded ? '/system-assistant/chat' : '/system-assistant', expiresAt: expect.any(Number),
-        context: embedded ? currentIngress : null, message: loginMessage, model: 'original-model', reasoningEffort: 'high'});
+        context: embedded ? currentIngress : null, nonce: embedded ? bridgeNonce : null, message: loginMessage, model: 'original-model', reasoningEffort: 'high'});
       expect(JSON.parse(cached!).expiresAt).toBeGreaterThan(Date.now());
       expect(JSON.parse(cached!).expiresAt).toBeLessThanOrEqual(Date.now() + 300_000);
       expect(cached).not.toContain('Poprzednia odpowiedź');
@@ -183,10 +194,43 @@ describe('SystemAssistantPage', () => {
       page.send('Nie ponawiaj'); http.expectNone('/api/system-assistant/conversations/saved-chat/messages');
       fixture.destroy();
     });
+  it.each(['stay', 'leave', 'edited during login', 'edits reverted', 'redirect failed'] as const)(
+    'guards a conversation login with unsaved configuration (%s)', outcome => {
+      const fixture = ready(); const page = fixture.componentInstance; const editor = configurationEditor(fixture);
+      const browser = TestBed.inject(SYSTEM_ASSISTANT_WINDOW);
+      const confirm = vi.mocked(browser.confirm).mockReturnValueOnce(outcome !== 'stay').mockReturnValue(false);
+      const canUnload = () => browser.dispatchEvent(new Event('beforeunload', {cancelable: true}));
+      editor.updateProfile(0, 'name', 'Szkic'); page.workspaceView.set('conversation');
+      page.conversation.set(savedConversation()); fixture.detectChanges();
+      page.send(loginMessage);
+      http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
+        {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
+      expect(confirm).toHaveBeenCalledExactlyOnceWith('Opuścić System Assistant i odrzucić niezapisane zmiany konfiguracji?');
+      const loginUrl = '/api/system-assistant/auth/crm_oidc/login';
+      if (outcome === 'stay') http.expectNone(loginUrl);
+      else {
+        expect(canUnload()).toBe(false);
+        if (outcome === 'edited during login') editor.addSkill();
+        if (outcome === 'edits reverted') { editor.addSkill(); editor.remove('skills', 0); }
+        if (outcome === 'redirect failed') vi.mocked(browser.location.assign).mockImplementation(() => { throw new Error(); });
+        http.expectOne(loginUrl).flush({authorizationUrl: 'https://sso.example.com/authorize'});
+      }
+      if (outcome === 'leave' || outcome === 'edits reverted') {
+        expect(browser.location.assign).toHaveBeenCalledOnce();
+        expect(confirm).toHaveBeenCalledTimes(1); expect(canUnload()).toBe(true);
+      } else {
+        expect(confirm).toHaveBeenCalledTimes(outcome === 'edited during login' ? 2 : 1);
+        expect(browser.location.assign).toHaveBeenCalledTimes(outcome === 'redirect failed' ? 1 : 0);
+        expect(browser.sessionStorage.getItem(loginContextKey)).toBeNull();
+        expect(page.busy()).toBe(false);
+        expect(fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance.messageText()).toBe(loginMessage);
+      }
+      expect(canUnload()).toBe(false); expect(page.dirty()).toBe(true); fixture.destroy();
+    });
   it.each([false, true])('keeps the message in the editor after a failed login start and clears the cache (embedded=%s)', embedded => {
     TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
     const fixture = ready(); const page = fixture.componentInstance;
-    page.historyOpen.set(false); if (embedded) page.ingress.restoreContext(currentIngress);
+    page.historyOpen.set(false); if (embedded) page.ingress.reconnect(currentIngress, bridgeNonce);
     page.conversation.set(savedConversation()); page.send('Sprawdź klienta');
     http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
       {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
@@ -207,7 +251,7 @@ describe('SystemAssistantPage', () => {
     const page = fixture.componentInstance;
     expect(page.profileId()).toBe('crm_selected');
     if (!configFirst) http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
-    loadProfiles([{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/tickets/*'}]);
+    loadConfiguration({profiles: [{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/tickets/*'}]});
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
     http.expectOne('/api/auth/github/status').flush({configured: true});
     if (configFirst) {
@@ -219,14 +263,14 @@ describe('SystemAssistantPage', () => {
     fixture.detectChanges();
     if (auth === 'success') {
       const resumed = http.expectOne('/api/system-assistant/conversations/saved-chat/messages');
-      expect(resumed.request.body).toEqual({message: loginMessage, profileId: 'crm_selected', model: 'original-model', reasoningEffort: 'high'});
+      expect(resumed.request.body).toEqual({message: loginMessage, profileId: 'crm_selected', model: 'original-model', reasoningEffort: 'high', ...(embedded ? {pageContext: currentIngress} : {})});
       expect(page.busy()).toBe(true);
       resumed.flush(savedConversation()); fixture.detectChanges();
     }
     expect(page.workspaceView()).toBe('conversation'); expect(page.selectedProfileId()).toBe('crm_selected');
     expect(page.messages()).toHaveLength(2); expect(page.unsentMessage()).toBe('');
     expect(page.historyOpen()).toBe(false); expect(page.canChat()).toBe(true);
-    expect(page.pageContext()).toEqual(savedConversation().pageContext);
+    expect(page.pageContext()).toEqual(embedded ? currentIngress : savedConversation().pageContext);
     const chat = fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance as AnalysisFollowUpChatComponent;
     expect(chat.messageText()).toBe(auth === 'success' ? '' : loginMessage);
     expect(fixture.nativeElement.querySelector('textarea').value).toBe(auth === 'success' ? '' : loginMessage);
@@ -307,11 +351,11 @@ describe('SystemAssistantPage', () => {
     Object.defineProperty(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', {
       value: convertToParamMap({localRunId: 'saved-chat', profileId: 'crm_selected', auth: 'success'}), configurable: true});
     const storage = TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage;
-    storage.setItem(loginContextKey, JSON.stringify({...savedLoginContext(embedded), context: null}));
+    storage.setItem(loginContextKey, JSON.stringify({...savedLoginContext(embedded), context: null, nonce: null}));
     const openReturn = () => {
       const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
       http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
-      loadProfiles([{...testProfile, id: 'crm_selected'}]);
+      loadConfiguration({profiles: [{...testProfile, id: 'crm_selected'}]});
       http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
       http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
       return fixture;
@@ -345,7 +389,7 @@ describe('SystemAssistantPage', () => {
     TestBed.inject(SYSTEM_ASSISTANT_WINDOW).sessionStorage.setItem(loginContextKey, kind === 'broken' ? '{' : JSON.stringify(cached));
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges(); const page = fixture.componentInstance;
     http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
-    loadProfiles([{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/customers/*'}]);
+    loadConfiguration({profiles: [{...testProfile, id: 'crm_selected', urlPattern: 'https://crm.example/customers/*'}]});
     http.expectOne('/api/analysis/ai/options').flush({defaultModel: 'test-model', models: []});
     http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
     expect(page.conversation()?.id).toBe('saved-chat'); expect(page.historyOpen()).toBe(false);
@@ -359,7 +403,7 @@ describe('SystemAssistantPage', () => {
     const browser = TestBed.inject(SYSTEM_ASSISTANT_WINDOW);
     vi.spyOn(browser.sessionStorage, 'setItem').mockImplementation(() => { throw new DOMException('Blocked', 'SecurityError'); });
     const fixture = ready(); const page = fixture.componentInstance;
-    page.historyOpen.set(false); page.conversation.set(savedConversation()); page.ingress.restoreContext(currentIngress);
+    page.historyOpen.set(false); page.conversation.set(savedConversation()); if (embedded) page.ingress.reconnect(currentIngress, bridgeNonce);
     page.send('Sprawdź klienta');
     http.expectOne('/api/system-assistant/conversations/saved-chat/messages').flush(
       {code: 'AUTH_LOGIN_REQUIRED', authProfileId: 'crm_oidc'}, {status: 409, statusText: 'Conflict'});
@@ -397,6 +441,16 @@ describe('SystemAssistantPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Podaj login.');
     http.expectNone('/api/system-assistant/configuration'); fixture.destroy();
   });
+  it('keeps edits made while a manual OIDC login is starting', () => {
+    const profile = newAuthProfile('OIDC', 'crm_oidc', 'CRM login', 'http://localhost');
+    const fixture = ready([], {authProfiles: [profile]}); const editor = configurationEditor(fixture);
+    http.expectOne('/api/system-assistant/auth/status').flush({});
+    editor.loginAuth(profile.id); editor.addSkill();
+    http.expectOne('/api/system-assistant/auth/crm_oidc/login').flush({authorizationUrl: 'https://sso.example.com/authorize'});
+    expect(TestBed.inject(SYSTEM_ASSISTANT_WINDOW).location.assign).not.toHaveBeenCalled();
+    expect(editor.dirty()).toBe(true); expect(editor.authBusyId()).toBe('');
+    expect(editor.saveError()).toContain('Zapisz lub cofnij zmiany'); fixture.destroy();
+  });
   it('ignores a stale OIDC status response after the configured profiles change', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const editor = configurationEditor(fixture);
@@ -421,7 +475,34 @@ describe('SystemAssistantPage', () => {
     expect(page.activeProfiles()).toEqual(editor.configuration().profiles);
     expect(page.canChat()).toBe(true); fixture.destroy();
   });
-  it('filters embedded profiles using launch context rather than the restored conversation and keeps all profiles on the full page', () => {
+  it('checks the parent again at send, preserves a blocked draft and sends the full URL on the same conversation', () => {
+    TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = true;
+    const fixture = ready(); const page = fixture.componentInstance;
+    page.historyOpen.set(false); page.conversation.set(savedConversation());
+    page.ingress.reconnect(currentIngress, bridgeNonce);
+    page.activeProfiles.set([testProfile, {...testProfile, id: 'tickets', urlPattern: 'https://crm.example/tickets/*'}]);
+    page.profileId.set('tickets'); fixture.detectChanges();
+    parentPage = {...currentIngress, pathname: '/cases/3', url: 'https://crm.example/cases/3?filter=a%2Fb#details'};
+    page.send('Sprawdź ten ekran'); fixture.detectChanges();
+    expect(page.canChat()).toBe(false); expect(page.profileId()).toBe('');
+    expect(page.profileOptions().map(option => option.value)).toEqual(['test_profile']);
+    expect(fixture.nativeElement.querySelector('textarea').value).toBe('Sprawdź ten ekran');
+    http.expectNone(req => req.url.endsWith('/messages'));
+    page.profileId.set('test_profile'); page.send('Sprawdź ten ekran');
+    const turn = http.expectOne('/api/system-assistant/conversations/saved-chat/messages');
+    expect(turn.request.body.pageContext).toEqual(parentPage);
+    expect(page.pageUrl()).toBe(parentPage.url); turn.flush(savedConversation()); fixture.destroy();
+  });
+  it('keeps the original OIDC message for manual send if only the query or fragment changed', () => {
+    parentPage = {...currentIngress, url: currentIngress.url + '-another'};
+    const fixture = returningFromLogin(true);
+    http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation());
+    loadLoginConfiguration(); http.expectOne('/api/auth/github/status').flush({configured: true}); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('textarea').value).toBe(loginMessage);
+    expect(fixture.componentInstance.pageUrl()).toBe(parentPage.url); expect(fixture.componentInstance.busy()).toBe(false);
+    http.expectNone(req => req.url.endsWith('/messages')); fixture.destroy();
+  });
+  it('filters embedded profiles using live context rather than the restored conversation and keeps all profiles on the full page', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const profiles = [testProfile, {...testProfile, id: 'matched', urlPattern: 'https://crm.example/cases/*'},
       {...testProfile, id: 'hidden', urlPattern: 'https://other.example/*'}];
@@ -430,9 +511,9 @@ describe('SystemAssistantPage', () => {
     const embedded = ready(); const panel = embedded.componentInstance;
     panel.activeProfiles.set(profiles); panel.conversation.set(savedConversation());
     expect(panel.availableProfiles().map(item => item.id)).toEqual(['test_profile']);
-    panel.ingress.context.set({origin: 'https://crm.example', pathname: '/cases/C-100', title: 'CRM', capturedAt: ''});
+    panel.ingress.context.set({url: 'https://crm.example/cases/C-100', origin: 'https://crm.example', pathname: '/cases/C-100', title: 'CRM', capturedAt: ''});
     expect(panel.availableProfiles().map(item => item.id)).toEqual(['test_profile', 'matched']);
-    expect(panel.pageContext()?.pathname).toBe('/customers/C-100'); embedded.destroy();
+    expect(panel.pageContext()?.pathname).toBe('/cases/C-100'); embedded.destroy();
   });
   it.each([false, true])('refreshes only profile choices in the conversation (embedded=%s)', embedded => {
     TestBed.inject(ActivatedRoute).snapshot.data['embeddedChat'] = embedded;
@@ -466,7 +547,7 @@ describe('SystemAssistantPage', () => {
     http.expectOne('/api/analysis/runs').flush({runs: []});
     page.continueConversation('saved-chat'); expect(page.restoring()).toBe(true);
     http.expectOne('/api/system-assistant/conversations/saved-chat').flush(savedConversation()); fixture.detectChanges();
-    expect(page.historyOpen()).toBe(false); expect(page.pageContext()).toEqual(savedConversation().pageContext);
+    expect(page.historyOpen()).toBe(false); expect(page.pageContext()).toEqual(embedded ? null : savedConversation().pageContext);
     expect(fixture.debugElement.query(By.directive(AnalysisFollowUpChatComponent)).componentInstance).toBe(chat);
     expect(chat.messageText()).toBe(''); chat.messageText.set('Szkic kontynuacji');
     page.newConversation(); fixture.detectChanges(); expect(chat.messageText()).toBe('Szkic nowej rozmowy');
@@ -602,6 +683,37 @@ describe('SystemAssistantPage', () => {
     const input = {files: [{name: 'configuration.json', size, text: vi.fn(() => Promise.resolve(content))}], value: 'configuration.json'};
     return {input, event: {target: input} as unknown as Event};
   }
+  it('protects only real changes on unload, including across tabs and a failed save', async () => {
+    const fixture = ready(); const page = fixture.componentInstance; const editor = configurationEditor(fixture);
+    const browser = TestBed.inject(SYSTEM_ASSISTANT_WINDOW);
+    const canUnload = () => browser.dispatchEvent(new Event('beforeunload', {cancelable: true}));
+    expect(canUnload()).toBe(true);
+    editor.updateProfile(0, 'name', 'Szkic'); page.workspaceView.set('conversation'); fixture.detectChanges();
+    expect(canUnload()).toBe(false); expect(browser.confirm).not.toHaveBeenCalled();
+    editor.updateProfile(0, 'name', testProfile.name); fixture.detectChanges();
+    expect(canUnload()).toBe(true); expect(page.canDeactivate()).toBe(true);
+    editor.toggleProfileResource(0, 'skillIds', 'triage', true); fixture.detectChanges();
+    expect(canUnload()).toBe(false);
+    const original = {authProfiles: [], profiles: [testProfile], skills: [], apis: []};
+    await editor.importConfiguration(configurationInput(JSON.stringify({version: 1, configuration: original})).event);
+    fixture.detectChanges(); expect(canUnload()).toBe(true); expect(page.dirty()).toBe(false);
+    editor.updateProfile(0, 'name', 'Nowa nazwa'); editor.save(); fixture.detectChanges();
+    http.expectOne('/api/system-assistant/configuration').flush({}, {status: 503, statusText: 'Unavailable'});
+    expect(canUnload()).toBe(false);
+    editor.save(); http.expectOne('/api/system-assistant/configuration').flush(editor.configuration());
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]); fixture.detectChanges();
+    expect(canUnload()).toBe(true);
+    editor.updateProfile(0, 'name', testProfile.name); fixture.detectChanges();
+    expect(canUnload()).toBe(false);
+    fixture.destroy(); expect(canUnload()).toBe(true);
+  });
+  it('clears the warning after reverting an optional Auth field to its displayed empty value', () => {
+    const auth = newAuthProfile('OAUTH2', 'access', 'Dostęp', 'http://localhost');
+    const fixture = ready([], {authProfiles: [auth]}); const editor = configurationEditor(fixture);
+    editor.updateAuthProfiles([{...auth, scopes: 'read'}]); expect(editor.dirty()).toBe(true);
+    editor.updateAuthProfiles([{...auth, scopes: ''}]); expect(editor.dirty()).toBe(false);
+    fixture.destroy();
+  });
   it('imports the whole draft without activation and preserves chat, tools and AI preferences until Save', async () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const editor = configurationEditor(fixture);
@@ -673,7 +785,7 @@ describe('SystemAssistantPage', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     const editor = configurationEditor(fixture);
     editor.configuration.set({authProfiles: [], profiles: [], apis: [{id: 'api', name: 'Żółć', yaml: 'openapi: 3.0.3\n'}], skills: [{id: 's', name: 'Skill', content: '# Reguły\n'}]});
-    page.dirty.set(true); page.workspaceView.set('launch'); page.model.set('private-model'); fixture.detectChanges();
+    page.workspaceView.set('launch'); page.model.set('private-model'); fixture.detectChanges();
     const originalCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
     const originalRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
     const create = vi.fn((_blob: Blob) => 'blob:configuration'); const revoke = vi.fn();
@@ -705,10 +817,9 @@ describe('SystemAssistantPage', () => {
     }
   });
   it.each(['skills', 'profiles', 'auth'] as const)('collapses existing %s, opens a new item and preserves expansion and edits across tabs', view => {
-    const fixture = ready(); const page = fixture.componentInstance;
-    const editor = configurationEditor(fixture);
-    editor.configuration.set({apis: [], skills: [{id: 'triage', name: 'Analiza CRM', content: 'Reguły'}], profiles: [testProfile],
+    const fixture = ready([], {skills: [{id: 'triage', name: 'Analiza CRM', content: 'Reguły'}],
       authProfiles: [{...newAuthProfile('BASIC', 'crm_access', 'Dostęp CRM', 'http://localhost'), username: 'operator', password: 'public-test-password'}]});
+    const page = fixture.componentInstance; const editor = configurationEditor(fixture);
     page.workspaceView.set(view); fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const heading = () => root.querySelector<HTMLButtonElement>('.assistant-definition-toggle')!;
@@ -741,10 +852,9 @@ describe('SystemAssistantPage', () => {
     {view: 'auth', kind: 'authProfiles', add: 'Dodaj uwierzytelnianie', remove: 'Usuń uwierzytelnianie Dostęp'},
     {view: 'profiles', kind: 'profiles', add: 'Dodaj profil', remove: 'Usuń profil Test CRM'}
   ] as const)('keeps list actions separate from global transfer and save in $view', ({view, kind, add, remove}) => {
-    const fixture = ready(); const page = fixture.componentInstance;
-    const editor = configurationEditor(fixture);
-    editor.configuration.set({apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}], skills: [{id: 'guide', name: 'Instrukcja', content: 'Treść'}],
+    const fixture = ready([], {apis: [{id: 'crm', name: 'CRM', yaml: 'yaml'}], skills: [{id: 'guide', name: 'Instrukcja', content: 'Treść'}],
       authProfiles: [{...newAuthProfile('BASIC', 'access', 'Dostęp', 'http://localhost'), username: 'operator', password: 'public-password'}], profiles: [testProfile]});
+    const page = fixture.componentInstance; const editor = configurationEditor(fixture);
     page.workspaceView.set(view); fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.assistant-configuration-header h2')).toBeNull();
@@ -809,11 +919,10 @@ describe('SystemAssistantPage', () => {
     fixture.destroy();
   });
   it('edits only the API name in the draft, preserves it across tabs and saves it with the configuration', () => {
-    const fixture = ready(); const page = fixture.componentInstance;
-    const editor = configurationEditor(fixture);
     const api = {id: 'crm', name: 'CRM', yaml: 'openapi: 3.0.3\ninfo:\n  title: CRM\n'};
     const profile = {...testProfile, apiBindings: [{apiId: 'crm', authProfileId: null}]};
-    editor.configuration.set({apis: [api], skills: [], authProfiles: [], profiles: [profile]});
+    const fixture = ready([], {apis: [api], profiles: [profile]});
+    const page = fixture.componentInstance; const editor = configurationEditor(fixture);
     page.workspaceView.set('contracts'); fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
     const body = () => root.querySelector<HTMLElement>('#assistant-api-name-0')!;
@@ -962,10 +1071,10 @@ describe('SystemAssistantPage', () => {
     http.expectNone('/api/system-assistant/configuration'); fixture.destroy();
   });
   it('opens read-only documentation without changing the configuration', () => {
-    const fixture = ready(); const page = fixture.componentInstance;
-    const editor = configurationEditor(fixture);
     const current = {id: 'crm', name: 'CRM', yaml: 'current YAML'};
-    editor.configuration.set({authProfiles: [], profiles: [], apis: [current], skills: []}); editor.viewContract(current); fixture.detectChanges();
+    const fixture = ready([], {apis: [current]}); const page = fixture.componentInstance;
+    const editor = configurationEditor(fixture);
+    editor.viewContract(current); fixture.detectChanges();
     http.expectOne('/api/system-assistant/configuration/openapi/document').flush({specification: {openapi: '3.0.3', paths: {}}});
     TestBed.inject(Dialog).openDialogs[0].close();
     expect(editor.configuration().apis[0]).toBe(current); expect(page.dirty()).toBe(false);
@@ -988,7 +1097,7 @@ describe('SystemAssistantPage', () => {
     const editor = configurationEditor(fixture);
     const current = {id: 'crm', name: 'CRM / demo', yaml: 'openapi: 3.0.3\ninfo:\n  title: Zgłoszenia — Łódź\n  version: 1.0.0\npaths:\n  /selected: {}\n'};
     editor.configuration.set({authProfiles: [], profiles: [], apis: [{id: 'other', name: 'Other', yaml: 'other YAML'}, current], skills: []});
-    page.dirty.set(true); page.workspaceView.set('contracts'); fixture.detectChanges();
+    page.workspaceView.set('contracts'); fixture.detectChanges();
     const originalCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
     const originalRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
     const create = vi.fn((_blob: Blob) => 'blob:contract-export'); const revoke = vi.fn();
@@ -1023,7 +1132,7 @@ describe('SystemAssistantPage', () => {
       {id: 'new', name: 'New draft', yaml: 'yaml'}];
     const tool = (apiId: string, name: string, path: string) => ({apiId, name, path, method: 'GET', description: '', inputSchema: {}});
     const active = [tool('crm', 'oa_crm_a_read', '/tickets'), tool('crm_a', 'oa_crm_a_write', '/other')];
-    editor.configuration.set({authProfiles: [], profiles: [], apis, skills: []}); editor.tools.set(active); page.workspaceView.set('contracts'); page.dirty.set(true);
+    editor.configuration.set({authProfiles: [], profiles: [], apis, skills: []}); editor.tools.set(active); page.workspaceView.set('contracts');
     fixture.detectChanges();
     const counts = () => [...(fixture.nativeElement as HTMLElement).querySelectorAll('.assistant-contract-count')].map(node => node.textContent?.trim());
     expect(counts()).toEqual(['Aktywne operacje: 1', 'Aktywne operacje: 1', 'Aktywne operacje: 0']);
@@ -1092,11 +1201,18 @@ describe('SystemAssistantPage', () => {
     expect(page.unsentMessage()).toBe('Powtórz');
     expect(page.submitting()).toBe(false); fixture.destroy();
   });
-  it('allows repairing corrupt current configuration but blocks chat before save', () => {
+  it('allows repairing corrupt current configuration with an explicit empty import', async () => {
     const fixture = TestBed.createComponent(SystemAssistantPage); fixture.detectChanges();
     http.expectOne('/api/system-assistant/configuration').flush({ code: 'CONFIGURATION_UNAVAILABLE', message: 'Uszkodzony plik' }, { status: 503, statusText: 'Unavailable' });
     http.expectOne('/api/analysis/ai/options').flush({ defaultModel: 'test-model', models: [], defaultReasoningEffort: '', defaultReasoningEfforts: [] });
     http.expectOne('/api/auth/github/status').flush({ configured: true });
-    expect(fixture.componentInstance.ready()).toBe(true); expect(fixture.componentInstance.canChat()).toBe(false); fixture.destroy();
+    const page = fixture.componentInstance; const editor = configurationEditor(fixture);
+    expect(page.ready()).toBe(true); expect(page.canChat()).toBe(false); expect(page.dirty()).toBe(false);
+    const empty = {apis: [], skills: [], profiles: [], authProfiles: []};
+    await editor.importConfiguration(configurationInput(JSON.stringify({version: 1, configuration: empty})).event);
+    expect(page.dirty()).toBe(true);
+    editor.save(); http.expectOne('/api/system-assistant/configuration').flush(empty);
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    expect(page.configurationAvailable()).toBe(true); expect(page.dirty()).toBe(false); fixture.destroy();
   });
 });

@@ -50,18 +50,18 @@ class SystemAssistantAttachmentsTest {
             id = service.create(null).id();
             service.attach(id, "first.pdf", new ByteArrayInputStream(new byte[]{1}));
             assertThat(service.get(id).attachments().get(0).messageId()).isNull();
-            var first = service.send(id, new SystemAssistantMessageRequest("Pierwsze", "test_profile", null, null));
+            var first = service.send(id, new SystemAssistantMessageRequest("Pierwsze", "test_profile", null, null, null));
             firstMessage = first.messages().get(0).id();
             assertThat(first.attachments().get(0).messageId()).isEqualTo(firstMessage);
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
 
             service.attach(id, "second.png", new ByteArrayInputStream(new byte[]{2}));
-            var second = service.send(id, new SystemAssistantMessageRequest("Drugie", "test_profile", null, null));
+            var second = service.send(id, new SystemAssistantMessageRequest("Drugie", "test_profile", null, null, null));
             secondMessage = second.messages().get(2).id();
             assertThat(second.attachments()).extracting(SystemAssistantAttachment::messageId)
                     .containsExactly(firstMessage, secondMessage);
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
-            service.send(id, new SystemAssistantMessageRequest("Trzecie", "test_profile", null, null));
+            service.send(id, new SystemAssistantMessageRequest("Trzecie", "test_profile", null, null, null));
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
         } finally { service.close(); }
         var reopened = service(ai);
@@ -80,7 +80,7 @@ class SystemAssistantAttachmentsTest {
             var id = service.create(null).id();
             service.attach(id, "waiting.pdf", new ByteArrayInputStream(new byte[]{1}));
             ((ExecutorService) org.springframework.test.util.ReflectionTestUtils.getField(service, "worker")).shutdown();
-            assertThatThrownBy(() -> service.send(id, new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null)))
+            assertThatThrownBy(() -> service.send(id, new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null, null)))
                     .isInstanceOfSatisfying(SystemAssistantException.class, error -> assertThat(error.code()).isEqualTo("AI_BUSY"));
             assertThat((Map<?, ?>) org.springframework.test.util.ReflectionTestUtils.getField(service, "conversations")).isEmpty();
             assertThat(service.get(id).messages()).isEmpty();
@@ -138,13 +138,13 @@ class SystemAssistantAttachmentsTest {
         try {
             var id = service.create(null).id();
             service.attach(id, "report.pdf", new ByteArrayInputStream(new byte[]{1, 2, 3}));
-            service.send(id, new SystemAssistantMessageRequest("Pierwsze pytanie", "test_profile", null, null));
+            service.send(id, new SystemAssistantMessageRequest("Pierwsze pytanie", "test_profile", null, null, null));
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             assertThatThrownBy(() -> service.attach(id, "next.png", new ByteArrayInputStream(new byte[]{4})))
                     .isInstanceOfSatisfying(SystemAssistantException.class, error -> assertThat(error.code()).isEqualTo("CHAT_BUSY"));
             release.countDown();
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
-            service.send(id, new SystemAssistantMessageRequest("Drugie pytanie", "test_profile", null, null));
+            service.send(id, new SystemAssistantMessageRequest("Drugie pytanie", "test_profile", null, null, null));
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
             assertThat(seen).hasSize(2).allSatisfy(files -> {
                 assertThat(files).hasSize(1);
@@ -180,7 +180,7 @@ class SystemAssistantAttachmentsTest {
                 new OpenApiToolSetFactory((execution, arguments) -> null, mapper), preparation, gateway,
                 new SystemAssistantPrompt(mapper), CopilotSessionCleanup.NO_OP);
         runner.answer("turn", new SystemAssistantProfileResources(List.of(), List.of()),
-                null, List.of(), new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null), ignored -> {}, ignored -> {},
+                null, List.of(), new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null, null), ignored -> {}, ignored -> {},
                 List.of(new SystemAssistantAiPort.Attachment("image.png", "image/png", new byte[]{1, 2, 3})));
         assertThat(options.getAttachments()).singleElement().isInstanceOfSatisfying(BlobAttachment.class, blob -> {
             assertThat(blob.getDisplayName()).isEqualTo("image.png");

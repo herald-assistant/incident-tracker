@@ -53,12 +53,12 @@ class SystemAssistantAuthAdmissionTest {
             assertThat(service.get(id).messages()).isEmpty();
             assertThat(service.get(id).busy()).isFalse();
             verify(ai, never()).answer(any(), any(), any(), any(), any(), any(), any(), any());
-            service.send(id, new SystemAssistantMessageRequest("Sprawdź klienta ponownie", "crm", null, null));
+            service.send(id, new SystemAssistantMessageRequest("Sprawdź klienta ponownie", "crm", null, null, null));
             await().until(() -> !service.get(id).busy());
             assertThat(service.get(id).messages()).hasSize(2);
             // Three API operations share one OIDC profile: one preflight per turn.
             verify(oidc, times(2)).authorization(auth);
-            service.send(id, new SystemAssistantMessageRequest("Rozmowa bez usuniętego API", "missing", null, null));
+            service.send(id, new SystemAssistantMessageRequest("Rozmowa bez usuniętego API", "missing", null, null, null));
             await().until(() -> !service.get(id).busy());
             verifyNoMoreInteractions(oidc);
         } finally { service.close(); }

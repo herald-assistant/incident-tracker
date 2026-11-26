@@ -13,6 +13,7 @@ import { vi } from 'vitest';
 import { App } from './app';
 import { routes } from './app.routes';
 import { AppShellComponent } from './components/app-shell/app-shell';
+import { AssistantConfigurationEditor } from './features/system-assistant/assistant-configuration-editor';
 import { AppUiConfigService } from './core/services/app-ui-config.service';
 import { FlowExplorerPageComponent } from './features/flow-explorer/pages/flow-explorer-page/flow-explorer-page';
 import {
@@ -65,6 +66,29 @@ describe('App', () => {
     expect(compiled.querySelector('.platform-landing__feature-card[href="/system-assistant"]')).toBeTruthy();
     const route = routes.find(item => item.component === AppShellComponent)?.children?.find(item => item.path === 'system-assistant');
     expect(route?.data?.['title']).toBe('System Assistant');
+  });
+
+  it('keeps an unsaved System Assistant draft until leaving the route is confirmed', async () => {
+    const fixture = TestBed.createComponent(App); const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+    await router.navigateByUrl('/system-assistant'); fixture.detectChanges(); flushUiConfig(http);
+    http.expectOne('/api/system-assistant/configuration').flush({apis: [], profiles: [], skills: [], authProfiles: []});
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    http.expectOne('/api/analysis/ai/options').flush({models: []});
+    http.match('/api/auth/github/status').forEach(request => request.flush({configured: true}));
+    fixture.detectChanges();
+    const editor: AssistantConfigurationEditor = fixture.debugElement.query(By.directive(AssistantConfigurationEditor)).componentInstance;
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    try {
+      editor.addSkill(); fixture.detectChanges();
+      expect(await router.navigateByUrl('/system-assistant?localRunId=chat')).toBe(true);
+      expect(confirm).not.toHaveBeenCalled();
+      expect(await router.navigateByUrl('/')).toBe(false);
+      expect(router.url).toBe('/system-assistant?localRunId=chat');
+      expect(editor.configuration().skills).toHaveLength(1);
+      confirm.mockReturnValue(true);
+      expect(await router.navigateByUrl('/')).toBe(true); expect(confirm).toHaveBeenCalledTimes(2);
+    } finally { confirm.mockRestore(); fixture.destroy(); }
   });
 
   it('renders embedded System Assistant chat outside the application shell', async () => {

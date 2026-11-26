@@ -7,7 +7,7 @@
   } @else {
     <app-analysis-result-tabs [hidden]="!ready()" [tabs]="workspaceTabs" [activeTabId]="workspaceView()" [equalWidth]="true"
       idPrefix="system-assistant-view" ariaLabel="Widoki System Assistant" (tabSelected)="workspaceView.set($event)">
-      <app-assistant-configuration-editor [workspaceView]="workspaceView()" (tabRequested)="workspaceView.set($event)" [(dirty)]="dirty" [(notice)]="notice"
+      <app-assistant-configuration-editor [workspaceView]="workspaceView()" (tabRequested)="workspaceView.set($event)" [(notice)]="notice"
         [(error)]="error" [(authBusyId)]="authBusyId" (loaded)="configurationLoaded($event)" (loadFailed)="configurationLoadFailed($event)" />
       @if (ready()) { <ng-container [ngTemplateOutlet]="chatView" /> }
       <section class="assistant-launch assistant-view" [hidden]="workspaceView() !== 'launch'" aria-labelledby="system-assistant-view-tab-launch">
@@ -58,8 +58,8 @@
             <span class="material-symbols-outlined" aria-hidden="true">history</span>
           </button>
           @if (pageContext(); as page) {
-            <button chatActions class="assistant-chat-action" type="button" aria-label="Kontekst strony przy otwarciu"
-              [matTooltip]="page.title + ' · ' + page.origin + page.pathname + ' · ' + page.capturedAt">
+            <button chatActions class="assistant-chat-action" type="button" [attr.aria-label]="embedded ? 'Bieżąca strona' : 'Kontekst strony przy otwarciu'"
+              [matTooltip]="page.title + ' · ' + pageUrl() + ' · ' + page.capturedAt">
               <span class="material-symbols-outlined" aria-hidden="true">info</span>
             </button>
           }

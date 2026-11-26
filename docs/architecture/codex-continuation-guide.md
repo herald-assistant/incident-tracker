@@ -171,8 +171,8 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
   wybor zakresu danych i wysyla jeden POST capture przez fetch do TDW.
   UI Explorer otwiera widok bez selekcji elementu, zachowujac handshake
   page-context przez postMessage. System Assistant osadza listę historii
-  i chat w iframe TDW; zachowuje kontekst wybranej rozmowy i używa aktualnej
-  konfiguracji. Transfery między stroną a TDW nie korzystają ze storage.
+  i chat w iframe TDW. Wiadomości z ramki używają pełnego adresu bieżącej strony
+  nadrzędnej i aktualnej konfiguracji. Transfery między stroną a TDW nie korzystają ze storage.
 - shell i routing aplikacji
   composition root nawigacji oraz rejestracji feature'ow.
 

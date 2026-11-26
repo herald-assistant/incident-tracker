@@ -67,7 +67,39 @@ class SystemAssistantChatTest {
     private SystemAssistantConfiguration config(String instructions) {
         return SystemAssistantTestSupport.config(List.of(), List.of(new SystemAssistantConfiguration.Skill("demo", "Demo", instructions)));
     }
-    private SystemAssistantMessageRequest message(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null); }
+    private SystemAssistantMessageRequest message(String text) { return new SystemAssistantMessageRequest(text, "test_profile", null, null, null); }
+
+    @Test
+    void freezesTheFullPageUrlPerTurnAndPreservesTheOpeningPageInHistory() {
+        var seen = new CopyOnWriteArrayList<String>();
+        var prompts = new SystemAssistantPrompt(new ObjectMapper());
+        var ai = mock(SystemAssistantAiPort.class);
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
+            SystemAssistantMessageRequest turn = call.getArgument(4);
+            seen.add(prompts.conversation(call.getArgument(2), turn.pageContext(), call.getArgument(3)));
+            return new SystemAssistantAiPort.Reply("OK", null);
+        });
+        var a = new SystemAssistantMessageRequest.CurrentPage("https://crm.example", "/cases/1",
+                "https://crm.example/cases/1?tab=one#row", "Ekran A", "2026-11-26T10:00:00Z");
+        var b = new SystemAssistantMessageRequest.CurrentPage(a.origin(), "/cases/2",
+                "https://crm.example/cases/2?id=a%2Fb&id=c#details", "Ekran B", a.capturedAt());
+        var service = service(SystemAssistantTestSupport.configuration((id, yaml) -> List.of()), ai);
+        try {
+            var id = service.create(a.openingContext()).id();
+            for (var page : List.of(a, b)) {
+                service.send(id, new SystemAssistantMessageRequest("Opisz ekran", "test_profile", null, null, page));
+                await().until(() -> !service.get(id).busy());
+            }
+            assertThat(seen).hasSize(2);
+            assertThat(seen.get(0)).contains(a.url()).doesNotContain(b.url());
+            assertThat(seen.get(1)).contains(b.url(), b.title()).doesNotContain(a.url());
+            var invalid = new SystemAssistantMessageRequest.CurrentPage(a.origin(), a.pathname(), b.url(), a.title(), a.capturedAt());
+            assertThatThrownBy(() -> service.send(id, new SystemAssistantMessageRequest("Dalej", "test_profile", null, null, invalid)))
+                    .isInstanceOf(SystemAssistantException.class);
+            assertThat(service.get(id).messages()).hasSize(4);
+            assertThat(service.get(id).pageContext()).isEqualTo(a.openingContext());
+        } finally { service.close(); }
+    }
 
     @Test
     void acceptsLongMessagesAndPassesFullHistoryWithToolResultsToAi() throws Exception {
@@ -78,7 +110,7 @@ class SystemAssistantChatTest {
         var seenPrompts = new CopyOnWriteArrayList<String>();
         var ai = mock(SystemAssistantAiPort.class);
         when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
-            seenPrompts.add(prompts.conversation(invocation.getArgument(2), invocation.getArgument(3)));
+            seenPrompts.add(prompts.conversation(invocation.getArgument(2), ((SystemAssistantMessageRequest) invocation.getArgument(4)).pageContext(), invocation.getArgument(3)));
             Consumer<AnalysisEvidenceSection> sink = invocation.getArgument(5);
             sink.accept(new AnalysisEvidenceSection("openapi", "call", List.of(new AnalysisEvidenceItem("result",
                     List.of(new AnalysisEvidenceAttribute("result", longResult))))));

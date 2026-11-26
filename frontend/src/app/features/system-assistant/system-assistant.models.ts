@@ -18,6 +18,7 @@ export interface AssistantOidcConnection { connected: boolean; username: string 
 export interface AssistantTool { apiId: string; name: string; description: string; method: string; path: string; inputSchema: unknown; }
 export interface AssistantPageContext { origin: string; pathname: string; title: string; capturedAt: string; }
 export interface AssistantAttachment { id: string; name: string; mimeType: string; size: number; messageId?: string | null; }
+export interface AssistantCurrentPage extends AssistantPageContext { url: string; }
 export interface AssistantConversation { id: string; busy: boolean; pageContext: AssistantPageContext | null; messages: AnalysisChatMessageResponse[]; attachments?: AssistantAttachment[]; }
 export interface OpenApiOperationKey { method: string; path: string; }
 export interface OpenApiCandidate extends OpenApiOperationKey { operationId: string; summary: string; tags: string[]; unavailableReason: string | null; warnings: string[]; }

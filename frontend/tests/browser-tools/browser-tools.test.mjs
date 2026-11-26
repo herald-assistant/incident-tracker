@@ -338,7 +338,7 @@ test('remote loader derives TDW origin and loads protocol before runtime', {time
     `<!doctype html><html><head></head><body>
       <script
         id="tdw-loader"
-        src="https://tdw.example.com/browser-tools/loader.js?v=1.12.0"
+        src="https://tdw.example.com/browser-tools/loader.js?v=1.13.0"
         data-tdw-feature-id="browser-tools"
       ></script>
     </body></html>`,
@@ -411,7 +411,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.12.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.13.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null
@@ -518,7 +518,7 @@ test('new runtime replaces an older Browser Tools instance on the same page', ()
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="browser-tools-shell"]')
       ?.getAttribute('data-tdw-browser-tool-version'),
-    '1.12.0'
+    '1.13.0'
   );
   dom.window.close();
 });

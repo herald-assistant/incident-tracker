@@ -70,7 +70,7 @@ class SystemAssistantProfilesTest {
         try {
             var id = service.create(null).id();
             for (var profile : List.of("first", "second", "empty")) {
-                service.send(id, new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest("Dalej", profile, null, null));
+                service.send(id, new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest("Dalej", profile, null, null, null));
                 org.awaitility.Awaitility.await().until(() -> !service.get(id).busy());
             }
             assertThat(service.get(id).messages()).hasSize(6);
@@ -78,7 +78,7 @@ class SystemAssistantProfilesTest {
             assertThat(seen.get(1).skills()).extracting(Skill::id).containsExactly("shared", "private");
             assertThat(seen.get(2).executions()).isEmpty();
             assertThatThrownBy(() -> service.send(id,
-                    new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest("Nie wykonuj", "gone", null, null)))
+                    new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest("Nie wykonuj", "gone", null, null, null)))
                     .isInstanceOf(SystemAssistantException.class);
             assertThat(service.get(id).messages()).hasSize(6);
         } finally { service.close(); }

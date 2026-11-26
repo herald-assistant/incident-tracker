@@ -85,7 +85,7 @@ portem i poza schema argumentów AI. Nie ma starszego overloadu wykonania.
 | `GET /api/system-assistant/configuration/tools` | ID kontraktu `apiId`, wygenerowane nazwy, opisy, metody, ścieżki i input schema |
 | `POST /api/system-assistant/conversations` | `{pageContext}` lub null context; `201` i pusta rozmowa bez AI |
 | `GET /api/system-assistant/conversations/{id}` | ID, busy, przypięty pageContext i neutralne wiadomości |
-| `POST /api/system-assistant/conversations/{id}/messages` | `{message, profileId, model?, reasoningEffort?}`; `202` i natychmiastowy snapshot; `409 AUTH_LOGIN_REQUIRED` z authProfileId przed przyjęciem, jeżeli wymagane OIDC nie jest gotowe |
+| `POST /api/system-assistant/conversations/{id}/messages` | `{message, profileId, model?, reasoningEffort?, pageContext?}`; `202` i natychmiastowy snapshot; `409 AUTH_LOGIN_REQUIRED` z authProfileId przed przyjęciem, jeżeli wymagane OIDC nie jest gotowe |
 | `POST /api/system-assistant/conversations/{id}/attachments?name={filename}` | `application/octet-stream`; trwały strumieniowy zapis jednego pliku i snapshot rozmowy z listą `attachments: [{id,name,mimeType,size}]`; aktywna tura daje `409` |
 | `DELETE /api/system-assistant/conversations/{id}` | `204`; aktywna tura daje `409` |
 | `GET /api/analysis/runs` | Wspólny indeks historii; rozmowy mają `feature=system-assistant` |
@@ -120,7 +120,7 @@ widok. Cookie tdw_oidc_browser ma HttpOnly, SameSite=None i zawsze Secure.
 Odrzucona wiadomość jest zachowana w sessionStorage na maks. 5 min w obu
 widokach, razem z conversationId/profileId/returnPath, modelem/reasoning
 i terminem ważności.
-Embedded dołącza opcjonalny zweryfikowany ingress, pełny ekran context=null.
+Ramka dołącza snapshot strony odrzuconej wiadomości i nonce połączenia. Po powrocie ponawia handshake z rodzicem i porównuje pełny URL przed wznowieniem. Pełny ekran przekazuje context=null i nonce=null.
 Po pasującym callbacku success wiadomość jest wysyłana automatycznie dokładnie
 raz do tej samej idle rozmowy i profilu, z pierwotnymi preferencjami AI.
 Wznowienie czeka na zamontowany chat, odczyt rozmowy, konfigurację, katalog
@@ -132,9 +132,8 @@ Ponowny AUTH_LOGIN_REQUIRED wznowionego POST nie uruchamia kolejnego loginu.
 Nieustalony wynik POST nadal uruchamia tylko reconciliation odczytem, bez retry.
 Treść nie trafia do URL, state dostawcy ani API loginu. Niedostępny storage
 blokuje przekierowanie i zachowuje tekst w polu; błąd rozpoczęcia loginu
-usuwa cache i również zachowuje tekst. Filtr profili używa zweryfikowanego
-ingress niezależnie od historycznego pageContext. Bez nowego handshake,
-zmiany sandbox/CSP i popupów. Blokada third-party cookies lub osadzania
+usuwa cache i również zachowuje tekst. Filtr profili używa bieżącej strony
+potwierdzonej przez rodzica ramki. Blokada third-party cookies lub osadzania
 providera nadal może uniemożliwić login. Ręczny login z Auth wraca do Auth.
 Kontrakt, mechanikę i ograniczenia opisuje
 [uwierzytelnianie HTTP API](http-api-authentication.md).
@@ -371,6 +370,17 @@ i rozmowę. Panel shared chatu jest ukrywany atrybutem hidden, więc zachowuje
 wpisaną wiadomość; polling trwa również poza widokiem Rozmowa. Przełączenie
 nie zapisuje konfiguracji i nie tworzy ani nie wysyła rozmowy.
 
+Pełny ekran porównuje szkic z ostatnią konfiguracją odczytaną lub zapisaną
+przez serwer. Gdy wartości się różnią, opuszczenie trasy wymaga potwierdzenia,
+a odświeżenie lub zamknięcie karty wywołuje ostrzeżenie przeglądarki. Cofnięcie
+edycji do zapisanych wartości usuwa ostrzeżenie. Błąd zapisu zachowuje ochronę.
+Zmiana zakładki lub rozmowy zachowuje szkic bez pytania.
+
+Jeśli rozmowa wymaga OIDC, pełny ekran pyta o odrzucenie zmian przed
+rozpoczęciem logowania. Anulowanie pozostawia wiadomość w polu i pozwala
+kontynuować edycję. Zgoda obejmuje jedno przekierowanie z tym samym szkicem.
+Szkic konfiguracji pozostaje w pamięci strony.
+
 Skille, Kontrakty, Auth i Profile korzystają ze wspólnej oprawy zapisu całego zestawu.
 Skille, profile i Auth są początkowo zwinięte. Kliknięcie belki rozwija edytor;
 belka pokazuje nazwę i odpowiednio ID skilla, zakres URL z liczbą skilli/API
@@ -480,7 +490,7 @@ danego profilu wynika z adresu endpointu i bieżącej konfiguracji. Wybór
 w chacie nie przełącza profilu używanego przez odrębnego klienta MCP.
 
 W panelu lista profili jest filtrowana przez pełne origin + pathname
-przekazane przy uruchomieniu ramki, niezależnie od kontekstu rozmowy wybranej
+bieżącej strony nadrzędnej, niezależnie od kontekstu rozmowy wybranej
 z historii. Wildcard `*` dopasowuje dowolny ciąg, reszta znaków jest literalna;
 dopasowanie całego ciągu rozróżnia wielkość liter i nie zawiera query/hash.
 Brak poprawnego ingress dopuszcza tylko dokładny wzorzec `*`. Pełny ekran
@@ -716,11 +726,14 @@ ramki), nonce, wersję protokołu 1 i dokładne klucze wiadomości. Fragment
 transferu jest usuwany z URL TDW. Nie ma transferu przez opener dla tej akcji.
 UI Explorer zachowuje własny popup, a UX capture pozostaje osobny.
 
-Payload zawiera tylko origin, pathname, tytuł do 200 znaków i capturedAt.
-Bez query/hash, DOM, formularza, store, historii HTTP, cookies i tokenów.
-Kontekst jest obserwacją z chwili otwarcia; nie wybiera credentials ani
-autoryzowanego obiektu. ID zgłoszenia użytkownik podaje w wiadomości.
-Zmiana strony nie przepina rozmowy. Zamknięcie panelu chowa tę samą ramkę,
+Rodzic przekazuje origin, pathname, pełny URL z query i fragmentem, tytuł do 200
+znaków i capturedAt. Panel śledzi zmianę adresu i tytułu w tym samym dokumencie.
+Przy wysyłaniu ponownie pobiera stronę od rodzica, potwierdza dopasowanie profilu
+i przekazuje snapshot jako `pageContext` wiadomości. Prompt dostaje URL i tytuł
+z tej tury. Zmiana strony zachowuje rozmowę i szkic, a utrata dopasowania
+wymaga wyboru nowego profilu. Po powrocie z OIDC ramka ponownie nawiązuje
+połączenie. Automatyczne wznowienie wymaga tego samego pełnego URL i profilu.
+Zamknięcie panelu chowa tę samą ramkę,
 zachowując rozmowę i draft wiadomości do ponownego otwarcia. Usunięcie Browser
 Tools usuwa panel i listenery. Iframe ma no-referrer i sandbox
 allow-scripts allow-same-origin allow-forms; wiadomości chatu pozostają na originie TDW.
@@ -755,8 +768,8 @@ zachowuje w pamięci szkic, błąd i wiadomość bez potwierdzenia dla danego ID
 nowa rozmowa wraca do roboczego nowego szkicu. Błąd wyboru pozostawia listę
 i poprzednią rozmowę. Aktywna tura/wczytywanie blokują zmianę. Odpowiedzi
 HTTP i pollingu poprzedniego widoku nie podmieniają nowego wyboru.
-Kontynuacja używa poprzedniego pageContext i transkryptu oraz aktualnych
-skilli/tools dla każdej następnej tury. Brak toku AI i kosztów w ramce.
+Kontynuacja w ramce łączy zapisany transkrypt z bieżącą stroną i aktualnymi skillami/tools.
+Pełny ekran może przekazać pierwotny kontekst oznaczony jako strona przy otwarciu. Brak toku AI i kosztów w ramce.
 Nagłówek osłony ma trzy równe pola ikon SVG: otwarcie TDW, maksymalizacja
 i zamknięcie. Ikona przeciąganego bookmarkletu jest SVG, bez tekstowej
 ligatury w nazwie; etykieta zakładki to `TDW Browser Tools`.

@@ -287,7 +287,7 @@ Nieustalony wynik wysłania nie powoduje automatycznej kolejnej próby. Flow dzi
 też w ramce: returnPath odtwarza kompaktowy widok tej samej rozmowy i profil,
 bez przejścia na pełny TDW. Na czas logowania oba widoki przechowują wiadomość
 tymczasowo w danej karcie (sessionStorage, 5 min). Ramka zachowuje również
-zweryfikowany kontekst strony do filtra profili. Wpis jest jednorazowy i
+adres strony odrzuconej wiadomości i dane połączenia z rodzicem. Po powrocie sprawdza ponownie pełny URL oraz profil. Jeśli zmienił się ekran, tekst pozostaje do ręcznego wysłania. Wpis jest jednorazowy i
 przypisany do rozmowy, profilu oraz widoku. Gdy przeglądarka blokuje ten zapis,
 TDW pozostawia tekst w polu i pokazuje błąd przed przekierowaniem. Błąd
 rozpoczęcia loginu również zachowuje tekst. Tokeny pozostają na backendzie.
@@ -322,13 +322,13 @@ W panelu nie pokazujemy toku działania AI ani kosztów. Na pełnym ekranie
 TDW są dostępne we wspólnym panelu szczegółów. Enter wysyła wiadomość,
 a Shift+Enter dodaje nową linię.
 
-Nowa rozmowa otrzymuje origin, pathname, tytuł i czas otwarcia strony.
-Nie przekazuje query/hash, formularzy, cookies ani autentykacji systemu
-źródłowego. CSP lub polityka osadzania może zablokować ramkę; panel oferuje
-ponowienie i link do pełnego TDW.
-Wybranie wcześniejszej rozmowy zachowuje kontekst przekazany przy jej
-utworzeniu, również gdy otwierasz ją z innej strony. Nawigacja w aplikacji
-nie przepina automatycznie kontekstu chatu.
+Panel śledzi adres i tytuł bieżącej strony. Przy wysyłaniu wiadomości do AI
+trafia pełny URL, włącznie z wartościami parametrów query i fragmentem po `#`.
+Dotyczy to także rozmowy wybranej z historii. Lista profili odświeża się
+według domeny i ścieżki. Jeżeli wybrany profil przestaje pasować, szkic
+wiadomości pozostaje w polu do czasu wybrania innego profilu.
+Po przeładowaniu dokumentu nadrzędnego ponownie otwórz Browser Tools i wybierz
+rozmowę z historii.
 
 ## Zapis i ograniczenia
 

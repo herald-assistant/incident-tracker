@@ -1,1 +1,0 @@
-import{k as o}from"./chunk-MIBWFG5M.js";import{X as i,aa as e}from"./chunk-2ZOL5RVJ.js";var a=class t{http=e(o);getStatus(){return this.http.get("/api/auth/github/status")}openSettings(){window.location.assign("/workspace-settings")}static \u0275fac=function(r){return new(r||t)};static \u0275prov=i({token:t,factory:t.\u0275fac,providedIn:"root"})};export{a};

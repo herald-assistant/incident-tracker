@@ -35,6 +35,10 @@ Jeden sticky pasek grupuje import, eksport i Zapisz konfigurację dla całego
 zestawu. Pokazuje tylko niezapisane zmiany i komunikaty. Zakres zapisu jest
 w tooltipie. Zakładki używają shared equalWidth z równą szerokością i paginacją.
 OIDC używa zapisanej konfiguracji. Powrót ręcznego logowania wybiera Auth.
+Pełny ekran chroni szkic przy wyjściu z trasy, zamknięciu, odświeżeniu i OIDC
+z rozmowy. Porównuj treść z ostatnim poprawnym odczytem lub zapisem. Zmiana
+zakładki lub rozmowy zachowuje szkic bez pytania. Przy anulowaniu OIDC zachowaj
+wiadomość w polu i odblokuj chat.
 409 AUTH_LOGIN_REQUIRED przy wysłaniu rozpoczyna login i location.assign także
 w ramce, bez zmiany sandbox/CSP. Backend wiąże chat/profil/returnPath z state;
 returnPath to wyłącznie /system-assistant lub /system-assistant/chat.
@@ -97,3 +101,7 @@ Kontrakt źródłowy, walidacja requestu i schemat argumentów mają odrębne ro
 Nie zgaduj discriminator mapping i nie usuwaj ograniczeń allOf/oneOf.
 Kanoniczne limity oraz semantykę x-tdw-operation-effect opisuje runtime
 System Assistanta; GET bez potwierdzenia skutków pozostaje UNKNOWN.
+
+Panel Browser Tools potwierdza bieżący kontekst przed wysyłką. Każda przyjęta tura
+otrzymuje pełny URL z query i fragmentem. Profil filtruj po origin + pathname.
+Po OIDC ponownie uzgodnij stronę z rodzicem przed wznowieniem wysyłki.

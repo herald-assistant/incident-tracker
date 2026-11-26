@@ -1,4 +1,4 @@
-import { afterRenderEffect, Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { afterRenderEffect, Component, computed, DestroyRef, effect, inject, OnInit, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -9,7 +9,7 @@ import { matchesProfileUrl } from './assistant-profiles';
 import { assistantErrorMessage, SystemAssistantApi } from './system-assistant-api.service';
 import { AssistantConfigurationEditor } from './assistant-configuration-editor';
 import { AnalysisResultTabsComponent } from '../../components/analysis-result-tabs/analysis-result-tabs';
-import { AssistantConversation, AssistantProfileOption } from './system-assistant.models';
+import { AssistantConfiguration, AssistantConversation, AssistantCurrentPage, AssistantProfileOption } from './system-assistant.models';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AiExecutionControlsComponent } from '../../components/ai-execution-controls/ai-execution-controls';
 import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature-aside/analysis-feature-aside';
@@ -18,7 +18,7 @@ import { AnalysisJobPollingService } from '../../core/services/analysis-job-poll
 import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import { EMPTY_ANALYSIS_AI_MODEL_OPTIONS, normalizeAnalysisAiModelOptions, defaultReasoningEffortForAiModel } from '../../core/utils/analysis-ai-model-options.utils';
-import { concatMap, from, of, Subscription, switchMap } from 'rxjs';
+import { concatMap, from, of, Subscription, switchMap, tap } from 'rxjs';
 import type { FormTourSource } from '../../core/models/form-tour';
 import { SystemAssistantIngress, SYSTEM_ASSISTANT_WINDOW } from './system-assistant-ingress.service';
 import { AssistantConversationPicker } from './assistant-conversation-picker';
@@ -29,6 +29,7 @@ interface LoginMessage {
   profileId: string;
   message: string;
   autoSend: boolean;
+  pageUrl: string | null;
 }
 
 @Component({
@@ -81,8 +82,14 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly ready = signal(false);
   readonly configurationAvailable = signal(false);
   readonly ingress = inject(SystemAssistantIngress);
-  readonly pageContext = computed(() => this.conversation() ? this.conversation()!.pageContext : this.ingress.context());
-  readonly dirty = signal(false);
+  readonly pageContext = computed(() => this.embedded ? this.ingress.context() : this.conversation()?.pageContext);
+  readonly pageUrl = computed(() => {
+    const page = this.pageContext();
+    return this.embedded ? this.ingress.context()?.url : page && page.origin + page.pathname;
+  });
+  private readonly configurationEditor = viewChild(AssistantConfigurationEditor);
+  readonly dirty = computed(() => this.configurationEditor()?.dirty() ?? false);
+  private approvedUnloadDraft?: AssistantConfiguration;
   readonly authBusyId = signal('');
   readonly conversation = signal<AssistantConversation | null>(null);
   readonly chatError = signal('');
@@ -128,7 +135,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   readonly activities = computed(() => this.messages().flatMap(message => message.aiActivityEvents));
   readonly evidence = computed(() => this.messages().flatMap(message => message.toolEvidenceSections));
   readonly busy = computed(() => this.restoring() || this.uploading() || this.submitting() || !!this.conversation()?.busy);
-  readonly canChat = computed(() => !this.uploading() && !this.historyOpen() && !this.restoring() && !this.restoreError() && this.configurationAvailable() && this.ingress.status() !== 'waiting' && this.authReady() && !this.catalogLoading() && !this.catalogError()
+  readonly canChat = computed(() => !this.uploading() && !this.historyOpen() && !this.restoring() && !this.restoreError() && this.configurationAvailable() && this.ingress.status() !== 'waiting' && this.ingress.status() !== 'invalid' && this.authReady() && !this.catalogLoading() && !this.catalogError()
     && !!this.selectedProfileId() && !!(this.model() || this.catalog().defaultModel));
   private readonly polling = inject(AnalysisJobPollingService);
   private readonly optionsApi = inject(AiOptionsApiService);
@@ -137,6 +144,18 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
   private profileRequest?: Subscription;
 
   constructor() {
+    effect(onCleanup => {
+      if (!this.dirty()) return;
+      const beforeUnload = (event: BeforeUnloadEvent) => {
+        if (this.dirty() && this.configurationEditor()?.differsFrom(this.approvedUnloadDraft)) event.preventDefault();
+        this.approvedUnloadDraft = undefined;
+      };
+      this.browser.addEventListener('beforeunload', beforeUnload);
+      onCleanup(() => this.browser.removeEventListener('beforeunload', beforeUnload));
+    });
+    effect(() => {
+      if (this.embedded && this.ready() && this.ingress.status() === 'received' && this.profileId() && !this.selectedProfileId()) this.profileId.set('');
+    });
     afterRenderEffect(() => {
       const pending = this.pendingLoginMessage();
       const chat = this.chatPanel();
@@ -146,20 +165,23 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
         this.pendingLoginMessage.set(null); return;
       }
       chat.messageText.set(pending.message);
-      if (pending.autoSend && (this.restoring() || !this.ready() || this.catalogLoading() || !this.authStatusLoaded())) return;
+      if (pending.autoSend && (this.ingress.status() === 'waiting' || this.restoring() || !this.ready() || this.catalogLoading() || !this.authStatusLoaded())) return;
       this.pendingLoginMessage.set(null);
       if (!pending.autoSend || !this.canChat() || this.busy() || conversation?.id !== pending.conversationId
           || this.selectedProfileId() !== pending.profileId) return;
       chat.messageText.set(''); this.drafts.delete(pending.conversationId);
-      this.unsentMessage.set(pending.message); this.submitting.set(true); this.chatError.set('');
-      this.submitMessage(pending.conversationId, pending.message, true);
+      this.prepareMessage(pending.message, pending);
     });
+  }
+
+  canDeactivate(): boolean {
+    return !this.dirty() || this.browser.confirm('Opuścić System Assistant i odrzucić niezapisane zmiany konfiguracji?');
   }
 
   ngOnInit(): void {
     const authReturn = this.route?.snapshot.queryParamMap?.get('auth');
     if ((authReturn === 'success' || authReturn === 'failed') && this.restoredId) this.restoreLoginContext(authReturn === 'success');
-    this.ingress.start();
+    if (this.embedded) this.ingress.start();
     if (authReturn) {
       if (this.restoredId) {
         this.workspaceView.set('conversation');
@@ -244,21 +266,39 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
     if (!this.canChat() || this.busy()) return;
     this.pendingLoginMessage.set(null);
     this.loginNotice.set('');
+    this.prepareMessage(message);
+  }
+  private prepareMessage(message: string, resume?: LoginMessage): void {
+    const profileId = this.selectedProfileId();
     this.unsentMessage.set(message);
     this.submitting.set(true); this.chatError.set('');
-    const existing = this.conversation();
-    if (!existing) {
-      this.api.create(this.ingress.context()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: conversation => { this.conversation.set(conversation); this.updateConversationUrl(conversation.id); this.submitMessage(conversation.id, message); },
-        error: error => { this.submitting.set(false); this.chatError.set(assistantErrorMessage(error)); }
-      });
-    } else this.submitMessage(existing.id, message);
+    this.ingress.currentPage().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: page => {
+        if (!this.canChat() || this.selectedProfileId() !== profileId || (resume && (page?.url ?? null) !== resume.pageUrl)) {
+          this.retainMessage(message, 'Strona lub profil uległy zmianie. Sprawdź kontekst przed wysłaniem wiadomości.');
+          return;
+        }
+        const existing = this.conversation();
+        if (existing) this.submitMessage(existing.id, message, profileId, page, !!resume);
+        else this.api.create(page).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: conversation => {
+            this.conversation.set(conversation); this.updateConversationUrl(conversation.id);
+            this.submitMessage(conversation.id, message, profileId, page);
+          },
+          error: error => { this.submitting.set(false); this.chatError.set(assistantErrorMessage(error)); }
+        });
+      },
+      error: () => this.retainMessage(message, 'Nie udało się potwierdzić bieżącej strony. Spróbuj ponownie.')
+    });
   }
-  private submitMessage(id: string, message: string, resumedAfterLogin = false): void {
+  private retainMessage(message: string, reason: string): void {
+    this.chatPanel()?.messageText.set(message); this.unsentMessage.set('');
+    this.submitting.set(false); this.chatError.set(reason);
+  }
+  private submitMessage(id: string, message: string, profileId: string, page: AssistantCurrentPage | null, resumedAfterLogin = false): void {
     const generation = this.conversationGeneration;
-    const profileId = this.selectedProfileId();
     const previousMessageIds = new Set(this.conversation()?.messages.map(item => item.id) ?? []);
-    this.api.send(id, message, profileId, this.model(), this.reasoningEffort()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.send(id, message, profileId, this.model(), this.reasoningEffort(), page).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: snapshot => { this.conversation.set(snapshot); this.unsentMessage.set(''); this.submitting.set(false); this.startPolling(); },
       error: error => {
         if (error instanceof HttpErrorResponse && error.status === 409 && error.error?.code === 'AUTH_LOGIN_REQUIRED'
@@ -269,7 +309,7 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
             this.chatError.set('Nie udało się uzyskać dostępu do API po zalogowaniu. Spróbuj ponownie.');
             return;
           }
-          this.loginForConversation(error.error.authProfileId, id, profileId, message);
+          this.loginForConversation(error.error.authProfileId, id, profileId, message, page);
           return; // Rejected before acceptance; only a successful bound login can resume it.
         }
         this.submitting.set(false); this.chatError.set(assistantErrorMessage(error));
@@ -285,26 +325,45 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       }
     });
   }
-  private loginForConversation(authProfileId: string, conversationId: string, profileId: string, message: string): void {
-    if (!this.rememberLoginContext(conversationId, profileId, message)) {
+  private loginForConversation(authProfileId: string, conversationId: string, profileId: string, message: string, page: AssistantCurrentPage | null): void {
+    if (!this.canDeactivate()) {
+      this.submitting.set(false);
+      return;
+    }
+    const confirmedDraft = this.configurationEditor()?.configuration();
+    if (!this.rememberLoginContext(conversationId, profileId, message, page)) {
       this.submitting.set(false);
       this.chatError.set('Przeglądarka blokuje zachowanie wiadomości na czas logowania. Treść pozostaje w polu; sprawdź ustawienia prywatności i spróbuj ponownie.');
       return;
     }
     this.authBusyId.set(authProfileId); this.loginNotice.set('Przekierowywanie do logowania…');
-    this.api.loginAuth(authProfileId, {conversationId, profileId, returnPath: this.loginReturnPath}).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: result => this.browser.location.assign(result.authorizationUrl),
+    this.api.loginAuth(authProfileId, {conversationId, profileId, returnPath: this.loginReturnPath}).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      tap(result => {
+        const editor = this.configurationEditor();
+        if (editor?.differsFrom(confirmedDraft) && !this.canDeactivate()) {
+          this.finishLoginAttempt();
+          return;
+        }
+        this.approvedUnloadDraft = editor?.configuration();
+        this.browser.location.assign(result.authorizationUrl);
+      })
+    ).subscribe({
       error: error => {
-        this.clearLoginContext();
-        this.authBusyId.set(''); this.submitting.set(false); this.loginNotice.set(''); this.chatError.set(assistantErrorMessage(error));
+        this.finishLoginAttempt();
+        this.chatError.set(assistantErrorMessage(error));
       }
     });
   }
-  private rememberLoginContext(conversationId: string, profileId: string, message: string): boolean {
-    const context = this.embedded ? this.ingress.context() : null;
+  private finishLoginAttempt(): void {
+    this.approvedUnloadDraft = undefined;
+    this.clearLoginContext();
+    this.authBusyId.set(''); this.submitting.set(false); this.loginNotice.set('');
+  }
+  private rememberLoginContext(conversationId: string, profileId: string, message: string, context: AssistantCurrentPage | null): boolean {
     try {
       this.browser.sessionStorage.setItem(this.loginContextKey,
-        JSON.stringify({conversationId, profileId, returnPath: this.loginReturnPath, expiresAt: Date.now() + 300_000, context, message,
+        JSON.stringify({conversationId, profileId, returnPath: this.loginReturnPath, expiresAt: Date.now() + 300_000, context, nonce: this.ingress.connectionNonce, message,
           model: this.model(), reasoningEffort: this.reasoningEffort()}));
       return true;
     } catch { this.clearLoginContext(); return false; }
@@ -315,19 +374,19 @@ export class SystemAssistantPage implements OnInit, FormTourSource {
       if (!raw) return;
       this.browser.sessionStorage.removeItem(this.loginContextKey);
       const saved = JSON.parse(raw);
-      const keys = ['conversationId', 'profileId', 'returnPath', 'expiresAt', 'context', 'message', 'model', 'reasoningEffort'];
+      const keys = ['conversationId', 'profileId', 'returnPath', 'expiresAt', 'context', 'nonce', 'message', 'model', 'reasoningEffort'];
       if (!saved || typeof saved !== 'object' || Array.isArray(saved) || Object.keys(saved).length !== keys.length
           || !keys.every(key => Object.hasOwn(saved, key))
           || !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now() || saved.expiresAt > Date.now() + 300_000
           || saved.conversationId !== this.restoredId || saved.profileId !== this.profileId() || saved.returnPath !== this.loginReturnPath
           || typeof saved.message !== 'string' || !saved.message.trim()
           || typeof saved.model !== 'string' || typeof saved.reasoningEffort !== 'string') return;
-      if (this.embedded) {
-        if (saved.context !== null && !this.ingress.restoreContext(saved.context)) return;
-      } else if (saved.context !== null) return;
+      if (saved.context !== null) {
+        if (!this.embedded || !this.ingress.reconnect(saved.context, saved.nonce)) return;
+      } else if (saved.nonce !== null) return;
       this.drafts.set(this.restoredId, {text: saved.message, error: '', unsent: ''});
       this.model.set(saved.model); this.reasoningEffort.set(saved.reasoningEffort);
-      this.pendingLoginMessage.set({conversationId: saved.conversationId, profileId: saved.profileId, message: saved.message, autoSend});
+      this.pendingLoginMessage.set({conversationId: saved.conversationId, profileId: saved.profileId, message: saved.message, autoSend, pageUrl: saved.context?.url ?? null});
     } catch { this.clearLoginContext(); }
   }
   private clearLoginContext(): void {

@@ -9,7 +9,7 @@ const runtime = await readFile(new URL('runtime.js', root), 'utf8');
 const origin = 'http://127.0.0.1:8080';
 function setup(enabled = true) {
   const dom = new JSDOM('<html><head><title>CRM demo</title></head><body><input value="private" /></body></html>', {
-    url: 'http://127.0.0.1:8099/tickets/CRM-101?secret=never-transfer#private', runScripts: 'outside-only'
+    url: 'http://127.0.0.1:8099/tickets/CRM-101?tab=details#overview', runScripts: 'outside-only'
   });
   const window = dom.window;
   window.__TDW_BROWSER_TOOLS_TEST_MODE__ = true;
@@ -122,15 +122,15 @@ test('iframe handshake checks origin, source, nonce and shape and transfers only
   h.receive({...h.ready,nonce:'wrong'});h.receive({...h.ready,extra:'forbidden'});
   assert.equal(h.sent.length,0);h.receive(h.ready);
   assert.equal(h.sent.length,1);
-  assert.deepEqual(Object.keys(h.sent[0].data.context).sort(),['capturedAt','origin','pathname','title']);
+  assert.deepEqual(Object.keys(h.sent[0].data.context).sort(),['capturedAt','origin','pathname','title','url']);
   assert.equal(h.sent[0].data.context.pathname,'/tickets/CRM-101');
-  assert.equal(JSON.stringify(h.sent).includes('never-transfer'),false);
+  assert.equal(h.sent[0].data.context.url, current.window.location.href);
   assert.equal(h.sent[0].target,origin);
   h.receive({type:'TDW_SYSTEM_ASSISTANT_RECEIVED',protocolVersion:1,nonce:h.nonce,contextId:h.sent[0].data.contextId});
   assert.equal(current.panel().shadowRoot.querySelector('.assistant-status').hidden,true);
   assert.equal(current.shell.hidden,true);
 });
-test('closing and reopening keeps the same frame and original context, removal cleans up everything', t => {
+test('closing and reopening keeps the same frame and updates the context, removal cleans up everything', t => {
   const current=setup();t.after(()=>current.dom.window.close());current.action.click();
   const h=handshake(current);h.receive(h.ready);
   h.receive({type:'TDW_SYSTEM_ASSISTANT_RECEIVED',protocolVersion:1,nonce:h.nonce,contextId:h.sent[0].data.contextId});
@@ -138,10 +138,38 @@ test('closing and reopening keeps the same frame and original context, removal c
   panel.shadowRoot.querySelector('.assistant-close').click();assert.equal(panel.hidden,true);assert.equal(current.shell.hidden,false);
   current.window.history.replaceState(null,'','/different/page');current.action.click();
   assert.equal(current.panel(),panel);assert.equal(panel.hidden,false);assert.equal(panel.shadowRoot.querySelector('iframe'),h.frame);assert.equal(h.frame.src,src);
+  assert.equal(h.sent.at(-1).data.context.url, current.window.location.href);
+  const count = h.sent.length;
   current.window.__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__.dispose();
   assert.equal(current.panel(),null);assert.equal(current.shell.isConnected,false);
-  h.receive(h.ready);assert.equal(h.sent.length,1);
+  h.receive(h.ready);assert.equal(h.sent.length,count);
 });
+test('updates a mounted chat on SPA navigation and reads the current full URL on demand', async t => {
+  const current = setup();
+  t.after(() => current.dom.window.close());
+  current.action.click();
+  const h = handshake(current);
+  h.receive(h.ready);
+  h.receive({type: 'TDW_SYSTEM_ASSISTANT_RECEIVED', protocolVersion: 1, nonce: h.nonce, contextId: h.sent[0].data.contextId});
+  current.window.history.pushState(null, '', '/cases/7?view=items&view=all#member');
+  current.window.document.title = 'Case 7';
+  await new Promise(resolve => current.window.setTimeout(resolve, 400));
+  assert.equal(h.sent.at(-1).data.type, 'TDW_SYSTEM_ASSISTANT_UPDATE');
+  assert.equal(h.sent.at(-1).data.context.title, 'Case 7');
+  assert.equal(h.sent.at(-1).data.context.url, current.window.location.href);
+  const back = new Promise(resolve => current.window.addEventListener('popstate', resolve, {once: true}));
+  current.window.history.back(); await back;
+  assert.equal(h.sent.at(-1).data.context.url, current.window.location.href);
+  current.window.history.replaceState(null, '', '/tickets/CRM-101?tab=files#file%202');
+  const request = {type: 'TDW_SYSTEM_ASSISTANT_REQUEST', protocolVersion: 1, nonce: h.nonce, contextId: 'request_1234'};
+  const count = h.sent.length;
+  h.receive(request, null); h.receive({...request, nonce: 'wrong'});
+  assert.equal(h.sent.length, count);
+  h.receive(request);
+  assert.equal(h.sent.at(-1).data.contextId, request.contextId);
+  assert.equal(h.sent.at(-1).data.context.url, current.window.location.href);
+});
+
 test('failure is visible in the panel with a manual link and retry uses a fresh nonce', async t => {
   const current=setup();t.after(()=>current.dom.window.close());current.action.click();
   const panel=current.panel();const previous=panel.shadowRoot.querySelector('iframe').src;

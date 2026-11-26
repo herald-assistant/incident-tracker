@@ -108,22 +108,20 @@ Akcja jest widoczna przy `system-assistant.enabled=true`, niezależnie od
 adresu nasłuchiwania TDW.
 Otwiera panel na badanej stronie z iframe TDW pod `/system-assistant/chat`.
 Na pierwsze otwarcie pokazuje listę zapisanych rozmów z wyszukiwaniem oraz
-akcją nowej rozmowy. Wybór otwiera ten sam transkrypt i pierwotny kontekst
-strony, także po restarcie TDW. Każda następna tura używa aktualnych skilli
+akcją nowej rozmowy. Wybór otwiera ten sam transkrypt, także po restarcie TDW. Każda następna tura używa aktualnych skilli
 i narzędzi. Ikona historii w chacie wraca do listy bez otwierania pełnego TDW.
 Ramka korzysta ze wspólnego widoku chatu bez sidebaru i konfiguracji.
 Nie pokazuje toku AI ani kosztów; pełny ekran TDW zachowuje te dane.
 Select Profil obok modelu/reasoningu pokazuje zapisane profile pasujące
-wzorcem do origin + pathname strony uruchomienia. Domyślne * pasuje wszędzie,
+wzorcem do origin + pathname bieżącej strony. Domyślne * pasuje wszędzie,
 pozostałe znaki są literalne. Wybranie rozmowy z historii nie podmienia
 kontekstu służącego temu filtrowi. Każda tura wymaga wyboru profilu i korzysta
 z aktualnych istniejących przypisań; brakujące API/skille są pomijane.
 Pełny ekran TDW pokazuje wszystkie profile bez filtrowania URL.
 Zamknięcie panelu chowa ramkę; ponowne otwarcie zachowuje rozmowę i wpisaną
 wiadomość. Usunięcie Browser Tools usuwa też ramkę.
-Przekazuje wyłącznie origin, pathname,
-tytuł i czas otwarcia; bez query/hash, capture elementu, formularzy, store,
-historii HTTP i autentykacji. Handshake V1 sprawdza origin, source, nonce
+Panel przekazuje pełny URL strony (z query i fragmentem), origin, pathname,
+tytuł i czas obserwacji. Sprawdza aktualny adres przy każdej wysyłce. Handshake V1 sprawdza origin, source, nonce
 i dokładne pola między rodzicem a ramką. Strona źródłowa nie otrzymuje
 listy rozmów, ich tytułów, wiadomości ani stanu TDW. CSP frame-src lub polityka osadzania może blokować
 ramkę; panel pokazuje wtedy błąd, ponowienie i ręczny link do pełnego TDW.

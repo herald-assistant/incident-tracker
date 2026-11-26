@@ -52,3 +52,7 @@ w konfiguracji. Select chatu jest feature-owned; pełny ekran pokazuje wszystkie
 profile, ramka filtruje po ingress origin + pathname wildcardem *, niezależnie
 od historycznego kontekstu rozmowy. Konfiguracja/import V1 wymaga profiles;
 nie dodawaj migracji ani wersjonowania.
+
+Panel Browser Tools potwierdza bieżący kontekst przed wysyłką. Każda przyjęta tura
+otrzymuje pełny URL z query i fragmentem. Profil filtruj po origin + pathname.
+Po OIDC ponownie uzgodnij stronę z rodzicem przed wznowieniem wysyłki.

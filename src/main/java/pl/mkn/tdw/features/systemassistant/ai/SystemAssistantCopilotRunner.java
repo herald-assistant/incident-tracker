@@ -55,7 +55,7 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
                 "Używaj wyłącznie bieżących narzędzi OpenAPI tej tury.", false)
                 .withDurableSystemInstructions(prompts.instructions(profile));
         return new CopilotRunRequest(turnId, CopilotRunAuth.localToken(), CopilotSessionTarget.newSession(),
-                prompts.conversation(page, history), config, Map.of(), null, evidence, activity);
+                prompts.conversation(page, request.pageContext(), history), config, Map.of(), null, evidence, activity);
     }
 
     @Override

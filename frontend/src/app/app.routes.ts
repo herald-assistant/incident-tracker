@@ -6,7 +6,7 @@ import { DatabaseConsoleComponent } from './features/database-console/database-c
 import { ElasticEvidenceConsoleComponent } from './features/evidence-console/elastic-evidence-console';
 import { GitLabEvidenceConsoleComponent } from './features/evidence-console/gitlab-evidence-console';
 import { PlatformLandingPageComponent } from './features/platform-landing/platform-landing';
-import { pendingAiSkillChangesGuard } from './features/ai-skills/guards/pending-ai-skill-changes.guard';
+import { pendingChangesGuard } from './core/guards/pending-changes.guard';
 
 export const routes: Routes = [
   {
@@ -18,7 +18,7 @@ export const routes: Routes = [
     path: '',
     component: AppShellComponent,
     children: [
-      { path: 'system-assistant', loadComponent: () => import('./features/system-assistant/system-assistant-page').then(m => m.SystemAssistantPage), data: { section: 'Analysis Features', title: 'System Assistant' } },
+      { path: 'system-assistant', canDeactivate: [pendingChangesGuard], loadComponent: () => import('./features/system-assistant/system-assistant-page').then(m => m.SystemAssistantPage), data: { section: 'Analysis Features', title: 'System Assistant' } },
       { path: 'release-summary', loadComponent: () => import('./features/release-summary/release-summary-page').then(m => m.ReleaseSummaryPageComponent), data: { section: 'Analysis Features', title: 'Release summary' } },
       {
         path: '',
@@ -64,7 +64,7 @@ export const routes: Routes = [
           import('./features/ai-skills/pages/ai-skills-page/ai-skills-page').then(
             (module) => module.AiSkillsPageComponent
           ),
-        canDeactivate: [pendingAiSkillChangesGuard],
+        canDeactivate: [pendingChangesGuard],
         data: {
           section: 'Platform',
           title: 'AI Skills'
@@ -76,7 +76,7 @@ export const routes: Routes = [
           import('./features/ai-skills/pages/ai-skills-page/ai-skills-page').then(
             (module) => module.AiSkillsPageComponent
           ),
-        canDeactivate: [pendingAiSkillChangesGuard],
+        canDeactivate: [pendingChangesGuard],
         data: {
           section: 'Platform',
           title: 'AI Skills'

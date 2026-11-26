@@ -100,6 +100,7 @@ public class SystemAssistantConversationService {
     }
 
     public SystemAssistantConversation send(String id, SystemAssistantMessageRequest request) {
+        validateCurrentPage(request.pageContext());
         ai.requireReady();
         var lease = lease(id);
         try {
@@ -239,6 +240,17 @@ public class SystemAssistantConversationService {
         conversation.dirty = true;
         conversation.persistedDefaultName = history.save(conversation.createdAt, conversation.snapshot(), conversation.persistedDefaultName);
         conversation.dirty = false;
+    }
+
+    private void validateCurrentPage(SystemAssistantMessageRequest.CurrentPage page) {
+        if (page == null) return;
+        validate(page.openingContext());
+        var baseUrl = page.origin() + page.pathname();
+        var url = page.url();
+        if (url == null || url.chars().anyMatch(Character::isISOControl)
+                || !(url.equals(baseUrl) || url.startsWith(baseUrl + "?") || url.startsWith(baseUrl + "#"))) {
+            throw error("PAGE_CONTEXT_INVALID", UserFacingErrorType.BAD_REQUEST, "Adres strony jest niezgodny z kontekstem.");
+        }
     }
 
     private void validate(SystemAssistantConversation.PageContext page) {

@@ -4,7 +4,7 @@
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
   const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '1.12.0';
+  const RUNTIME_VERSION = '1.13.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];
@@ -807,6 +807,7 @@
     panel.append(header, this.status, this.retryButton, this.frame);
     this.shadowRoot.append(style, panel, this.resizeShield, this.resizeHandle);
     this.onClose = this.hide.bind(this); this.onRetry = this.connect.bind(this);
+    this.onPageChange = () => this.publishPage();
     this.onMessage = this.receive.bind(this); this.onError = () => this.fail();
     this.onMaximize = this.toggleMaximize.bind(this);
     this.onResizeStart = this.startResize.bind(this); this.onResizeMove = this.moveResize.bind(this);
@@ -895,15 +896,13 @@
       global.document.documentElement.append(this.host);
       this.connect();
     }
-    this.host.hidden = false;
+    this.host.hidden = false; this.publishPage();
     this.closeButton.focus({ preventScroll: true });
   };
   EmbeddedAssistant.prototype.connect = function connect() {
     if (this.disposed) return;
     this.cleanup();
-    this.context = { origin: global.location.origin, pathname: global.location.pathname,
-      title: global.document.title.slice(0, 200), capturedAt: new Date().toISOString() };
-    this.contextId = protocol.createNonce(); this.nonce = protocol.createNonce();
+    this.context = null; this.nonce = protocol.createNonce();
     const url = new URL('/system-assistant/chat', this.config.tdwOrigin);
     url.hash = new URLSearchParams({ nonce: this.nonce, sourceOrigin: global.location.origin }).toString();
     this.state = 'waiting'; this.status.hidden = false; this.status.setAttribute('role', 'status');
@@ -915,20 +914,37 @@
   EmbeddedAssistant.prototype.receive = function receive(event) {
     const peer = this.frame.contentWindow;
     if (this.disposed || !peer || event.origin !== this.config.tdwOrigin || event.source !== peer) return;
-    if (this.state === 'waiting' && validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'READY')) {
-      try {
-        peer.postMessage(protocol.createMessage('TDW_SYSTEM_ASSISTANT_CONTEXT', this.nonce,
-          {contextId: this.contextId, context: this.context}), this.config.tdwOrigin);
-        this.state = 'awaiting-receipt';
-      } catch { this.fail(); }
+    if (validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'READY')) {
+      this.state = 'awaiting-receipt';
+      this.contextId = protocol.createNonce();
+      this.publishPage(this.contextId, true);
     } else if (this.state === 'awaiting-receipt'
       && validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'RECEIVED')
       && event.data.contextId === this.contextId) {
-      this.state = 'ready'; this.status.hidden = true; this.cleanup();
+      this.state = 'ready'; this.status.hidden = true;
+      global.clearTimeout(this.timer); this.timer = null;
+      global.addEventListener('popstate', this.onPageChange);
+      global.addEventListener('hashchange', this.onPageChange);
+      // pushState, replaceState and asynchronous title changes need no hooks in the host application.
+      if (this.pageTimer == null) this.pageTimer = global.setInterval(this.onPageChange, 300);
+      this.publishPage();
+    } else if (this.state === 'ready' && validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'REQUEST')
+      && typeof event.data.contextId === 'string' && /^[A-Za-z0-9_-]{8,96}$/.test(event.data.contextId)) {
+      this.publishPage(event.data.contextId);
     } else if (validTransferMessage(event.data, 'TDW_SYSTEM_ASSISTANT', this.nonce, 'ERROR')) this.fail();
   };
+  EmbeddedAssistant.prototype.publishPage = function publishPage(contextId, connecting = false) {
+    if (this.disposed || (this.state !== 'ready' && !connecting) || (!contextId && this.host.hidden)) return;
+    const url = new URL(global.location.href);
+    url.username = ''; url.password = '';
+    const title = global.document.title.slice(0, 200);
+    if (!contextId && this.context?.url === url.href && this.context.title === title) return;
+    this.context = {origin: url.origin, pathname: url.pathname, url: url.href, title, capturedAt: new Date().toISOString()};
+    this.frame.contentWindow.postMessage(protocol.createMessage(connecting ? 'TDW_SYSTEM_ASSISTANT_CONTEXT' : 'TDW_SYSTEM_ASSISTANT_UPDATE', this.nonce,
+      {contextId: contextId || protocol.createNonce(), context: this.context}), this.config.tdwOrigin);
+  };
   EmbeddedAssistant.prototype.fail = function fail() {
-    if (this.disposed || this.state === 'ready') return;
+    if (this.disposed) return;
     this.cleanup(); this.state = 'failed'; this.frame.hidden = true; this.retryButton.hidden = false;
     this.status.hidden = false; this.status.setAttribute('role', 'alert');
     this.status.textContent = 'Nie udało się osadzić rozmowy TDW. Sprawdź dostępność TDW i czy strona zezwala na ramki (CSP frame-src). Możesz spróbować ponownie lub otworzyć TDW powyżej.';
@@ -939,6 +955,9 @@
     this.host.hidden = true; this.onExit?.({restoreFocus: true});
   };
   EmbeddedAssistant.prototype.cleanup = function cleanup() {
+    global.removeEventListener('popstate', this.onPageChange);
+    global.removeEventListener('hashchange', this.onPageChange);
+    global.clearInterval(this.pageTimer); this.pageTimer = null;
     global.removeEventListener('message', this.onMessage, true);
     if (this.timer !== null) global.clearTimeout(this.timer);
     this.timer = null;
@@ -990,7 +1009,7 @@
 
   function validTransferMessage(data, prefix, nonce, suffix) {
     const fields = suffix === 'READY' ? ['type', 'protocolVersion', 'nonce']
-      : suffix === 'RECEIVED' ? ['type', 'protocolVersion', 'nonce', 'contextId']
+      : suffix === 'RECEIVED' || suffix === 'REQUEST' ? ['type', 'protocolVersion', 'nonce', 'contextId']
       : ['type', 'protocolVersion', 'nonce', 'code'];
     return data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === fields.length &&
       fields.every(key => Object.hasOwn(data, key)) && data.type === `${prefix}_${suffix}` &&
