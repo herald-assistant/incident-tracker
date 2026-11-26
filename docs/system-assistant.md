@@ -45,7 +45,11 @@ prawej stronie każdego wiersza. Wspólny pasek na dole pokazuje niezapisane
 zmiany, komunikaty i błędy oraz grupuje import, eksport i `Zapisz konfigurację`
 dla Skilli, Kontraktów, Auth oraz Profili. Zakładki wypełniają dostępną
 szerokość równymi kolumnami; na wąskim ekranie można je przewijać strzałkami.
-Przełączanie zakładek zachowuje szkic.
+W każdej z tych czterech zakładek najedź na wiersz, aby zobaczyć uchwyt po lewej
+stronie nazwy. Możesz za niego przeciągnąć wpis. Uchwyt pojawia się także po przejściu
+do niego klawiszem Tab i otwiera menu z poleceniami „Przesuń w górę” i „Przesuń w dół”.
+Przełączanie zakładek zachowuje szkic. Po wybraniu `Zapisz konfigurację` kolejność
+wierszy odpowiada kolejności wpisów w tablicach `configuration.json`.
 
 Swagger UI pozwala przejrzeć parametry, odpowiedzi i schematy. Wyszukiwanie,
 filtry metody/tagu i `Tylko wybrane` ułatwiają wybór. `Zaznacz wszystko`

@@ -1,14 +1,16 @@
 import {Component, input, output} from '@angular/core';
 import {DatePipe} from '@angular/common';
+import {CdkDrag} from '@angular/cdk/drag-drop';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {TextFieldComponent} from '../../components/text-field/text-field';
 import {ChoiceSelectComponent} from '../../components/choice-select/choice-select';
 import {AssistantApiDefinition, AssistantProfile, AssistantAuthProfile, AssistantAuthType, AssistantOidcConnection} from './system-assistant.models';
 import {AUTH_TYPES, authErrors, newAuthProfile} from './assistant-auth';
+import {AssistantOrderHandle} from './assistant-order-handle';
 
 @Component({
   selector: 'app-assistant-auth-profiles',
-  imports: [TextFieldComponent, ChoiceSelectComponent, DatePipe, MatTooltipModule],
+  imports: [AssistantOrderHandle, CdkDrag, TextFieldComponent, ChoiceSelectComponent, DatePipe, MatTooltipModule],
   templateUrl: './assistant-auth-profiles.html',
   styleUrl: './assistant-auth-profiles.scss'
 })
@@ -24,6 +26,7 @@ export class AssistantAuthProfiles {
   readonly expandedIds = input<ReadonlySet<string>>(new Set());
   readonly expansionToggled = output<string>();
   readonly profilesChange = output<AssistantAuthProfile[]>();
+  readonly orderChanged = output<{from: number; to: number}>();
   readonly login = output<string>();
   readonly disconnect = output<string>();
   readonly types = AUTH_TYPES;

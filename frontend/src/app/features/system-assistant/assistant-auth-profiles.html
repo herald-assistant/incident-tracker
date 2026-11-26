@@ -1,6 +1,7 @@
 @for (item of profiles(); track item.id; let i = $index) {
-  <section class="auth-definition assistant-definition" [attr.aria-label]="item.name || 'Nowe uwierzytelnianie'">
+  <section class="auth-definition assistant-definition" cdkDrag [cdkDragData]="item" [attr.aria-label]="item.name || 'Nowe uwierzytelnianie'">
     <div class="auth-heading assistant-definition-heading">
+      <app-assistant-order-handle [name]="item.name" [index]="i" [count]="profiles().length" [disabled]="disabled()" (moveTo)="orderChanged.emit({from: i, to: $event})" />
       <button type="button" class="assistant-definition-toggle" [disabled]="disabled()"
         [attr.aria-expanded]="expandedIds().has(item.id)" [attr.aria-controls]="'assistant-auth-body-' + i" (click)="expansionToggled.emit(item.id)">
         <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowe uwierzytelnianie'}}</span><span class="assistant-definition-meta">{{typeLabel(item.type)}}</span></span>

@@ -378,8 +378,9 @@ Select przy przypisanym API w profilu ma domyślne No Auth.
 
 Cztery zakładki konfiguracji System Assistant mają wspólny wzorzec listy:
 licznik wpisów i Dodaj, bez powtarzania nazwy aktywnej zakładki. Nazwa wpisu
-z pomocniczym opisem znajduje się po lewej, a
-ikonowe akcje 32 px po prawej. Usuwanie jest zawsze ostatnią akcją wiersza.
+z pomocniczym opisem znajduje się po lewej. Przed nazwą jest stałe miejsce na
+uchwyt zmiany kolejności, widoczny po najechaniu na wiersz lub po przejściu do
+uchwytu klawiaturą. Pozostałe akcje ikonowe 32 px są po prawej. Usuwanie jest ostatnie.
 Skille, Auth i Profile rozwijają edytor inline; Kontrakty mają ikonę ołówka
 rozwijającą shared text-field „Nazwa API” i zachowują podgląd oraz eksport.
 Nazwę (1–100 znaków, nie same białe znaki) utrwala wspólny zapis konfiguracji.

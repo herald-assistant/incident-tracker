@@ -6,11 +6,13 @@ import { AssistantConfigurationEditor } from './assistant-configuration-editor';
 import { SystemAssistantPage } from './system-assistant-page';
 import { AssistantConfiguration, AssistantConversation } from './system-assistant.models';
 import { Dialog } from '@angular/cdk/dialog';
+import { CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { OpenApiOperationPicker } from './openapi-operation-picker';
 import { By } from '@angular/platform-browser';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatTooltipHarness } from '@angular/material/tooltip/testing';
+import { MatMenuHarness } from '@angular/material/menu/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import {choice} from '../../../testing/form-controls';
 import {newAuthProfile} from './assistant-auth';
@@ -901,6 +903,89 @@ describe('SystemAssistantPage', () => {
     expect(root.querySelector('.assistant-save-state')).toBeNull();
     expect(root.querySelector('.assistant-configuration-actions [role=alert]')).toBeNull();
     expect(root.querySelector('.assistant-configuration-actions [role=status]')?.textContent).toContain('Zapisano');
+    fixture.destroy();
+  });
+
+  it('saves and reloads the dropped order of all four lists with their original entries and assignments', () => {
+    const ids = ['crm', 'contacts', 'tickets'];
+    const configuration: AssistantConfiguration = {
+      skills: ids.map(id => ({id, name: id, content: 'Instrukcja ' + id})),
+      apis: ids.map(id => ({id, name: id, yaml: 'YAML ' + id})),
+      authProfiles: ids.map(id => ({...newAuthProfile('BEARER', id, id, 'http://localhost'), token: 'public-' + id})),
+      profiles: ids.map(id => ({id, name: id, urlPattern: '*', skillIds: [id], apiBindings: [{apiId: id, authProfileId: id}]}))
+    };
+    const tabs = [['skills', 'skills'], ['contracts', 'apis'], ['auth', 'authProfiles'], ['profiles', 'profiles']] as const;
+    const fixture = ready([], configuration);
+    const editor = configurationEditor(fixture);
+    const saveButton: HTMLButtonElement = fixture.nativeElement.querySelector('.assistant-configuration-actions .primary-button');
+    const browser = TestBed.inject(SYSTEM_ASSISTANT_WINDOW);
+    vi.mocked(browser.confirm).mockReturnValue(false);
+    const canUnload = () => browser.dispatchEvent(new Event('beforeunload', {cancelable: true}));
+    expect(saveButton.disabled).toBe(true);
+    for (const [view, kind] of tabs) {
+      fixture.componentInstance.workspaceView.set(view);
+      fixture.detectChanges();
+      const element = fixture.debugElement.query(By.directive(CdkDropList));
+      const list = element.injector.get(CdkDropList);
+      const items = list.getSortedItems();
+      expect(items.map(item => item.data)).toEqual(configuration[kind]);
+      expect(element.queryAll(By.directive(CdkDragHandle))).toHaveLength(ids.length);
+      expect(element.queryAll(By.css('.assistant-definition-heading > app-assistant-order-handle:first-child'))).toHaveLength(ids.length);
+      const drop = {previousContainer: list, container: list, item: items[2], previousIndex: 2, currentIndex: 0};
+      element.triggerEventHandler('cdkDropListDropped', {...drop, isPointerOverContainer: false});
+      expect(editor.configuration()[kind]).toEqual(configuration[kind]);
+      element.triggerEventHandler('cdkDropListDropped', {...drop, isPointerOverContainer: true});
+      fixture.detectChanges();
+      expect(list.getSortedItems().map(item => item.data.id)).toEqual(['tickets', 'crm', 'contacts']);
+    }
+    expect(saveButton.disabled).toBe(false);
+    expect(fixture.componentInstance.canDeactivate()).toBe(false);
+    expect(canUnload()).toBe(false);
+    http.expectNone('/api/system-assistant/configuration');
+    saveButton.click();
+    const save = http.expectOne('/api/system-assistant/configuration');
+    for (const [, kind] of tabs) {
+      const [first, second, third] = configuration[kind];
+      expect(save.request.body[kind]).toEqual([third, first, second]);
+    }
+    save.flush(save.request.body);
+    http.expectOne('/api/system-assistant/configuration/tools').flush([]);
+    fixture.detectChanges();
+    expect(saveButton.disabled).toBe(true);
+    expect(fixture.componentInstance.canDeactivate()).toBe(true);
+    expect(canUnload()).toBe(true);
+    fixture.destroy();
+
+    const reloaded = ready([], save.request.body);
+    for (const [view] of tabs) {
+      reloaded.componentInstance.workspaceView.set(view);
+      reloaded.detectChanges();
+      const titles: NodeListOf<HTMLElement> = reloaded.nativeElement.querySelectorAll('.assistant-definition-title');
+      expect([...titles].map(title => title.textContent)).toEqual(['tickets', 'crm', 'contacts']);
+    }
+    reloaded.destroy();
+  });
+
+  it('keeps an open skill and its editable ID with the row when moving it from the handle menu', async () => {
+    const fixture = ready([], {skills: ['crm', 'contacts'].map(id => ({id, name: id, content: id}))});
+    const editor = configurationEditor(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    const field = () => root.querySelector('.assistant-definition-body:not([hidden]) input');
+    root.querySelector<HTMLButtonElement>('.assistant-definition-toggle')!.click();
+    fixture.detectChanges();
+    const originalField = field();
+    editor.updateSkill(0, 'id', 'contacts');
+    fixture.detectChanges();
+    const handle = await TestbedHarnessEnvironment.loader(fixture).getHarness(MatMenuHarness.with({triggerText: 'drag_indicator'}));
+    await handle.open();
+    await handle.clickItem({text: 'Przesuń w dół'});
+    expect(editor.configuration().skills.map(skill => skill.name)).toEqual(['contacts', 'crm']);
+    expect(root.querySelectorAll<HTMLElement>('.assistant-definition-body')[1].hidden).toBe(false);
+    expect(field()).toBe(originalField);
+    await handle.open();
+    await handle.clickItem({text: 'Przesuń w górę'});
+    editor.updateSkill(0, 'id', 'crm');
+    expect(editor.dirty()).toBe(false);
     fixture.destroy();
   });
 

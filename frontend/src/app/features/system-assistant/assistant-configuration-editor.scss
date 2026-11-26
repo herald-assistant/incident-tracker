@@ -4,12 +4,17 @@
 .assistant-view { margin-top: 1rem; }
 .assistant-view[hidden] { display: none !important; }
 [role=alert] { color: var(--color-danger, #a52525); }
-.assistant-configuration { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 1rem; }
+.assistant-configuration { --assistant-order-gutter: .75rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 1rem; }
 fieldset { border: 0; padding: .25rem 0 1rem; margin: 0; min-width: 0; }
 .assistant-configuration-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-bottom: .75rem; }
 .assistant-section-count { color: var(--color-muted); font-size: .8125rem; }
 .assistant-configuration-add button { margin: 0; }
 .assistant-contracts { list-style: none; margin: 0; padding: 0; }
+// Include the full drag handle in the CDK drop area while keeping the content aligned.
+.assistant-configuration .cdk-drop-list {
+  margin-inline-start: calc(-1 * var(--assistant-order-gutter));
+  padding-inline-start: var(--assistant-order-gutter);
+}
 .assistant-empty { color: var(--color-muted); font-size: .875rem; }
 .assistant-contract-meta { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
 .assistant-contract-count { cursor: help; }

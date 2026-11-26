@@ -30,7 +30,9 @@ z passwordToggle, z przyciskiem oka jak w Workspace Settings. JSON i eksport
 konfiguracji nadal zawierają jawne wartości.
 Listy czterech zakładek mają licznik wpisów i Dodaj bez powtórzonego nagłówka,
 odstępy zamiast wewnętrznych separatorów oraz hover całej belki z obszarem
-akcji. Małe ikony są po prawej; usuwanie jest ostatnią akcją.
+akcji. Uchwyt zmiany kolejności jest przed nazwą po lewej. Pokazuj go po
+najechaniu na wiersz lub po przejściu do uchwytu klawiaturą. Pozostałe
+ikony są po prawej, z usuwaniem jako ostatnią akcją.
 Jeden sticky pasek grupuje import, eksport i Zapisz konfigurację dla całego
 zestawu. Pokazuje tylko niezapisane zmiany i komunikaty. Zakres zapisu jest
 w tooltipie. Zakładki używają shared equalWidth z równą szerokością i paginacją.

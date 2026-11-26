@@ -382,6 +382,8 @@ kontynuować edycję. Zgoda obejmuje jedno przekierowanie z tym samym szkicem.
 Szkic konfiguracji pozostaje w pamięci strony.
 
 Skille, Kontrakty, Auth i Profile korzystają ze wspólnej oprawy zapisu całego zestawu.
+Przesunięcie wiersza w zakładce zmienia kolejność odpowiedniej tablicy w szkicu.
+Eksport zachowuje tę kolejność, a wspólny zapis utrwala ją w `configuration.json`.
 Skille, profile i Auth są początkowo zwinięte. Kliknięcie belki rozwija edytor;
 belka pokazuje nazwę i odpowiednio ID skilla, zakres URL z liczbą skilli/API
 profilu albo typ Auth. `*` jest prezentowane jako „Wszystkie adresy”.

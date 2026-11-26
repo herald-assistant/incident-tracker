@@ -15,13 +15,15 @@
     </div>
   </header>
   @if (workspaceView() === 'skills') {
-    <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
-      @for (item of configuration().skills; track $index; let i = $index) {
-        <section class="assistant-definition">
+    <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills"
+      cdkDropList [cdkDropListDisabled]="configurationBusy() || configuration().skills.length < 2" (cdkDropListDropped)="dropDefinition('skills', $event)">
+      @for (item of configuration().skills; track skillRowKey(item); let i = $index) {
+        <section class="assistant-definition" cdkDrag [cdkDragData]="item">
           <div class="assistant-definition-heading">
+            <app-assistant-order-handle [name]="item.name" [index]="i" [count]="configuration().skills.length" [disabled]="configurationBusy()" (moveTo)="moveDefinition('skills', i, $event)" />
             <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
-              [attr.aria-expanded]="expandedDefinitions().skills.has('' + i)" [attr.aria-controls]="'assistant-skill-body-' + i"
-              (click)="toggleDefinition('skills', '' + i)">
+              [attr.aria-expanded]="expandedDefinitions().skills.has(skillRowKey(item))" [attr.aria-controls]="'assistant-skill-body-' + i"
+              (click)="toggleDefinition('skills', skillRowKey(item))">
               <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy skill'}}</span><span class="assistant-definition-meta">{{item.id || 'Brak ID'}}</span></span>
               <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
             </button>
@@ -32,7 +34,7 @@
               </button>
             </div>
           </div>
-          <div class="assistant-definition-body" [id]="'assistant-skill-body-' + i" [hidden]="!expandedDefinitions().skills.has('' + i)">
+          <div class="assistant-definition-body" [id]="'assistant-skill-body-' + i" [hidden]="!expandedDefinitions().skills.has(skillRowKey(item))">
             <app-text-field [disabled]="configurationBusy()" label="ID skilla" [value]="item.id" (valueChange)="updateSkill(i, 'id', $event)" />
             <app-text-field [disabled]="configurationBusy()" label="Nazwa skilla" [value]="item.name" (valueChange)="updateSkill(i, 'name', $event)" />
             <app-text-field [disabled]="configurationBusy()" label="Instrukcje Markdown" type="textarea" [rows]="6" [value]="item.content" (valueChange)="updateSkill(i, 'content', $event)" />
@@ -43,6 +45,8 @@
   } @else if (workspaceView() === 'auth') {
     <fieldset data-form-tour="assistant-auth" aria-labelledby="system-assistant-view-tab-auth" [disabled]="configurationBusy()">
       <app-assistant-auth-profiles [profiles]="configuration().authProfiles" [apis]="configuration().apis" [assistantProfiles]="configuration().profiles"
+        cdkDropList [cdkDropListDisabled]="configurationBusy() || configuration().authProfiles.length < 2" (cdkDropListDropped)="dropDefinition('authProfiles', $event)"
+        (orderChanged)="moveDefinition('authProfiles', $event.from, $event.to)"
         [disabled]="configurationBusy()" [dirty]="dirty()" [showErrors]="authValidationVisible()"
         [busyId]="authBusyId()" [connections]="authConnections()" (profilesChange)="updateAuthProfiles($event)"
         [expandedIds]="expandedDefinitions().authProfiles" (expansionToggled)="toggleDefinition('authProfiles', $event)"
@@ -50,10 +54,12 @@
     </fieldset>
     @if (authStatusError()) { <p role="alert">{{authStatusError()}} <button type="button" class="secondary-button" (click)="loadAuthStatus()">Odśwież stan logowania</button></p> }
   } @else if (workspaceView() === 'profiles') {
-    <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-profiles" aria-labelledby="system-assistant-view-tab-profiles">
+    <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-profiles" aria-labelledby="system-assistant-view-tab-profiles"
+      cdkDropList [cdkDropListDisabled]="configurationBusy() || configuration().profiles.length < 2" (cdkDropListDropped)="dropDefinition('profiles', $event)">
       @for (item of configuration().profiles; track item.id; let i = $index) {
-        <section class="assistant-definition assistant-profile">
+        <section class="assistant-definition assistant-profile" cdkDrag [cdkDragData]="item">
           <div class="assistant-definition-heading">
+            <app-assistant-order-handle [name]="item.name" [index]="i" [count]="configuration().profiles.length" [disabled]="configurationBusy()" (moveTo)="moveDefinition('profiles', i, $event)" />
             <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
               [attr.aria-expanded]="expandedDefinitions().profiles.has(item.id)" [attr.aria-controls]="'assistant-profile-body-' + i"
               (click)="toggleDefinition('profiles', item.id)">
@@ -98,10 +104,12 @@
     </fieldset>
   } @else if (workspaceView() === 'contracts') {
     <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-api" aria-labelledby="system-assistant-view-tab-contracts">
-      <ul class="assistant-contracts" aria-label="Zaimportowane kontrakty">
+      <ul class="assistant-contracts" aria-label="Zaimportowane kontrakty"
+        cdkDropList [cdkDropListDisabled]="configurationBusy() || configuration().apis.length < 2" (cdkDropListDropped)="dropDefinition('apis', $event)">
         @for (item of configuration().apis; track item.id; let i = $index) {
-          <li class="assistant-contract assistant-definition">
+          <li class="assistant-contract assistant-definition" cdkDrag [cdkDragData]="item">
             <div class="assistant-definition-heading">
+              <app-assistant-order-handle [name]="item.name" [index]="i" [count]="configuration().apis.length" [disabled]="configurationBusy()" (moveTo)="moveDefinition('apis', i, $event)" />
               <div class="assistant-definition-label assistant-definition-label--static">
                 <h3 class="assistant-definition-title">{{item.name}}</h3>
                 <div class="assistant-contract-meta assistant-definition-meta">

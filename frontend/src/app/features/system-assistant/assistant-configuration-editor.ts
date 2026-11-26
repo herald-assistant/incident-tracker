@@ -1,5 +1,6 @@
 import {Component, computed, DestroyRef, inject, input, linkedSignal, model, OnInit, output, signal} from '@angular/core';
 import {Dialog, DialogModule, DialogRef} from '@angular/cdk/dialog';
+import {CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray} from '@angular/cdk/drag-drop';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {HttpErrorResponse} from '@angular/common/http';
@@ -8,6 +9,7 @@ import {ChoiceSelectComponent} from '../../components/choice-select/choice-selec
 import {TextFieldComponent} from '../../components/text-field/text-field';
 import {downloadJsonFile, readJsonFile, sanitizeFileNamePart} from '../../core/utils/json-file.utils';
 import {AssistantAuthProfiles} from './assistant-auth-profiles';
+import {AssistantOrderHandle} from './assistant-order-handle';
 import {AUTH_TYPES, authErrors, newAuthProfile} from './assistant-auth';
 import {missingProfileResources} from './assistant-profiles';
 import {OpenApiContractViewer} from './openapi-contract-viewer';
@@ -15,7 +17,7 @@ import {OpenApiOperationPicker, OpenApiPickerResult} from './openapi-operation-p
 import {assistantErrorMessage, SystemAssistantApi} from './system-assistant-api.service';
 import {ASSISTANT_CONFIGURATION_FILE_MAX_BYTES, ASSISTANT_CONFIGURATION_FILE_NAME, configurationFile, parseConfigurationFile} from './system-assistant-configuration-file';
 import {SYSTEM_ASSISTANT_WINDOW} from './system-assistant-ingress.service';
-import {AssistantApiDefinition, AssistantAuthProfile, AssistantConfiguration, AssistantOidcConnection, AssistantProfile, AssistantProfileOption, AssistantTool} from './system-assistant.models';
+import {AssistantApiDefinition, AssistantAuthProfile, AssistantConfiguration, AssistantOidcConnection, AssistantProfile, AssistantProfileOption, AssistantSkill, AssistantTool} from './system-assistant.models';
 
 const EMPTY_CONFIGURATION: AssistantConfiguration = {apis: [], skills: [], profiles: [], authProfiles: []};
 
@@ -30,7 +32,7 @@ function sameConfigurationValue(left: unknown, right: unknown): boolean {
 
 @Component({
   selector: 'app-assistant-configuration-editor',
-  imports: [AssistantAuthProfiles, ChoiceSelectComponent, DialogModule, MatTooltipModule, TextFieldComponent],
+  imports: [AssistantAuthProfiles, AssistantOrderHandle, CdkDrag, CdkDropList, ChoiceSelectComponent, DialogModule, MatTooltipModule, TextFieldComponent],
   templateUrl: './assistant-configuration-editor.html',
   styleUrl: './assistant-configuration-editor.scss'
 })
@@ -57,6 +59,9 @@ export class AssistantConfigurationEditor implements OnInit {
     return saved ? this.differsFrom(saved) : this.configuration() !== EMPTY_CONFIGURATION;
   });
   readonly editingApiId = signal<string | null>(null);
+  // Skill IDs are editable, including temporarily blank or duplicate values in a draft.
+  private readonly skillRowKeys = new WeakMap<AssistantSkill, string>();
+  private nextSkillRowKey = 0;
   readonly expandedDefinitions = signal<Record<'skills' | 'profiles' | 'authProfiles', ReadonlySet<string>>>({
     skills: new Set(), profiles: new Set(), authProfiles: new Set()
   });
@@ -145,14 +150,25 @@ export class AssistantConfigurationEditor implements OnInit {
   addSkill(): void {
     if (this.configurationBusy()) return;
     const id = `skill_${crypto.randomUUID().slice(0, 8)}`;
-    const index = this.configuration().skills.length;
-    this.configuration.update(value => ({...value, skills: [...value.skills, {id, name: 'Nowy skill', content: ''}]}));
-    this.setDefinitionExpanded('skills', '' + index, true);
+    const skill = {id, name: 'Nowy skill', content: ''};
+    this.configuration.update(value => ({...value, skills: [...value.skills, skill]}));
+    this.setDefinitionExpanded('skills', this.skillRowKey(skill), true);
     this.notice.set('');
+  }
+  skillRowKey(skill: AssistantSkill): string {
+    let key = this.skillRowKeys.get(skill);
+    if (key === undefined) {
+      key = String(this.nextSkillRowKey++);
+      this.skillRowKeys.set(skill, key);
+    }
+    return key;
   }
   updateSkill(index: number, key: 'id' | 'name' | 'content', content: string): void {
     if (this.configurationBusy()) return;
-    this.configuration.update(value => ({...value, skills: value.skills.map((item, i) => i === index ? {...item, [key]: content} : item)}));
+    const current = this.configuration().skills[index];
+    const edited = {...current, [key]: content};
+    this.skillRowKeys.set(edited, this.skillRowKey(current));
+    this.configuration.update(value => ({...value, skills: value.skills.map((item, i) => i === index ? edited : item)}));
     this.notice.set('');
   }
   toggleApiName(id: string): void {
@@ -166,12 +182,24 @@ export class AssistantConfigurationEditor implements OnInit {
   apiNameError(name: string): string {
     return !name.trim() ? 'Podaj nazwę API.' : name.length > 100 ? 'Nazwa API może mieć do 100 znaków.' : '';
   }
+  dropDefinition(kind: keyof AssistantConfiguration, event: CdkDragDrop<unknown>): void {
+    if (event.isPointerOverContainer && event.previousContainer === event.container
+        && this.configuration()[kind][event.previousIndex] === event.item.data) {
+      this.moveDefinition(kind, event.previousIndex, event.currentIndex);
+    }
+  }
+  moveDefinition(kind: keyof AssistantConfiguration, from: number, to: number): void {
+    const entries = [...this.configuration()[kind]];
+    if (this.configurationBusy() || from === to || !entries[from] || !entries[to]) return;
+    moveItemInArray(entries, from, to);
+    this.configuration.update(value => ({...value, [kind]: entries}));
+    this.notice.set('');
+  }
   remove(kind: 'apis' | 'skills' | 'profiles', index: number): void {
     if (this.configurationBusy()) return;
     if (kind === 'apis' && this.editingApiId() === this.configuration().apis[index]?.id) this.editingApiId.set(null);
     if (kind === 'skills') {
-      this.expandedDefinitions.update(value => ({...value, skills: new Set([...value.skills]
-        .map(Number).filter(current => current !== index).map(current => '' + (current > index ? current - 1 : current)))}));
+      this.setDefinitionExpanded('skills', this.skillRowKey(this.configuration().skills[index]), false);
     } else if (kind === 'profiles') this.setDefinitionExpanded('profiles', this.configuration().profiles[index].id, false);
     this.configuration.update(value => ({ ...value, [kind]: value[kind].filter((_, i) => i !== index) }));
     this.notice.set('');
@@ -260,8 +288,10 @@ export class AssistantConfigurationEditor implements OnInit {
       this.tabRequested.emit('auth'); this.saveError.set('Uzupełnij zaznaczone pola uwierzytelniania.'); return;
     }
     this.saving.set(true); this.error.set(''); this.saveError.set(''); this.notice.set('');
-    this.api.save(this.configuration()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const draft = this.configuration();
+    this.api.save(draft).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: value => {
+        value.skills.forEach((skill, index) => this.skillRowKeys.set(skill, this.skillRowKey(draft.skills[index])));
         this.savedConfiguration.set(value); this.loaded.emit(value.profiles); this.saving.set(false);
         this.notice.set('Zapisano. Kolejna tura użyje bieżącego zestawu API i skilli.'); this.loadTools();
       },
