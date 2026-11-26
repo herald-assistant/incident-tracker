@@ -12,7 +12,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGatewa
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
-import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService.Snapshot;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
@@ -41,11 +41,11 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
             throw new CopilotLocalTokenMissingException();
     }
 
-    public CopilotRunRequest assemble(String turnId, Snapshot configuration,
+    public CopilotRunRequest assemble(String turnId, SystemAssistantProfileResources profile,
                                       SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                                       SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
                                       Consumer<AnalysisAiActivityEvent> activity) {
-        var callbacks = tools.create(configuration.executions());
+        var callbacks = tools.create(profile.executions());
         var names = callbacks.stream().map(callback -> callback.getToolDefinition().name()).toList();
         var session = new CopilotToolSessionContext(turnId, "system-assistant-" + turnId, Map.of());
         var definitions = sdkTools.createToolDefinitions(session, CopilotToolDescriptionContext.profile("system-assistant"), callbacks)
@@ -53,17 +53,17 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
         var config = new CopilotSessionConfigRequest(session.copilotSessionId(), definitions, names,
                 new CopilotModelSelection(request.model(), request.reasoningEffort()),
                 "Używaj wyłącznie bieżących narzędzi OpenAPI tej tury.", false)
-                .withDurableSystemInstructions(prompts.instructions(configuration));
+                .withDurableSystemInstructions(prompts.instructions(profile));
         return new CopilotRunRequest(turnId, CopilotRunAuth.localToken(), CopilotSessionTarget.newSession(),
                 prompts.conversation(page, history), config, Map.of(), null, evidence, activity);
     }
 
     @Override
-    public Reply answer(String turnId, Snapshot configuration,
+    public Reply answer(String turnId, SystemAssistantProfileResources profile,
                         SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                         SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
                         Consumer<AnalysisAiActivityEvent> activity, List<Attachment> attachments) {
-        var run = assemble(turnId, configuration, page, history, request, evidence, activity);
+        var run = assemble(turnId, profile, page, history, request, evidence, activity);
         var prepared = preparation.prepare(run);
         prepared.messageOptions().setAttachments(SystemAssistantAttachments.prepare(attachments));
         try {

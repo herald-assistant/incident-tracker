@@ -82,7 +82,7 @@ class SystemAssistantCompositionTest {
                 new SystemAssistantConfiguration.ApiDefinition("crm_b", "CRM B", source.replace("operationId: getTicket", "operationId: " + operationId))), List.of());
         assertThatThrownBy(() -> service.save(config)).hasMessageContaining("powtórzone nazwy narzędzi");
         assertThat(service.current().apis()).isEmpty();
-        assertThat(service.snapshot().executions()).isEmpty();
+        assertThat(service.snapshot().forProfile("test_profile").executions()).isEmpty();
     }
 
     @Test void persistsFullOperationIdAndPublishesItsStableShortNameToTheSdk() throws Exception {
@@ -103,11 +103,11 @@ class SystemAssistantCompositionTest {
             var calls = new AtomicInteger();
             var callbacks = new OpenApiToolSetFactory((execution, args) -> {
                 calls.incrementAndGet();
-                assertThat(execution.operation().name()).isEqualTo(service.snapshot().executions().get(0).operation().name());
+                assertThat(execution.operation().name()).isEqualTo(service.snapshot().forProfile("test_profile").executions().get(0).operation().name());
                 assertThat(execution.operation().method()).isEqualTo("GET");
                 assertThat(execution.operation().path()).isEqualTo("/tickets/{id}");
                 return new OpenApiResult("RESPONSE_RECEIVED", 200, mapper.createObjectNode(), "test");
-            }, mapper).create(restored.snapshot().executions());
+            }, mapper).create(restored.snapshot().forProfile("test_profile").executions());
             var sdk = new CopilotSdkToolFactory(List.of(), mapper, List.of(), null).createToolDefinitions(
                     new CopilotToolSessionContext("names", "names-session", Map.of()), CopilotToolDescriptionContext.profile("system-assistant"), callbacks);
             assertThat(sdk).hasSize(1);
@@ -140,7 +140,7 @@ class SystemAssistantCompositionTest {
             assertThat(restored.current()).isEqualTo(configuration);
             assertThat(mapper.readTree(Files.readString(directory.resolve("system-assistant/configuration.json"))).path("version").asInt()).isEqualTo(1);
             var factory = new OpenApiToolSetFactory((execution, args) -> new OpenApiResult("RESPONSE_RECEIVED", 200, mapper.createObjectNode(), "test"), mapper);
-            var callbacks = factory.create(restored.snapshot().executions());
+            var callbacks = factory.create(restored.snapshot().forProfile("test_profile").executions());
             var sdk = new CopilotSdkToolFactory(List.of(), mapper, List.of(), null).createToolDefinitions(
                     new CopilotToolSessionContext("test", "test-session", Map.of()), CopilotToolDescriptionContext.profile("system-assistant"), callbacks);
             var tool = sdk.stream().filter(item -> item.name().equals("oa_products_createItem")).findFirst().orElseThrow();

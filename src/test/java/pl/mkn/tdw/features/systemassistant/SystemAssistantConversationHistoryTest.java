@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort;
 import pl.mkn.tdw.features.systemassistant.chat.*;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
@@ -39,10 +40,11 @@ class SystemAssistantConversationHistoryTest {
 
     @Test void reopensPersistedTranscriptWithOriginalPageAndCurrentSkillsAndTools() throws Exception {
         var store = store(); var configurations = mock(SystemAssistantConfigurationService.class);
-        var old = new SystemAssistantConfigurationService.Snapshot(SystemAssistantTestSupport.config(List.of(),
-                List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "OLD_SKILL"))), List.of(), Map.of());
-        when(configurations.snapshot()).thenReturn(old);
-        var seen = new AtomicReference<SystemAssistantConfigurationService.Snapshot>();
+        var old = new SystemAssistantProfileResources(List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "OLD_SKILL")), List.of());
+        var snapshot = mock(SystemAssistantConfigurationService.Snapshot.class);
+        when(configurations.snapshot()).thenReturn(snapshot);
+        when(snapshot.forProfile("test_profile")).thenReturn(old);
+        var seen = new AtomicReference<SystemAssistantProfileResources>();
         var seenPage = new AtomicReference<SystemAssistantConversation.PageContext>();
         var transcript = new AtomicReference<List<AnalysisChatMessageResponse>>();
         var ai = mock(SystemAssistantAiPort.class);
@@ -61,9 +63,9 @@ class SystemAssistantConversationHistoryTest {
         });
         assertThat(store.findById(id).orElseThrow().exportEnvelope().toString()).doesNotContain("OLD_SKILL");
         var tool = mock(OpenApiOperation.class); when(tool.name()).thenReturn("oa_crm_read");
-        var current = new SystemAssistantConfigurationService.Snapshot(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "CRM", "yaml")),
-                List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "CURRENT_SKILL"))), List.of(tool), Map.of("oa_crm_read", "crm"));
-        when(configurations.snapshot()).thenReturn(current);
+        var current = new SystemAssistantProfileResources(List.of(new SystemAssistantConfiguration.Skill("s", "Skill", "CURRENT_SKILL")),
+                List.of(new pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution(tool, null)));
+        when(snapshot.forProfile("test_profile")).thenReturn(current);
         try (var reopened = new ServiceClose(new SystemAssistantConversationService(configurations, ai, history(store()), new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             assertThat(reopened.service.get(id).messages()).hasSize(2);
             reopened.service.send(id, request("Kontynuacja")); await().until(() -> !reopened.service.get(id).busy());
@@ -78,12 +80,39 @@ class SystemAssistantConversationHistoryTest {
         }
     }
 
+    @Test void savingProgressPreservesManualTitleWithOneTranscriptReadPerUpdate() {
+        properties.setDirectory(directory.toString());
+        var paths = new LocalWorkspacePaths(properties);
+        var files = spy(new LocalWorkspaceJsonFileStore(mapper));
+        var store = new FileSystemLocalAnalysisRunStore(properties, paths, files);
+        var history = history(store);
+        var id = UUID.randomUUID().toString();
+        var created = Instant.now();
+        var messages = new ArrayList<AnalysisChatMessageResponse>();
+        for (int turn = 0; turn < 20; turn++) {
+            messages.add(AnalysisChatMessageState.completedUser("q" + turn, "Pytanie " + turn, created).snapshot());
+            var reply = AnalysisChatMessageState.inProgressAssistant("a" + turn, created);
+            reply.complete("Odpowiedź", null, null);
+            messages.add(reply.snapshot());
+        }
+        var conversation = new SystemAssistantConversation(id, false, null, messages, List.of());
+        var defaultName = history.save(created, conversation, null);
+        store.rename(id, "Tytuł operatora");
+        clearInvocations(files);
+
+        history.save(created, conversation, defaultName);
+
+        verify(files).read(paths.runFile(id), LocalAnalysisRunRecord.class);
+        verify(files, times(2)).read(paths.indexFile(), LocalAnalysisRunIndex.class);
+        assertThat(store.listRuns().get(0).name()).isEqualTo("Tytuł operatora");
+    }
+
     @Test void interruptedTurnRetainsEvidenceAndDoesNotReplayAi() {
         var store = store(); var history = history(store); var id = UUID.randomUUID().toString(); var now = Instant.now();
         var assistant = AnalysisChatMessageState.inProgressAssistant("assistant", now);
         assistant.addToolEvidence(new AnalysisEvidenceSection("api", "writes", List.of(new AnalysisEvidenceItem("Zapis wykonany", List.of()))));
         history.save(now, new SystemAssistantConversation(id, true, null,
-                List.of(AnalysisChatMessageState.completedUser("user", "Zapisz", now).snapshot(), assistant.snapshot()), java.util.List.of()));
+                List.of(AnalysisChatMessageState.completedUser("user", "Zapisz", now).snapshot(), assistant.snapshot()), java.util.List.of()), null);
         var ai = mock(SystemAssistantAiPort.class);
         try (var service = new ServiceClose(new SystemAssistantConversationService(mock(SystemAssistantConfigurationService.class), ai, history, new LocalAnalysisRunOperationGuard(), mock(pl.mkn.tdw.integrations.httpauth.OidcLoginPort.class)))) {
             service.service.recoverInterruptedTurns();

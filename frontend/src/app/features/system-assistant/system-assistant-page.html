@@ -1,180 +1,20 @@
 <main class="assistant-workspace" [class.assistant-workspace--embedded]="embedded">
   @if (error()) { <p role="alert">{{ error() }}</p> }
-  @if (ready()) {
-    @if (embedded) {
+  @if (embedded) {
+    @if (ready()) {
       <ng-container [ngTemplateOutlet]="chatView" />
-    } @else {
-    <app-analysis-result-tabs [tabs]="workspaceTabs" [activeTabId]="workspaceView()" [equalWidth]="true"
+    }
+  } @else {
+    <app-analysis-result-tabs [hidden]="!ready()" [tabs]="workspaceTabs" [activeTabId]="workspaceView()" [equalWidth]="true"
       idPrefix="system-assistant-view" ariaLabel="Widoki System Assistant" (tabSelected)="workspaceView.set($event)">
-      <section class="assistant-configuration assistant-view" [hidden]="workspaceView() !== 'skills' && workspaceView() !== 'contracts' && workspaceView() !== 'profiles' && workspaceView() !== 'auth'" [attr.aria-labelledby]="'system-assistant-view-tab-' + workspaceView()">
-        <header class="assistant-configuration-header">
-          <span class="assistant-section-count">Liczba wpisów: {{configurationEntryCount()}}</span>
-          <div class="assistant-configuration-add">
-            @if (workspaceView() === 'skills') {
-              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().skills.length >= 20" (click)="addSkill()">Dodaj skill</button>
-            } @else if (workspaceView() === 'auth') {
-              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().authProfiles.length >= 20" (click)="addAuth()">Dodaj uwierzytelnianie</button>
-            } @else if (workspaceView() === 'profiles') {
-              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().profiles.length >= 20" (click)="addProfile()">Dodaj profil</button>
-            } @else if (workspaceView() === 'contracts') {
-              <input #newContractFile type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml" hidden (change)="readNewOpenApi($event)" />
-              <button class="secondary-button" type="button" [disabled]="configurationBusy() || configuration().apis.length >= 12" (click)="newContractFile.click()">Dodaj OpenAPI</button>
-            }
-          </div>
-        </header>
-        @if (workspaceView() === 'skills') {
-          <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-skills" aria-labelledby="system-assistant-view-tab-skills">
-            @for (item of configuration().skills; track $index; let i = $index) {
-              <section class="assistant-definition">
-                <div class="assistant-definition-heading">
-                  <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
-                    [attr.aria-expanded]="expandedDefinitions().skills.has('' + i)" [attr.aria-controls]="'assistant-skill-body-' + i"
-                    (click)="toggleDefinition('skills', '' + i)">
-                    <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy skill'}}</span><span class="assistant-definition-meta">{{item.id || 'Brak ID'}}</span></span>
-                    <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
-                  </button>
-                  <div class="assistant-definition-actions">
-                    <button class="assistant-definition-action" type="button" [disabled]="configurationBusy()" matTooltip="Usuń skill"
-                      [attr.aria-label]="'Usuń skill ' + item.name" (click)="remove('skills', i)">
-                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="assistant-definition-body" [id]="'assistant-skill-body-' + i" [hidden]="!expandedDefinitions().skills.has('' + i)">
-                  <app-text-field [disabled]="configurationBusy()" label="ID skilla" [value]="item.id" (valueChange)="updateSkill(i, 'id', $event)" />
-                  <app-text-field [disabled]="configurationBusy()" label="Nazwa skilla" [value]="item.name" (valueChange)="updateSkill(i, 'name', $event)" />
-                  <app-text-field [disabled]="configurationBusy()" label="Instrukcje Markdown" type="textarea" [rows]="6" [value]="item.content" (valueChange)="updateSkill(i, 'content', $event)" />
-                </div>
-              </section>
-            } @empty { <p class="assistant-empty">Dodaj instrukcje określające sposób pracy asystenta.</p> }
-          </fieldset>
-        } @else if (workspaceView() === 'auth') {
-          <fieldset data-form-tour="assistant-auth" aria-labelledby="system-assistant-view-tab-auth" [disabled]="configurationBusy()">
-            <app-assistant-auth-profiles [profiles]="configuration().authProfiles" [apis]="configuration().apis" [assistantProfiles]="configuration().profiles"
-              [disabled]="configurationBusy()" [dirty]="dirty()" [showErrors]="authValidationVisible()"
-              [busyId]="authBusyId()" [connections]="authConnections()" (profilesChange)="updateAuthProfiles($event)"
-              [expandedIds]="expandedDefinitions().authProfiles" (expansionToggled)="toggleDefinition('authProfiles', $event)"
-              (login)="loginAuth($event)" (disconnect)="disconnectAuth($event)" />
-          </fieldset>
-          @if (authStatusError()) { <p role="alert">{{authStatusError()}} <button type="button" class="secondary-button" (click)="loadAuthStatus()">Odśwież stan logowania</button></p> }
-        } @else if (workspaceView() === 'profiles') {
-          <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-profiles" aria-labelledby="system-assistant-view-tab-profiles">
-            @for (item of configuration().profiles; track item.id; let i = $index) {
-              <section class="assistant-definition assistant-profile">
-                <div class="assistant-definition-heading">
-                  <button class="assistant-definition-toggle" type="button" [disabled]="configurationBusy()"
-                    [attr.aria-expanded]="expandedDefinitions().profiles.has(item.id)" [attr.aria-controls]="'assistant-profile-body-' + i"
-                    (click)="toggleDefinition('profiles', item.id)">
-                    <span class="assistant-definition-label"><span class="assistant-definition-title">{{item.name || 'Nowy profil'}}</span><span class="assistant-definition-meta">{{profileSummary(item)}}</span></span>
-                    <span class="material-symbols-outlined assistant-definition-chevron" aria-hidden="true">expand_more</span>
-                  </button>
-                  <div class="assistant-definition-actions">
-                    @if (profileWarning(item); as warning) {
-                      <span class="material-symbols-outlined assistant-profile-warning" role="img" tabindex="0" aria-label="Brakujące zasoby profilu" [matTooltip]="warning">warning</span>
-                    }
-                    <button class="assistant-definition-action" type="button" [disabled]="configurationBusy()" matTooltip="Usuń profil"
-                      [attr.aria-label]="'Usuń profil ' + item.name" (click)="remove('profiles', i)">
-                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="assistant-definition-body" [id]="'assistant-profile-body-' + i" [hidden]="!expandedDefinitions().profiles.has(item.id)">
-                  <app-text-field label="Nazwa profilu" [value]="item.name" [maxLength]="100" [required]="true" [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'name', $event)" />
-                  <app-text-field label="Wzorzec URL" [value]="item.urlPattern" [maxLength]="2300" [required]="true" hint="* oznacza dowolny ciąg. Dopasowanie do origin + ścieżka, bez query i hash." [disabled]="configurationBusy()" (valueChange)="updateProfile(i, 'urlPattern', $event)" />
-                  <div class="assistant-profile-resources">
-                    <fieldset><legend>Skille</legend>
-                      @for (resource of profileResources(item, 'skills'); track resource.id) {
-                        <label><input type="checkbox" [checked]="item.skillIds.includes(resource.id)" (change)="toggleProfileResource(i, 'skillIds', resource.id, $any($event.target).checked)" />{{resource.name}}</label>
-                      } @empty { <p>Nie dodano skilli.</p> }
-                    </fieldset>
-                    <fieldset><legend>API</legend>
-                      @for (resource of profileResources(item, 'apis'); track resource.id) {
-                        <div class="assistant-profile-api">
-                          <label><input type="checkbox" [checked]="profileHasApi(item, resource.id)" (change)="toggleProfileApi(i, resource.id, $any($event.target).checked)" />{{resource.name}}</label>
-                          @if (profileHasApi(item, resource.id)) {
-                            <app-choice-select label="Uwierzytelnianie" [ariaLabel]="'Uwierzytelnianie API ' + resource.name + ' w profilu ' + item.name"
-                              [options]="apiAuthOptions(item, resource.id)" [value]="profileApiAuth(item, resource.id)" [disabled]="configurationBusy()"
-                              (valueChange)="updateProfileApiAuth(i, resource.id, $event)" />
-                          }
-                        </div>
-                      } @empty { <p>Nie dodano API.</p> }
-                    </fieldset>
-                  </div>
-                </div>
-              </section>
-            } @empty { <p>Nie dodano profili.</p> }
-          </fieldset>
-        } @else if (workspaceView() === 'contracts') {
-          <fieldset [disabled]="configurationBusy()" data-form-tour="assistant-api" aria-labelledby="system-assistant-view-tab-contracts">
-            <ul class="assistant-contracts" aria-label="Zaimportowane kontrakty">
-              @for (item of configuration().apis; track item.id; let i = $index) {
-                <li class="assistant-contract assistant-definition">
-                  <div class="assistant-definition-heading">
-                    <div class="assistant-definition-label assistant-definition-label--static">
-                      <h3 class="assistant-definition-title">{{item.name}}</h3>
-                      <div class="assistant-contract-meta assistant-definition-meta">
-                        <span>{{item.id}}</span>
-                        @if (contractActivity().get(item.id); as activity) {
-                          <span class="assistant-definition-meta assistant-contract-count" tabindex="0" [matTooltip]="activity.tooltip"
-                            matTooltipClass="analysis-rich-tooltip" [attr.aria-label]="item.name + ': ' + activity.tooltip">Aktywne operacje: {{activity.count === null ? '—' : activity.count}}</span>
-                        }
-                      </div>
-                    </div>
-                    <div class="assistant-definition-actions assistant-contract-actions">
-                      <button class="assistant-definition-action" type="button" matTooltip="Edytuj nazwę API" [disabled]="configurationBusy()"
-                        [attr.aria-label]="'Edytuj nazwę API ' + item.name" [attr.aria-expanded]="editingApiId() === item.id"
-                        [attr.aria-controls]="'assistant-api-name-' + i" (click)="toggleApiName(item.id)">
-                        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                      </button>
-                      <button class="assistant-definition-action" type="button" matTooltip="Podgląd" [disabled]="configurationBusy()" (click)="viewContract(item)" [attr.aria-label]="'Podgląd kontraktu ' + item.name">
-                        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                      </button>
-                      <button class="assistant-definition-action" type="button" matTooltip="Eksportuj YAML" [disabled]="configurationBusy()" (click)="exportContract(item)" [attr.aria-label]="'Eksportuj kontrakt ' + item.name">
-                        <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                      </button>
-                      <button class="assistant-definition-action" type="button" matTooltip="Usuń" [disabled]="configurationBusy()" (click)="remove('apis', i)" [attr.aria-label]="'Usuń kontrakt ' + item.name">
-                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="assistant-definition-body" [id]="'assistant-api-name-' + i" [hidden]="editingApiId() !== item.id">
-                    <app-text-field label="Nazwa API" [value]="item.name" [maxLength]="100" [required]="true"
-                      [error]="apiNameError(item.name)" [disabled]="configurationBusy()" (valueChange)="updateApiName(item.id, $event)" />
-                  </div>
-                </li>
-              } @empty { <li class="assistant-empty">Nie dodano kontraktów. Wczytaj plik i wybierz potrzebne operacje.</li> }
-            </ul>
-          </fieldset>
-          @if (toolsError()) { <p role="alert">{{toolsError()}}</p> }
-        }
-        <footer class="assistant-configuration-actions" aria-label="Zapis całej konfiguracji">
-          <div class="assistant-configuration-status" aria-live="polite">
-            @if (saveError()) { <p role="alert">{{saveError()}}</p> }
-            @if (notice()) { <p role="status">{{notice()}}</p> }
-            @if (dirty()) { <p class="assistant-save-state">Niezapisane zmiany</p> }
-          </div>
-          <div class="assistant-configuration-buttons" role="group" aria-label="Akcje całej konfiguracji">
-            <div class="assistant-configuration-transfer" role="group" aria-label="Import i eksport konfiguracji">
-              <input #configurationFileInput class="assistant-configuration-file" type="file" accept=".json,application/json" hidden (change)="importConfiguration($event)" />
-              <button class="secondary-button" type="button" aria-label="Importuj konfigurację" matTooltip="Importuj konfigurację" [disabled]="configurationBusy()" (click)="configurationFileInput.click()">
-                <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              </button>
-              <button class="secondary-button" type="button" aria-label="Eksportuj konfigurację" matTooltip="Eksportuj konfigurację" [disabled]="configurationBusy()" (click)="exportConfiguration()">
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              </button>
-            </div>
-            <button class="primary-button" type="button" [disabled]="configurationBusy() || !dirty()" [attr.aria-busy]="saving()"
-              matTooltip="Zapis obejmuje Skille, Kontrakty, Auth i Profile." (click)="save()">{{saving() ? 'Zapisywanie…' : 'Zapisz konfigurację'}}</button>
-          </div>
-        </footer>
-      </section>
-      <ng-container [ngTemplateOutlet]="chatView" />
+      <app-assistant-configuration-editor [workspaceView]="workspaceView()" (tabRequested)="workspaceView.set($event)" [(dirty)]="dirty" [(notice)]="notice"
+        [(error)]="error" [(authBusyId)]="authBusyId" (loaded)="configurationLoaded($event)" (loadFailed)="configurationLoadFailed($event)" />
+      @if (ready()) { <ng-container [ngTemplateOutlet]="chatView" /> }
       <section class="assistant-launch assistant-view" [hidden]="workspaceView() !== 'launch'" aria-labelledby="system-assistant-view-tab-launch">
         <app-browser-tools-setup data-form-tour="assistant-launch" title="Otwórz rozmowę z aplikacji"
           instruction="Otwórz aplikację, kliknij zapisaną zakładkę i wybierz System Assistant. Rozmowa otworzy się w panelu na tej stronie." />
       </section>
     </app-analysis-result-tabs>
-    }
   }
   <ng-template #chatView>
       @if (historyOpen()) {

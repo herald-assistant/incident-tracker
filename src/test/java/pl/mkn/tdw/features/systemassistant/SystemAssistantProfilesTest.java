@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.systemassistant;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration.*;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
@@ -30,18 +31,18 @@ class SystemAssistantProfilesTest {
     @Test void resolvesOnlyAssignedCurrentResourcesWithoutChangingGlobalCatalogOrAcceptedSnapshots() throws Exception {
         configurations.save(configuration("FIRST"));
         var accepted = configurations.snapshot().forProfile("first");
-        assertThat(accepted.configuration().skills()).extracting(Skill::content).containsExactly("FIRST");
-        assertThat(accepted.operations()).hasSize(3).allMatch(item -> item.name().startsWith("oa_crm_"));
+        assertThat(accepted.skills()).extracting(Skill::content).containsExactly("FIRST");
+        assertThat(accepted.executions()).hasSize(3).allMatch(item -> item.operation().name().startsWith("oa_crm_"));
         assertThat(configurations.snapshot().operations()).hasSize(6);
         configurations.save(configuration("UPDATED"));
-        assertThat(accepted.configuration().skills().get(0).content()).isEqualTo("FIRST");
+        assertThat(accepted.skills().get(0).content()).isEqualTo("FIRST");
         for (var id : List.of("first", "second"))
-            assertThat(configurations.snapshot().forProfile(id).configuration().skills().get(0).content()).isEqualTo("UPDATED");
-        assertThat(configurations.snapshot().forProfile("empty").operations()).isEmpty();
-        assertThat(configurations.snapshot().forProfile("empty").configuration().skills()).isEmpty();
+            assertThat(configurations.snapshot().forProfile(id).skills().get(0).content()).isEqualTo("UPDATED");
+        assertThat(configurations.snapshot().forProfile("empty").executions()).isEmpty();
+        assertThat(configurations.snapshot().forProfile("empty").skills()).isEmpty();
         var current = configuration("UPDATED");
         configurations.save(new SystemAssistantConfiguration(List.of(), current.skills(), current.profiles(), List.of()));
-        assertThat(configurations.snapshot().forProfile("first").operations()).isEmpty();
+        assertThat(configurations.snapshot().forProfile("first").executions()).isEmpty();
         assertThat(configurations.current().profiles().get(0).apiBindings().stream().map(SystemAssistantConfiguration.ApiBinding::apiId).toList()).contains("crm", "deleted");
     }
 
@@ -56,7 +57,7 @@ class SystemAssistantProfilesTest {
 
     @Test void switchesProfileWithinTheSameHistoryAndAcceptsProfilesWithOnlyMissingResources() throws Exception {
         configurations.save(configuration("CURRENT"));
-        var seen = new java.util.concurrent.CopyOnWriteArrayList<SystemAssistantConfigurationService.Snapshot>();
+        var seen = new java.util.concurrent.CopyOnWriteArrayList<SystemAssistantProfileResources>();
         var ai = org.mockito.Mockito.mock(pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort.class);
         org.mockito.Mockito.when(ai.answer(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
@@ -73,9 +74,9 @@ class SystemAssistantProfilesTest {
                 org.awaitility.Awaitility.await().until(() -> !service.get(id).busy());
             }
             assertThat(service.get(id).messages()).hasSize(6);
-            assertThat(seen.get(0).configuration().skills()).extracting(Skill::id).containsExactly("shared");
-            assertThat(seen.get(1).configuration().skills()).extracting(Skill::id).containsExactly("shared", "private");
-            assertThat(seen.get(2).operations()).isEmpty();
+            assertThat(seen.get(0).skills()).extracting(Skill::id).containsExactly("shared");
+            assertThat(seen.get(1).skills()).extracting(Skill::id).containsExactly("shared", "private");
+            assertThat(seen.get(2).executions()).isEmpty();
             assertThatThrownBy(() -> service.send(id,
                     new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest("Nie wykonuj", "gone", null, null)))
                     .isInstanceOf(SystemAssistantException.class);

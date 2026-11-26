@@ -29,6 +29,14 @@ public class SystemAssistantConfigurationController {
         return configurations.save(request);
     }
 
+    public record ProfileOption(String id, String name, String urlPattern) {}
+
+    @GetMapping("/profiles")
+    public List<ProfileOption> profiles() {
+        return configurations.current().profiles().stream()
+                .map(profile -> new ProfileOption(profile.id(), profile.name(), profile.urlPattern())).toList();
+    }
+
     @GetMapping("/tools")
     public List<Tool> tools() {
         var snapshot = configurations.snapshot();

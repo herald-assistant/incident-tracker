@@ -13,7 +13,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.features.systemassistant.ai.*;
 import pl.mkn.tdw.features.systemassistant.api.SystemAssistantConversationController;
 import pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationService;
-import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import pl.mkn.tdw.integrations.httpauth.OidcLoginPort;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
@@ -82,6 +82,7 @@ class SystemAssistantAttachmentsTest {
             ((ExecutorService) org.springframework.test.util.ReflectionTestUtils.getField(service, "worker")).shutdown();
             assertThatThrownBy(() -> service.send(id, new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null)))
                     .isInstanceOfSatisfying(SystemAssistantException.class, error -> assertThat(error.code()).isEqualTo("AI_BUSY"));
+            assertThat((Map<?, ?>) org.springframework.test.util.ReflectionTestUtils.getField(service, "conversations")).isEmpty();
             assertThat(service.get(id).messages()).isEmpty();
             assertThat(service.get(id).attachments().get(0).messageId()).isNull();
             assertThat(SystemAssistantTestSupport.history(workspace).load(id).conversation().attachments().get(0).messageId()).isNull();
@@ -178,7 +179,7 @@ class SystemAssistantAttachmentsTest {
         var runner = new SystemAssistantCopilotRunner(() -> "fixture", new CopilotSdkToolFactory(List.of(), mapper, List.of(), null),
                 new OpenApiToolSetFactory((execution, arguments) -> null, mapper), preparation, gateway,
                 new SystemAssistantPrompt(mapper), CopilotSessionCleanup.NO_OP);
-        runner.answer("turn", new SystemAssistantConfigurationService.Snapshot(SystemAssistantTestSupport.config(List.of(), List.of()), List.of(), Map.of()),
+        runner.answer("turn", new SystemAssistantProfileResources(List.of(), List.of()),
                 null, List.of(), new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null), ignored -> {}, ignored -> {},
                 List.of(new SystemAssistantAiPort.Attachment("image.png", "image/png", new byte[]{1, 2, 3})));
         assertThat(options.getAttachments()).singleElement().isInstanceOfSatisfying(BlobAttachment.class, blob -> {

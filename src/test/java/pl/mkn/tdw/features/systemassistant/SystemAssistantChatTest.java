@@ -8,6 +8,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.CopilotToolInvocationHandler;
 import pl.mkn.tdw.features.systemassistant.ai.*;
 import pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationService;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import pl.mkn.tdw.shared.ai.*;
 import pl.mkn.tdw.shared.evidence.*;
@@ -145,11 +146,11 @@ class SystemAssistantChatTest {
         var historySeen = new AtomicReference<List<AnalysisChatMessageResponse>>();
         var ai = new SystemAssistantAiPort() {
             public void requireReady() {}
-            public Reply answer(String turnId, SystemAssistantConfigurationService.Snapshot configuration,
+            public Reply answer(String turnId, SystemAssistantProfileResources configuration,
                     SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                     SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
                     Consumer<AnalysisAiActivityEvent> activity, List<SystemAssistantAiPort.Attachment> attachments) {
-                seen.add(configuration.configuration().skills().get(0).content()); historySeen.set(history);
+                seen.add(configuration.skills().get(0).content()); historySeen.set(history);
                 entered.countDown();
                 try { if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException(); }
                 catch (InterruptedException e) { throw new IllegalStateException(e); }
@@ -185,7 +186,7 @@ class SystemAssistantChatTest {
         var runner = new SystemAssistantCopilotRunner(() -> "synthetic-fixture", sdkTools,
                 new OpenApiToolSetFactory((execution, args) -> null, mapper), null, null, new SystemAssistantPrompt(mapper), pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup.NO_OP);
         var history = List.of(pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState.completedUser("user", "Pytanie", java.time.Instant.now()).snapshot());
-        var run = runner.assemble("one", new SystemAssistantConfigurationService.Snapshot(config("CURRENT"), List.of(), java.util.Map.of()),
+        var run = runner.assemble("one", new SystemAssistantProfileResources(config("CURRENT").skills(), List.of()),
                 null, history, message("Pytanie"), ignored -> {}, ignored -> {});
         assertThat(run.sessionTarget().existing()).isFalse();
         assertThat(run.sessionConfigRequest().skillsEnabled()).isFalse();

@@ -8,9 +8,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.systemassistant.ai.SystemAssistantAiPort;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantAttachment;
-import java.io.InputStream;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantLoginRequiredException;
@@ -22,6 +22,7 @@ import pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.time.Instant;
 import java.util.*;
@@ -70,7 +71,7 @@ public class SystemAssistantConversationService {
                 try (var recoveryLease = lease(id)) {
                     history.load(id);
                     persist(conversation);
-                    conversations.remove(id, conversation);
+                    releaseIfSaved(conversation);
                 }
             }
             return conversation.snapshot();
@@ -88,13 +89,11 @@ public class SystemAssistantConversationService {
         try (var lease = lease(id)) {
             var conversation = find(id, true);
             synchronized (conversation) {
-                if (conversation.busy()) throw error("CHAT_BUSY", UserFacingErrorType.CONFLICT,
-                        "Poczekaj na zakończenie poprzedniej odpowiedzi.");
-                if (conversation.dirty) persist(conversation);
+                requireIdleAndPersistPending(conversation);
                 conversation.attachments.add(history.writeAttachment(id, name, content));
                 conversations.put(id, conversation);
                 persist(conversation);
-                conversations.remove(id, conversation);
+                releaseIfSaved(conversation);
                 return conversation.snapshot();
             }
         }
@@ -103,90 +102,94 @@ public class SystemAssistantConversationService {
     public SystemAssistantConversation send(String id, SystemAssistantMessageRequest request) {
         ai.requireReady();
         var lease = lease(id);
-        Conversation conversation = null;
         try {
-            conversation = find(id, true);
+            var conversation = find(id, true);
             synchronized (conversation) {
-                if (conversation.busy())
-                    throw error("CHAT_BUSY", UserFacingErrorType.CONFLICT, "Poczekaj na zakończenie poprzedniej odpowiedzi.");
-                if (conversation.dirty) persist(conversation);
-                var configuration = configurations.snapshot().forProfile(request.profileId());
-                requireApiAuthentication(configuration);
-                var user = AnalysisChatMessageState.completedUser(UUID.randomUUID().toString(), request.message(), Instant.now());
-                var assistant = AnalysisChatMessageState.inProgressAssistant(UUID.randomUUID().toString(), Instant.now());
+                requireIdleAndPersistPending(conversation);
+                var profile = configurations.snapshot().forProfile(request.profileId());
+                requireApiAuthentication(profile);
                 var previousAttachments = List.copyOf(conversation.attachments);
-                conversation.attachments.replaceAll(file -> file.messageId() != null ? file
-                        : new SystemAssistantAttachment(file.id(), file.name(), file.mimeType(), file.size(), user.id()));
-                conversation.messages.add(user.snapshot());
-                var transcript = List.copyOf(conversation.messages);
-                conversation.active = assistant;
+                conversation.begin(request.message());
                 conversations.put(id, conversation);
                 try {
-                    persist(conversation); // Durable acceptance must precede any external operation.
-                    var accepted = conversation;
-                    worker.execute(() -> {
-                        try {
-                            var reply = ai.answer(assistant.id(), configuration, accepted.page, transcript, request,
-                                    section -> {
-                                        synchronized (accepted) {
-                                            assistant.addToolEvidence(section);
-                                            persist(accepted);
-                                        }
-                                    },
-                                    activity -> {
-                                        synchronized (accepted) {
-                                            assistant.addActivity(activity);
-                                            persist(accepted);
-                                        }
-                                    }, history.readAttachments(id, accepted.attachments));
-                            synchronized (accepted) {
-                                assistant.complete(reply.content(), null, reply.usage());
-                            }
-                        } catch (RuntimeException exception) {
-                            synchronized (accepted) {
-                                assistant.fail(exception instanceof UserFacingApplicationException userError ? userError.code() : "AI_FAILED",
-                                        exception instanceof UserFacingApplicationException ? exception.getMessage()
-                                                : "Nie udało się zakończyć tury AI. Sprawdź połączenie i ustawienia Copilota. Wykonane operacje pozostają w przebiegu; nie ponowiono zapisów.");
-                            }
-                        } finally {
-                            synchronized (accepted) {
-                                accepted.messages.add(assistant.snapshot());
-                                accepted.active = null;
-                                try {
-                                    persist(accepted);
-                                } catch (RuntimeException exception) {
-                                    log.warn("System Assistant transcript awaits storage recovery id={}", id);
-                                } finally {
-                                    lease.close();
-                                    if (!accepted.dirty) conversations.remove(id, accepted);
-                                }
-                            }
-                        }
-                    });
-                } catch (RuntimeException exception) {
-                    conversation.messages.remove(conversation.messages.size() - 1);
-                    conversation.active = null;
-                    conversation.attachments.clear();
-                    conversation.attachments.addAll(previousAttachments);
-                    if (exception instanceof RejectedExecutionException) {
+                    persist(conversation);
+                    worker.execute(() -> executeTurn(conversation, profile, request, lease));
+                } catch (RuntimeException failure) {
+                    conversation.undoAcceptance(previousAttachments);
+                    if (failure instanceof RejectedExecutionException) {
                         persist(conversation);
+                        releaseIfSaved(conversation);
                         throw error("AI_BUSY", UserFacingErrorType.SERVICE_UNAVAILABLE, "Kolejka lokalna jest pełna. Spróbuj później.");
                     }
-                    throw exception;
+                    throw failure;
                 }
                 return conversation.snapshot();
             }
-        } catch (RuntimeException exception) {
+        } catch (RuntimeException failure) {
             lease.close();
-            throw exception;
+            throw failure;
         }
+    }
+
+    private void executeTurn(Conversation conversation, SystemAssistantProfileResources profile,
+                             SystemAssistantMessageRequest request, LocalAnalysisRunOperationGuard.Lease lease) {
+        var assistant = conversation.active;
+        try {
+            var reply = ai.answer(assistant.id(), profile, conversation.page, List.copyOf(conversation.messages), request,
+                    section -> {
+                        synchronized (conversation) {
+                            assistant.addToolEvidence(section);
+                            persist(conversation);
+                        }
+                    },
+                    activity -> {
+                        synchronized (conversation) {
+                            assistant.addActivity(activity);
+                            persist(conversation);
+                        }
+                    }, history.readAttachments(conversation.id, conversation.attachments));
+            synchronized (conversation) {
+                assistant.complete(reply.content(), null, reply.usage());
+            }
+        } catch (RuntimeException failure) {
+            synchronized (conversation) {
+                if (failure instanceof UserFacingApplicationException userError) assistant.fail(userError.code(), userError.getMessage());
+                else assistant.fail("AI_FAILED", "Nie udało się zakończyć tury AI. Sprawdź połączenie i ustawienia Copilota. Wykonane operacje pozostają w przebiegu; nie ponowiono zapisów.");
+            }
+        } finally {
+            synchronized (conversation) {
+                conversation.messages.add(assistant.snapshot());
+                conversation.active = null;
+                try {
+                    persist(conversation);
+                } catch (RuntimeException failure) {
+                    log.warn("System Assistant transcript awaits storage recovery id={}", conversation.id);
+                } finally {
+                    lease.close();
+                    releaseIfSaved(conversation);
+                }
+            }
+        }
+    }
+
+    private void requireIdleAndPersistPending(Conversation conversation) {
+        if (conversation.busy()) throw error("CHAT_BUSY", UserFacingErrorType.CONFLICT,
+                "Poczekaj na zakończenie poprzedniej odpowiedzi.");
+        if (conversation.dirty) {
+            persist(conversation);
+            releaseIfSaved(conversation);
+        }
+    }
+
+    private void releaseIfSaved(Conversation conversation) {
+        if (!conversation.busy() && !conversation.dirty) conversations.remove(conversation.id, conversation);
     }
 
     private LocalAnalysisRunOperationGuard.Lease lease(String id) {
         return operationGuard.tryAcquire(id).orElseThrow(() -> error("CHAT_BUSY", UserFacingErrorType.CONFLICT, "Poczekaj na zakończenie tury lub innej operacji na rozmowie."));
     }
 
-    private void requireApiAuthentication(SystemAssistantConfigurationService.Snapshot configuration) {
+    private void requireApiAuthentication(SystemAssistantProfileResources configuration) {
         var profiles = configuration.executions().stream().map(execution -> execution.authentication())
                 .filter(Objects::nonNull).filter(profile -> "OIDC".equals(profile.type())).distinct().toList();
         for (var profile : profiles) {
@@ -215,6 +218,7 @@ public class SystemAssistantConversationService {
             var stored = history.load(id);
             var conversation = new Conversation(id, stored.conversation().pageContext(), stored.createdAt(), stored.conversation().messages());
             conversation.attachments.addAll(stored.conversation().attachments());
+            conversation.persistedDefaultName = SystemAssistantConversationHistory.defaultName(stored.conversation());
             validate(conversation.page);
             if (stored.conversation().busy() || conversation.messages.stream().anyMatch(message -> "IN_PROGRESS".equals(message.status()))) {
                 for (var i = 0; i < conversation.messages.size(); i++) {
@@ -233,7 +237,7 @@ public class SystemAssistantConversationService {
 
     private void persist(Conversation conversation) {
         conversation.dirty = true;
-        history.save(conversation.createdAt, conversation.snapshot());
+        conversation.persistedDefaultName = history.save(conversation.createdAt, conversation.snapshot(), conversation.persistedDefaultName);
         conversation.dirty = false;
     }
 
@@ -270,12 +274,28 @@ public class SystemAssistantConversationService {
         final List<SystemAssistantAttachment> attachments = new ArrayList<>();
         AnalysisChatMessageState active;
         boolean dirty;
+        String persistedDefaultName;
 
         Conversation(String id, SystemAssistantConversation.PageContext page, Instant createdAt, List<AnalysisChatMessageResponse> messages) {
             this.id = id;
             this.page = page;
             this.createdAt = createdAt;
             this.messages = new ArrayList<>(messages);
+        }
+
+        void begin(String message) {
+            var user = AnalysisChatMessageState.completedUser(UUID.randomUUID().toString(), message, Instant.now());
+            attachments.replaceAll(file -> file.messageId() != null ? file
+                    : new SystemAssistantAttachment(file.id(), file.name(), file.mimeType(), file.size(), user.id()));
+            messages.add(user.snapshot());
+            active = AnalysisChatMessageState.inProgressAssistant(UUID.randomUUID().toString(), Instant.now());
+        }
+
+        void undoAcceptance(List<SystemAssistantAttachment> previousAttachments) {
+            messages.remove(messages.size() - 1);
+            active = null;
+            attachments.clear();
+            attachments.addAll(previousAttachments);
         }
 
         boolean busy() {

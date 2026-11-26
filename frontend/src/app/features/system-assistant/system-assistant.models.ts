@@ -4,6 +4,7 @@ export interface AssistantApiDefinition { id: string; name: string; yaml: string
 export interface AssistantSkill { id: string; name: string; content: string; }
 export interface AssistantApiBinding { apiId: string; authProfileId: string | null; }
 export interface AssistantProfile { id: string; name: string; urlPattern: string; apiBindings: AssistantApiBinding[]; skillIds: string[]; }
+export type AssistantProfileOption = Pick<AssistantProfile, 'id' | 'name' | 'urlPattern'>;
 export interface AssistantConfiguration { apis: AssistantApiDefinition[]; skills: AssistantSkill[]; profiles: AssistantProfile[]; authProfiles: AssistantAuthProfile[]; }
 export type AssistantAuthType = 'BASIC' | 'BEARER' | 'OAUTH2' | 'OIDC';
 export interface AssistantAuthProfile {

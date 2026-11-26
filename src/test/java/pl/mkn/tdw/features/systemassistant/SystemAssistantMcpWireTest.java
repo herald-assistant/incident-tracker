@@ -12,6 +12,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.annotation.DirtiesContext;
+import pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog;
 import pl.mkn.tdw.agenttools.openapi.mcp.OpenApiMcpEndpoint;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration;
@@ -312,6 +313,9 @@ class SystemAssistantMcpWireTest {
                 assertThat(calls).hasValue(1);
                 uncertain.set(true);
                 assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", arguments)).content().toString()).contains("OUTCOME_UNKNOWN");
+                assertThatThrownBy(() -> catalog.replace(Map.of(), () -> { throw new IllegalStateException("store offline"); }))
+                        .isInstanceOf(IllegalStateException.class);
+                assertThat(client.listTools().tools()).extracting(McpSchema.Tool::name).contains("oa_items_patchItem");
                 assertThat(client.callTool(new McpSchema.CallToolRequest("oa_items_patchItem", arguments)).content().toString()).contains("WRITE_BLOCKED");
                 assertThat(calls).hasValue(2);
             }
@@ -324,6 +328,7 @@ class SystemAssistantMcpWireTest {
     }
     @LocalServerPort int port;
     @Autowired SystemAssistantConfigurationService configurations;
+    @Autowired OpenApiToolCatalog catalog;
     @Autowired pl.mkn.tdw.integrations.openapi.OpenApiSelectionPort selections;
 
     @Test

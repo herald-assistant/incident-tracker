@@ -81,15 +81,16 @@ public class SystemAssistantConversationHistory {
                 .map(LocalAnalysisRunIndexEntry::analysisId).toList();
     }
 
-    public void save(Instant createdAt, SystemAssistantConversation conversation) {
+    /** Returns the generated title at this checkpoint so the next save can recognize an operator rename. */
+    public String save(Instant createdAt, SystemAssistantConversation conversation, String previousDefaultName) {
         requireEnabled();
         try {
             synchronized (store) {
-                var name = name(conversation);
-                var previous = store.listRuns().stream().filter(entry -> entry.analysisId().equals(conversation.id())).findFirst();
-                if (previous.isPresent()) {
-                    var old = load(conversation.id());
-                    if (!previous.get().name().equals(name(old.conversation()))) name = previous.get().name();
+                var defaultName = defaultName(conversation);
+                var name = defaultName;
+                if (previousDefaultName != null) {
+                    var entry = store.listRuns().stream().filter(item -> item.analysisId().equals(conversation.id())).findFirst().orElseThrow();
+                    if (!entry.name().equals(previousDefaultName)) name = entry.name();
                 }
                 var last = conversation.messages().isEmpty() ? null : conversation.messages().get(conversation.messages().size() - 1);
                 var status = conversation.busy() ? "IN_PROGRESS" : last == null ? "PENDING" : last.status();
@@ -100,6 +101,7 @@ public class SystemAssistantConversationHistory {
                 LocalAnalysisRunSnapshotWriter.save(store, envelope, null, attachments,
                         new LocalAnalysisRunSnapshotWriter.Metadata(conversation.id(), FEATURE, name, status, createdAt, Instant.now(),
                                 conversation.busy() || last == null ? null : last.completedAt()));
+                return defaultName;
             }
         } catch (RuntimeException exception) {
             throw new SystemAssistantException("CONVERSATION_SAVE_FAILED", UserFacingErrorType.SERVICE_UNAVAILABLE,
@@ -169,7 +171,7 @@ public class SystemAssistantConversationHistory {
                 "Historia rozmów wymaga włączonego lokalnego workspace TDW.");
     }
 
-    private String name(SystemAssistantConversation conversation) {
+    static String defaultName(SystemAssistantConversation conversation) {
         var first = conversation.messages().stream().filter(message -> "USER".equals(message.role())).findFirst();
         var text = first.map(message -> message.content()).orElse(conversation.pageContext() == null ? "Nowa rozmowa" : conversation.pageContext().title());
         text = text.replaceAll("\\s+", " ").trim();

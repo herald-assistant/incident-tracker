@@ -32,7 +32,7 @@ class SystemAssistantPersistenceTest {
             seen.set(execution.operation().path());
             return new pl.mkn.tdw.integrations.openapi.contract.OpenApiResult("RESPONSE_RECEIVED", 200, mapper.createObjectNode(), "Demo");
         }, mapper);
-        var accepted = factory.create(service.snapshot().executions()).get(0);
+        var accepted = factory.create(service.snapshot().forProfile("test_profile").executions()).get(0);
         var colliding = yaml.replace("operationId: ", "operationId: a_");
         assertThatThrownBy(() -> service.save(SystemAssistantTestSupport.config(List.of(original.apis().get(0),
                 new SystemAssistantConfiguration.ApiDefinition("crm", "Collision", colliding)), List.of())))
@@ -41,7 +41,7 @@ class SystemAssistantPersistenceTest {
         service.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm_a", "Edited", yaml.replace("/tickets/{id}", "/changed/{id}"))), List.of()));
         accepted.call("{\"path\":{\"id\":\"CRM-101\"}}");
         assertThat(seen.get()).isEqualTo("/tickets/{id}");
-        factory.create(service.snapshot().executions()).get(0).call("{\"path\":{\"id\":\"CRM-101\"}}");
+        factory.create(service.snapshot().forProfile("test_profile").executions()).get(0).call("{\"path\":{\"id\":\"CRM-101\"}}");
         assertThat(seen.get()).isEqualTo("/changed/{id}");
     }
 

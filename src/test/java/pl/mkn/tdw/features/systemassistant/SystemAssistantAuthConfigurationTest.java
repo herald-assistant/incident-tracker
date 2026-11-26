@@ -60,7 +60,7 @@ class SystemAssistantAuthConfigurationTest {
         });
         assertThat(service.snapshot().forProfile("second").executions()).allSatisfy(binding -> assertThat(binding.authentication()).isEqualTo(second));
         assertThat(service.snapshot().forProfile("anonymous").executions()).allSatisfy(binding -> assertThat(binding.authentication()).isNull());
-        assertThatThrownBy(() -> service.snapshot().executions()).hasMessageContaining("jednego wybranego profilu");
+        assertThatThrownBy(() -> service.snapshot().forProfile("missing")).hasMessageContaining("Wybierz istniejący profil");
         assertThatThrownBy(() -> service.save(new SystemAssistantConfiguration(List.of(api), List.of(), profiles, List.of())))
                 .hasMessageContaining("nieistniejące uwierzytelnianie");
         assertThat(service.current()).isEqualTo(current);

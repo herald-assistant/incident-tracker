@@ -3,7 +3,7 @@ package pl.mkn.tdw.features.systemassistant.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService.Snapshot;
+import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.List;
 public class SystemAssistantPrompt {
     private final ObjectMapper mapper;
 
-    public String instructions(Snapshot configuration) {
+    public String instructions(SystemAssistantProfileResources profile) {
         var result = new StringBuilder("""
                 Jesteś asystentem pracy w systemie. Rozmawiaj po polsku, wykonuj konkretne polecenia użytkownika.
                 Masz wyłącznie bieżące narzędzia OpenAPI. Używaj ich do ustalania faktów i obliczeń.
@@ -29,11 +29,12 @@ public class SystemAssistantPrompt {
                 Nie korzystaj z filesystemu, terminala, shell, report tools ani innych zewnętrznych narzędzi.
                 Nie twórz raportu analitycznego. Odpowiedź ma być zwięzłą, niepustą wiadomością do użytkownika.
                 """);
+        var toolNames = profile.executions().stream().map(execution -> execution.operation().name()).toList();
         result.append("\nAktualny katalog narzędzi OpenAPI (nadrzędny wobec historii): ")
-                .append(json(configuration.operations().stream().map(operation -> operation.name()).toList()))
-                .append(". Liczba narzędzi: ").append(configuration.operations().size()).append(".\n")
+                .append(json(profile.executions().stream().map(execution -> execution.operation().name()).toList()))
+                .append(". Liczba narzędzi: ").append(profile.executions().size()).append(".\n")
                 .append("Jeżeli katalog jest pusty, NIE masz narzędzi API. Nie deklaruj ich dostępności na podstawie poprzednich tur.\n");
-        for (var skill : configuration.configuration().skills())
+        for (var skill : profile.skills())
             result.append("\n<skill name=\"").append(skill.id()).append("\">\n")
                     .append(skill.name()).append('\n').append(skill.content()).append("\n</skill>\n");
         return result.toString();

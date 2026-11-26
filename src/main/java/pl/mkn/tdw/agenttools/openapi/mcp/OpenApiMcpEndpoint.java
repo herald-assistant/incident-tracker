@@ -7,6 +7,7 @@ import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.transport.WebMvcStreamableServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 import pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog;
@@ -18,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Each operator-selected scope has an isolated MCP transport and sessions. */
+@Slf4j
 public class OpenApiMcpEndpoint implements AutoCloseable {
     private static final String PREFIX = "/api/openapi-tools/";
     private final Map<String, Scope> scopes = new LinkedHashMap<>();
@@ -32,7 +34,7 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
 
     public OpenApiMcpEndpoint(OpenApiToolCatalog catalog, OpenApiToolSetFactory callbacks, ObjectMapper mapper) {
         this.catalog = catalog; this.callbacks = callbacks; this.mapper = mapper;
-        catalog.attach(this::reconcile);
+        catalog.attach(this::publish);
     }
 
     public RouterFunction<ServerResponse> routes() {
@@ -46,16 +48,45 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
         };
     }
 
-    private synchronized void reconcile(Map<String, List<OpenApiExecution>> next) {
-        next.forEach((id, executions) -> scopes.computeIfAbsent(id, Scope::new).reconcile(executions));
-        for (var id : new ArrayList<>(scopes.keySet())) if (!next.containsKey(id)) scopes.remove(id).server.close();
+    private synchronized void publish(Map<String, List<OpenApiExecution>> next, Runnable commit) {
+        var previous = catalog.current();
+        try {
+            registerTools(next);
+            commit.run();
+        } catch (RuntimeException failure) {
+            try {
+                registerTools(previous);
+            } catch (RuntimeException rollbackFailure) {
+                failure.addSuppressed(rollbackFailure);
+            } finally {
+                closeRemovedScopes(previous.keySet());
+            }
+            throw failure;
+        }
+        // Closing a transport destroys its sessions. Only retire it after durable publication.
+        closeRemovedScopes(next.keySet());
+    }
+
+    private void registerTools(Map<String, List<OpenApiExecution>> definitions) {
+        definitions.forEach((id, executions) -> scopes.computeIfAbsent(id, Scope::new).reconcile(executions));
+    }
+
+    private void closeRemovedScopes(Set<String> retained) {
+        for (var id : new ArrayList<>(scopes.keySet())) {
+            if (retained.contains(id)) continue;
+            try {
+                scopes.remove(id).server.close();
+            } catch (RuntimeException failure) {
+                log.warn("Failed to close retired OpenAPI MCP scope {}", id, failure);
+            }
+        }
     }
 
     private class Scope {
         private final String id;
         private final WebMvcStreamableServerTransportProvider transport;
         private final McpSyncServer server;
-        private final Set<String> registered = new LinkedHashSet<>();
+        private final Map<String, McpSchema.Tool> registered = new LinkedHashMap<>();
         private final Map<String, AtomicBoolean> sessionGuards = new HashMap<>();
 
         Scope(String id) {
@@ -67,15 +98,25 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
         }
 
         void reconcile(List<OpenApiExecution> executions) {
-            for (var name : new ArrayList<>(registered)) { server.removeTool(name); registered.remove(name); }
+            var removed = new LinkedHashSet<>(registered.keySet());
             for (var execution : executions) {
                 var operation = execution.operation();
                 var tool = McpSchema.Tool.builder().name(operation.name()).description(operation.description())
                         .inputSchema(new JacksonMcpJsonMapper(mapper), operation.inputSchema().toString()).build();
+                var name = operation.name();
+                removed.remove(name);
+                if (tool.equals(registered.get(name))) continue;
+                if (registered.containsKey(name)) removeTool(name);
                 server.addTool(McpServerFeatures.SyncToolSpecification.builder().tool(tool)
-                        .callHandler((exchange, request) -> call(exchange.sessionId(), operation.name(), request.arguments())).build());
-                registered.add(operation.name());
+                        .callHandler((exchange, request) -> call(exchange.sessionId(), name, request.arguments())).build());
+                registered.put(name, tool);
             }
+            removed.forEach(this::removeTool);
+        }
+
+        private void removeTool(String name) {
+            server.removeTool(name);
+            registered.remove(name);
         }
 
         private synchronized AtomicBoolean guard(String sessionId) {

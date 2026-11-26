@@ -26,6 +26,10 @@ class SystemAssistantSkeletonTest {
                 new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration.ApiDefinition("crm", "CRM", "yaml"),
                 new pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration.ApiDefinition("crm_a", "Other", "yaml")), List.of()));
         var mvc = MockMvcBuilders.standaloneSetup(new SystemAssistantConfigurationController(service)).build();
+        mvc.perform(get("/api/system-assistant/configuration/profiles"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json(
+                        "[{\"id\":\"test_profile\",\"name\":\"Test CRM\",\"urlPattern\":\"*\"}]", org.springframework.test.json.JsonCompareMode.STRICT));
         mvc.perform(get("/api/system-assistant/configuration/tools"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].apiId").value("crm"))

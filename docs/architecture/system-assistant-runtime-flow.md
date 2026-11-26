@@ -81,6 +81,7 @@ portem i poza schema argumentów AI. Nie ma starszego overloadu wykonania.
 | `POST /api/system-assistant/configuration/openapi/preview` | `{id, yaml}`; katalog operacji, limit wyboru i specification (kopia JSON do dokumentacji), bez aktywacji |
 | `POST /api/system-assistant/configuration/openapi/document` | `{id, yaml}`; zwalidowany dokument JSON do podglądu, bez zapisu i publikacji |
 | `POST /api/system-assistant/configuration/openapi/selection` | `{id, yaml, operations:[{method,path}]}`; zwalidowany YAML wyboru i operationCount, bez zapisu |
+| `GET /api/system-assistant/configuration/profiles` | Wybór profilu w rozmowie. Zwraca wyłącznie bieżące `id`, `name` i `urlPattern`, w kolejności konfiguracji |
 | `GET /api/system-assistant/configuration/tools` | ID kontraktu `apiId`, wygenerowane nazwy, opisy, metody, ścieżki i input schema |
 | `POST /api/system-assistant/conversations` | `{pageContext}` lub null context; `201` i pusta rozmowa bez AI |
 | `GET /api/system-assistant/conversations/{id}` | ID, busy, przypięty pageContext i neutralne wiadomości |
@@ -432,11 +433,17 @@ nie zmieniają sposobu renderowania ani CSS.
 
 ## Aktywacja i bieżący zapis
 
-Zapis jest serializowany: walidacja całego zestawu, przygotowanie operacji,
+Zapis jest serializowany. Po walidacji cały zestaw przechodzi przez przygotowanie operacji,
 aktualizacja handlerów MCP, atomowy zapis pliku i publikacja katalogu oraz
 feature snapshotu. Zakończony sukcesem PUT oznacza aktywację całego zestawu.
 Przy błędzie publikacji lub zapisu następuje przywrócenie poprzedniego
-katalogu; szkic UI pozostaje edytowalny, bez komunikatu o aktywacji.
+katalogu. MCP aktualizuje zmienione definicje narzędzi. Transport usuniętego profilu
+zamyka dopiero po udanym zapisie, dzięki czemu przy błędzie klient zachowuje
+sesję i stan blokady operacji o nieustalonym wyniku. Szkic UI pozostaje edytowalny.
+
+Każdy zapis przygotowuje dla profilu listę bieżących skilli i operacji z przypisanym
+uwierzytelnianiem. MCP publikuje te operacje. Przyjęcie tury pobiera gotowy zestaw
+według `profileId` do sprawdzenia OIDC, promptu i callbacków SDK.
 
 Jeden aktualny plik:
 `${tdw.workspace.directory}/system-assistant/configuration.json`.
@@ -479,7 +486,9 @@ dopasowanie całego ciągu rozróżnia wielkość liter i nie zawiera query/hash
 Brak poprawnego ingress dopuszcza tylko dokładny wzorzec `*`. Pełny ekran
 zawsze pokazuje wszystkie profile. Brak wyboru lub dopasowań wymaga wyboru
 lub konfiguracji, bez automatycznego wskazania profilu. Select odświeża
-zapisane profile przy otwarciu; niezapisany szkic ich nie podmienia.
+zapisane profile przy otwarciu przez `configuration/profiles`. Ramka używa tego
+samego odczytu przy starcie. Pełną konfigurację i katalog definicji narzędzi
+pobiera edytor na pełnym ekranie. Oba widoki współdzielą komponent rozmowy.
 
 ## Import i eksport konfiguracji
 
