@@ -16,7 +16,7 @@ final class SystemAssistantAttachments {
         for (var file : files) {
             try {
                 for (var prepared : DocumentAttachmentPreparer.prepare(file.name(), file.mimeType(), file.content()))
-                    result.add(blob(prepared.name(), prepared.mimeType(), prepared.content()));
+                    result.add(blob("[" + file.id() + "] " + prepared.name(), prepared.mimeType(), prepared.content()));
             } catch (IllegalArgumentException failure) {
                 throw new SystemAssistantException("ATTACHMENT_INVALID", UserFacingErrorType.BAD_REQUEST,
                         "Nie można odczytać załącznika „" + file.name() + "”. Sprawdź jego zawartość i format.");

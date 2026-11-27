@@ -21,6 +21,8 @@ Authorization. MCP korzysta z tego samego wykonawcy co SDK.
 Factory przekazuje istniejący OpenApiExecution bezpośrednio do portu wykonania
 wraz z OpenApiArguments; nie rozdziela ani nie wybiera ponownie Auth.
 
+Callback operacji plikowej wiąże referencje z mapą dostępną w jego turze. Do portu trafiają wyłącznie wskazane pliki, oddzielnie od JSON. MCP profilu nie ma źródła oryginałów, więc pomija operacje wysyłające pliki zarówno przy rejestracji, jak i rozwiązywaniu wywołania po nazwie.
+
 Katalog grupuje executions według neutralnego scopeId. Każdy scope ma
 oddzielny endpoint `/api/openapi-tools/{scopeId}/mcp`, transport i sesje.
 Nie ma nieskopowanego endpointu, domyślnego scope ani wyboru Auth przez AI.

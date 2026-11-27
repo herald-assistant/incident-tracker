@@ -1,0 +1,15 @@
+openapi: 3.1.0
+info: {title: CRM documents, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /files:
+    post:
+      operationId: saveOriginal
+      summary: Zapisz oryginalny plik i zwróć numer potwierdzenia.
+      requestBody:
+        required: true
+        content:
+          application/pdf: {}
+          application/octet-stream: {}
+      responses:
+        '201': {description: Potwierdzenie zapisu, content: {application/json: {schema: {type: object}}}}

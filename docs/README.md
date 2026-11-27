@@ -84,6 +84,10 @@ Bearer, OAuth2 i OIDC; obsługę załączników opisuje instrukcja obsługi.
 [File Reader w Tool Workbench](architecture/file-reader-workbench.md) pozwala
 sprawdzić pliki bez AI: zobaczyć obrazy/strony PDF i zweryfikować DOCX.
 
+Asystent może wysłać oryginał z rozmowy zgodnie z kontraktem API. Obsługę opisuje
+[instrukcja wysyłki](system-assistant.md#wysłanie-załącznika-do-api), a przykłady
+multipart i surowego body zawiera [instrukcja tworzenia kontraktów](system-assistant-configuration-authoring.md#pliki-w-żądaniach).
+
 ## Aktualne potrzeby i plany
 
 `needs/` i `plans/` nie sa archiwum zakonczonych prac. Po zamknieciu zmiany
@@ -108,8 +112,7 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
-  Ma status `draft`; nie ma obecnie otwartych dokumentów potrzeb ani innych
-  planów wykonawczych. Zrealizowane potrzeby i zakończone plany usuwamy,
+  Ma status `draft`. Zrealizowane potrzeby i zakończone plany usuwamy,
   a opis działającego rozwiązania pozostaje w dokumentacji kanonicznej.
 
 Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako

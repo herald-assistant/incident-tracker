@@ -151,7 +151,7 @@ z lokalizacją przed zapisem.
 | Server | Jeden jawny top-level URL HTTP(S) z dowolnym poprawnym hostem DNS/IP/localhost, opcjonalny base path | Brak hosta, nieprawidłowy port, credentials, query/hash, server variables i override path/operation |
 | Operacje | GET, POST, PUT, DELETE, PATCH; wymagany unikalny operationId z liter/cyfr/underscore | HEAD/OPTIONS/TRACE i pozostałe metody, callbacks/webhooks, operacyjne `$ref` |
 | Parametry | Scalar path/query, query array ze scalar items, płaski query object z form/explode true; path required, opcjonalny jawny catch-all na ostatnim segmencie; dziedziczenie i override; opcjonalne header są dokumentacją | Wymagane header, cookies, array path, zagnieżdżone/null wartości query object, pozostałe style/content i nullable tablice query |
-| Body | POST/PUT/PATCH oraz DELETE w 3.1: `application/json`, wymagane lub opcjonalne body; `schema: {}` dopuszcza dowolny JSON | GET body, DELETE body w 3.0, multipart, binary request, pozostałe request media types |
+| Body | POST/PUT/PATCH oraz DELETE w 3.1 z opcjonalnym lub wymaganym JSON, multipart z częściami plikowymi albo surowym plikiem. `schema: {}` dla JSON dopuszcza dowolny JSON | GET body, DELETE body w 3.0, alternatywy JSON/multipart i własne nagłówki części |
 | Schema | object/array/scalars, properties/items/required/enum, `allOf`/`oneOf`/`anyOf`, discriminator jako guidance wariantów, boolean lub typowane additionalProperties, uniqueItems, pattern, limity, readOnly/writeOnly, format i metadata; w 3.0 nullable, w 3.1 null/tablica typów/const | not, patternProperties, multipleOf, inne nieobsługiwane keywords i niestandardowe dialekty |
 | References | Lokalne `#/components/schemas/...`; requesty: acykliczna projekcja inline do 30000 węzłów i 64 poziomów; odpowiedzi: ograniczony graf z produktywną rekursją; rodzeństwo schema `$ref` w 3.1 zachowuje przecięcie ograniczeń | Zewnętrzne refs, cykliczne aliasy, rekurencyjne requesty, rodzeństwo `$ref` w 3.0, przekroczenie budżetu |
 | Responses | Kody liczbowe 100–599 lub default, description, opcjonalne application/json, text/plain ze string schema, wspierane MIME plików lub application/octet-stream ze string/binary schema lub */* | Response refs, headers, links, pozostałe jawne content types |
@@ -254,7 +254,7 @@ Efektywne `explode` należy do neutralnych metadanych `Parameter`, bez
 model-facing wyboru serializacji, dowolnego URL albo query stringa.
 
 PATCH używa tego samego wykonawcy i walidacji co pozostałe operacje.
-Dopuszcza `application/json`, opcjonalne body oraz brak body. Nie znosi
+Dopuszcza JSON, body plikowe oraz brak body. Nie znosi
 schema required, nie dopisuje defaultów, nie pobiera całego obiektu do
 scalenia i nie zamienia metody na PUT. `application/json-patch+json` oraz
 `application/merge-patch+json` nie należą do obsługiwanego podzbioru.
@@ -557,6 +557,14 @@ diagnostyka OTLP pozostaje konfiguracją platformy; feature nie tworzy
 osobnego magazynu telemetryki ani historycznych konfiguracji.
 
 ## Załączniki rozmowy
+
+### Wysłanie oryginału przez narzędzie
+
+Każda przyjęta tura ma własny katalog ID, nazw, MIME, rozmiarów i powiązań z wiadomościami USER. Ten sam identyfikator w etykiecie blobu łączy podgląd PDF/BMP z oryginałem. Na zlecenie użytkownika model podaje `{"attachmentId":"…"}` w pozycji pliku. Callback sprawdza ID w mapie oryginałów tej tury i przekazuje wybrane pliki do integracji poza JSON. Po ponownym otwarciu rozmowy katalog powstaje z metadanych i plików runu. Przy niejednoznacznym wskazaniu asystent pyta o wybór.
+
+Importer rozpoznaje w multipart nazwane części plikowe, tablice plików, skalary i obiekty JSON, również po rozwiązaniu lokalnych `$ref`. Część plikową opisuje `type: string, format: binary`, w 3.1 również pusty schemat. Każdy element niepustej tablicy plików trafia do osobnej części z tą samą nazwą. Multipart ma jawne nazwy części, a otwarta mapa metadanych może znajdować się wewnątrz części JSON. Domyślne typy części to odpowiednio `application/octet-stream`, `text/plain` i `application/json`. Pojedynczy konkretny MIME w `encoding.<część>.contentType` musi odpowiadać rodzajowi części i zapisanemu formatowi pliku.
+
+Surowe body ma referencję bezpośrednio w `body`. Przy kilku binarnych media types pierwszeństwo ma MIME załącznika, potem zadeklarowany `application/octet-stream`. W OpenAPI 3.1 można pominąć schema surowego pliku. Wszystkie pliki i argumenty podlegają sprawdzeniu przed HTTP. Odpowiedź i nieustalony wynik zapisu przechodzą przez wspólny mechanizm wykonawcy. MCP profilu pomija operacje z plikami wejściowymi przy publikacji i wywołaniu. Opisy kontraktów, Swagger i oba widoki chatu obejmują te operacje.
 
 ### Plik jako odpowiedź OpenAPI
 

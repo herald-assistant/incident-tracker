@@ -101,6 +101,7 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
             var removed = new LinkedHashSet<>(registered.keySet());
             for (var execution : executions) {
                 var operation = execution.operation();
+                if (operation.upload() != null) continue;
                 var tool = McpSchema.Tool.builder().name(operation.name()).description(operation.description())
                         .inputSchema(new JacksonMcpJsonMapper(mapper), operation.inputSchema().toString()).build();
                 var name = operation.name();
@@ -129,7 +130,7 @@ public class OpenApiMcpEndpoint implements AutoCloseable {
         private McpSchema.CallToolResult call(String sessionId, String name, Map<String, Object> arguments) {
             try {
                 var execution = catalog.current().getOrDefault(id, List.of()).stream()
-                        .filter(item -> item.operation().name().equals(name)).findFirst()
+                        .filter(item -> item.operation().upload() == null && item.operation().name().equals(name)).findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("Operacja nie jest już dostępna w wybranym profilu."));
                 var guard = guard(sessionId);
                 ToolContentResult content;

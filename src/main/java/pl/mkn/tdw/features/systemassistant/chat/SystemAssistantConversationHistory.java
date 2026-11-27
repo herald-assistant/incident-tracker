@@ -138,7 +138,8 @@ public class SystemAssistantConversationHistory {
         try {
             for (var attachment : attachments) {
                 var file = directory.resolve(UUID.fromString(attachment.id()) + "." + extension(attachment.name()));
-                result.add(new SystemAssistantAiPort.Attachment(attachment.name(), attachment.mimeType(), Files.readAllBytes(file)));
+                result.add(new SystemAssistantAiPort.Attachment(attachment.id(), attachment.messageId(), attachment.name(),
+                        attachment.mimeType(), Files.readAllBytes(file)));
             }
             return List.copyOf(result);
         } catch (IOException exception) {

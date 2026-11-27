@@ -138,7 +138,7 @@ Do 60 operacji na YAML, maksymalnie 100 łącznie we wszystkich API.
 | `operationId` | Wymagany, unikalny w kontrakcie, regex `[a-zA-Z][a-zA-Z0-9_]*`; pełny identyfikator pozostaje w dokumencie i opisie narzędzia. Nazwa `oa_<apiId>_<operationId>` ponad 64 znaki jest automatycznie skracana do 47 znaków prefiksu + `_` + 16 cyfr hex SHA-256 pełnej nazwy UTF-8; kolizja blokuje publikację |
 | Parametry | Scalar `path`/`query`, query array z scalar items oraz query object z płaskimi skalarnymi wartościami; opcjonalne `header` są dokumentacją; nazwa `[a-zA-Z][a-zA-Z0-9_]{0,63}`; path required; simple dla path / form dla query |
 | Pola parametru | `name`, `in`, `description`, `required`, `schema`, `style`, `explode`, `deprecated`, `example`; query array: form + explode true/default (powtarzane klucze) lub false (CSV); query object: form + explode true/default, schema mapy i kodowanie kluczy, bez null/tablic/zagnieżdżeń; x-tdw-catch-all na string path pozwala na wiele segmentów (opis poniżej); array path, wymagane header i cookies nieobsługiwane |
-| Body | POST/PUT/PATCH oraz DELETE w OpenAPI 3.1: `application/json`, wymagane lub opcjonalne; `schema: {}` to dowolny JSON; GET bez body; pola `description`, `required`, `content`; media object ma `schema` i opcjonalne `example` |
+| Body | POST/PUT/PATCH oraz DELETE w OpenAPI 3.1 przyjmują JSON, multipart z plikami albo surowy plik. GET bez body. Dla JSON `schema: {}` dopuszcza dowolny JSON. |
 | Responses | Niepusta mapa kodów `"100"`–`"599"` lub default; description i opcjonalne content: application/json, text/plain ze schema type string, image/png, image/jpeg, image/webp, image/gif, image/bmp, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document lub application/octet-stream ze schema `{type: string, format: binary}` albo `*/*`; wspierany plik jest treścią wyniku narzędzia (PDF jako obrazy stron, BMP jako PNG, DOCX jako tekst i osadzone obrazy), bez zapisu do kolejnych tur; inne binary wildcard pozostają obiektem base64; bez headers, links i response refs |
 | Components | `components.schemas` oraz `components.securitySchemes` dla Basic/Bearer/OAuth2/openIdConnect; bez katalogów parameters, responses i requestBodies |
 | References | Lokalne `#/components/schemas/...`; requesty acykliczne do 64 poziomów i 30000 węzłów; odpowiedzi mogą mieć produktywną rekursję; rodzeństwo schema `$ref` dozwolone tylko w 3.1 |
@@ -198,6 +198,12 @@ Gdy potrzebnej operacji nie da się wiernie opisać, pomiń ją z jasnym uzasadn
 albo wskaż potrzebę osobnej, faktycznie dostępnej fasady. Samo napisanie YAML-a
 nie tworzy fasady ani endpointu. Możesz pominąć schema odpowiedzi, pozostawiając
 jej description, ale jawnie opisz utratę dokumentacji typu; nie zmienia to wymagań API.
+
+### Pliki w żądaniach
+
+Dla operacji wysyłającej plik opisz rzeczywisty `requestBody.content`. W `multipart/form-data` podaj obiekt z nazwanymi częściami, wymagane pola w `required`, a plik jako `{type: string, format: binary}`. Tablica takich plików powtarza tę samą nazwę części. Pole obiektowe, np. mapa `additionalProperties: {}`, jest serializowane jako JSON. Skalary są wysyłane jako tekst. Możesz określić pojedynczy zgodny MIME przez `encoding.<pole>.contentType`.
+
+Dla surowego pliku zadeklaruj MIME dokumentu lub `application/octet-stream`. W OpenAPI 3.1 dopuszczalne jest np. `application/pdf: {}`. TDW sam projektuje referencję `attachmentId` w narzędziu. W YAML-u opisuj format rzeczywistego API. Adres bazowy musi być uzupełniony w top-level `servers`. [Szczegóły kodowania i granic podzbioru](architecture/system-assistant-runtime-flow.md#wysłanie-oryginału-przez-narzędzie)
 
 ## Autentykacja i transport
 
@@ -278,7 +284,7 @@ Nie kopiuj sekretów, danych klientów ani całych repozytoriów do instrukcji.
 ## Projektowanie profili
 
 Profil zawiera referencje do katalogów; nie zawiera kopii skilli ani YAML-i.
-Przypisanie API udostępnia wszystkie operacje kontraktu z Auth wybranym w tej parze. Jeżeli dwa profile
+Przypisanie API udostępnia w chacie wszystkie operacje kontraktu z Auth wybranym w tej parze. W MCP profilu dostępne są operacje niewymagające źródła plików wejściowych. Jeżeli dwa profile
 mają różnić się operacjami tego samego systemu, rozdziel kontrakty, np.
 `tickets_read` oraz `tickets_write`, z odpowiednimi operacjami i zależnościami.
 Skill „tylko odczyt” nie zastępuje ograniczenia zestawu udostępnionych tools.

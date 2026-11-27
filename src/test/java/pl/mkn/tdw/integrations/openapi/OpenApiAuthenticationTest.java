@@ -49,7 +49,7 @@ class OpenApiAuthenticationTest {
             var auth = new HttpAuthenticationService(protocol, new pl.mkn.tdw.integrations.httpauth.service.OidcLoginService(protocol, java.time.Clock.systemUTC()));
             var executor = new OpenApiRestExecutor(IntegrationRestClientBuilderFactoryTestCreator.create(RestClient.builder()), mapper, auth);
             var operation = new OpenApiOperation("oa_crm_read", "CRM", "POST", java.net.URI.create(base), "/api", List.of(),
-                    mapper.readTree("{\"type\":\"object\"}"), mapper.readTree("{\"type\":\"object\"}"), "UNKNOWN", java.util.Map.of());
+                    mapper.readTree("{\"type\":\"object\"}"), mapper.readTree("{\"type\":\"object\"}"), "UNKNOWN", java.util.Map.of(), null);
             var arguments = new OpenApiArguments(mapper.createObjectNode());
             assertThat(executor.execute(new OpenApiExecution(operation, basic()), arguments).statusCode()).isEqualTo(200);
             assertThat(executor.execute(new OpenApiExecution(operation, bearer()), arguments).statusCode()).isEqualTo(200);

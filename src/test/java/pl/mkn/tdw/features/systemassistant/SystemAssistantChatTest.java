@@ -76,7 +76,7 @@ class SystemAssistantChatTest {
         var ai = mock(SystemAssistantAiPort.class);
         when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
             SystemAssistantMessageRequest turn = call.getArgument(4);
-            seen.add(prompts.conversation(call.getArgument(2), turn.pageContext(), call.getArgument(3)));
+            seen.add(prompts.conversation(call.getArgument(2), turn.pageContext(), call.getArgument(3), call.getArgument(7)));
             return new SystemAssistantAiPort.Reply("OK", null);
         });
         var a = new SystemAssistantMessageRequest.CurrentPage("https://crm.example", "/cases/1",
@@ -110,7 +110,7 @@ class SystemAssistantChatTest {
         var seenPrompts = new CopyOnWriteArrayList<String>();
         var ai = mock(SystemAssistantAiPort.class);
         when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(invocation -> {
-            seenPrompts.add(prompts.conversation(invocation.getArgument(2), ((SystemAssistantMessageRequest) invocation.getArgument(4)).pageContext(), invocation.getArgument(3)));
+            seenPrompts.add(prompts.conversation(invocation.getArgument(2), ((SystemAssistantMessageRequest) invocation.getArgument(4)).pageContext(), invocation.getArgument(3), invocation.getArgument(7)));
             Consumer<AnalysisEvidenceSection> sink = invocation.getArgument(5);
             sink.accept(new AnalysisEvidenceSection("openapi", "call", List.of(new AnalysisEvidenceItem("result",
                     List.of(new AnalysisEvidenceAttribute("result", longResult))))));
@@ -219,7 +219,7 @@ class SystemAssistantChatTest {
                 new OpenApiToolSetFactory((execution, args) -> null, mapper), null, null, new SystemAssistantPrompt(mapper), pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup.NO_OP);
         var history = List.of(pl.mkn.tdw.shared.ai.chat.AnalysisChatMessageState.completedUser("user", "Pytanie", java.time.Instant.now()).snapshot());
         var run = runner.assemble("one", new SystemAssistantProfileResources(config("CURRENT").skills(), List.of()),
-                null, history, message("Pytanie"), ignored -> {}, ignored -> {});
+                null, history, message("Pytanie"), ignored -> {}, ignored -> {}, List.of());
         assertThat(run.sessionTarget().existing()).isFalse();
         assertThat(run.sessionConfigRequest().skillsEnabled()).isFalse();
         assertThat(run.sessionConfigRequest().effectiveAvailableToolNames()).isEmpty();

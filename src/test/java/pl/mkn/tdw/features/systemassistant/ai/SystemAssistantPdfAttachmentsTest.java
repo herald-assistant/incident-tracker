@@ -35,13 +35,13 @@ class SystemAssistantPdfAttachmentsTest {
             document.save(bytes); pdf = bytes.toByteArray();
         }
         var prepared = SystemAssistantAttachments.prepare(List.of(
-                new SystemAssistantAiPort.Attachment("scan.pdf", "application/pdf", pdf),
-                new SystemAssistantAiPort.Attachment("image.png", "image/png", new byte[]{1, 2, 3}),
-                new SystemAssistantAiPort.Attachment("report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new byte[]{4, 5})));
+                new SystemAssistantAiPort.Attachment("id-scan.pdf", "user", "scan.pdf", "application/pdf", pdf),
+                new SystemAssistantAiPort.Attachment("id-image.png", "user", "image.png", "image/png", new byte[]{1, 2, 3}),
+                new SystemAssistantAiPort.Attachment("id-report.docx", "user", "report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new byte[]{4, 5})));
         assertThat(prepared).hasSize(4);
         for (var page = 0; page < 2; page++) {
             var blob = prepared.get(page);
-            assertThat(blob.getDisplayName()).isEqualTo("scan.pdf — strona " + (page + 1) + "/2.jpg");
+            assertThat(blob.getDisplayName()).isEqualTo("[id-scan.pdf] scan.pdf — strona " + (page + 1) + "/2.jpg");
             assertThat(blob.getMimeType()).isEqualTo("image/jpeg");
             var image = ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(blob.getData())));
             assertThat(image.getWidth()).isEqualTo(100);
@@ -57,7 +57,7 @@ class SystemAssistantPdfAttachmentsTest {
             }
         }
         assertThat(Base64.getDecoder().decode(prepared.get(2).getData())).containsExactly(1, 2, 3);
-        assertThat(prepared.get(2).getDisplayName()).isEqualTo("image.png");
+        assertThat(prepared.get(2).getDisplayName()).isEqualTo("[id-image.png] image.png");
         assertThat(prepared.get(2).getMimeType()).isEqualTo("image/png");
         assertThat(Base64.getDecoder().decode(prepared.get(3).getData())).containsExactly(4, 5);
         assertThat(prepared.get(3).getMimeType()).isEqualTo("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
@@ -70,14 +70,14 @@ class SystemAssistantPdfAttachmentsTest {
         }
         for (var content : List.of(new byte[]{1, 2, 3}, empty)) {
             assertThatThrownBy(() -> SystemAssistantAttachments.prepare(List.of(
-                    new SystemAssistantAiPort.Attachment("invalid.pdf", "application/pdf", content))))
+                    new SystemAssistantAiPort.Attachment("id-invalid.pdf", "user", "invalid.pdf", "application/pdf", content))))
                     .isInstanceOf(SystemAssistantException.class).hasMessageContaining("invalid.pdf");
         }
     }
 
     @Test void reportsTheNameOfAnUnreadableBitmapToTheOperator() {
         assertThatThrownBy(() -> SystemAssistantAttachments.prepare(List.of(
-                new SystemAssistantAiPort.Attachment("CRM.bmp", "image/bmp", new byte[]{'B', 'M'}))))
+                new SystemAssistantAiPort.Attachment("id-CRM.bmp", "user", "CRM.bmp", "image/bmp", new byte[]{'B', 'M'}))))
                 .isInstanceOfSatisfying(SystemAssistantException.class,
                         failure -> assertThat(failure.code()).isEqualTo("ATTACHMENT_INVALID"))
                 .hasMessageContaining("CRM.bmp");

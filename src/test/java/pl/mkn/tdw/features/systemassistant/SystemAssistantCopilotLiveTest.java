@@ -13,7 +13,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.convention.TestBean;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotPatSource;
+import pl.mkn.tdw.api.workspacesettings.WorkspaceCopilotPatSource;
+import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
+import pl.mkn.tdw.localworkspace.settings.FileSystemLocalWorkspaceSettingsStore;
+import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
+import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsProvider;
 import pl.mkn.tdw.features.systemassistant.chat.SystemAssistantConversationService;
@@ -40,15 +46,64 @@ import static org.awaitility.Awaitility.await;
 class SystemAssistantCopilotLiveTest {
     @TempDir static Path runtime;
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
+        registry.add("tdw.workspace.directory", () -> runtime.resolve("workspace").toString());
         registry.add("analysis.ai.copilot.copilot-home", () -> runtime.resolve("copilot").toString());
         registry.add("analysis.ai.copilot.working-directory", () -> runtime.resolve("work").toString());
     }
-    // Prevents pilot configuration from touching the operator's actual configuration.
-    @MockitoBean SystemAssistantConfigurationStore store;
+    // All pilot writes go to the temporary workspace. Only authentication reads operator settings.
+    @TestBean(methodName = "operatorToken") CopilotPatSource patSource;
+    static CopilotPatSource operatorToken() {
+        var workspace = new LocalWorkspaceProperties();
+        workspace.setDirectory(System.getProperty("tdw.workspace.directory",
+                System.getenv().getOrDefault("TDW_WORKSPACE_DIRECTORY", workspace.getDirectory())));
+        return new WorkspaceCopilotPatSource(new FileSystemLocalWorkspaceSettingsStore(workspace, new LocalWorkspacePaths(workspace),
+                new LocalWorkspaceJsonFileStore(new ObjectMapper().findAndRegisterModules())));
+    }
     @Autowired SystemAssistantConversationService chats;
     @Autowired SystemAssistantConfigurationService configurations;
     @Autowired CopilotModelOptionsProvider models;
     @Autowired ObjectMapper mapper;
+
+    @Test void selectsAnOriginalFromAnEarlierMessageAndAsksWhenTheChoiceIsAmbiguous() throws Exception {
+        var first = pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.pdf("CRM-A");
+        var second = pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.pdf("CRM-B");
+        var received = new java.util.concurrent.CopyOnWriteArrayList<byte[]>();
+        var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        var receipt = "CRM-" + UUID.randomUUID();
+        api.createContext("/files", exchange -> {
+            try (exchange) {
+                received.add(exchange.getRequestBody().readAllBytes());
+                var result = mapper.writeValueAsBytes(Map.of("receipt", receipt));
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(201, result.length);
+                exchange.getResponseBody().write(result);
+            }
+        });
+        api.start();
+        String id = null;
+        try {
+            var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-file-upload.yaml"))
+                    .replace(":8099", ":" + api.getAddress().getPort());
+            configurations.save(config(yaml, null, "Po wykonaniu zapisu podaj pełny numer potwierdzenia receipt z odpowiedzi API."));
+            id = chats.create(null).id();
+            var model = Optional.ofNullable(System.getenv("COPILOT_TEST_MODEL")).orElse("gpt-6.1-terra");
+            chats.attach(id, "oferta.pdf", new ByteArrayInputStream(first));
+            turn(id, "To pierwsza oferta. Zapamiętaj jej powiązanie z tą wiadomością.", model);
+            chats.attach(id, "oferta.pdf", new ByteArrayInputStream(second));
+            turn(id, "To druga oferta. Obie oferty nadal są aktualne.", model);
+            var question = turn(id, "Zapisz jedną z ofert w API. Musi to być właściwa oferta.", model);
+            assertThat(question.content()).contains("?");
+            assertThat(received).isEmpty();
+            var answer = turn(id, "Chodzi o ofertę dołączoną do pierwszej wiadomości. Wyślij ją teraz.", model);
+            assertThat(answer.content()).contains(receipt);
+            assertThat(received).hasSize(1);
+            assertThat(received.get(0)).isEqualTo(first);
+            assertThat(mapper.writeValueAsString(chats.get(id))).doesNotContain(Base64.getEncoder().encodeToString(first));
+        } finally {
+            if (id != null && !chats.get(id).busy()) chats.remove(id);
+            api.stop(0);
+        }
+    }
 
     @Test
     void readsFilesReturnedByApiWithoutSavingAttachments() throws Exception {

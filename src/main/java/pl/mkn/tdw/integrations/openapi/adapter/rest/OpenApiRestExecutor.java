@@ -113,19 +113,17 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
         OpenApiTarget.uri(target.getScheme() + "://" + target.getRawAuthority());
         if (!target.getAuthority().equals(operation.server().getAuthority()))
             throw new OpenApiException("Zmiana hosta jest zabroniona.");
-        final String authorization;
-        try { authorization = this.authentication.authorization(execution.authentication()); }
-        catch (pl.mkn.tdw.integrations.httpauth.contract.HttpAuthException failure) {
-            return new OpenApiResult("AUTH_REQUIRED", null, mapper.nullNode(), failure.getMessage());
-        }
         try {
             var accepted = operation.responseContentTypes().values().stream().flatMap(List::stream).distinct()
                     .map(MediaType::parseMediaType).toArray(MediaType[]::new);
             var request = client.method(HttpMethod.valueOf(operation.method())).uri(target)
                     .accept(accepted.length == 0 ? new MediaType[]{MediaType.APPLICATION_JSON} : accepted);
+            if (arguments.has("body")) {
+                if (operation.upload() != null) OpenApiUploadBody.apply(request, operation.upload(), requestArguments, mapper);
+                else request.contentType(MediaType.APPLICATION_JSON).body(mapper.writeValueAsBytes(arguments.get("body")));
+            }
+            var authorization = this.authentication.authorization(execution.authentication());
             if (authorization != null) request.header(org.springframework.http.HttpHeaders.AUTHORIZATION, authorization);
-            if (arguments.has("body")) request.contentType(MediaType.APPLICATION_JSON)
-                    .body(mapper.writeValueAsBytes(arguments.get("body")));
             return request.exchange((sent, response) -> {
                 var bytes = response.getBody().readAllBytes();
                 JsonNode body;
@@ -164,6 +162,8 @@ public class OpenApiRestExecutor implements OpenApiExecutionPort {
                 return new OpenApiResult("RESPONSE_RECEIVED", response.getStatusCode().value(), body,
                         "Odpowiedź HTTP nie potwierdza wszystkich skutków biznesowych.", file);
             });
+        } catch (pl.mkn.tdw.integrations.httpauth.contract.HttpAuthException failure) {
+            return new OpenApiResult("AUTH_REQUIRED", null, mapper.nullNode(), failure.getMessage());
         } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
             throw new OpenApiException("Nie udało się przygotować JSON request body.");
         } catch (org.springframework.web.client.RestClientException ex) {

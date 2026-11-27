@@ -10,7 +10,8 @@ import java.util.Collections;
 
 public record OpenApiOperation(String name, String description, String method, URI server,
                                String path, List<Parameter> parameters, JsonNode inputSchema,
-                               JsonNode validationSchema, String effect, Map<String, List<String>> responseContentTypes) {
+                               JsonNode validationSchema, String effect, Map<String, List<String>> responseContentTypes,
+                               OpenApiUpload upload) {
     public OpenApiOperation {
         parameters = List.copyOf(parameters);
         inputSchema = inputSchema.deepCopy();

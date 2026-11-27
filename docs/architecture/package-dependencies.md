@@ -122,6 +122,7 @@ Port wykonania OpenAPI przyjmuje własny `contract.OpenApiExecution` oraz
 `OpenApiArguments`. Binding zawiera operację i captured profil neutralnego
 HTTP Auth; root portu nie importuje ani nie ujawnia bezpośrednio typu profilu
 innej integracji. Callback i REST reuse'ują ten sam binding.
+Przy wysyłce plików feature wiąże oryginały z turą. Callback rozwiązuje referencje według pozycji binarnych z importera i przekazuje wybrane `OpenApiFile` w `OpenApiArguments` poza JSON-em. Kodowanie HTTP należy do adaptera REST.
 `IntegrationPackageBoundaryTest` sprawdza wszystkie obecne integracje systemowe,
 ich konsumentow oraz inwentarz katalogow, aby nowy system wymagal jawnego
 objecia testem.

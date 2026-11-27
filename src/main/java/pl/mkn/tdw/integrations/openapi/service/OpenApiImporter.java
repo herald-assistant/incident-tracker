@@ -121,12 +121,16 @@ public class OpenApiImporter implements OpenApiImportPort {
                 var declared = new HashSet<String>();
                 parameters.stream().filter(p -> p.in().equals("path")).forEach(p -> declared.add(p.name()));
                 if (!tokens.equals(declared) || path.replaceAll("\\{[^{}]+}", "").matches(".*[{}].*")) error(path, "Niezgodne parametry ścieżki.");
+                OpenApiUpload upload = null;
                 if (op.has("requestBody")) {
                     if (method.equals("get") || method.equals("delete") && !root.path("openapi").asText().startsWith("3.1."))
                         error(path, "Body dla POST/PUT/PATCH oraz DELETE w OpenAPI 3.1; GET bez body.");
                     var body = op.get("requestBody"); fields(body, path, "description", "required", "content");
                     if (body.has("required") && !body.get("required").isBoolean()) error(path, "required musi być boolean.");
-                    var schema = requestSchema(root, body.path("content"), path + "/requestBody");
+                    var parsed = OpenApiRequestBodyParser.parse(mapper, resolver, root.path("openapi").asText(),
+                            body.path("content"), path + "/requestBody/content");
+                    var schema = parsed.schema();
+                    upload = parsed.upload();
                     // A request body is not itself a schema property; retain flags on its children.
                     if (schema instanceof ObjectNode object) object.remove("readOnly");
                     input.withObject("properties").set("body", schema);
@@ -151,19 +155,11 @@ public class OpenApiImporter implements OpenApiImportPort {
                         op.path("summary").asText(operationId) + "\n" + op.path("description").asText("")
                                 + "\noperationId: " + operationId
                                 + "\nSkutki operacji: " + effect + ". " + String.join(" ", OpenApiSchemaDiagnostics.warnings(root, item, op)),
-                        method.toUpperCase(Locale.ROOT), server, path, parameters, toolSchema, input, effect, responseContentTypes));
+                        method.toUpperCase(Locale.ROOT), server, path, parameters, toolSchema, input, effect, responseContentTypes, upload));
                 if (result.size() > 60) error(path, "Maksymalnie 60 operacji w specyfikacji.");
             }
         }
         return List.copyOf(result);
-    }
-
-    private JsonNode requestSchema(JsonNode root, JsonNode content, String path) {
-        fields(content, path + "/content", "application/json");
-        if (!content.has("application/json")) error(path, "Wymagane application/json.");
-        var media = content.get("application/json"); fields(media, path, "schema", "example");
-        var resolver = new OpenApiSchemaResolver(mapper, root);
-        return resolver.request(media.path("schema"), path);
     }
 
     private List<String> responseContent(JsonNode root, JsonNode content, String path) {
@@ -197,7 +193,7 @@ public class OpenApiImporter implements OpenApiImportPort {
         result.putObject("properties"); result.putArray("required"); result.put("additionalProperties", false); return result;
     }
 
-    private static void fields(JsonNode node, String pointer, String... allowed) {
+    static void fields(JsonNode node, String pointer, String... allowed) {
         if (node.isMissingNode()) return;
         if (!node.isObject()) error(pointer, "Wymagany obiekt.");
         var supported = Set.of(allowed);

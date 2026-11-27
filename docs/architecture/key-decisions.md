@@ -69,6 +69,8 @@ obrazów. Bez zapisu pliku do przyszłych tur i bez automatycznego pobierania UR
 z JSON. Ponowne wywołanie operacji wykonuje nowe HTTP. Ręczne załączniki rozmowy
 zachowują swój trwały lifecycle. Binaria nie trafiają do logów/activity TDW.
 
+O wysłaniu pliku do operacji OpenAPI decyduje zlecenie użytkownika w rozmowie. Model wskazuje ID z katalogu przyjętej tury, a integracja dostaje wybrane oryginały poza argumentami JSON. MCP profilu nie posiada dostępu do tych plików. [Wysłanie oryginału przez narzędzie](system-assistant-runtime-flow.md#wysłanie-oryginału-przez-narzędzie)
+
 ## Odczyt dużych wyników narzędzi Copilota
 
 Platforma udostępnia `tool_output_read_chunk` w create i resume. CLI

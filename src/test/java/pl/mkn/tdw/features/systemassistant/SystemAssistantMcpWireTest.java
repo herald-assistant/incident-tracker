@@ -29,6 +29,22 @@ import static org.assertj.core.api.Assertions.*;
 })
 @DirtiesContext
 class SystemAssistantMcpWireTest {
+    @Test void removesAnOperationFromMcpWhenItsNewContractRequiresAttachments() throws Exception {
+        var yaml = Files.readString(Path.of("src/test/resources/openapi/crm-file-upload.yaml")).replace("\r\n", "\n");
+        var plain = yaml.replace("          application/pdf: {}\n          application/octet-stream: {}", "          application/json: {schema: {type: object}}");
+        configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Pliki", plain)), List.of()));
+        var transport = HttpClientStreamableHttpTransport.builder("http://127.0.0.1:" + port)
+                .endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
+        try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
+            client.initialize();
+            assertThat(client.listTools().tools()).extracting(McpSchema.Tool::name).containsExactly("oa_crm_saveOriginal");
+            configurations.save(SystemAssistantTestSupport.config(List.of(new SystemAssistantConfiguration.ApiDefinition("crm", "Pliki", yaml)), List.of()));
+            assertThat(client.listTools().tools()).isEmpty();
+            assertThatThrownBy(() -> client.callTool(new McpSchema.CallToolRequest("oa_crm_saveOriginal",
+                    Map.of("body", Map.of("attachmentId", "crm-file"))))).isInstanceOf(RuntimeException.class);
+        }
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
     void returnsPdfPagesBitmapsAndDocxEmbeddedImagesAsMcpContent(boolean genericResponse) throws Exception {

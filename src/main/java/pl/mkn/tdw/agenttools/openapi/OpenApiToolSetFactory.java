@@ -10,6 +10,7 @@ import pl.mkn.tdw.integrations.openapi.OpenApiExecutionPort;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiArguments;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiException;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiFile;
 import pl.mkn.tdw.agenttools.content.ToolContentCallback;
 import pl.mkn.tdw.agenttools.content.ToolContentResult;
 import pl.mkn.tdw.common.documents.DocumentAttachmentPreparer;
@@ -17,6 +18,7 @@ import pl.mkn.tdw.common.documents.DocxContentReader;
 import org.springframework.ai.chat.model.ToolContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
@@ -31,6 +33,12 @@ public class OpenApiToolSetFactory {
 
     /** The caller owns the lifecycle of a turn or an MCP session's uncertain-write state. */
     public List<ToolCallback> create(List<OpenApiExecution> executions, AtomicBoolean uncertainWrite) {
+        return create(executions, uncertainWrite, Map.of());
+    }
+
+    public List<ToolCallback> create(List<OpenApiExecution> executions, AtomicBoolean uncertainWrite,
+                                     Map<String, OpenApiFile> files) {
+        var available = Map.copyOf(files);
         return executions.stream().map(execution -> (ToolCallback) new ToolContentCallback() {
             private final pl.mkn.tdw.integrations.openapi.contract.OpenApiOperation operation = execution.operation();
             @Override
@@ -45,7 +53,9 @@ public class OpenApiToolSetFactory {
                 if (operation.mutation() && uncertainWrite.get())
                     return new ToolContentResult("{\"outcome\":\"WRITE_BLOCKED\",\"message\":\"Poprzedni zapis ma nieustalony wynik. W tej turze użyj odczytu.\"}", List.of());
                 try {
-                    var result = executor.execute(execution, new OpenApiArguments(mapper.readTree(input)));
+                    var json = mapper.readTree(input);
+                    var arguments = operation.upload() == null ? new OpenApiArguments(json) : operation.upload().bind(json, available);
+                    var result = executor.execute(execution, arguments);
                     if (operation.mutation() && result.outcome().equals("OUTCOME_UNKNOWN")) uncertainWrite.set(true);
                     var binaries = new java.util.ArrayList<ToolContentResult.Binary>();
                     var text = mapper.valueToTree(result);

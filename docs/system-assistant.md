@@ -181,13 +181,17 @@ TDW wysyła `Accept` z deklaracji OpenAPI, a odpowiedź odczytuje według
 nawet wtedy, gdy wygląda jak JSON. Błędny application/json nadal jest błędem.
 Odpowiedź jest odczytywana w całości, bez aplikacyjnego limitu rozmiaru body.
 Nadal obowiązuje blokada po nieustalonym zapisie.
-Request body nadal obsługuje wyłącznie application/json.
+
+## Wysłanie załącznika do API
+
+Wybierz profil z operacją przyjmującą plik, dodaj dokument w rozmowie i napisz, co ma z nim zrobić asystent. Możesz wskazać wcześniejszą wiadomość, np. „Wyślij ofertę z pierwszej wiadomości do folderu CRM-1”. Działa to również w panelu osadzonym i po otwarciu rozmowy z historii. Przy kilku pasujących dokumentach asystent zapyta o wybór.
+
+API otrzymuje oryginał, również gdy model ogląda PDF jako obrazy stron. Kontrakt określa nazwy pól, metadane i typ żądania. Operacja może przyjmować jeden plik jako całe body albo formularz multipart z jednym lub kilkoma plikami. Podaj wymagane wartości biznesowe w rozmowie lub instrukcji profilu. Po utracie odpowiedzi przy zapisie sprawdź stan w systemie odbiorcy przed ponownym zleceniem.
 
 ## Operacje PATCH
 
-Możesz importować i wybierać PATCH z `application/json` lub bez body.
-Wysyłany jest dokładnie JSON przygotowany zgodnie ze schematem requestu;
-TDW nie pobiera i nie odsyła całego DTO ani nie dopisuje domyślnych wartości.
+Możesz importować i wybierać PATCH z JSON-em, body plikowym lub bez body.
+Dla żądania JSON wysyłane są pola podane przez model zgodnie ze schematem requestu.
 Required nadal obowiązuje. Auth i blokada po nieustalonym wyniku działają
 jak dla pozostałych potencjalnych zapisów.
 
@@ -365,7 +369,10 @@ pełna macierz i limity są w [runtime flow](architecture/system-assistant-runti
 ## Testy i wyłączenie
 
 Kontrakty CRM do testów automatycznych znajdują się w
-`src/test/resources/openapi/{crm-api,contacts-api}.yaml`. Testy uruchamiają
+`src/test/resources/openapi`. Przykłady wysyłki to
+[formularz z metadanymi](../src/test/resources/openapi/crm-folder-upload.yaml),
+[galeria z tablicą plików](../src/test/resources/openapi/crm-gallery-upload.yaml)
+i [surowe body](../src/test/resources/openapi/crm-file-upload.yaml). Testy uruchamiają
 własne izolowane serwery HTTP i nie wymagają osobnej aplikacji demo.
 Test z rzeczywistym Copilotem jest uruchamiany tylko jawnie:
 

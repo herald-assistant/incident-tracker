@@ -93,6 +93,43 @@ class SystemAssistantAttachmentsTest {
         } finally { service.close(); }
     }
 
+    @Test void restoresOnlyTheOriginalsOfEachConversationForConcurrentTurnsOfOneProfile() throws Exception {
+        var ai = mock(SystemAssistantAiPort.class);
+        var initial = service(ai);
+        String first, second;
+        try {
+            first = initial.create(null).id();
+            second = initial.create(null).id();
+            initial.attach(first, "oferta.png", new ByteArrayInputStream(new byte[]{11}));
+            initial.attach(second, "oferta.png", new ByteArrayInputStream(new byte[]{22}));
+        } finally { initial.close(); }
+
+        var restarted = service(ai);
+        var arrived = new CountDownLatch(2);
+        var captures = new ConcurrentHashMap<String, List<SystemAssistantAiPort.Attachment>>();
+        when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
+            SystemAssistantMessageRequest request = call.getArgument(4);
+            captures.put(request.message(), call.getArgument(7));
+            arrived.countDown();
+            if (!arrived.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Druga tura nie dotarła.");
+            return new SystemAssistantAiPort.Reply("Gotowe", null);
+        });
+        try {
+            for (var id : List.of(first, second))
+                restarted.send(id, new SystemAssistantMessageRequest(id, "test_profile", null, null, null));
+            await().atMost(10, TimeUnit.SECONDS).until(() -> !restarted.get(first).busy() && !restarted.get(second).busy());
+            for (var id : List.of(first, second)) {
+                var conversation = restarted.get(id);
+                assertThat(captures.get(id)).singleElement().satisfies(file -> {
+                    assertThat(file.id()).isEqualTo(conversation.attachments().get(0).id());
+                    assertThat(file.messageId()).isEqualTo(conversation.messages().get(0).id());
+                    assertThat(file.content()).containsExactly(id.equals(first) ? 11 : 22);
+                });
+            }
+            assertThat(captures.get(first).get(0).id()).isNotEqualTo(captures.get(second).get(0).id());
+        } finally { restarted.close(); }
+    }
+
     @Test void streamsLargeFilesToUniqueNamesRestoresMetadataAndExcludesAttachmentsFromExport() throws Exception {
         var ai = mock(SystemAssistantAiPort.class);
         String id;
@@ -187,16 +224,16 @@ class SystemAssistantAttachmentsTest {
                 new SystemAssistantPrompt(mapper), CopilotSessionCleanup.NO_OP);
         runner.answer("turn", new SystemAssistantProfileResources(List.of(), List.of()),
                 null, List.of(), new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null, null), ignored -> {}, ignored -> {},
-                List.of(new SystemAssistantAiPort.Attachment("image.png", "image/png", new byte[]{1, 2, 3}),
-                        new SystemAssistantAiPort.Attachment("crm.BMP", "image/bmp", OpenApiFileFixtures.bmp("CRM-215"))));
+                List.of(new SystemAssistantAiPort.Attachment("id-image.png", "user", "image.png", "image/png", new byte[]{1, 2, 3}),
+                        new SystemAssistantAiPort.Attachment("id-crm.BMP", "user", "crm.BMP", "image/bmp", OpenApiFileFixtures.bmp("CRM-215"))));
         assertThat(options.getAttachments()).hasSize(2);
         assertThat(options.getAttachments().get(0)).isInstanceOfSatisfying(BlobAttachment.class, blob -> {
-            assertThat(blob.getDisplayName()).isEqualTo("image.png");
+            assertThat(blob.getDisplayName()).isEqualTo("[id-image.png] image.png");
             assertThat(blob.getMimeType()).isEqualTo("image/png");
             assertThat(Base64.getDecoder().decode(blob.getData())).containsExactly(1, 2, 3);
         });
         assertThat(options.getAttachments().get(1)).isInstanceOfSatisfying(BlobAttachment.class, blob -> {
-            assertThat(blob.getDisplayName()).isEqualTo("crm.png");
+            assertThat(blob.getDisplayName()).isEqualTo("[id-crm.BMP] crm.png");
             assertThat(blob.getMimeType()).isEqualTo("image/png");
             assertThat(Base64.getDecoder().decode(blob.getData())).startsWith((byte) 0x89, (byte) 'P', (byte) 'N', (byte) 'G');
         });

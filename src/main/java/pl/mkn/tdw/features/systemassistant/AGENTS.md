@@ -31,6 +31,8 @@ feature'ów. API i orkiestracja należą do feature'a; parser/REST do
   Oczekujące pliki mają null. Powiązanie zapisuj przed AI, cofaj razem z odrzuconą
   wiadomością i odtwarzaj z lokalnego snapshotu; nie eksportuj go ani nie
   wyprowadzaj historycznie z diagnostyki. Nie zmienia to plików dostarczanych AI.
+- Przy wysyłce do API runner przekazuje callbackom mapę oryginałów tej rozmowy. Katalog w prompcie i etykieta każdego blobu SDK identyfikują ten sam oryginał. ID i powiązanie z wiadomością pochodzą ze snapshotu runu. Po niejednoznacznym poleceniu asystent dopytuje o wybór.
+
 - Pliki z odpowiedzi OpenAPI są wynikami bieżącego narzędzia, bez zapisu przy
   rozmowie i bez automatycznego dołączania w przyszłych turach. Ponowne wywołanie
   wykonuje nowe HTTP. Neutralne tools przygotowują PDF/obrazy/DOCX, platforma

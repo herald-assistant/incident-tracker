@@ -13,6 +13,6 @@ public interface SystemAssistantAiPort {
                  List<AnalysisChatMessageResponse> history, SystemAssistantMessageRequest request,
                  Consumer<AnalysisEvidenceSection> evidence, Consumer<AnalysisAiActivityEvent> activity,
                  List<Attachment> attachments);
-    record Attachment(String name, String mimeType, byte[] content) { }
+    record Attachment(String id, String messageId, String name, String mimeType, byte[] content) { }
     record Reply(String content, AnalysisAiUsage usage) {}
 }

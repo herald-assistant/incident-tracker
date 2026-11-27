@@ -15,12 +15,15 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCon
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResources;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConversation;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantMessageRequest;
+import pl.mkn.tdw.integrations.openapi.contract.OpenApiFile;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Service
@@ -44,8 +47,11 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
     public CopilotRunRequest assemble(String turnId, SystemAssistantProfileResources profile,
                                       SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                                       SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
-                                      Consumer<AnalysisAiActivityEvent> activity) {
-        var callbacks = tools.create(profile.executions());
+                                      Consumer<AnalysisAiActivityEvent> activity, List<Attachment> attachments) {
+        var originals = new LinkedHashMap<String, OpenApiFile>();
+        for (var file : attachments)
+            originals.put(file.id(), new OpenApiFile(file.name(), file.mimeType(), file.content()));
+        var callbacks = tools.create(profile.executions(), new AtomicBoolean(), originals);
         var names = callbacks.stream().map(callback -> callback.getToolDefinition().name()).toList();
         var session = new CopilotToolSessionContext(turnId, "system-assistant-" + turnId, Map.of());
         var definitions = sdkTools.createToolDefinitions(session, CopilotToolDescriptionContext.profile("system-assistant"), callbacks)
@@ -55,7 +61,7 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
                 "Używaj wyłącznie bieżących narzędzi OpenAPI tej tury.", false)
                 .withDurableSystemInstructions(prompts.instructions(profile));
         return new CopilotRunRequest(turnId, CopilotRunAuth.localToken(), CopilotSessionTarget.newSession(),
-                prompts.conversation(page, request.pageContext(), history), config, Map.of(), null, evidence, activity);
+                prompts.conversation(page, request.pageContext(), history, attachments), config, Map.of(), null, evidence, activity);
     }
 
     @Override
@@ -63,7 +69,7 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
                         SystemAssistantConversation.PageContext page, List<AnalysisChatMessageResponse> history,
                         SystemAssistantMessageRequest request, Consumer<AnalysisEvidenceSection> evidence,
                         Consumer<AnalysisAiActivityEvent> activity, List<Attachment> attachments) {
-        var run = assemble(turnId, profile, page, history, request, evidence, activity);
+        var run = assemble(turnId, profile, page, history, request, evidence, activity, attachments);
         var prepared = preparation.prepare(run);
         try {
             prepared.messageOptions().setAttachments(SystemAssistantAttachments.prepare(attachments));

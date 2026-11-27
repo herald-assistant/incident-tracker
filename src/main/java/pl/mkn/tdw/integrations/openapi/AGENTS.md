@@ -48,7 +48,7 @@ Nie zgaduj discriminator mapping i nie usuwaj ograniczeń allOf/oneOf.
 Kanoniczne limity oraz semantykę x-tdw-operation-effect opisuje runtime
 System Assistanta; GET bez potwierdzenia skutków pozostaje UNKNOWN.
 
-PATCH obsługuje application/json lub brak body, z dokładną walidacją schema
+PATCH obsługuje JSON, body plikowe lub brak body, z dokładną walidacją schema
 i operation-level security. Nie zastępuj go PUT ani nie dopisuj całego DTO.
 
 Opcjonalne parametry header (brak required lub false) zachowuj w dokumentacji,
@@ -73,7 +73,9 @@ początkowego /, URL, %, query/hash, backslash, znaków sterujących i segmentó
 . lub ... Każdy segment koduj osobno; nie zmieniaj hosta ani base path.
 Zwykły parametr bez tej flagi nadal przyjmuje tylko pojedynczy segment.
 Metadata wykonawcze pochodzą z importera i są wspólne dla SDK/MCP.
-DELETE może mieć JSON body tylko w OpenAPI 3.1; GET pozostaje bez body.
+DELETE może mieć body tylko w OpenAPI 3.1. GET pozostaje bez body.
+
+Importer określa pozycje plikowe i kodowanie multipart lub surowego body. REST sprawdza wszystkie części i MIME przed HTTP oraz wysyła oryginalne bajty z OpenApiArguments. Odczyt z dysku i wybór pliku rozmowy należą do wywołującego. Szczegóły obsługiwanego podzbioru zawiera runtime System Assistanta.
 
 Response content obsługuje application/json, text/plain ze string schema, */*
 oraz image/png, image/jpeg, image/webp, image/gif, image/bmp, application/pdf, DOCX MIME i application/octet-stream

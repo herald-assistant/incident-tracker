@@ -1,0 +1,26 @@
+openapi: 3.0.3
+info: {title: CRM folders, version: '1'}
+servers: [{url: 'http://127.0.0.1:8099'}]
+paths:
+  /folders/entries:
+    post:
+      operationId: storeEntry
+      security: [{crmBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [folder, labels, original]
+              properties:
+                folder: {type: string}
+                labels: {type: object, additionalProperties: {}}
+                original: {$ref: '#/components/schemas/File'}
+      responses:
+        '201': {description: Wpis, content: {application/json: {schema: {type: object}}}}
+components:
+  schemas:
+    File: {type: string, format: binary}
+  securitySchemes:
+    crmBearer: {type: http, scheme: bearer}
