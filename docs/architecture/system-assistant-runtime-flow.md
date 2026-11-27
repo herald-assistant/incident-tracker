@@ -9,7 +9,7 @@ z zapisanej aktualnej treści. Ekran: `/system-assistant`.
 
 Operator może podłączyć HTTP(S) API dowolnego systemu, z hostem DNS, IP lub
 localhost, w obsługiwanym podzbiorze OpenAPI 3.0.x/3.1.x opisanym poniżej.
-Bieżący zakres obsługuje jedną osobę w workspace. Obsługuje source auth Basic/Bearer/OAuth2/OIDC. Obejmuje załączniki PNG/JPEG/WebP/GIF, PDF i DOCX. Nie obejmuje approval workflow ani integracji CLP.
+Bieżący zakres obsługuje jedną osobę w workspace. Obsługuje source auth Basic/Bearer/OAuth2/OIDC. Obejmuje załączniki PNG/JPEG/WebP/GIF/BMP, PDF i DOCX. Nie obejmuje approval workflow ani integracji CLP.
 Konfigurację, rozmowę i testy opisuje [instrukcja obsługi](../system-assistant.md).
 Skille określają sposób pracy AI, nie egzekwują uprawnień biznesowych.
 Kontrakt operatora lub jego proxy może ograniczać i orkiestrować wywołania API;
@@ -560,7 +560,7 @@ osobnego magazynu telemetryki ani historycznych konfiguracji.
 
 ### Plik jako odpowiedź OpenAPI
 
-Response content przyjmuje `image/png`, `image/jpeg`, `image/webp`, `image/gif`,
+Response content przyjmuje `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `image/bmp`,
 `application/pdf` i `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 ze `schema: {type: string, format: binary}`. Działa też istniejący `*/*`.
 Rzeczywisty Content-Type określa format; dla jawnego MIME musi być zgodny
@@ -571,14 +571,14 @@ Jawne `application/octet-stream` ze `schema: {type: string, format: binary}`
 dla danego statusu lub `default` włącza rozpoznawanie pliku z bajtów po HTTP
 2xx, z wyłączeniem 204/205. Działa bez Content-Type, z application/octet-stream
 oraz z konkretnym binarnym MIME zgodnym z wykrytym formatem. Rozpoznawane są
-PDF, PNG, JPEG, GIF i WebP po sygnaturze; DOCX wymaga ZIP z wpisem
+PDF, PNG, JPEG, GIF, BMP i WebP po sygnaturze. DOCX wymaga ZIP z wpisem
 `word/document.xml`. Nazwa i rozszerzenie pliku nie są dowodem formatu.
 Nieznany format, pusta odpowiedź plikowa lub niezgodność Content-Type daje
 `outcome: RESPONSE_RECEIVED`, zachowany status HTTP i `fileDelivery: FAILED`,
 bez pliku ani base64. Operacja nie jest ponawiana. JSON/text korzysta z
 dotychczasowego dekodowania; błędy HTTP nie uruchamiają tej detekcji.
 Rozpoznanie nie dowodzi kompletnego odczytu dokumentu; PDF i DOCX przechodzą
-jeszcze przez swoje czytniki. Samo `*/*` nie włącza rozpoznawania bajtów:
+jeszcze przez swoje czytniki, a BMP przez dekoder obrazu. Samo `*/*` nie włącza rozpoznawania bajtów:
 ogólny/brakujący MIME nadal daje reprezentację base64.
 
 REST zwraca neutralny `OpenApiFile` w pamięci poza tekstowym JSON, którego body
@@ -587,8 +587,9 @@ tekst i binaria niezależnie od SDK/MCP. Wspólny `common.documents.PdfPageRende
 renderuje wszystkie strony PDF do JPEG 144 DPI, tak samo jak przy uploadzie.
 DOCX jest odczytywany przez JDK ZIP/StAX: tekst dokumentu, nagłówków, stopek,
 przypisów i komentarzy oraz obsługiwane obrazy z word/media. Bez odtwarzania
-układu Worda, wykonywania relacji zewnętrznych ani DTD. Obrazy są przekazywane
-bezpośrednio. Wszystkie modele używają tej samej ścieżki.
+układu Worda, wykonywania relacji zewnętrznych ani DTD. Plik BMP trafia do SDK
+i MCP jako bezstratny PNG. Metadane odpowiedzi HTTP opisują oryginalny BMP.
+Pozostałe obsługiwane obrazy są przekazywane bezpośrednio.
 
 Adapter Copilota zwraca `ToolResultObject` z `binaryResultsForLlm`, MCP tekst
 i image content. Model otrzymuje treść po tool call w tej samej turze.
@@ -618,14 +619,15 @@ binariów, ani katalogu załączników. Odczyt historii odtwarza metadane, a ka�
 NEW tura czyta ponownie pliki i przekazuje je jako SDK blobs. PDFBox renderuje
 wszystkie strony PDF w pamięci do JPEG (144 DPI), z nazwą dokumentu i numerem
 strony, jednakowo dla każdego modelu. Zachowuje to także skany i diagramy;
-omija pomijanie natywnego PDF w ścieżce GPT z narzędziami. Pozostałe formaty
-pozostają natywnymi blobs. Oryginał PDF pozostaje w runie, bez zapisu pochodnych,
+omija pomijanie natywnego PDF w ścieżce GPT z narzędziami. BMP jest dekodowany
+w pamięci i przekazywany jako PNG. Pozostałe formaty trafiają do SDK jako
+natywne blobs. Oryginały PDF i BMP pozostają w runie, bez zapisu pochodnych,
 OCR, zmiany modelu ani tools/policy. Brak zapisanego
 pliku kończy turę jawnym błędem. Activity SDK zawiera tylko metadane attachments,
 bez base64 i ścieżek plikowych. Zewnętrzny OTLP zachowuje swoją jawną konfigurację.
 
 Neutralny `common.documents.DocumentAttachmentPreparer` posiada preparację
-PDF oraz mapę rozszerzeń MIME załączników. Feature mapuje jego wynik na SDK
+PDF i BMP oraz mapę rozszerzeń MIME załączników. Feature mapuje jego wynik na SDK
 blobs. Ten sam mechanizm zasila [File Reader w Tool Workbench](file-reader-workbench.md),
 który pokazuje obrazy bez AI, a dla DOCX zwraca tylko walidację odczytu.
 

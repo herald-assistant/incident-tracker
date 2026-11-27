@@ -17,6 +17,7 @@ final class OpenApiBinaryFormat {
             return "image/jpeg";
         if (startsWith(bytes, "GIF87a") || startsWith(bytes, "GIF89a")) return "image/gif";
         if (startsWith(bytes, "RIFF") && startsWith(bytes, 8, "WEBP")) return "image/webp";
+        if (bytes.length >= 14 && startsWith(bytes, "BM")) return "image/bmp";
         if (startsWith(bytes, "PK\u0003\u0004") && containsWordDocument(bytes))
             return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         return null;

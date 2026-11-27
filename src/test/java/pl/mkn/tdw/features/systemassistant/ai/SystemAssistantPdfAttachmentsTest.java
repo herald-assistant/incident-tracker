@@ -6,6 +6,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantException;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;
@@ -70,7 +71,15 @@ class SystemAssistantPdfAttachmentsTest {
         for (var content : List.of(new byte[]{1, 2, 3}, empty)) {
             assertThatThrownBy(() -> SystemAssistantAttachments.prepare(List.of(
                     new SystemAssistantAiPort.Attachment("invalid.pdf", "application/pdf", content))))
-                    .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("invalid.pdf");
+                    .isInstanceOf(SystemAssistantException.class).hasMessageContaining("invalid.pdf");
         }
+    }
+
+    @Test void reportsTheNameOfAnUnreadableBitmapToTheOperator() {
+        assertThatThrownBy(() -> SystemAssistantAttachments.prepare(List.of(
+                new SystemAssistantAiPort.Attachment("CRM.bmp", "image/bmp", new byte[]{'B', 'M'}))))
+                .isInstanceOfSatisfying(SystemAssistantException.class,
+                        failure -> assertThat(failure.code()).isEqualTo("ATTACHMENT_INVALID"))
+                .hasMessageContaining("CRM.bmp");
     }
 }

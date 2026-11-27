@@ -96,7 +96,8 @@ describe('SystemAssistantPage', () => {
     const fixture = ready(); const page = fixture.componentInstance;
     page.workspaceView.set('conversation'); page.historyOpen.set(false); fixture.detectChanges();
     const input = fixture.nativeElement.querySelector('input[type=file][aria-label="Wybierz załączniki"]') as HTMLInputElement;
-    const first = new File(['one'], 'report.pdf'); const second = new File(['two'], 'picture.png');
+    expect(input.accept.split(',')).toContain('.bmp');
+    const first = new File(['one'], 'report.pdf'); const second = new File(['two'], 'picture.BMP');
     Object.defineProperty(input, 'files', {value: [first, second], configurable: true});
     page.attachFiles(input); fixture.detectChanges();
     expect(page.uploading()).toBe(true);
@@ -109,10 +110,10 @@ describe('SystemAssistantPage', () => {
     expect(upload.request.body).toBe(first); upload.flush(saved);
     const next = http.expectOne(req => req.url.endsWith('/attachments/attachments'));
     expect(next.request.body).toBe(second);
-    next.flush({...saved, attachments: [...saved.attachments, {id: 'file-2', name: second.name, mimeType: 'image/png', size: 3}]});
+    next.flush({...saved, attachments: [...saved.attachments, {id: 'file-2', name: second.name, mimeType: 'image/bmp', size: 3}]});
     fixture.detectChanges();
     expect(page.uploading()).toBe(false);
-    expect(page.pendingAttachmentNames()).toEqual(['report.pdf', 'picture.png']);
+    expect(page.pendingAttachmentNames()).toEqual(['report.pdf', 'picture.BMP']);
     expect(fixture.nativeElement.querySelector('.analysis-chat__form .chat-attachments').textContent).toContain('report.pdf');
     http.expectNone('/api/system-assistant/conversations/attachments/messages');
     page.conversation.set({...saved, busy: true}); fixture.detectChanges();

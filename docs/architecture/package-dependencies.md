@@ -463,9 +463,10 @@ bezpieczne parsowanie payloadu. Nie zawiera orchestration, kontraktow feature'a
 ani integracji.
 
 `common.documents.DocumentAttachmentPreparer` współdzieli preparację plików
-między załącznikami System Assistanta i operator API File Reader: PDF przez
-`PdfPageRenderer`, pozostałe jako natywne bajty. Nie zna SDK, sesji, storage
-ani modelu. `DocxContentReader` zapewnia techniczny odczyt/pojedynczą walidację
+między załącznikami System Assistanta i operator API File Reader. Renderuje PDF
+przez `PdfPageRenderer`, przekształca BMP do PNG, a pozostałe formaty przekazuje
+w postaci natywnej. Callback OpenAPI używa tego samego kodu do przygotowania PDF i obrazów.
+Preparacja jest niezależna od SDK, sesji, storage i modelu. `DocxContentReader` zapewnia techniczny odczyt/pojedynczą walidację
 dokumentu dla narzędzi OpenAPI i podglądu operatora.
 
 ### `localworkspace`

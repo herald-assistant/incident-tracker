@@ -16,6 +16,7 @@ import pl.mkn.tdw.agenttools.openapi.OpenApiToolCatalog;
 import pl.mkn.tdw.agenttools.openapi.mcp.OpenApiMcpEndpoint;
 import pl.mkn.tdw.features.systemassistant.config.SystemAssistantConfigurationService;
 import pl.mkn.tdw.features.systemassistant.contract.SystemAssistantConfiguration;
+import pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -30,18 +31,30 @@ import static org.assertj.core.api.Assertions.*;
 class SystemAssistantMcpWireTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
-    void returnsPdfPagesAndDocxEmbeddedImagesAsMcpContent(boolean genericResponse) throws Exception {
+    void returnsPdfPagesBitmapsAndDocxEmbeddedImagesAsMcpContent(boolean genericResponse) throws Exception {
         var api = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         var calls = new java.util.concurrent.atomic.AtomicInteger();
         api.createContext("/file", exchange -> {
             try {
                 calls.incrementAndGet();
-                var docx = exchange.getRequestURI().getPath().endsWith("docx");
-                var bytes = docx ? pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.docx("WORD-682")
-                        : pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures.pdf("PDF-831");
-                if (!genericResponse) exchange.getResponseHeaders().set("Content-Type", docx
-                        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf");
-                else if (!docx) exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
+                String mime;
+                byte[] bytes;
+                switch (exchange.getRequestURI().getPath()) {
+                    case "/file/docx" -> {
+                        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                        bytes = OpenApiFileFixtures.docx("WORD-682");
+                    }
+                    case "/file/bmp" -> {
+                        mime = "image/bmp";
+                        bytes = OpenApiFileFixtures.bmp("CRM-215");
+                    }
+                    default -> {
+                        mime = "application/pdf";
+                        bytes = OpenApiFileFixtures.pdf("PDF-831");
+                    }
+                }
+                if (!genericResponse) exchange.getResponseHeaders().set("Content-Type", mime);
+                else if (!mime.endsWith("wordprocessingml.document")) exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
                 exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes);
             } catch (Exception ex) { throw new RuntimeException(ex); }
             finally { exchange.close(); }
@@ -55,15 +68,19 @@ class SystemAssistantMcpWireTest {
                     .endpoint(OpenApiMcpEndpoint.path("test_profile")).build();
             try (var client = McpClient.sync(transport).requestTimeout(Duration.ofSeconds(15)).build()) {
                 client.initialize();
-                for (var format : List.of("pdf", "docx", "pdf")) {
+                for (var format : List.of("pdf", "docx", "bmp", "pdf")) {
                     var result = client.callTool(new McpSchema.CallToolRequest("oa_files_getFile", Map.of("path", Map.of("format", format))));
                     assertThat(result.isError()).isFalse();
                     assertThat(result.content()).filteredOn(McpSchema.ImageContent.class::isInstance).hasSize(1);
                     var text = ((McpSchema.TextContent) result.content().get(0)).text();
                     assertThat(text).contains("CURRENT_TURN_ONLY").doesNotContain("base64");
                     if (format.equals("docx")) assertThat(text).contains("WORD-682");
+                    if (format.equals("bmp")) {
+                        assertThat(text).contains("image/bmp");
+                        assertThat(((McpSchema.ImageContent) result.content().get(1)).mimeType()).isEqualTo("image/png");
+                    }
                 }
-                assertThat(calls).hasValue(3);
+                assertThat(calls).hasValue(4);
             }
         } finally { api.stop(0); configurations.save(SystemAssistantConfiguration.empty()); }
     }

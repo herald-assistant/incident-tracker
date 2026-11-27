@@ -25,6 +25,8 @@ describe('FileReaderPage', () => {
     const fixture = TestBed.createComponent(FileReaderPage);
     fixture.detectChanges();
     const readButton = fixture.nativeElement.querySelector('.primary-button') as HTMLButtonElement;
+    const picker = fixture.nativeElement.querySelector('input[type=file]') as HTMLInputElement;
+    expect(picker.accept.split(',')).toContain('.bmp');
     expect(readButton.disabled).toBe(true);
     const file = new File(['CRM'], 'CRM.png');
     select(fixture.componentInstance, [file]);

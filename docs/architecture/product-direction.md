@@ -135,7 +135,7 @@ Feature jest domyślnie wyłączony flagą
 katalogów skilli/API, a wybór w chacie określa zestaw następnej tury.
 Browser Tools filtruje profile wzorcem URL z wildcardem `*`; pełny ekran
 pokazuje wszystkie. Brak usuniętego zasobu daje ostrzeżenie w konfiguracji
-profilu i nie blokuje rozmowy. Konfiguracja ma jeden aktualny zapis. Rozmowa obsługuje załączniki PNG/JPEG/WebP/GIF, PDF i DOCX, zachowywane przy runie i dołączane do każdej tury. Auth obejmuje Basic, Bearer,
+profilu i nie blokuje rozmowy. Konfiguracja ma jeden aktualny zapis. Rozmowa obsługuje załączniki PNG/JPEG/WebP/GIF/BMP, PDF i DOCX, zachowywane przy runie i dołączane do każdej tury. Auth obejmuje Basic, Bearer,
 OAuth2 i OIDC, z formularzami inline i przypisaniem API–Auth w profilu, domyślnie No Auth. Rozmowy są trwale zapisywane w historii;
 kontynuacja odtwarza kontekst, ale używa bieżących instrukcji i narzędzi. Jest to rozszerzenie platformy
 o pracę operacyjną; pozostałe analizy zachowują swoje kontrakty.

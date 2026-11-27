@@ -24,7 +24,7 @@ public class FilePreviewController {
         var mime = DocumentAttachmentPreparer.mimeTypeForName(name);
         if (name.isBlank() || name.chars().anyMatch(Character::isISOControl) || mime == null)
             return ResponseEntity.badRequest().body(new FilePreviewResponse(name, "", 0, "FAILED", false,
-                    "Wybierz pliki PNG, JPEG, WebP, GIF, PDF lub DOCX.", List.of()));
+                    "Wybierz pliki PNG, JPEG, WebP, GIF, BMP, PDF lub DOCX.", List.of()));
         var bytes = request.getInputStream().readAllBytes();
         var docx = mime.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         try {
@@ -38,8 +38,11 @@ public class FilePreviewController {
                     .map(image -> new FilePreviewResponse.Image(image.name(), image.mimeType(), image.content().length,
                             Base64.getEncoder().encodeToString(image.content()))).toList();
             return ResponseEntity.ok(new FilePreviewResponse(name, mime, bytes.length, "READY", false,
-                    mime.equals("application/pdf") ? "Przygotowano wszystkie strony PDF jako obrazy dla AI."
-                            : "Obraz jest przekazywany do AI bez zmiany zawartości.", images));
+                    switch (mime) {
+                        case "application/pdf" -> "Przygotowano wszystkie strony PDF jako obrazy dla AI.";
+                        case "image/bmp" -> "Przygotowano obraz BMP jako PNG dla AI.";
+                        default -> "Obraz jest przekazywany do AI bez zmiany zawartości.";
+                    }, images));
         } catch (IllegalArgumentException failure) {
             return ResponseEntity.unprocessableEntity().body(new FilePreviewResponse(name, mime, bytes.length, "FAILED", docx,
                     "Nie można odczytać pliku. Sprawdź jego zawartość i format.", List.of()));

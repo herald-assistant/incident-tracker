@@ -12,7 +12,7 @@ import pl.mkn.tdw.integrations.openapi.contract.OpenApiException;
 import pl.mkn.tdw.integrations.openapi.contract.OpenApiExecution;
 import pl.mkn.tdw.agenttools.content.ToolContentCallback;
 import pl.mkn.tdw.agenttools.content.ToolContentResult;
-import pl.mkn.tdw.common.documents.PdfPageRenderer;
+import pl.mkn.tdw.common.documents.DocumentAttachmentPreparer;
 import pl.mkn.tdw.common.documents.DocxContentReader;
 import org.springframework.ai.chat.model.ToolContext;
 
@@ -52,15 +52,16 @@ public class OpenApiToolSetFactory {
                     if (result.file() != null) {
                         var file = result.file();
                         try {
-                            if (file.mimeType().equals("application/pdf")) {
-                                for (var page : PdfPageRenderer.render(file.name(), file.content()))
-                                    binaries.add(new ToolContentResult.Binary(page.name(), "image/jpeg", page.content()));
-                            } else if (file.mimeType().equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
+                            if (file.mimeType().equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
                                 var document = DocxContentReader.read(file.content());
                                 ((com.fasterxml.jackson.databind.node.ObjectNode) text).put("documentText", document.text());
                                 for (var image : document.images()) binaries.add(new ToolContentResult.Binary(
                                         file.name() + " — " + image.name(), image.mimeType(), image.content()));
-                            } else binaries.add(new ToolContentResult.Binary(file.name(), file.mimeType(), file.content()));
+                            } else {
+                                for (var image : DocumentAttachmentPreparer.prepare(file.name(), file.mimeType(), file.content())) {
+                                    binaries.add(new ToolContentResult.Binary(image.name(), image.mimeType(), image.content()));
+                                }
+                            }
                             ((com.fasterxml.jackson.databind.node.ObjectNode) text).put("fileDelivery", "CURRENT_TURN_ONLY");
                         } catch (IllegalArgumentException failure) {
                             ((com.fasterxml.jackson.databind.node.ObjectNode) text).put("fileDelivery", "FAILED")

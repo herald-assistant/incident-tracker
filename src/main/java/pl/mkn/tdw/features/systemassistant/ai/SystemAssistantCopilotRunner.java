@@ -65,8 +65,8 @@ public class SystemAssistantCopilotRunner implements SystemAssistantAiPort {
                         Consumer<AnalysisAiActivityEvent> activity, List<Attachment> attachments) {
         var run = assemble(turnId, profile, page, history, request, evidence, activity);
         var prepared = preparation.prepare(run);
-        prepared.messageOptions().setAttachments(SystemAssistantAttachments.prepare(attachments));
         try {
+            prepared.messageOptions().setAttachments(SystemAssistantAttachments.prepare(attachments));
             var result = gateway.execute(prepared);
             return new Reply(result.content(), result.usage());
         } finally {

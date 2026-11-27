@@ -8,8 +8,9 @@ mutacje tej samej tury, bez samoczynnego retry.
 
 Pliki odpowiedzi są efemeryczne. ToolContentCallback zwraca tekst i binaria:
 PDF jako obrazy wszystkich stron przez wspólny common.documents.PdfPageRenderer,
-DOCX jako tekst i osadzone obsługiwane obrazy przez DocxContentReader, obrazy
-bezpośrednio. SDK i MCP mapują ten neutralny wynik na własny transport.
+DOCX jako tekst i osadzone obsługiwane obrazy przez DocxContentReader, BMP jako
+PNG przez DocumentAttachmentPreparer, pozostałe obrazy bezpośrednio.
+SDK i MCP mapują ten neutralny wynik na własny transport.
 Nie zapisuj pobranych plików do rozmowy ani nie pobieraj automatycznie URL z JSON.
 Tekst wyniku zachowuje status/outcome HTTP i nie zawiera base64 obrazów.
 

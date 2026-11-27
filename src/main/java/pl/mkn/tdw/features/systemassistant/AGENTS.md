@@ -25,7 +25,7 @@ feature'ów. API i orkiestracja należą do feature'a; parser/REST do
   ze state i przeglądarką. Cookie ma HttpOnly/SameSite=None/Secure. Jednorazowe
   wznowienie odrzuconej wiadomości w obu widokach opisuje
   [kanoniczny przebieg OIDC](../../../../../../../../docs/architecture/system-assistant-runtime-flow.md#uwierzytelnianie-źródłowych-api).
-- Załączniki PNG/JPEG/WebP/GIF, PDF i DOCX zapisujemy strumieniowo w runs/{id}/attachments/{uuid}.{ext}. Metadane są w storeSnapshot run.json i GET rozmowy, poza exportEnvelope. Każda NEW tura dostaje wszystkie pliki jako SDK blobs. PDFBox renderuje PDF do JPEG wszystkich stron w pamięci (144 DPI), jednakowo dla każdego modelu; bez zapisu pochodnych i OCR. Upload blokuje ten sam operation guard co tura/delete. Pliki są usuwane tylko z runem, bez limitów TDW i walidacji kompatybilności modelu. Bez tymczasowego storage OIDC. Obowiązkowy approval pozostaje odrębnym zakresem.
+- Załączniki PNG/JPEG/WebP/GIF/BMP, PDF i DOCX zapisujemy strumieniowo w runs/{id}/attachments/{uuid}.{ext}. Metadane są w storeSnapshot run.json i GET rozmowy, poza exportEnvelope. Każda NEW tura dostaje wszystkie pliki jako SDK blobs. PDFBox renderuje PDF do JPEG wszystkich stron w pamięci (144 DPI), jednakowo dla każdego modelu; bez zapisu pochodnych i OCR. Upload blokuje ten sam operation guard co tura/delete. Pliki są usuwane tylko z runem, bez limitów TDW i walidacji kompatybilności modelu. Bez tymczasowego storage OIDC. Obowiązkowy approval pozostaje odrębnym zakresem.
 - Nie zakładaj fikcyjnych danych ani lokalnego demo; timeout nie uprawnia do retry.
 - Metadane pliku mają opcjonalne messageId pierwszej przyjętej wiadomości USER.
   Oczekujące pliki mają null. Powiązanie zapisuj przed AI, cofaj razem z odrzuconą

@@ -76,7 +76,7 @@ Metadata wykonawcze pochodzą z importera i są wspólne dla SDK/MCP.
 DELETE może mieć JSON body tylko w OpenAPI 3.1; GET pozostaje bez body.
 
 Response content obsługuje application/json, text/plain ze string schema, */*
-oraz image/png, image/jpeg, image/webp, image/gif, application/pdf, DOCX MIME i application/octet-stream
+oraz image/png, image/jpeg, image/webp, image/gif, image/bmp, application/pdf, DOCX MIME i application/octet-stream
 ze string/binary schema. Wspierany plik według rzeczywistego Content-Type
 jest typowanym OpenApiFile w pamięci; JSON body zawiera tylko metadane.
 Bez zależności od renderowania, SDK, MCP i storage rozmowy.

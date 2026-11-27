@@ -163,7 +163,7 @@ public class SystemAssistantConversationHistory {
 
     private static SystemAssistantException invalidAttachment() {
         return new SystemAssistantException("ATTACHMENT_INVALID", UserFacingErrorType.BAD_REQUEST,
-                "Wybierz pliki PNG, JPEG, WebP, GIF, PDF lub DOCX.");
+                "Wybierz pliki PNG, JPEG, WebP, GIF, BMP, PDF lub DOCX.");
     }
 
     private void requireEnabled() {

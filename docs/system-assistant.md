@@ -11,7 +11,7 @@ niezależny od tej flagi. AI wymaga skonfigurowanego PAT Copilota w Workspace Se
 ## Załączniki rozmowy
 
 W zakładce Rozmowa i panelu Browser Tools przycisk spinacza dodaje wiele plików
-PNG/JPEG/WebP/GIF, PDF lub DOCX. Są zapisywane przed następną wiadomością;
+PNG/JPEG/WebP/GIF/BMP, PDF lub DOCX. Są zapisywane przed następną wiadomością;
 przed wysłaniem nazwy pojawiają się przy polu wiadomości. Przy przyjęciu
 wiadomości nowe pliki są do niej przypisywane; ich nazwy widać nad tą
 wiadomością, także po ponownym otwarciu rozmowy. Nie powtarzamy etykiet
@@ -19,7 +19,8 @@ przy kolejnych wiadomościach. Podczas zapisu i pracy AI dodawanie jest
 zablokowane. Pliki pozostają dostępne w kolejnych turach i po ponownym otwarciu
 rozmowy. Usunięcie rozmowy usuwa także pliki; eksport ich nie zawiera.
 PDF jest przekazywany jako obrazy wszystkich stron, jednakowo dla każdego
-modelu; oryginalny plik pozostaje przy rozmowie.
+modelu. Asystent otrzymuje BMP jako bezstratny PNG. Oryginały PDF i BMP
+pozostają przy rozmowie pod nazwami nadanymi przez operatora.
 TDW nie ogranicza liczby ani rozmiaru plików i nie weryfikuje zgodności modelu;
 faktyczny odczyt zależy od modelu oraz limitów CLI. Nie ma osobnego odtwarzania
 niewysłanych plików po logowaniu.
@@ -128,7 +129,7 @@ Pliki można sprawdzić bez uruchamiania AI w `Tool Workbench / File Reader`:
 podgląd pokazuje wszystkie strony PDF i obrazy, a dla DOCX wyłącznie wynik
 walidacji odczytu. [Szczegóły](architecture/file-reader-workbench.md).
 
-Operacja może zwrócić PNG/JPEG/WebP/GIF, PDF lub DOCX. W YAML deklarujesz
+Operacja może zwrócić PNG/JPEG/WebP/GIF/BMP, PDF lub DOCX. W YAML deklarujesz
 odpowiedni MIME, np.:
 
 ```yaml
@@ -141,7 +142,8 @@ responses:
 ```
 
 API powinno zwracać właściwy Content-Type. PDF trafia do AI jako obrazy wszystkich
-stron, DOCX jako odczytany tekst i osadzone obsługiwane obrazy, a obrazy bezpośrednio.
+stron, DOCX jako odczytany tekst i osadzone obsługiwane obrazy, a BMP jako
+bezstratny PNG. Dla operacji zwracającej BMP zadeklaruj `image/bmp`.
 Model dostaje zawartość w tej samej turze po wywołaniu narzędzia. Plik nie jest
 zapisywany w załącznikach rozmowy; ponowne użycie wymaga kolejnego wywołania API,
 które pobiera aktualny wynik. Adres URL w JSON sam nie uruchamia pobrania.
@@ -355,7 +357,7 @@ wyniku operacji sprawdź stan systemu przed ponownym zleceniem zapisu.
 Błąd odświeżania chatu pozwala ponowić odczyt, bez ponawiania polecenia.
 
 Feature obsługuje Basic, Bearer, OAuth2 Client Credentials i OIDC. Nie przejmuje
-logowania ze strony. Obsługuje załączniki rozmowy PNG/JPEG/WebP/GIF, PDF i DOCX. Skille są
+logowania ze strony. Obsługuje załączniki rozmowy PNG/JPEG/WebP/GIF/BMP, PDF i DOCX. Skille są
 instrukcjami pracy, nie mechanizmem nadawania uprawnień. Importer obsługuje
 wybrane konstrukcje OpenAPI, w tym readOnly, format i nullable;
 pełna macierz i limity są w [runtime flow](architecture/system-assistant-runtime-flow.md#importowany-podzbiór-openapi).

@@ -17,6 +17,7 @@ import pl.mkn.tdw.features.systemassistant.config.SystemAssistantProfileResource
 import pl.mkn.tdw.features.systemassistant.contract.*;
 import pl.mkn.tdw.integrations.httpauth.OidcLoginPort;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunOperationGuard;
+import pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.*;
@@ -55,7 +56,7 @@ class SystemAssistantAttachmentsTest {
             assertThat(first.attachments().get(0).messageId()).isEqualTo(firstMessage);
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
 
-            service.attach(id, "second.png", new ByteArrayInputStream(new byte[]{2}));
+            service.attach(id, "second.BMP", new ByteArrayInputStream(OpenApiFileFixtures.bmp("CRM-215")));
             var second = service.send(id, new SystemAssistantMessageRequest("Drugie", "test_profile", null, null, null));
             secondMessage = second.messages().get(2).id();
             assertThat(second.attachments()).extracting(SystemAssistantAttachment::messageId)
@@ -66,11 +67,14 @@ class SystemAssistantAttachmentsTest {
         } finally { service.close(); }
         var reopened = service(ai);
         try {
-            assertThat(reopened.get(id).attachments()).extracting(SystemAssistantAttachment::messageId)
+            var restored = reopened.get(id).attachments();
+            assertThat(restored).extracting(SystemAssistantAttachment::messageId)
                     .containsExactly(firstMessage, secondMessage);
+            assertThat(restored.get(1).name()).isEqualTo("second.BMP");
+            assertThat(restored.get(1).mimeType()).isEqualTo("image/bmp");
             var stored = mapper.readTree(workspace.resolve("runs").resolve(id).resolve("run.json").toFile());
             assertThat(stored.at("/storeSnapshot/state/attachments/0/messageId").asText()).isEqualTo(firstMessage);
-            assertThat(stored.path("exportEnvelope").toString()).doesNotContain("messageId", "attachments", "first.pdf", "second.png");
+            assertThat(stored.path("exportEnvelope").toString()).doesNotContain("messageId", "attachments", "first.pdf", "second.BMP");
         } finally { reopened.close(); }
     }
 
@@ -125,19 +129,20 @@ class SystemAssistantAttachmentsTest {
         var ai = mock(SystemAssistantAiPort.class);
         var release = new CountDownLatch(1);
         var entered = new CountDownLatch(1);
+        var bitmap = OpenApiFileFixtures.bmp("CRM-215");
         var seen = new CopyOnWriteArrayList<List<SystemAssistantAiPort.Attachment>>();
         when(ai.answer(any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(call -> {
             List<SystemAssistantAiPort.Attachment> files = call.getArgument(7);
             seen.add(files); entered.countDown();
             assertThat(Files.readString(workspace.resolve("runs").resolve(SystemAssistantTestSupport.history(workspace)
-                    .interruptedIds().get(0)).resolve("run.json"))).contains("report.pdf");
+                    .interruptedIds().get(0)).resolve("run.json"))).contains("report.BMP");
             release.await(5, TimeUnit.SECONDS);
             return new SystemAssistantAiPort.Reply("Gotowe", null);
         });
         var service = service(ai);
         try {
             var id = service.create(null).id();
-            service.attach(id, "report.pdf", new ByteArrayInputStream(new byte[]{1, 2, 3}));
+            service.attach(id, "report.BMP", new ByteArrayInputStream(bitmap));
             service.send(id, new SystemAssistantMessageRequest("Pierwsze pytanie", "test_profile", null, null, null));
             assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
             assertThatThrownBy(() -> service.attach(id, "next.png", new ByteArrayInputStream(new byte[]{4})))
@@ -148,8 +153,9 @@ class SystemAssistantAttachmentsTest {
             await().atMost(5, TimeUnit.SECONDS).until(() -> !service.get(id).busy());
             assertThat(seen).hasSize(2).allSatisfy(files -> {
                 assertThat(files).hasSize(1);
-                assertThat(files.get(0).content()).containsExactly(1, 2, 3);
-                assertThat(files.get(0).name()).isEqualTo("report.pdf");
+                assertThat(files.get(0).content()).isEqualTo(bitmap);
+                assertThat(files.get(0).name()).isEqualTo("report.BMP");
+                assertThat(files.get(0).mimeType()).isEqualTo("image/bmp");
             });
         } finally { release.countDown(); service.close(); }
     }
@@ -158,9 +164,9 @@ class SystemAssistantAttachmentsTest {
         var service = service(mock(SystemAssistantAiPort.class));
         try {
             var id = service.create(null).id();
-            for (var extension : List.of("png", "jpg", "jpeg", "webp", "gif", "pdf", "docx"))
+            for (var extension : List.of("png", "jpg", "jpeg", "webp", "gif", "bmp", "pdf", "docx"))
                 service.attach(id, "test." + extension, new ByteArrayInputStream(new byte[]{1}));
-            assertThat(service.get(id).attachments()).hasSize(7);
+            assertThat(service.get(id).attachments()).hasSize(8);
             assertThatThrownBy(() -> service.attach(id, "test.exe", new ByteArrayInputStream(new byte[]{1})))
                     .isInstanceOfSatisfying(SystemAssistantException.class, error -> assertThat(error.code()).isEqualTo("ATTACHMENT_INVALID"));
             assertThatThrownBy(() -> service.attach("unknown", "test.pdf", new ByteArrayInputStream(new byte[]{1})))
@@ -169,7 +175,7 @@ class SystemAssistantAttachmentsTest {
         } finally { service.close(); }
     }
 
-    @Test void featureAdapterSendsNativeBlobsWithoutChangingSessionPolicy() {
+    @Test void featureAdapterSendsNativePngAndConvertedBmpInTheSdkMessage() throws Exception {
         var preparation = mock(CopilotRunPreparationService.class);
         var gateway = mock(CopilotSdkExecutionGateway.class);
         var options = new MessageOptions();
@@ -181,11 +187,18 @@ class SystemAssistantAttachmentsTest {
                 new SystemAssistantPrompt(mapper), CopilotSessionCleanup.NO_OP);
         runner.answer("turn", new SystemAssistantProfileResources(List.of(), List.of()),
                 null, List.of(), new SystemAssistantMessageRequest("Pytanie", "test_profile", null, null, null), ignored -> {}, ignored -> {},
-                List.of(new SystemAssistantAiPort.Attachment("image.png", "image/png", new byte[]{1, 2, 3})));
-        assertThat(options.getAttachments()).singleElement().isInstanceOfSatisfying(BlobAttachment.class, blob -> {
+                List.of(new SystemAssistantAiPort.Attachment("image.png", "image/png", new byte[]{1, 2, 3}),
+                        new SystemAssistantAiPort.Attachment("crm.BMP", "image/bmp", OpenApiFileFixtures.bmp("CRM-215"))));
+        assertThat(options.getAttachments()).hasSize(2);
+        assertThat(options.getAttachments().get(0)).isInstanceOfSatisfying(BlobAttachment.class, blob -> {
             assertThat(blob.getDisplayName()).isEqualTo("image.png");
             assertThat(blob.getMimeType()).isEqualTo("image/png");
             assertThat(Base64.getDecoder().decode(blob.getData())).containsExactly(1, 2, 3);
+        });
+        assertThat(options.getAttachments().get(1)).isInstanceOfSatisfying(BlobAttachment.class, blob -> {
+            assertThat(blob.getDisplayName()).isEqualTo("crm.png");
+            assertThat(blob.getMimeType()).isEqualTo("image/png");
+            assertThat(Base64.getDecoder().decode(blob.getData())).startsWith((byte) 0x89, (byte) 'P', (byte) 'N', (byte) 'G');
         });
     }
 }

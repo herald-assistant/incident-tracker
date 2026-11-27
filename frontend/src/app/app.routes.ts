@@ -314,11 +314,11 @@ export const routes: Routes = [
           section: 'Tool Workbench',
           title: 'File Reader',
           capabilityInfo: {
-            description: 'Podgląd załączników przygotowanych do AI bez uruchamiania modelu. PDF jako obrazy stron, obrazy bez zmian; DOCX tylko walidacja.',
+            description: 'Podgląd załączników przygotowanych do AI. Możesz obejrzeć obrazy, w tym BMP jako PNG, przejrzeć strony PDF i sprawdzić odczyt DOCX.',
             badges: ['Bez AI', 'Bez zapisu plików'],
             meta: [
               { label: 'Endpoint', value: 'POST /api/files/preview' },
-              { label: 'Formaty', value: 'PNG, JPEG, WebP, GIF, PDF i DOCX' },
+              { label: 'Formaty', value: 'PNG, JPEG, WebP, GIF, BMP, PDF i DOCX' },
               { label: 'PDF', value: 'Wszystkie strony jako JPEG 144 DPI, tak samo jak w załącznikach chatu' },
               { label: 'DOCX', value: 'Sprawdzenie odczytu ZIP/XML; bez zwracania treści i bez potwierdzania interpretacji przez model' }
             ]

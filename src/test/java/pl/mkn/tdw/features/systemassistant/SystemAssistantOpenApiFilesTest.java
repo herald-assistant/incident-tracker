@@ -53,10 +53,12 @@ class SystemAssistantOpenApiFilesTest {
                     CopilotToolDescriptionContext.profile("system-assistant"), callbacks).get(0);
             var args = mapper.valueToTree(Map.of("path", Map.of("format", "test")));
             String previousPdf = null;
-            for (var format : List.of("pdf", "pdf", "docx", "png", "brokenPdf", "brokenDocx")) {
+            for (var format : List.of("pdf", "pdf", "docx", "png", "bmp", "brokenBmp", "brokenPdf", "brokenDocx")) {
                 if (format.equals("pdf")) bytes.set(OpenApiFileFixtures.pdf("CRM-" + calls.get()));
                 if (format.equals("docx")) { mime.set(null); bytes.set(OpenApiFileFixtures.docx("CRM-682")); }
                 if (format.equals("png")) { mime.set("application/octet-stream"); bytes.set(OpenApiFileFixtures.png("CRM-215")); }
+                if (format.equals("bmp")) bytes.set(OpenApiFileFixtures.bmp("CRM-215"));
+                if (format.equals("brokenBmp")) bytes.set(Arrays.copyOf(bytes.get(), 14));
                 if (format.equals("brokenPdf")) bytes.set("%PDF-1.7\ninvalid".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
                 if (format.equals("brokenDocx")) {
                     var archiveBytes = new java.io.ByteArrayOutputStream();
@@ -85,6 +87,11 @@ class SystemAssistantOpenApiFilesTest {
                     assertThat(reply.textResultForLlm()).doesNotContain(data);
                     assertThat(events.toString()).doesNotContain(data);
                     if (format.equals("docx")) assertThat(reply.textResultForLlm()).contains("CRM-682");
+                    if (format.equals("bmp")) {
+                        assertThat(reply.textResultForLlm()).contains("image/bmp");
+                        assertThat(reply.binaryResultsForLlm().get(0).mimeType()).isEqualTo("image/png");
+                        assertThat(Base64.getDecoder().decode(data)).startsWith((byte) 0x89, (byte) 'P', (byte) 'N', (byte) 'G');
+                    }
                     if (format.equals("pdf")) {
                         assertThat(data).isNotEqualTo(previousPdf);
                         previousPdf = data;

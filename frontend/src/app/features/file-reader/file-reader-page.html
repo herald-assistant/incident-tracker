@@ -6,7 +6,7 @@
           <h2>Pliki</h2>
           <span class="panel-chip">{{ files().length }}</span>
         </div>
-        <input #fileInput hidden type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.docx"
+        <input #fileInput hidden type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.docx"
           aria-label="Wybierz pliki" [disabled]="busy()" (change)="selectFiles(fileInput)" />
         <button class="secondary-button file-reader__attach" type="button" [disabled]="busy()" (click)="fileInput.click()">
           <span class="material-symbols-outlined" aria-hidden="true">attach_file</span>Załącz pliki
@@ -25,7 +25,7 @@
           </ul>
           <button class="secondary-button" type="button" [disabled]="busy()" (click)="clear()">Wyczyść listę</button>
         } @else {
-          <p class="field-hint">Wybierz jeden lub kilka plików PNG, JPEG, WebP, GIF, PDF lub DOCX.</p>
+          <p class="field-hint">Wybierz jeden lub kilka plików PNG, JPEG, WebP, GIF, BMP, PDF lub DOCX.</p>
         }
       </aside>
 
@@ -34,7 +34,7 @@
           <div class="section-heading">
             <div>
               <h2>Podgląd danych dla AI</h2>
-              <p class="field-hint">PDF jako obrazy wszystkich stron, obrazy w oryginalnej postaci. Dla DOCX tylko sprawdzenie poprawności.</p>
+              <p class="field-hint">Każda strona PDF ma własny podgląd. BMP jest wyświetlany jako PNG. Dla DOCX sprawdzana jest poprawność pliku.</p>
             </div>
             <span class="panel-chip file-reader__no-ai">Bez uruchamiania AI</span>
           </div>

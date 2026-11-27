@@ -17,13 +17,14 @@ anuluje bieżący odczyt i nie uruchamia kolejnych żądań.
 
 `common.documents.DocumentAttachmentPreparer` jest wspólnym mechanizmem
 preparacji dla Workbench i załączników rozmowy System Assistanta. MIME
-pochodzi z rozszerzenia: PNG/JPG/JPEG/WebP/GIF/PDF/DOCX, jak w chacie.
+pochodzi z rozszerzenia pliku (PNG/JPG/JPEG/WebP/GIF/BMP/PDF/DOCX), jak w chacie.
 Adapter feature'a mapuje przygotowane bajty na SDK BlobAttachment;
 operator API nie zależy od SDK ani feature'a.
 
 - PDF: wszystkie strony jako JPEG 144 DPI przez `PdfPageRenderer`, w tej
   samej kolejności i z tymi samymi nazwami co w chacie; także skany i diagramy.
 - PNG/JPEG/WebP/GIF: oryginalne bajty i MIME, bez konwersji lub OCR.
+- Dla BMP nagłówek wyniku opisuje plik źródłowy, a podgląd zawiera bezstratny PNG przygotowany dla AI.
 - DOCX: wyłącznie wynik sprawdzenia odczytu przez `DocxContentReader`.
   ZIP musi zawierać `word/document.xml` z prawidłowym korzeniem dokumentu
   Word i poprawnym XML. DTD i encje zewnętrzne są wyłączone. Odpowiedź nie

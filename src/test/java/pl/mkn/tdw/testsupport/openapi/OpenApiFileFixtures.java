@@ -52,8 +52,17 @@ public final class OpenApiFileFixtures {
     }
 
     public static byte[] png(String code) throws Exception {
+        return encodedImage(code, "png");
+    }
+
+    public static byte[] bmp(String code) throws Exception {
+        return encodedImage(code, "bmp");
+    }
+
+    private static byte[] encodedImage(String code, String format) throws Exception {
         try (var bytes = new ByteArrayOutputStream()) {
-            ImageIO.write(image(code), "png", bytes); return bytes.toByteArray();
+            if (!ImageIO.write(image(code), format, bytes)) throw new IllegalStateException(format);
+            return bytes.toByteArray();
         }
     }
 

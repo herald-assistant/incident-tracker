@@ -40,7 +40,7 @@
           placeholder="Wiadomość…" unavailableMessage="Sprawdź dostępność feature'a, model i PAT Copilota w Workspace Settings."
           (sendMessage)="send($event)" (clearError)="chatError.set('')" (connectAuth)="auth.openSettings()">
           <span chatActions>
-            <input #attachmentInput hidden type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.docx" aria-label="Wybierz załączniki"
+            <input #attachmentInput hidden type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.docx" aria-label="Wybierz załączniki"
               [disabled]="busy() || !canChat()" (change)="attachFiles(attachmentInput)" />
             <button class="assistant-chat-action" type="button" aria-label="Załącz pliki" [matTooltip]="uploading() ? 'Zapisywanie załączników…' : 'Załącz pliki'"
               [disabled]="busy() || !canChat()" (click)="attachmentInput.click()">

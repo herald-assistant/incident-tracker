@@ -10,6 +10,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.common.documents.DocumentAttachmentPreparer;
 import pl.mkn.tdw.testsupport.openapi.OpenApiFileFixtures;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -57,6 +59,25 @@ class FilePreviewControllerTest {
                 .andExpect(jsonPath("$.images[0].data").value(Base64.getEncoder().encodeToString(image)));
     }
 
+    @Test void previewsTheOriginalBitmapAsALosslessPng() throws Exception {
+        var bmp = OpenApiFileFixtures.bmp("CRM-215");
+        var result = mvc.perform(post("/api/files/preview").param("name", "CRM-215.BMP")
+                        .contentType("application/octet-stream").content(bmp))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.mimeType").value("image/bmp"))
+                .andExpect(jsonPath("$.size").value(bmp.length))
+                .andExpect(jsonPath("$.images[0].name").value("CRM-215.png"))
+                .andExpect(jsonPath("$.images[0].mimeType").value("image/png")).andReturn();
+        var png = mapper.readTree(result.getResponse().getContentAsByteArray()).at("/images/0/data").binaryValue();
+        assertThat(png).startsWith((byte) 0x89, (byte) 'P', (byte) 'N', (byte) 'G');
+        var original = ImageIO.read(new ByteArrayInputStream(bmp));
+        var preview = ImageIO.read(new ByteArrayInputStream(png));
+        int width = original.getWidth(), height = original.getHeight();
+        assertThat(preview.getWidth()).isEqualTo(width);
+        assertThat(preview.getHeight()).isEqualTo(height);
+        assertThat(preview.getRGB(0, 0, width, height, null, 0, width))
+                .isEqualTo(original.getRGB(0, 0, width, height, null, 0, width));
+    }
+
     @Test void validatesDocxWithoutReturningItsTextImagesOrOriginalBytes() throws Exception {
         var docx = OpenApiFileFixtures.docx("CRM-PRIVATE-682");
         var result = mvc.perform(post("/api/files/preview").param("name", "CRM.docx")
@@ -69,12 +90,12 @@ class FilePreviewControllerTest {
     }
 
     @Test void rejectsUnreadablePdfDocxAndEmptyFiles() throws Exception {
-        for (var name : new String[]{"CRM.pdf", "CRM.docx", "CRM.png"}) {
+        for (var name : new String[]{"CRM.pdf", "CRM.docx", "CRM.png", "CRM.bmp"}) {
             mvc.perform(post("/api/files/preview").param("name", name).contentType("application/octet-stream"))
                     .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.status").value("FAILED"))
                     .andExpect(jsonPath("$.images").isEmpty());
         }
-        for (var name : new String[]{"CRM.pdf", "CRM.docx"}) {
+        for (var name : new String[]{"CRM.pdf", "CRM.docx", "CRM.bmp"}) {
             mvc.perform(post("/api/files/preview").param("name", name)
                             .contentType("application/octet-stream").content(new byte[]{1, 2, 3}))
                     .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.status").value("FAILED"));
